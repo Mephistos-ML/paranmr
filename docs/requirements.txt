@@ -1,0 +1,5 @@
+sphinx
+sphinx-rtd-theme
+sphinxcontrib-bibtex
+sphinx-copybutton
+sphinxemoji

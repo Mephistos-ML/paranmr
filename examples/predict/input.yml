@@ -1,0 +1,17 @@
+project:
+  name: prediction
+
+hyperfine:
+  method: dft
+  file: hyperfine_tpssh.log
+
+chem_labels:
+  file: chem_labels.csv
+
+nuclei:
+  include: C
+
+susceptibility:
+  format: orca_nev
+  file: nev.out
+  temperatures: [298.00000]

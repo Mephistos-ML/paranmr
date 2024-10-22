@@ -1,0 +1,43 @@
+---
+project:
+  name: proton
+
+hyperfine:
+  method: dft
+  file: ni_0_cpcm_tpssh.out
+
+experiment:
+  files: [exp/exp*.csv]
+
+diamagnetic:
+  method: csv
+  file: dia.csv
+
+chem_labels:
+  file: chem_labels.csv
+
+nuclei:
+  include: H
+
+susc_fit:
+  type: split
+  variables:
+    iso: [fit, 0.01]
+    dxx: [fit, 0.1]
+    dxy: [fix, 0.]
+    dxz: [fix, 0.]
+    dyy: [fit, 0.1]
+    dyz: [fix, 0.]
+  average_shifts: 'all'
+
+# Permutation groups which modify initial
+# assignment in experiment file
+assignment:
+  method: permute
+  groups:
+    - [tphz1, tpy1]
+    - [tpy5, tpy4]
+    - [tphz2, tpy2]
+    - [tpy6, tpy3, tphz3]
+  # method: fixed
+...

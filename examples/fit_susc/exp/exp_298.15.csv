@@ -1,0 +1,13 @@
+#temperature 298.15
+#larmor 400
+#isotope 1H
+assignment,shift,width,area
+tpy1, 150.1471,1,1
+tphz1,101.5225,1,1
+tpy5, 78.2155,1,1
+tpy4, 77.5069,1,1
+tpy2, 47.3577,1,1
+tphz2,44.669,1,1
+tpy6, 17.3475,1,1
+tpy3, 14.2293,1,1
+tphz3,12.3487,1,1
