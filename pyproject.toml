@@ -1,7 +1,7 @@
 [tool.semantic_release]
 version_variable = [
     'setup.py:__version__',
-    'angmom_suite/__version__.py:__version__'
+    'simple_pnmr/__version__.py:__version__'
     ]
 upload_to_pypi=false
 branch = "main"
