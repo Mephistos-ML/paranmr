@@ -1,0 +1,39 @@
+stages:
+- deploy
+
+variables:
+  # change pip's cache location to inside the project
+  PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
+
+# Documentation
+pages:
+  image: python:latest
+  stage: deploy
+  cache:
+    paths:
+      - .cache/pip
+      - docs_venv/
+  script:
+  - git checkout "$CI_COMMIT_REF_NAME"
+  - pip install virtualenv
+  - virtualenv docs_venv
+  - source docs_venv/bin/activate
+  - pip install -e .
+  - cd docs
+  - pip install -r requirements.txt
+  - pip install anybadge ${PKG_NAME} --upgrade
+  - make html
+  - mv build/html ../public
+  - export VERSION=$(grep -oP '__version__ = "\K[^"]+' ../simple_pnmr/__version__.py)
+  - rm -f ../public/docs.svg
+  - anybadge -l Documentation -v $VERSION -f ../public/docs.svg --color green -o
+  artifacts:
+    paths:
+    - public
+    expire_in: 1 day
+  rules:
+    - if: '$force == "docs" && $CI_COMMIT_REF_NAME == "main"'
+      when:
+        manual
+    - when:
+        never
