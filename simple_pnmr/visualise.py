@@ -1700,20 +1700,20 @@ def plot_raw_deconv_pred(molecule: main.Molecule, experiment: main.Experiment,
             _total += lorentzian(
                 ppm_grid,
                 _width,
-                nucleus.shift.average,
+                nucleus.shift.avg,
                 1
             )
 
-    shifts = {
-        nucleus.shift.average
+    shifts = list({
+        nucleus.shift.avg
         for nucleus in molecule.nuclei
         if nucleus.isotope == experiment.isotope
-    }
-    labels = {
+    })
+    labels = list({
         nucleus.chem_math_label
         for nucleus in molecule.nuclei
         if nucleus.isotope == experiment.isotope
-    }
+    })
 
     shifts, shift_inds = np.unique(shifts, return_index=True)
     labels = [labels[ind] for ind in shift_inds]
