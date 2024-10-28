@@ -472,7 +472,7 @@ def fit_susc_func(uargs):
                     terms=_terms,
                     show=_SHOW_CONV[uargs.spread_plots],
                     save=_SAVE_CONV[uargs.spread_plots],
-                    save_name=os.path.join(config.project_name, f'predicted_shifts_{molecule.susc.temperature:.2f}_K{PFF}'), # noqa
+                    save_name=os.path.join(config.project_name, f'pred_shift_spread{molecule.susc.temperature:.2f}_K{PFF}'), # noqa
                     verbose=True,
                     window_title=f'Spread of predicted shift components at {experiment.temperature:.2f} K', # noqa
                     order='ascending'
@@ -488,7 +488,7 @@ def fit_susc_func(uargs):
                     save=_SAVE_CONV[uargs.contrib_plots],
                     save_name=os.path.join(
                         config.project_name,
-                        f'shift_components_{experiment.temperature:.2f}_K{PFF}' # noqa
+                        f'shift_components_{experiment.temperature:.2f}_K{PFF}'
                     ),
                     verbose=True,
                     window_title=f'Predicted shift components at {experiment.temperature:.2f} K' # noqa
@@ -1044,26 +1044,28 @@ def predict_func(uargs):
         # Calculate average shifts
         molecule.average_shifts()
 
-        # # Plot theoretical shifts
-        # vis.plot_shift_contrib(
-        #     molecule,
-        #     experiment=None,
-        #     save=True,
-        #     show=False,
-        #     save_name=os.path.join(config.project_name, f'predicted_components_{molecule.susc.temperature:.2f}_K{PFF}'), # noqa
-        #     verbose=True,
-        #     window_title=f'Predicted shifts and components at {susc.temperature:.2f} K', # noqa
-        #     order='descending'
-        # )
-
+        # Plot theoretical shifts
+        # Spread
         vis.plot_shift_spread(
             molecule,
             save=True,
             show=False,
             terms=_terms,
-            save_name=os.path.join(config.project_name, f'predicted_shifts_{molecule.susc.temperature:.2f}_K{PFF}'), # noqa
+            save_name=os.path.join(config.project_name, f'pred_shift_spread_{molecule.susc.temperature:.2f}_K{PFF}'), # noqa
             verbose=True,
             window_title=f'Spread of predicted shifts at {susc.temperature:.2f} K', # noqa
+            order='descending'
+        )
+
+        # Bar chart for means
+        vis.plot_shift_contrib(
+            molecule,
+            experiment=None,
+            save=True,
+            show=False,
+            save_name=os.path.join(config.project_name, f'pred_mean_components_{molecule.susc.temperature:.2f}_K{PFF}'), # noqa
+            verbose=True,
+            window_title=f'Predicted mean shifts and components at {susc.temperature:.2f} K', # noqa
             order='descending'
         )
 
@@ -1087,21 +1089,20 @@ def predict_func(uargs):
                 show=False,
                 save_name=os.path.join(
                     config.project_name,
-                    f'predicted_spectrum_{molecule.susc.temperature:.2f}_K{PFF}' # noqa
-                ), # noqa
+                    f'pred_and_exp_spectrum_{molecule.susc.temperature:.2f}_K{PFF}' # noqa
+                )
             )
-        else:
-            vis.plot_pred_spectrum(
-                molecule,
-                isotope=molecule.nuclei[0].isotope,
-                shift_range=shift_range,
-                save=True,
-                show=False,
-                save_name=os.path.join(
-                    config.project_name,
-                    f'predicted_spectrum_{molecule.susc.temperature:.2f}_K{PFF}' # noqa
-                ), # noqa
-            )
+        vis.plot_pred_spectrum(
+            molecule,
+            isotope=molecule.nuclei[0].isotope,
+            shift_range=shift_range,
+            save=True,
+            show=False,
+            save_name=os.path.join(
+                config.project_name,
+                f'pred_spectrum_{molecule.susc.temperature:.2f}_K{PFF}'
+            ),
+        )
 
         plt.show()
 
