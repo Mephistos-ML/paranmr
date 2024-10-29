@@ -841,7 +841,7 @@ def plot_shift_spread(molecule: main.Molecule,
     )
 
     fig.tight_layout()
-    fig.subplots_adjust(right=0.85)
+    fig.subplots_adjust(right=0.825)
 
     if save:
         fig.savefig(save_name, dpi=400)
@@ -1064,7 +1064,7 @@ def plot_shift_contrib(molecule: main.Molecule,
 
     fig.legend(loc=7, frameon=False)
     fig.tight_layout()
-    fig.subplots_adjust(right=0.85)
+    fig.subplots_adjust(right=0.825)
 
     if save:
         fig.savefig(save_name, dpi=400)
@@ -1654,26 +1654,26 @@ def plot_raw_deconv_pred(molecule: main.Molecule, experiment: main.Experiment,
     fig, ax = plt.subplots(
         3,
         1,
-        figsize=(7, 4),
+        figsize=(8, 5.5),
         num=window_title,
         sharex=True
     )
 
     # Experimental spectrum
     ax[0].plot(
-        experiment.spectrum[:, 0],
-        experiment.spectrum[:, 1],
+        experiment.spectrum[::4, 0],
+        experiment.spectrum[::4, 1],
         lw=1,
-        color='k',
-        label='Full spectrum'
+        color='k'
     )
+    ax[0].set_title('Full spectrum', loc='left', fontdict={'size': 'smaller'})
 
     # Deconvoluted spectrum (user fit)
     # Convert linewidths into ppm for this spectrometer
     ppm_grid = np.linspace(
-        np.min(experiment.spectrum[:, 0]),
-        np.max(experiment.spectrum[:, 0]),
-        100000
+        np.min(experiment.spectrum[::4, 0]),
+        np.max(experiment.spectrum[::4, 0]),
+        10000
     )
     _total = np.zeros(np.shape(ppm_grid))
     for signal in experiment.signals:
@@ -1690,7 +1690,12 @@ def plot_raw_deconv_pred(molecule: main.Molecule, experiment: main.Experiment,
             signal.shift,
             signal.area
         )
-    ax[1].plot(ppm_grid, _total, lw=1, color='k', label='Paramagnetic Signals')
+    ax[1].plot(ppm_grid, _total, lw=1, color='k')
+    ax[1].set_title(
+        'Paramagnetic Signals',
+        loc='left',
+        fontdict={'size': 'smaller'}
+    )
 
     # Predicted spectrum
     _total = np.zeros(np.shape(ppm_grid))
@@ -1704,16 +1709,16 @@ def plot_raw_deconv_pred(molecule: main.Molecule, experiment: main.Experiment,
                 1
             )
 
-    shifts = list({
+    shifts = list(
         nucleus.shift.avg
         for nucleus in molecule.nuclei
         if nucleus.isotope == experiment.isotope
-    })
-    labels = list({
+    )
+    labels = list(
         nucleus.chem_math_label
         for nucleus in molecule.nuclei
         if nucleus.isotope == experiment.isotope
-    })
+    )
 
     shifts, shift_inds = np.unique(shifts, return_index=True)
     labels = [labels[ind] for ind in shift_inds]
@@ -1732,15 +1737,16 @@ def plot_raw_deconv_pred(molecule: main.Molecule, experiment: main.Experiment,
     )
 
     for shift, y, label in zip(shifts, closest_y, labels):
-        ax[2].text(shift, y, label)
+        if np.min(ppm_grid) < shift < np.max(ppm_grid):
+            ax[2].text(shift, y, label)
 
     ax[2].plot(
         ppm_grid,
         _total,
         lw=1,
-        color='k',
-        label='Simulation'
+        color='k'
     )
+    ax[2].set_title('Simulation', loc='left', fontdict={'size': 'smaller'})
 
     # Axis configuration
     for axis in ax:
@@ -1753,15 +1759,13 @@ def plot_raw_deconv_pred(molecule: main.Molecule, experiment: main.Experiment,
             ]
         )
         axis.spines[['right', 'top', 'left']].set_visible(False)
-        _leg = axis.legend(frameon=False)
-        for item in _leg.legend_handles:
-            item.set_visible(False)
 
     ax[2].set_xlabel(r'{} $\delta$ (ppm)'.format(
         ut.isotope_format(experiment.isotope))
     )
-
     ax[2].xaxis.set_minor_locator(ticker.AutoMinorLocator())
+
+    fig.tight_layout()
 
     if save:
         plt.savefig(save_name, dpi=500)

@@ -25,6 +25,9 @@ mpl.rcParams["savefig.directory"] = ""
 
 os.environ['OPENBLAS_NUM_THREADS'] = '1'
 
+# Change matplotlib font size to be larger
+mpl.rcParams.update({'font.size': 12})
+
 # Set spawn as default start method - MUCH faster on WSL2 than default fork
 # mp.set_start_method('spawn', force=True)
 
@@ -320,10 +323,7 @@ def fit_susc_func(uargs):
         _terms.pop(_terms.index('d'))
 
     # Run fit for all experiments
-    for ait, (molecule, susc_model, experiment) in enumerate(zip(molecules, susc_models, experiments)): # noqa
-
-        # if not ait:
-        #     guess = susc_model.fit_vars
+    for molecule, susc_model, experiment in zip(molecules, susc_models, experiments): # noqa
 
         # If permuting assignments, then first
         # run all assignment permutations to find best one

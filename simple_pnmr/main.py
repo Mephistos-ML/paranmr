@@ -1949,13 +1949,8 @@ class Molecule():
 
     def average_shifts(self):
         '''
-        Averages total shifts by chem_label
-
-        Parameters
-        ----------
-        chem_labels: list[str]
-            List of chemical labels specifying nuclei for which averaging
-            will take place
+        Averages total shifts by all Nuclei according to chem_label.\n
+        Average values are then stored in Nucleus.avg_shift attribute
         '''
 
         cl_to_shifts = {nuc.chem_label for nuc in self.nuclei}
