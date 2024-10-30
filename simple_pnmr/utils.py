@@ -313,14 +313,13 @@ def cprint(string: str, color: str):
     ----------
     string: str
         String to print
-    color: str {'red', 'green', 'yellow', 'blue', 'magenta', 'cyan', 'white',
-                'black_yellowbg', 'black_bluebg'}
+    color: str {'red', 'green', 'yellow', 'blue', 'magenta', 'cyan', 'white', 'black_yellowbg', 'black_bluebg'}
         String name of color
 
     Returns
     -------
     None
-    '''
+    ''' # noqa
 
     return print(cstr(string, color))
 

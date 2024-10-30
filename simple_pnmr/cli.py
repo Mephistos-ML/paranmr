@@ -255,6 +255,9 @@ def fit_susc_func(uargs):
     if len(config.hyperfine_average):
         base_molecule.average_hyperfine(config.hyperfine_average)
 
+    if len(config.diamagnetic_average):
+        base_molecule.average_shifts
+
     experiments = main.Experiment.from_file(
         config.experiment_files
     )
@@ -431,10 +434,6 @@ def fit_susc_func(uargs):
         # Calculate shifts using new susceptibility tensor
         molecule.calculate_shifts()
         molecule.average_shifts()
-
-        # Plot shifts
-        if it > 0 and uargs.show_single:
-            continue
 
         visible = ['show', 'on']
 
@@ -1013,7 +1012,10 @@ def predict_func(uargs):
         experiments = main.Experiment.from_file(config.experiment_files)
         for susc, exp in zip(suscs, experiments):
             if susc.temperature != exp.temperature:
-                ut.red_exit('Mismatch in susceptibility and Experimental temperatures') # noqa
+                ut.cprint(
+                    f'Warning: Mismatch in Susceptibility ({susc.temperature:.2f} K) and Experimental ({exp.temperature:.2f} K) temperatures',
+                    'black_yellowbg'
+                ) # noqa
     else:
         experiments = [None] * len(suscs)
 
@@ -1325,15 +1327,6 @@ def read_args(arg_list=None):
             ' - \'save\' saves the plots\n'
             ' - \'off\' neither shows nor saves\n'
             'Default: on'
-        )
-    )
-
-    fit_susc.add_argument(
-        '--show_single',
-        action='store_true',
-        default=False,
-        help=(
-            'Only show the first temperature set\'s data'
         )
     )
 
