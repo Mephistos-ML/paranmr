@@ -11,6 +11,7 @@ import xyz_py as xyzp
 import copy
 import sys
 from pathos import multiprocessing as mp
+import re
 
 from . import main
 from . import readers as rdrs
@@ -1013,9 +1014,14 @@ def predict_func(uargs):
         for susc, exp in zip(suscs, experiments):
             if susc.temperature != exp.temperature:
                 ut.cprint(
-                    f'Warning: Mismatch in Susceptibility ({susc.temperature:.2f} K) and Experimental ({exp.temperature:.2f} K) temperatures',
+                    f'Warning: Mismatch in Susceptibility ({susc.temperature:.2f} K) and Experimental ({exp.temperature:.2f} K) temperatures', # noqa
                     'black_yellowbg'
-                ) # noqa
+                )
+            if re.sub('[0-9]', '', exp.isotope) not in config.nuclei_include:
+                ut.cprint(
+                    f'Warning: Experimental isotope ({exp.isotope}) not requested in input file ({config.nuclei_include})', # noqa
+                    'black_yellowbg'
+                )
     else:
         experiments = [None] * len(suscs)
 
