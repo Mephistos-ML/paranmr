@@ -1193,7 +1193,7 @@ def read_args(arg_list=None):
 
     epilog = (
         'To display options for a specific program, use\n\n'
-        f'{ut.cstr('simple_pnmr SUBPROGRAM -h', 'green')}'
+        f'      {ut.cstr('simple_pnmr SUBPROGRAM -h', 'green')}'
     )
 
     parser = argparse.ArgumentParser(
