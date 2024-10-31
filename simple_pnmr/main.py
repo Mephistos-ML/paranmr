@@ -1317,7 +1317,7 @@ class Shift():
 
 
 class Nucleus():
-    '''
+    r'''
     Contains all information on a given nucleus of a molecule
 
     Parameters
@@ -1437,11 +1437,14 @@ class Nucleus():
 
         incoord = np.asarray(incoord)
 
-        if self.incoord.size[1] != 3:
-            self.incoord = self.incoord.T
-        if self.incoord.size[1] != 3:
+        if len(incoord.shape) > 1:
             raise ValueError(
-                ut.cstr('Nuclear coordinates must be (1x3) array')
+                ut.cstr('Nucleus coordinates must be (1x3) array', 'red')
+            )
+
+        elif incoord.shape[0] != 3:
+            raise ValueError(
+                ut.cstr('Nucleus coordinates must be (1x3) array', 'red')
             )
         self._coord = incoord
         return
