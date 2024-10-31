@@ -98,7 +98,7 @@ This file contains the additional labels which allow the user to refer to the at
 chemically meaningful labels e.g. ``Me1`` rather than the atomic labels ``H1``, ``H2``, ``H3``. Chemical labels
 can be repeated and serve to group atoms together for plotting and averaging purposes.
 
-Optionally, the user may also specify `mathmode <https://matplotlib.org/stable/users/explain/text/mathtext.html>`_ labels to be used when plotting data in ``matplotlib`` - these must
+Optionally, the user may also specify `mathtext <https://matplotlib.org/stable/users/explain/text/mathtext.html>`_ labels to be used when plotting data in ``matplotlib`` - these must
 be wrapped in ``$$``.
 
 This must be a ``.csv`` file containing a series of columns, each denoting a specific property (see below).
@@ -110,7 +110,7 @@ This must be a ``.csv`` file containing a series of columns, each denoting a spe
 +-------------------+----------------------+------------------------------------------------------------------------------+--------------------------+
 | Chemical label    | chem_label           | Chemical label of each NMR active nucleus                                    | |:white_check_mark:|     |
 +-------------------+----------------------+------------------------------------------------------------------------------+--------------------------+
-| Math label        | chem_math_label      | Mathmode label of each NMR active nucleus e.g. ``$\mathregular{Me}_1$``      | |:x:|                    |
+| Math label        | chem_math_label      | Mathtext label of each NMR active nucleus e.g. ``$\mathregular{Me}_1$``      | |:x:|                    |
 +-------------------+----------------------+------------------------------------------------------------------------------+--------------------------+
 
 At least of each property must be present in the file (in any order), and a comma delimited header line
