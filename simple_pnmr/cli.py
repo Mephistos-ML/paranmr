@@ -256,9 +256,6 @@ def fit_susc_func(uargs):
     if len(config.hyperfine_average):
         base_molecule.average_hyperfine(config.hyperfine_average)
 
-    if len(config.diamagnetic_average):
-        base_molecule.average_shifts
-
     experiments = main.Experiment.from_file(
         config.experiment_files
     )
