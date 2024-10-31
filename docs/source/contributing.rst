@@ -30,7 +30,7 @@ Documentation
 Our documentation is written in `Sphinx <https://www.sphinx-doc.org/en/master/>`_ and uses
 the `Read the Docs` theme. The source-code for the docs is available at ``simple_pnmr/docs/source``.
 
-To build the documentation, navigate to ``simple_pnmr/docs`` and install the python dependencies with
+To build the documentation **locally**, navigate to ``simple_pnmr/docs`` and install the python dependencies with
 
 .. code-block:: bash
 
@@ -48,4 +48,6 @@ The compiled html pages will be available at ``simple_pnmr/docs/build/html``.
 
 Please ensure the documentation builds successfully prior to committing/merging.
 
-You do not need to commit compiled pages to the repository.
+Do not commit compiled pages to the repository.
+
+To publish the documentation online, create a pipeline with the keyword ``force`` and the value ``docs``.
