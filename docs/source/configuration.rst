@@ -92,4 +92,4 @@ Note that when specifying a semicolon delimiter on Linux and Mac, you must escap
     export pnmr_csvdelimiter=,
 
 Windows Users can use the system environment variable window, or the commands in the :ref:`env_var` section.
-Note that unlike Linux/Mac no escape character is required for the semi-colon - it is just ;.
+Note that unlike for Linux/Mac no escape character is required for the semi-colon - it is just ;.

@@ -1,7 +1,8 @@
 Authors
 =======
 
-The ``simple_pnmr`` package is maintained by `Dr. Jon Kragskow <https://www.kragskow.dev/>`_.
+The ``simple_pnmr`` package was originally written by `Dr. Jon Kragskow <https://www.kragskow.dev/>`_ as a member of the
+Suturina group.
 
 Citation
 --------

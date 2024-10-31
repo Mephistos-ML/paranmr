@@ -1,7 +1,7 @@
 Contributing
 ============
 
-We welcome contributions to ``simple_pnmr``, please create an issue on GitLab if you wish to add functionality.
+We welcome contributions to ``simple_pnmr``, please create an `Issue <https://gitlab.com/suturina-group/simple_pnmr/-/issues>`_  on GitLab (with a template) if you wish to add functionality.
 
 When contributing, you **must** follow the following rules which help to standardise development.
 
