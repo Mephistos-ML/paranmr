@@ -30,6 +30,7 @@ os.environ['OPENBLAS_NUM_THREADS'] = '1'
 mpl.rcParams.update({'font.size': 12})
 
 # Set spawn as default start method - MUCH faster on WSL2 than default fork
+# if not using pathos multiprocessing instead!
 # mp.set_start_method('spawn', force=True)
 
 # Print r2 to terminal for each assignment
@@ -1195,9 +1196,10 @@ def read_args(arg_list=None):
 
     parser = argparse.ArgumentParser(
         description=description,
-        epilog=epilog,
-        formatter_class=argparse.RawDescriptionHelpFormatter
+        epilog=epilog
     )
+
+    parser._positionals.title = 'Subprograms'
 
     subparsers = parser.add_subparsers(dest='prog')
 
@@ -1236,7 +1238,7 @@ def read_args(arg_list=None):
         'input_file',
         type=str,
         help=(
-            'Input file for fit_susc'
+            'Input file for fit_susc -- see documentation for format'
         )
     )
 
@@ -1265,7 +1267,7 @@ def read_args(arg_list=None):
         default='A3',
         help=(
             'Controls susceptibility units of plots \n'
-            '(wrap with "")'
+            '(wrap with "")\n'
             'Default: A3'
         )
     )
@@ -1552,7 +1554,7 @@ def read_args(arg_list=None):
         'input_file',
         type=str,
         help=(
-            'Input file for predict'
+            'Input file for predict - see documentation for format'
         )
     )
 
@@ -1565,7 +1567,7 @@ def read_args(arg_list=None):
         default='A3',
         help=(
             'Controls susceptibility units of plots and output files \n'
-            '(wrap with "")'
+            '(wrap with "")\n'
             'Default: A3'
         )
     )
