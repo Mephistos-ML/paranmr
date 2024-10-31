@@ -251,8 +251,7 @@ def fit_susc_func(uargs):
             config.diamagnetic_ref_method
         )
 
-    # Rotationally average hyperfines and diamagnetic shifts for
-    # nuclei with equivalent chemlabels
+    # Rotationally average hyperfines
     if len(config.hyperfine_average):
         base_molecule.average_hyperfine(config.hyperfine_average)
 
