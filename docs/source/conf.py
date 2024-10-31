@@ -21,12 +21,6 @@ sys.path.insert(0, os.path.abspath('../../'))
 project = 'simple_pnmr'
 copyright = '{:d}'.format(datetime.date.today().year)
 
-# The full version, including alpha/beta/rc tags
-# DO NOT EDIT THIS NUMBER!
-# IT IS AUTOMATICALLY CHANGED BY python-semantic-release
-release = "0.0.1"
-version = release
-
 # -- General configuration ---------------------------------------------------
 
 # Add any Sphinx extension module names here, as strings. They can be
@@ -61,9 +55,6 @@ exclude_patterns = []
 # a list of builtin themes.
 #
 html_theme = 'sphinx_rtd_theme'
-html_theme_options = {
-    'display_version': True
-}
 # html_logo = '../../images/simple_pnmr.png'
 # html_favicon = '../../images/simple_pnmr.ico'
 
