@@ -4,7 +4,7 @@ This module contains utility objects and methods
 """
 
 import numpy as np
-import numpy.typing as npt
+from numpy.typing import NDArray
 import scipy.constants as consts
 import sys
 import re
@@ -122,8 +122,8 @@ OTHER_ISOTOPES = [
 SUPPORTED_ISOTOPES = list(DEFAULT_ISOTOPES.values()) + OTHER_ISOTOPES
 
 
-def a_tensor_mhz_to_angstrom(a_tensors: dict[str: np.ndarray]) -> dict[
-        str: np.ndarray]:
+def a_tensor_mhz_to_angstrom(a_tensors: dict[str: NDArray]) -> dict[
+        str: NDArray]:
     """
     Converts A tensor from MHz to ppm angstrom^-3 using gyromagnetic ratio of
     given nucleus
@@ -152,23 +152,25 @@ def a_tensor_mhz_to_angstrom(a_tensors: dict[str: np.ndarray]) -> dict[
     return a_tensors_ang
 
 
-def _mhz_to_angstrom(val_mhz: npt.NDArray | float, nuclear_gamma: float):
+def _mhz_to_angstrom(val_mhz: NDArray | float, nuclear_gamma: float) -> NDArray | float: # noqa
     """
     Converts A tensor in MHz to ppm Angstrom^-3 using specified nuclear
     gyromagnetic ratio
 
     Parameters
     ----------
-    val_mhz: np.ndarray[float] | float
+    val_mhz: array_like | float
         3x3 array containing A tensor, or isotropic A value in MHz
     nuclear_gamm: float
         Nuclear gyromagnetic ratio for current nucleus in MHz/T
 
     Returns
-    np.ndarray[float] | flaot
+    -------
+    ndarray of floats | float
         3x3 array containing A tensor, or isotropic A value in ppm Angstrom^-3
-
     """
+
+    val_mhz = np.asarray(val_mhz)
 
     # Conversion factor for MHz to ppm Angstrom^-3
     val = 1E-18 / (H * EGAMMA * nuclear_gamma * 1E12 * MU0)
@@ -178,12 +180,23 @@ def _mhz_to_angstrom(val_mhz: npt.NDArray | float, nuclear_gamma: float):
     return val_ang
 
 
-def flatten(biglist):
+def flatten(biglist: list) -> list:
+    '''
+    Recursively flattens list
+
+    Parameters
+    ----------
+    biglist: list[list]
+
+    Returns
+    -------
+    list
+        Flattened list
+    '''
     return [item for sublist in biglist for item in sublist]
 
 
-def find_mean_values(values: list[float], thresh: float = 0.1) -> tuple[
-        list[float], list[int]]:
+def find_mean_values(values: list[float], thresh: float = 0.1) -> list[int]:
     '''
     Finds mean value from a list of values by locating values for which
     step size is >= `thresh`
@@ -212,9 +225,19 @@ def find_mean_values(values: list[float], thresh: float = 0.1) -> tuple[
     return split_indices.tolist()
 
 
-def comp2ind(comp_str) -> list[int]:
+def comp2ind(comp_str: str) -> list[int]:
     '''
     Convert component string to element indices of 3x3 tensor
+
+    Parameters
+    ----------
+    comp_str: str
+        Component string e.g. xy
+
+    Returns
+    -------
+    list[int]
+        row and column index of component
     '''
 
     _c2i = {
@@ -240,15 +263,14 @@ def cstr(string: str, color: str):
     ----------
     string: str
         String to print
-    color: str {'red', 'green', 'yellow', 'blue', 'magenta', 'cyan', 'white',
-                'black_yellowbg', 'black_bluebg'}
+    color: str {'red', 'green', 'yellow', 'blue', 'magenta', 'cyan', 'white', 'black_yellowbg', 'black_bluebg'}
         String name of color
 
     Returns
     -------
     str
         Input string with colours
-    '''
+    ''' # noqa
 
     ccodes = {
         'red': '\u001b[31m',
@@ -324,9 +346,18 @@ def cprint(string: str, color: str):
     return print(cstr(string, color))
 
 
-def red_exit(string: str):
+def red_exit(string: str) -> None:
+    '''
+    Prints a red string and then exits with return code of -1
+
+    Parameters
+    ----------
+    string: str
+        String to print
+    '''
     cprint(string, 'red')
     sys.exit(-1)
+    return
 
 
 def read_exp_metadata(file_name: str) -> tuple[float, float, str]:
@@ -386,8 +417,19 @@ def find_index_of_nearest(array, value):
 
 def isotope_format(isotope_string: str) -> str:
     '''
-    Converts isotope string into mathmode
-    '''
+    Converts isotope string into Mathtext, compatible with matplotlib
+
+    Parameters
+    ----------
+    isotope_string: str
+        e.g. 1H, 13C
+
+    Returns
+    -------
+    str
+        Mathtext formatted string with enclosing $$\n
+        e.g. $^\mathregular{13}\mathregular{C}$
+    ''' # noqa
 
     # Split at number letter boundary
     for it, char in enumerate(isotope_string):
