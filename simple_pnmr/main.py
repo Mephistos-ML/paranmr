@@ -1313,7 +1313,7 @@ class Nucleus():
         # Coordinates of nucleus
         self.coord = coord
 
-        # Chemical labels, normal and mathmode
+        # Chemical labels, normal and mathtext
         if chem_label is None:
             self._chem_label = None
         else:
