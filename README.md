@@ -1,15 +1,16 @@
 # simple_pnmr
 
+## Documentation and Installation
 
-Installation is currently via `pip` editable install.
+To get started, head to the online documentation for `simple_pnmr` [here](https://suturina-group.gitlab.io/simple_pnmr/).
+
+## Developers
+
+Install in editable mode by running
 
 ```
-cd simple_pnmr
 pip install -e .
 ```
 
-Then run the command line interface with
+in the repository HEAD.
 
-```
-pnmr -h
-```
