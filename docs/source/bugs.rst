@@ -5,7 +5,7 @@ If you find a bug, please first update ``simple_pnmr`` with ``pip install --upgr
 
 If the bug persists, then please check the :ref:`faq` page before reporting any bugs!
 
-To report bugs with ``simple_pnmr`` please raise a `GitLab Issue <https://gitlab.com/suturina-group/simple_pnmr/-/issues`_ **instead
+To report bugs with ``simple_pnmr`` please raise a `GitLab Issue <https://gitlab.com/suturina-group/simple_pnmr/-/issues>`_ **instead
 of emailing individual developers**. We appreciate users reporting bugs, as this makes ``simple_pnmr``
 better for everyone.
 
