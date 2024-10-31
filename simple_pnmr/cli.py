@@ -1191,10 +1191,11 @@ def read_args(arg_list=None):
     A package for fitting susceptibility tensors from paramagnetic NMR data
     '''
 
-    epilog = '''
-    To display options for a specific program, use simple_pnmr \
-    PROGRAMFILETYPE -h
-    '''
+    epilog = (
+        'To display options for a specific program, use\n\n'
+        f'{ut.cstr('simple_pnmr SUBPROGRAM -h', 'green')}'
+    )
+
     parser = argparse.ArgumentParser(
         description=description,
         epilog=epilog,
