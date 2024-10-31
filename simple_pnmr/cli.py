@@ -469,7 +469,7 @@ def fit_susc_func(uargs):
                     terms=_terms,
                     show=_SHOW_CONV[uargs.spread_plots],
                     save=_SAVE_CONV[uargs.spread_plots],
-                    save_name=os.path.join(config.project_name, f'pred_shift_spread_{molecule.susc.temperature:.2f}_K{PFF}'), # noqa
+                    save_name=os.path.join(config.project_name, f'shift_spread_{molecule.susc.temperature:.2f}_K{PFF}'), # noqa
                     verbose=True,
                     window_title=f'Spread of predicted shift components at {experiment.temperature:.2f} K', # noqa
                     order='ascending'
@@ -485,7 +485,7 @@ def fit_susc_func(uargs):
                     save=_SAVE_CONV[uargs.contrib_plots],
                     save_name=os.path.join(
                         config.project_name,
-                        f'shift_components_{experiment.temperature:.2f}_K{PFF}'
+                        f'mean_components_{experiment.temperature:.2f}_K{PFF}'
                     ),
                     verbose=True,
                     window_title=f'Predicted shift components at {experiment.temperature:.2f} K' # noqa
