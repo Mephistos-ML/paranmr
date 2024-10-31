@@ -2,7 +2,7 @@ Authors
 =======
 
 The ``simple_pnmr`` package was originally written by `Dr. Jon Kragskow <https://www.kragskow.dev/>`_ as a member of the
-Suturina group.
+Suturina group at the University of Bath.
 
 Citation
 --------
