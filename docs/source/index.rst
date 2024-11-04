@@ -22,7 +22,7 @@ Home
 
 ``simple_pnmr`` is a python package for working paramagnetic nuclear magnetic resonance (pNMR) data.
 
-These pages contain the documentation for the ``simple_pnmr`` python package, and its associated command line interface and executable.
+These pages contain the documentation for the ``simple_pnmr`` python package, and its associated command line interface.
 
 New users
 ^^^^^^^^^
