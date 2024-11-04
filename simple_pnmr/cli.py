@@ -22,7 +22,7 @@ from . import visualise as vis
 from . import outputs
 
 # Change figure save dialog to use current working directory
-mpl.rcParams["savefig.directory"] = ""
+mpl.rcParams['savefig.directory'] = ''
 
 os.environ['OPENBLAS_NUM_THREADS'] = '1'
 
@@ -30,7 +30,7 @@ os.environ['OPENBLAS_NUM_THREADS'] = '1'
 mpl.rcParams.update({'font.size': 12})
 
 # Set spawn as default start method - MUCH faster on WSL2 than default fork
-# if not using pathos multiprocessing instead!
+# if not using pathos multiprocessing instead
 # mp.set_start_method('spawn', force=True)
 
 # Print r2 to terminal for each assignment
