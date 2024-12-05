@@ -7,8 +7,9 @@ import numpy as np
 import numpy.typing as npt
 import scipy.constants as consts
 import sys
-import re
+from extto.core import find_lines
 import math
+import re
 
 from . import string_tools as st
 
@@ -354,25 +355,23 @@ def read_exp_metadata(file_name: str) -> tuple[float, float, str]:
 
     temperature, larmor, isotope = None, None, None
 
-    with open(file_name, 'r') as f:
-        for line in f:
-            line = line.replace('=', ' ')
-            line = line.replace(',', '')
-            line = line.lower().lstrip().rstrip()
-            line = re.sub(r'\s+', ' ', line)
-            line = line.replace('# ', '#')
-            if 'temperature' in line and '#' in line:
-                temperature = float(line.split()[1])
-            elif 'larmor' in line and '#' in line:
-                larmor = float(line.split()[1])
-            elif 'isotope' in line and '#' in line:
-                isotope = line.split()[1]
-            elif '#' in line:
-                continue
-            elif None in [temperature, larmor, isotope]:
-                raise ValueError(
-                    f'Cannot find temperature, larmor, or isotope metadata in {file_name}]' # noqa
-                )
+    temperature = float(find_lines(
+        file_name,
+        r'# *temperature (\d*\.*\d*)',
+        re.IGNORECASE
+    )[0])
+
+    larmor = float(find_lines(
+        file_name,
+        r'# *larmor (\d*\.*\d*)',
+        re.IGNORECASE
+    )[0])
+
+    isotope = find_lines(
+        file_name,
+        r'# *isotope (\d{0,3}[A-Za-z]{0,2})',
+        re.IGNORECASE
+    )[0]
 
     return temperature, larmor, isotope
 

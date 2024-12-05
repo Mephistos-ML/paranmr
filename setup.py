@@ -31,14 +31,15 @@ setuptools.setup(
         'pathos',
         'pyyaml',
         'pyyaml-include',
-        'adjustText'
+        'adjustText',
+        'extto >= 0.3.0'
     ],
     entry_points={
         'console_scripts': [
             'pnmr = simple_pnmr.cli:interface',
             'plot_A_funcs = simple_pnmr.scripts.batch_hf_plot:main',
             'plot_chi_funcs = simple_pnmr.scripts.batch_susc_plot:main',
-            'xyz_to_chemlabel = simple_pnmr.scripts.chemcraft_xyz_to_chemlabels:main' # noqa
+            'xyz_to_chemlabel = simple_pnmr.scripts.chemcraft_xyz_to_chemlabels:main' # noqa,
         ]
     }
 )
