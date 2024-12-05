@@ -1276,15 +1276,7 @@ def read_args(arg_list=None):
         default='A3',
         help=(
             'Controls susceptibility units of plots \n'
-<<<<<<< Updated upstream
             '(wrap with "")'
-=======
-            '(wrap with "")\n'
-            'Options:\n'
-            ' - \'emu mol-1\' shows and saves the plots\n'
-            ' - \'cm3 mol-1\' shows the plots\n'
-            ' - \'A3\' saves the plots\n'
->>>>>>> Stashed changes
             'Default: A3'
         )
     )
