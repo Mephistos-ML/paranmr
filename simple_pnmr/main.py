@@ -154,6 +154,43 @@ class Experiment():
         self._signals = value
         return
 
+    @property
+    def temperature(self) -> float:
+        return self._temperature
+
+    @temperature.setter
+    def temperature(self, value: float):
+        try:
+            value = float(value)
+        except TypeError:
+            raise TypeError('temperature must be floatable')
+        self._temperature = value
+        return
+
+    @property
+    def larmor(self) -> float:
+        return self._larmor
+
+    @larmor.setter
+    def larmor(self, value: float):
+        try:
+            value = float(value)
+        except TypeError:
+            raise TypeError('larmor must be floatable')
+        self._larmor = value
+        return
+
+    @property
+    def isotope(self) -> str:
+        return self._isotope
+
+    @isotope.setter
+    def isotope(self, value: str):
+        if not isinstance(value, str):
+            raise ValueError('isotope must be str')
+        self._isotope = value
+        return
+
     def __str__(self):
         out = f'Temperature {self.temperature:f} K\n'
         out += 'assignment, shift, width, area\n'
@@ -230,6 +267,7 @@ class Experiment():
             final.append(_data)
 
         data = pd.concat(final)
+        data.reset_index(inplace=True)
 
         # Sort by temperature
         data = data.sort_values('temperature')
@@ -253,6 +291,7 @@ class Experiment():
 
         for _e in _exp:
             _e.sort_values('shift')
+            _e.reset_index(inplace=True)
 
         # and create experiments
         experiments = [

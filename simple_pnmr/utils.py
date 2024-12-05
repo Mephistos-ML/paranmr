@@ -357,6 +357,7 @@ def read_exp_metadata(file_name: str) -> tuple[float, float, str]:
     with open(file_name, 'r') as f:
         for line in f:
             line = line.replace('=', ' ')
+            line = line.replace(',', '')
             line = line.lower().lstrip().rstrip()
             line = re.sub(r'\s+', ' ', line)
             line = line.replace('# ', '#')

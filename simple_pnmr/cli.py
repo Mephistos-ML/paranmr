@@ -260,6 +260,14 @@ def fit_susc_func(uargs):
         config.experiment_files
     )
 
+    # Check the number of experiments is consistent across the files
+    # and issue warning if not
+    if len(np.unique([len(exp.signals) for exp in experiments])) > 1:
+        ut.cprint(
+            'Warning: some experiments have more signals than others!',
+            'black_yellowbg'
+        )
+
     # Create a molecule object to accompany each experiment object
     molecules = [
         copy.deepcopy(base_molecule)
@@ -1227,8 +1235,11 @@ def read_args(arg_list=None):
 
     fit_susc = subparsers.add_parser(
         'fit_susc',
-        description='Fit susceptibility tensor using DFT hyperfines and \
-        experimental peaks'
+        description=(
+            'Fit susceptibility tensor using DFT hyperfines and'
+            ' experimental peaks'
+        ),
+        formatter_class=argparse.RawTextHelpFormatter
     )
     fit_susc.set_defaults(func=fit_susc_func)
 
@@ -1265,7 +1276,15 @@ def read_args(arg_list=None):
         default='A3',
         help=(
             'Controls susceptibility units of plots \n'
+<<<<<<< Updated upstream
             '(wrap with "")'
+=======
+            '(wrap with "")\n'
+            'Options:\n'
+            ' - \'emu mol-1\' shows and saves the plots\n'
+            ' - \'cm3 mol-1\' shows the plots\n'
+            ' - \'A3\' saves the plots\n'
+>>>>>>> Stashed changes
             'Default: A3'
         )
     )
@@ -1275,14 +1294,14 @@ def read_args(arg_list=None):
         choices=['on', 'show', 'save', 'off'],
         metavar='<str>',
         type=str,
-        default='show',
+        default='save',
         help=(
             'Plot Experimental and Calculated Chemical shifts against each other \n' # noqa
             ' - \'on\' shows and saves the plots\n'
             ' - \'show\' shows the plots\n'
             ' - \'save\' saves the plots\n'
             ' - \'off\' neither shows nor saves\n'
-            'Default: show'
+            'Default: save'
         )
     )
 
@@ -1291,14 +1310,14 @@ def read_args(arg_list=None):
         choices=['on', 'show', 'save', 'off'],
         metavar='<str>',
         type=str,
-        default='show',
+        default='save',
         help=(
             'Plot spread of contributions to calculated shifts \n'
             ' - \'on\' shows and saves the plots\n'
             ' - \'show\' shows the plots\n'
             ' - \'save\' saves the plots\n'
             ' - \'off\' neither shows nor saves\n'
-            'Default: show'
+            'Default: save'
         )
     )
 
@@ -1309,7 +1328,7 @@ def read_args(arg_list=None):
         type=str,
         default='off',
         help=(
-            'Plot contributions to calculated shifts \n'
+            'Plot mean of contributions to mean calculated shifts \n'
             ' - \'on\' shows and saves the plots\n'
             ' - \'show\' shows the plots\n'
             ' - \'save\' saves the plots\n'
@@ -1323,14 +1342,14 @@ def read_args(arg_list=None):
         choices=['on', 'show', 'save', 'off'],
         metavar='<str>',
         type=str,
-        default='on',
+        default='save',
         help=(
             'Plot Isotropic, Axial, and Rhombic susceptibility as a function of temperature \n' # noqa
             ' - \'on\' shows and saves the plots\n'
             ' - \'show\' shows the plots\n'
             ' - \'save\' saves the plots\n'
             ' - \'off\' neither shows nor saves\n'
-            'Default: on'
+            'Default: save'
         )
     )
 
