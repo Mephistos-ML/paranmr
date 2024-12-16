@@ -888,6 +888,15 @@ def read_gaussian_log_a_tensors(file_name: str) -> tuple[
                     a_dip[it, :, :] = vecs @ np.diag(vals) @ la.inv(vecs)
                     line = next(f)
 
+    if track != 2:
+        ut.cprint(
+            (
+                'Warning: Cannot find Dipolar Hyperfine Tensor in log file\n'
+                ' Check prop=epr is in routecard!'
+            ),
+            'black_yellowbg'
+        )
+
     return a_iso, a_dip
 
 
