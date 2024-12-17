@@ -33,6 +33,8 @@ def load_chemcraft_xyz(file_name: str):
 
     formatting = xyzp.detect_xyz_formatting(file_name)
 
+    print(formatting)
+
     # Read labels and coordinates
     try:
         _labels, coords = xyzp.load_xyz(
@@ -53,11 +55,13 @@ def load_chemcraft_xyz(file_name: str):
     # Read chemical labels
     with open(file_name, 'r') as f:
         for it, line in enumerate(f):
-            if it < 2:
+            if it < 2 and not formatting['missing_headers']:
                 continue
             spl = line.split()
             if len(spl) > 4:
                 chem_dict[indexed_labels[it]] = spl[4].replace('"', '')
+
+    print(chem_dict)
 
     return chem_dict, indexed_labels, coords
 
