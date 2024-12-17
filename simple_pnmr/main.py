@@ -1637,7 +1637,7 @@ class Molecule():
                 tmp = [
                     la
                     for la in labels
-                    if _e in xyzp.remove_label_indices(la)
+                    if _e == xyzp.remove_label_indices(la)
                 ]
                 elements_to_include += tmp
             else:
@@ -1751,7 +1751,7 @@ class Molecule():
                 tmp = [
                     la
                     for la in labels
-                    if _e in xyzp.remove_label_indices(la)
+                    if _e == xyzp.remove_label_indices(la)
                 ]
                 elements_to_include += tmp
             else:
