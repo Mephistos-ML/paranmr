@@ -7,6 +7,7 @@ import scipy.constants as constants
 import numpy as np
 from numpy.typing import NDArray, ArrayLike
 import xyz_py.atomic as atomic
+import copy
 
 from . import utils as ut
 from . import main
@@ -533,6 +534,9 @@ def plot_pred_spectrum(molecule: main.Molecule,
                 1
             )
 
+    # Normalise spectrum
+    _total /= np.max(_total)
+
     # Make plot
     fig, ax = plt.subplots(1, 1, num=window_title, figsize=(8, 5.5))
 
@@ -566,12 +570,6 @@ def plot_pred_spectrum(molecule: main.Molecule,
         color='k'
     )
 
-    # Adjust labels to avoid overlap
-    label_offset = 0.02 * (np.max(shift_range) - np.min(shift_range))
-
-    # Peak label y position (20% above max peak)
-    label_y_position = 1.2 * np.max(_total)
-
     # Horizontal line 10% above the highest peak
     hline_y = 1.1 * np.max(_total)
     ax.hlines(
@@ -584,31 +582,54 @@ def plot_pred_spectrum(molecule: main.Molecule,
         alpha=0.7
     )
 
-    adjusted_positions = {}
-    for i, shift in enumerate(sorted_shifts):
-        adjusted_x = shift
+    # Minimum acceptable distance between labels
+    label_mindist = 0.02 * (np.max(shift_range) - np.min(shift_range))
 
-        # Check for overlap with all previous labels
-        for prev_shift in adjusted_positions.values():
-            if abs(adjusted_x - prev_shift) < label_offset:
-                adjusted_x = prev_shift + label_offset
+    # Iteratively shift all label x positions so that they will not touch
+    # (i.e. are not within label_mindist)
 
-        adjusted_positions[shift] = adjusted_x
+    # Calculate initial distance matrix
+    adj_label_xvals = copy.copy(sorted_shifts)
+    distance = np.subtract.outer(adj_label_xvals, adj_label_xvals)
+    np.fill_diagonal(distance, np.inf)
+
+    # Shift points until distance matrix has no values less than minimum dist
+    while len(np.where(abs(distance) < label_mindist)[0]):
+        [xlocs, ylocs] = np.where(abs(distance) < label_mindist)
+        for x, y in zip(xlocs, ylocs):
+            if y > x:
+                adj_label_xvals[x] -= label_mindist / 2
+                adj_label_xvals[y] += label_mindist / 2
+
+        distance = np.subtract.outer(adj_label_xvals, adj_label_xvals)
+        np.fill_diagonal(distance, np.inf)
+
+    adjusted_labels = {
+        lab: val
+        for lab, val in zip(sorted_labels, adj_label_xvals)
+    }
+
+    # Peak label y position (20% above max peak)
+    label_y = 1.2 * np.max(_total)
+
+    # Add label and dashed lines
+    for shift, (label, label_x) in zip(sorted_shifts, adjusted_labels.items()):
 
         # Add label to plot
         ax.text(
-            adjusted_x,
-            label_y_position,
-            sorted_labels[i],
+            label_x,
+            label_y,
+            label,
             rotation='vertical',
-            ha='center'
+            ha='center',
+            va='bottom'
         )
 
         # Draw segmented line from peak to label via horizontal line
         peak_index = ut.find_index_of_nearest(ppm_grid, shift)
         ax.plot(
-            [ppm_grid[peak_index], ppm_grid[peak_index], adjusted_x],
-            [_total[peak_index], hline_y, label_y_position],
+            [ppm_grid[peak_index], ppm_grid[peak_index], label_x],
+            [_total[peak_index], hline_y, label_y],
             linestyle='--',
             color='black',
             linewidth=0.8,
