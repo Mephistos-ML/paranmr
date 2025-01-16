@@ -567,7 +567,6 @@ def plot_pred_spectrum(molecule: main.Molecule,
     )
 
     # Adjust labels to avoid overlap
-    texts = []
     label_offset = 0.02 * (np.max(shift_range) - np.min(shift_range))
 
     # Peak label y position (20% above max peak)
@@ -597,25 +596,19 @@ def plot_pred_spectrum(molecule: main.Molecule,
         adjusted_positions[shift] = adjusted_x
 
         # Add label to plot
-        texts.append(
-            ax.text(
-                adjusted_x,
-                label_y_position,
-                sorted_labels[i],
-                rotation='vertical',
-                ha='center'
-            )
+        ax.text(
+            adjusted_x,
+            label_y_position,
+            sorted_labels[i],
+            rotation='vertical',
+            ha='center'
         )
 
-        # Draw segmented line from peak to label
+        # Draw segmented line from peak to label via horizontal line
         peak_index = ut.find_index_of_nearest(ppm_grid, shift)
-        peak_x = ppm_grid[peak_index]
-        peak_y = _total[peak_index]
-
-        # Diagonal part of the line from horizontal line to label
         ax.plot(
-            [peak_x, peak_x, adjusted_x],
-            [peak_y, hline_y, label_y_position],
+            [ppm_grid[peak_index], ppm_grid[peak_index], adjusted_x],
+            [_total[peak_index], hline_y, label_y_position],
             linestyle='--',
             color='black',
             linewidth=0.8,
