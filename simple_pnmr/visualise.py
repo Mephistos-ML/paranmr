@@ -583,7 +583,7 @@ def plot_pred_spectrum(molecule: main.Molecule,
     )
 
     # Minimum acceptable distance between labels
-    label_mindist = 0.02 * (np.max(shift_range) - np.min(shift_range))
+    label_mindist = 0.03 * (np.max(shift_range) - np.min(shift_range))
 
     # Iteratively shift all label x positions so that they will not touch
     # (i.e. are not within label_mindist)
