@@ -7,7 +7,6 @@ import scipy.constants as constants
 import numpy as np
 from numpy.typing import NDArray, ArrayLike
 import xyz_py.atomic as atomic
-from adjustText import adjust_text
 
 from . import utils as ut
 from . import main
@@ -481,6 +480,7 @@ def plot_fitted_shifts(molecule: main.Molecule, experiment: main.Experiment,
 
     return fig, ax
 
+
 def plot_pred_spectrum(molecule: main.Molecule,
                        isotope: str,
                        shift_range: ArrayLike,
@@ -518,8 +518,6 @@ def plot_pred_spectrum(molecule: main.Molecule,
         Matplotlib axis object
     '''
 
-    molecule.nuclei[0].shift.lw
-
     ppm_grid = np.linspace(
         np.min(shift_range),
         np.max(shift_range),
@@ -553,14 +551,13 @@ def plot_pred_spectrum(molecule: main.Molecule,
     sorted_labels = [label for label, _ in sorted_shifts_labels]
     sorted_shifts = [shift for _, shift in sorted_shifts_labels]
 
+    # Grid y value closest to peak position
     closest_y = [
         _total[ut.find_index_of_nearest(ppm_grid, sh)]
         for sh in sorted_shifts
     ]
 
-    # Calculate label y position (20% above max peak)
-    label_y_position = 1.2 * np.max(_total)
-
+    # Marker at shift peak position
     ax.plot(
         sorted_shifts,
         closest_y,
@@ -572,6 +569,21 @@ def plot_pred_spectrum(molecule: main.Molecule,
     # Adjust labels to avoid overlap
     texts = []
     label_offset = 0.02 * (np.max(shift_range) - np.min(shift_range))
+
+    # Peak label y position (20% above max peak)
+    label_y_position = 1.2 * np.max(_total)
+
+    # Horizontal line 10% above the highest peak
+    hline_y = 1.1 * np.max(_total)
+    ax.hlines(
+        hline_y,
+        np.min(shift_range),
+        np.max(shift_range),
+        linestyle='-',
+        color='black',
+        linewidth=0.8,
+        alpha=0.7
+    )
 
     adjusted_positions = {}
     for i, shift in enumerate(sorted_shifts):
@@ -585,45 +597,38 @@ def plot_pred_spectrum(molecule: main.Molecule,
         adjusted_positions[shift] = adjusted_x
 
         # Add label to plot
-        label = sorted_labels[i]
-        texts.append(ax.text(adjusted_x, label_y_position, label, rotation='vertical', ha='center'))
+        texts.append(
+            ax.text(
+                adjusted_x,
+                label_y_position,
+                sorted_labels[i],
+                rotation='vertical',
+                ha='center'
+            )
+        )
 
         # Draw segmented line from peak to label
         peak_index = ut.find_index_of_nearest(ppm_grid, shift)
         peak_x = ppm_grid[peak_index]
         peak_y = _total[peak_index]
 
-        # Vertical part of the line up to the horizontal line
-        line_y = 1.1 * np.max(_total)  # Horizontal line height
-        ax.plot(
-            [peak_x, peak_x],
-            [peak_y, line_y],
-            linestyle='--', color=(0.8, 0.8, 1, 0.5), linewidth=0.8, alpha=0.5
-        )
-
         # Diagonal part of the line from horizontal line to label
         ax.plot(
-            [peak_x, adjusted_x],
-            [line_y, label_y_position],
-            linestyle='--', color=(0.8, 0.8, 1, 0.5), linewidth=0.8, alpha=0.5
+            [peak_x, peak_x, adjusted_x],
+            [peak_y, hline_y, label_y_position],
+            linestyle='--',
+            color='black',
+            linewidth=0.8,
+            alpha=0.6
         )
-
-    # Add a single horizontal line 10% above the highest peak
-    highest_peak_y = np.max(_total)
-    line_y = 1.1 * highest_peak_y
-    ax.plot(
-        [np.min(shift_range), np.max(shift_range)],
-        [line_y, line_y],
-        linestyle='-', color='black', linewidth=0.8, alpha=0.7
-    )
 
     ax.set_xlabel(r'{} $\delta$ (ppm)'.format(
         ut.isotope_format(isotope))
     )
 
+    # Deactivate borders, y axis and y ticks
     ax.set_yticks([])
     ax.set_yticklabels([])
-
     ax.spines[['right', 'top', 'left']].set_visible(False)
 
     ax.xaxis.set_major_locator(ticker.AutoLocator())
