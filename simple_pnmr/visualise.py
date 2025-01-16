@@ -481,7 +481,6 @@ def plot_fitted_shifts(molecule: main.Molecule, experiment: main.Experiment,
 
     return fig, ax
 
-
 def plot_pred_spectrum(molecule: main.Molecule,
                        isotope: str,
                        shift_range: ArrayLike,
@@ -549,24 +548,74 @@ def plot_pred_spectrum(molecule: main.Molecule,
         if nucleus.isotope == isotope
     }
 
-    labels = list(avg_shifts.keys())
+    # Ensure labels match shifts in sorted order
+    sorted_shifts_labels = sorted(avg_shifts.items(), key=lambda x: x[1])
+    sorted_labels = [label for label, _ in sorted_shifts_labels]
+    sorted_shifts = [shift for _, shift in sorted_shifts_labels]
 
     closest_y = [
         _total[ut.find_index_of_nearest(ppm_grid, sh)]
-        for sh in avg_shifts.values()
+        for sh in sorted_shifts
     ]
 
+    # Calculate label y position (20% above max peak)
+    label_y_position = 1.2 * np.max(_total)
+
     ax.plot(
-        avg_shifts.values(),
+        sorted_shifts,
         closest_y,
         lw=0,
         marker='x',
         color='k'
     )
 
+    # Adjust labels to avoid overlap
     texts = []
-    for shift, y, label in zip(avg_shifts.values(), closest_y, labels):
-        texts.append(ax.text(shift, y, label, rotation='vertical'))
+    label_offset = 0.02 * (np.max(shift_range) - np.min(shift_range))
+
+    adjusted_positions = {}
+    for i, shift in enumerate(sorted_shifts):
+        adjusted_x = shift
+
+        # Check for overlap with all previous labels
+        for prev_shift in adjusted_positions.values():
+            if abs(adjusted_x - prev_shift) < label_offset:
+                adjusted_x = prev_shift + label_offset
+
+        adjusted_positions[shift] = adjusted_x
+
+        # Add label to plot
+        label = sorted_labels[i]
+        texts.append(ax.text(adjusted_x, label_y_position, label, rotation='vertical', ha='center'))
+
+        # Draw segmented line from peak to label
+        peak_index = ut.find_index_of_nearest(ppm_grid, shift)
+        peak_x = ppm_grid[peak_index]
+        peak_y = _total[peak_index]
+
+        # Vertical part of the line up to the horizontal line
+        line_y = 1.1 * np.max(_total)  # Horizontal line height
+        ax.plot(
+            [peak_x, peak_x],
+            [peak_y, line_y],
+            linestyle='--', color=(0.8, 0.8, 1, 0.5), linewidth=0.8, alpha=0.5
+        )
+
+        # Diagonal part of the line from horizontal line to label
+        ax.plot(
+            [peak_x, adjusted_x],
+            [line_y, label_y_position],
+            linestyle='--', color=(0.8, 0.8, 1, 0.5), linewidth=0.8, alpha=0.5
+        )
+
+    # Add a single horizontal line 10% above the highest peak
+    highest_peak_y = np.max(_total)
+    line_y = 1.1 * highest_peak_y
+    ax.plot(
+        [np.min(shift_range), np.max(shift_range)],
+        [line_y, line_y],
+        linestyle='-', color='black', linewidth=0.8, alpha=0.7
+    )
 
     ax.set_xlabel(r'{} $\delta$ (ppm)'.format(
         ut.isotope_format(isotope))
@@ -586,7 +635,6 @@ def plot_pred_spectrum(molecule: main.Molecule,
             np.min(shift_range)
         ]
     )
-    adjust_text(texts)
 
     fig.tight_layout()
 
