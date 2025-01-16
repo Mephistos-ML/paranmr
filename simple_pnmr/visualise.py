@@ -604,16 +604,11 @@ def plot_pred_spectrum(molecule: main.Molecule,
         distance = np.subtract.outer(adj_label_xvals, adj_label_xvals)
         np.fill_diagonal(distance, np.inf)
 
-    adjusted_labels = {
-        lab: val
-        for lab, val in zip(sorted_labels, adj_label_xvals)
-    }
-
     # Peak label y position (20% above max peak)
     label_y = 1.2 * np.max(_total)
 
     # Add label and dashed lines
-    for shift, (label, label_x) in zip(sorted_shifts, adjusted_labels.items()):
+    for shift, label, label_x in zip(sorted_shifts, sorted_labels, adj_label_xvals): # noqa
 
         # Add label to plot
         ax.text(
