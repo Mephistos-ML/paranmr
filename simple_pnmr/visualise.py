@@ -7,7 +7,7 @@ import scipy.constants as constants
 import numpy as np
 from numpy.typing import NDArray, ArrayLike
 import xyz_py.atomic as atomic
-from adjustText import adjust_text
+import copy
 
 from . import utils as ut
 from . import main
@@ -519,8 +519,6 @@ def plot_pred_spectrum(molecule: main.Molecule,
         Matplotlib axis object
     '''
 
-    molecule.nuclei[0].shift.lw
-
     ppm_grid = np.linspace(
         np.min(shift_range),
         np.max(shift_range),
@@ -536,6 +534,9 @@ def plot_pred_spectrum(molecule: main.Molecule,
                 1
             )
 
+    # Normalise spectrum
+    _total /= np.max(_total)
+
     # Make plot
     fig, ax = plt.subplots(1, 1, num=window_title, figsize=(8, 5.5))
 
@@ -549,32 +550,94 @@ def plot_pred_spectrum(molecule: main.Molecule,
         if nucleus.isotope == isotope
     }
 
-    labels = list(avg_shifts.keys())
+    # Ensure labels match shifts in sorted order
+    sorted_shifts_labels = sorted(avg_shifts.items(), key=lambda x: x[1])
+    sorted_labels = [label for label, _ in sorted_shifts_labels]
+    sorted_shifts = [shift for _, shift in sorted_shifts_labels]
 
+    # Grid y value closest to peak position
     closest_y = [
         _total[ut.find_index_of_nearest(ppm_grid, sh)]
-        for sh in avg_shifts.values()
+        for sh in sorted_shifts
     ]
 
+    # Marker at shift peak position
     ax.plot(
-        avg_shifts.values(),
+        sorted_shifts,
         closest_y,
         lw=0,
         marker='x',
         color='k'
     )
 
-    texts = []
-    for shift, y, label in zip(avg_shifts.values(), closest_y, labels):
-        texts.append(ax.text(shift, y, label, rotation='vertical'))
+    # Horizontal line 10% above the highest peak
+    hline_y = 1.1 * np.max(_total)
+    ax.hlines(
+        hline_y,
+        np.min(shift_range),
+        np.max(shift_range),
+        linestyle='-',
+        color='black',
+        linewidth=0.8,
+        alpha=0.7
+    )
+
+    # Minimum acceptable distance between labels
+    label_mindist = 0.03 * (np.max(shift_range) - np.min(shift_range))
+
+    # Iteratively shift all label x positions so that they will not touch
+    # (i.e. are not within label_mindist)
+
+    # Calculate initial distance matrix
+    adj_label_xvals = copy.copy(sorted_shifts)
+    distance = np.subtract.outer(adj_label_xvals, adj_label_xvals)
+    np.fill_diagonal(distance, np.inf)
+
+    # Shift points until distance matrix has no values less than minimum dist
+    while len(np.where(abs(distance) < label_mindist)[0]):
+        [xlocs, ylocs] = np.where(abs(distance) < label_mindist)
+        for x, y in zip(xlocs, ylocs):
+            if y > x:
+                adj_label_xvals[x] -= label_mindist / 2
+                adj_label_xvals[y] += label_mindist / 2
+
+        distance = np.subtract.outer(adj_label_xvals, adj_label_xvals)
+        np.fill_diagonal(distance, np.inf)
+
+    # Peak label y position (20% above max peak)
+    label_y = 1.2 * np.max(_total)
+
+    # Add label and dashed lines
+    for shift, label, label_x in zip(sorted_shifts, sorted_labels, adj_label_xvals): # noqa
+
+        # Add label to plot
+        ax.text(
+            label_x,
+            label_y,
+            label,
+            rotation='vertical',
+            ha='center',
+            va='bottom'
+        )
+
+        # Draw segmented line from peak to label via horizontal line
+        peak_index = ut.find_index_of_nearest(ppm_grid, shift)
+        ax.plot(
+            [ppm_grid[peak_index], ppm_grid[peak_index], label_x],
+            [_total[peak_index], hline_y, label_y],
+            linestyle='--',
+            color='black',
+            linewidth=0.8,
+            alpha=0.6
+        )
 
     ax.set_xlabel(r'{} $\delta$ (ppm)'.format(
         ut.isotope_format(isotope))
     )
 
+    # Deactivate borders, y axis and y ticks
     ax.set_yticks([])
     ax.set_yticklabels([])
-
     ax.spines[['right', 'top', 'left']].set_visible(False)
 
     ax.xaxis.set_major_locator(ticker.AutoLocator())
@@ -586,7 +649,6 @@ def plot_pred_spectrum(molecule: main.Molecule,
             np.min(shift_range)
         ]
     )
-    adjust_text(texts)
 
     fig.tight_layout()
 
