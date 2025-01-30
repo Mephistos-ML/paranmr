@@ -48,14 +48,8 @@ def save_susc(molecules: list[main.Molecule],
         conv = 1E-24
         unit_label = r'cm^3'
     elif susc_units == 'cm3 mol-1':
-        conv = 1E-24 * constants.Avogadro
-        unit_label = r'cm^3 mol^-1'
-    elif susc_units == 'emu':
-        conv = 1E-24 / (4 * np.pi)
-        unit_label = r'emu$'
-    elif susc_units == 'emu mol-1':
         conv = 1E-24 * constants.Avogadro / (4 * np.pi)
-        unit_label = r'emu mol^-1'
+        unit_label = r'cm^3 mol^-1'
 
     # And write susceptibility tensor to csv
     out = {

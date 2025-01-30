@@ -22,7 +22,7 @@ from . import visualise as vis
 from . import outputs
 
 # Change figure save dialog to use current working directory
-mpl.rcParams["savefig.directory"] = ""
+mpl.rcParams['savefig.directory'] = ''
 
 os.environ['OPENBLAS_NUM_THREADS'] = '1'
 
@@ -30,6 +30,7 @@ os.environ['OPENBLAS_NUM_THREADS'] = '1'
 mpl.rcParams.update({'font.size': 12})
 
 # Set spawn as default start method - MUCH faster on WSL2 than default fork
+# if not using pathos multiprocessing instead
 # mp.set_start_method('spawn', force=True)
 
 # Print r2 to terminal for each assignment
@@ -251,11 +252,11 @@ def fit_susc_func(uargs):
             config.diamagnetic_ref_method
         )
 
-    # Rotationally average hyperfines and diamagnetic shifts for
-    # nuclei with equivalent chemlabels
+    # Rotationally average hyperfines
     if len(config.hyperfine_average):
         base_molecule.average_hyperfine(config.hyperfine_average)
 
+    # Create experiments
     experiments = main.Experiment.from_file(
         config.experiment_files
     )
@@ -480,7 +481,7 @@ def fit_susc_func(uargs):
                     save_name=os.path.join(config.project_name, f'shift_spread_{molecule.susc.temperature:.2f}_K{PFF}'), # noqa
                     verbose=True,
                     window_title=f'Spread of predicted shift components at {experiment.temperature:.2f} K', # noqa
-                    order='ascending'
+                    order='descending'
                 )
 
             if uargs.contrib_plots in _PLOT_ACTIVE:
@@ -496,7 +497,8 @@ def fit_susc_func(uargs):
                         f'mean_components_{experiment.temperature:.2f}_K{PFF}'
                     ),
                     verbose=True,
-                    window_title=f'Predicted shift components at {experiment.temperature:.2f} K' # noqa
+                    window_title=f'Predicted shift components at {experiment.temperature:.2f} K', # noqa
+                    order='descending'
                 )
 
                 plt.close('all')
@@ -1073,7 +1075,7 @@ def predict_func(uargs):
         # Bar chart for means
         vis.plot_shift_contrib(
             molecule,
-            experiment=None,
+            experiment=experiment,
             save=True,
             show=False,
             save_name=os.path.join(config.project_name, f'pred_mean_components_{molecule.susc.temperature:.2f}_K{PFF}'), # noqa
@@ -1203,9 +1205,10 @@ def read_args(arg_list=None):
 
     parser = argparse.ArgumentParser(
         description=description,
-        epilog=epilog,
-        formatter_class=argparse.RawDescriptionHelpFormatter
+        epilog=epilog
     )
+
+    parser._positionals.title = 'Subprograms'
 
     subparsers = parser.add_subparsers(dest='prog')
 
@@ -1247,7 +1250,7 @@ def read_args(arg_list=None):
         'input_file',
         type=str,
         help=(
-            'Input file for fit_susc'
+            'Input file for fit_susc -- see documentation for format'
         )
     )
 
@@ -1270,13 +1273,13 @@ def read_args(arg_list=None):
     fit_susc.add_argument(
         '--susc_units',
         '-su',
-        choices=['emu mol-1', 'cm3 mol-1', 'A3'],
+        choices=['cm3 mol-1', 'A3'],
         metavar='<str>',
         type=str,
         default='A3',
         help=(
             'Controls susceptibility units of plots \n'
-            '(wrap with "")'
+            '(wrap with "")\n'
             'Default: A3'
         )
     )
@@ -1318,14 +1321,14 @@ def read_args(arg_list=None):
         choices=['on', 'show', 'save', 'off'],
         metavar='<str>',
         type=str,
-        default='off',
+        default='on',
         help=(
             'Plot mean of contributions to mean calculated shifts \n'
             ' - \'on\' shows and saves the plots\n'
             ' - \'show\' shows the plots\n'
             ' - \'save\' saves the plots\n'
             ' - \'off\' neither shows nor saves\n'
-            'Default: off'
+            'Default: on'
         )
     )
 
@@ -1563,20 +1566,20 @@ def read_args(arg_list=None):
         'input_file',
         type=str,
         help=(
-            'Input file for predict'
+            'Input file for predict - see documentation for format'
         )
     )
 
     predict.add_argument(
         '--susc_units',
         '-su',
-        choices=['emu mol-1', 'cm3 mol-1', 'A3'],
+        choices=['cm3 mol-1', 'A3'],
         metavar='<str>',
         type=str,
         default='A3',
         help=(
             'Controls susceptibility units of plots and output files \n'
-            '(wrap with "")'
+            '(wrap with "")\n'
             'Default: A3'
         )
     )

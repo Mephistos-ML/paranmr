@@ -20,7 +20,6 @@ I want to...
 
     Read the instructions :ref:`here <env_var>`. 
 
-
 ... use an alternative delimiter in csv output files
 
     Read the instructions :ref:`here <csv_files>`. 

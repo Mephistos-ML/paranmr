@@ -13,8 +13,8 @@ Home
    FAQ <faq>
    Bugs <bugs>
    Authors and Citation <authors>
-   License <https://github.com/JonKragskow/simple_pnmr/blob/main/LICENSE>
-   Repository <https://github.com/JonKragskow/simple_pnmr/>
+   License <https://gitlab.com/suturina-group/simple_pnmr/blob/main/LICENSE>
+   Repository <https://gitlab.com/suturina-group/simple_pnmr>
    :maxdepth: 3
    :caption: Contents:
    :hidden:
@@ -22,7 +22,7 @@ Home
 
 ``simple_pnmr`` is a python package for working paramagnetic nuclear magnetic resonance (pNMR) data.
 
-These pages contain the documentation for the ``simple_pnmr`` python package, and its associated command line interface and executable.
+These pages contain the documentation for the ``simple_pnmr`` python package, and its associated command line interface.
 
 New users
 ^^^^^^^^^

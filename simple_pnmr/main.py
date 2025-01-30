@@ -79,6 +79,9 @@ class Experiment():
         Nucleus of experiment
     signals: list[Signal]
         Signals of experiment
+    spectrum: ArrayLike, optional
+        Experimental spectrum as (N, 2) array. First column is ppm, second\n
+        is intensity.
 
     Attributes
     ----------
@@ -90,6 +93,9 @@ class Experiment():
         Larmor frequency of nucleus in spectrometer
     isotope: str
         Isotope of experiment
+    spectrum: None | ArrayLike
+        Experimental spectrum as (N, 2) array. First column is ppm, second\n
+        is intensity.
     '''
 
     def __init__(self, temperature: float, larmor: float, isotope: str,
@@ -105,7 +111,7 @@ class Experiment():
             self._spectrum = None
         return
 
-    def load_spectrum_from_file(self, file_name):
+    def load_spectrum_from_file(self, file_name: str):
         '''
         Add spectrum data attribute from file containing x and y values\n
         of spectrum
@@ -113,17 +119,21 @@ class Experiment():
         Parameters
         ----------
         file_name: str
-            File containing spectrum values. 1st column shift, 2nd intensity\n
-            with no header line or comments
+            .csv file containing spectrum values. 1st column shift,
+            2nd intensity with no header line
         '''
 
-        self.spectrum = np.loadtxt(file_name, delimiter=',')
+        self.spectrum = np.loadtxt(file_name, delimiter=',', comments='#')
 
         self.spectrum = self.spectrum[np.flipud(self.spectrum[:, 0].argsort())]
 
         return
 
     def keys(self):
+        '''
+        Keys method which allows signals to be selected from an experiment
+        using their assignment
+        '''
         return [signal.assignment for signal in self.signals]
 
     def __getitem__(self, item):
@@ -218,13 +228,19 @@ class Experiment():
         Returns
         -------
         list[Experiment]
-            Experiments
+            Experiments, one per file
+
+        Raises
+        ------
+        ValueError
+            If file_names is an empty string or list
         '''
-        if isinstance(file_names, str):
-            file_names = [file_names]
 
         if not len(file_names):
-            raise ValueError('No files provided')
+            raise ValueError(ut.cstr('No files provided', 'red'))
+
+        if isinstance(file_names, str):
+            file_names = [file_names]
 
         # Standardise column names
         name_convertor = {
@@ -256,6 +272,7 @@ class Experiment():
             others[val.capitalize()] = val
         name_convertor.update(others)
 
+        # Read each file
         final = []
         for file_name in file_names:
             _data = pd.read_csv(file_name, comment='#', skipinitialspace=True)
@@ -266,6 +283,7 @@ class Experiment():
             _data['isotope'] = _isotope
             final.append(_data)
 
+        # combine into a single dataframe
         data = pd.concat(final)
         data.reset_index(inplace=True)
 
@@ -289,6 +307,7 @@ class Experiment():
         else:
             _exp = [data]
 
+        # Then sort by shift
         for _e in _exp:
             _e.sort_values('shift')
             _e.reset_index(inplace=True)
@@ -389,7 +408,7 @@ class Experiment():
         ----------
         experiment: Experiment
             Experiment used as basis for assignment permutation
-        groups: list[list[str]]
+        groups: list[list[str]], optional
             Groups of experimental signal labels (assignments) which are to be
             permuted.
 
@@ -626,6 +645,47 @@ class Hyperfine():
 
 
 class Susceptibility:
+    '''
+    Susceptibility tensor object
+
+    Parameters
+    ----------
+    tensor: ndarray of floats, default = np.zeros([3,3])
+        Susceptibility tensor as 3x3 numpy array of floats
+        Assumes units of [Angstrom^3]
+    temperature: float
+        Temperature that this tensor corresponds to [Kelvin]
+
+    Attributes
+    ----------
+    tensor: ndarray of floats, default = np.zeros([3,3])
+        susceptibility tensor as 3x3 numpy array of floats in units of
+        [Angstrom^3]
+    iso: float
+        Isotropic susceptibility in units of [Angstrom^3]
+    dtensor: ndarray of floats
+        Delta susceptibility tensor (3x3) in units of [ppm Angstrom^-3]
+    eigvals: ndarray of floats
+        Eigenvalues of susceptibility tensor sorted low to high as\n
+        3x1 np.array in units of [Angstrom^3]
+    eigvecs: ndarray of floats
+        Eigenvectors of susceptibility tensor in same order as eigenvalues
+    alpha: float
+        Alpha angle between eigenframe and original tensor frame (ZYZ) [rad]
+    beta: float
+        Beta angle between eigenframe and original tensor frame (ZYZ) [rad]
+    gamma: float
+        Gamma angle between eigenframe and original tensor frame (ZYZ) [rad]
+    axiality: float
+        Axiality value of dtensor [Angstrom^3]
+    rhombicity: float
+        Axiality value of dtensor [Angstrom^3]
+    irred: ndarray of floats
+        Irreducible spherical components of Susceptibility Tensor\n
+        as 5x1 np.array of floats ordered chi_-2, chi_-1, chi_0, chi_1, chi_2
+    temperature: float
+        Temperature that this tensor corresponds to [Kelvin]
+    '''
     def __init__(self, tensor: NDArray = np.zeros([3, 3]),
                  temperature: float = 0.) -> None:
 
@@ -635,7 +695,6 @@ class Susceptibility:
         self._eigvecs = None
         self._axiality = None
         self._rhombicity = None
-        self._r2 = None
         self._irred = None
         self._alpha = None
         self._beta = None
@@ -671,7 +730,6 @@ class Susceptibility:
         self._eigvecs = None
         self._axiality = None
         self._rhombicity = None
-        self._r2 = None
         self._irred = None
         self._alpha = None
         self._beta = None
@@ -892,7 +950,6 @@ class Susceptibility:
         tensor input frame and tensor eigenframe\n
         Units of Radians
         '''
-
         _ev = np.abs(self.eigvals - self.iso)
         order = np.argsort(_ev)
         _vecs = self.eigvecs[:, order]
@@ -990,9 +1047,7 @@ class Susceptibility:
             '(Å^3 mol^-1)': constants.Avogadro,
             '(A^3 mol^-1)': constants.Avogadro,
             '(cm^3)': 1E-24,
-            '(cm^3 mol^-1)': 1E-24 * constants.Avogadro,
-            '(emu)': 1E-24 / (4 * np.pi),
-            '(emu mol^-1)': 1E-24 * constants.Avogadro / (4 * np.pi)
+            '(cm^3 mol^-1)': 1E-24 * constants.Avogadro / (4 * np.pi),
         }
 
         # Check names of columns and convert units to angstrom cubed
@@ -1129,7 +1184,7 @@ class Susceptibility:
             'invalid value encountered in divide'
         )
 
-        isosurf = 1E3 * np.real(isosurf)
+        isosurf = 1E3 * np.real(isosurf) 
 
         coords *= 1.88973
 
@@ -1299,14 +1354,14 @@ class Shift():
 
 
 class Nucleus():
-    '''
+    r'''
     Contains all information on a given nucleus of a molecule
 
     Parameters
     ----------
     label: str
         Atomic label with indexing number e.g. H2
-    coords: np.array[float]
+    coords: array_like
         Coordinates of atom
     A: Hyperfine
         Hyperfine object
@@ -1315,8 +1370,8 @@ class Nucleus():
     chem_label: str, optional
         Optional chemical label for this atom, e.g. tBu3
     chem_math_label: str, optional
-        Optional chemical label for this atom, e.g. tBu3\n
-        with latex formatting
+        Optional chemical label for this atom, e.g. $\mathregular{tBu_3}$\n
+        with mathtext (LaTeX) formatting - used in plots.
     isotope: str
         Isotope of element formatted as nucleon number then symbol e.g. 13C
 
@@ -1326,15 +1381,20 @@ class Nucleus():
         Atomic label with indexing number e.g. H2
     label_nn: str
         Atomic label without indexing number e.g. H
-    coord: np.array[float]
-        Coordinates of nucleus
+    chem_label: str
+        Optional chemical label for this atom, e.g. tBu3
+    chem_math_label: str, optional
+        Optional chemical label for this atom, e.g. $\mathregular{tBu_3}$\n
+        with mathtext (LaTeX) formatting - used in plots.
+    coord: ndarray of floats
+        Coordinates of nucleus as (1x3) array
     A: Hyperfine
         Hyperfine object containing this Nucleus' hyperfine information
     shift: Shift
         Shift object containing this Nucleus' chemical shift information
     isotope: str
         Isotope of element formatted as nucleon number then symbol e.g. 13C
-    '''
+    ''' # noqa
     def __init__(self, label: str, coord: list[float], A: Hyperfine,
                  shift: Shift = Shift(), chem_label: str = None,
                  chem_math_label: str = None, isotope: str = None) -> None:
@@ -1352,7 +1412,7 @@ class Nucleus():
         # Coordinates of nucleus
         self.coord = coord
 
-        # Chemical labels, normal and mathmode
+        # Chemical labels, normal and mathtext
         if chem_label is None:
             self._chem_label = None
         else:
@@ -1410,11 +1470,19 @@ class Nucleus():
         return self._coord
 
     @coord.setter
-    def coord(self, incoord: NDArray):
-        if not isinstance(incoord, list) and not isinstance(incoord, np.ndarray): # noqa
-            raise TypeError('coord must be 3 element arraylike')
-        elif incoord.shape != (3,):
-            raise TypeError('coord must be 3 element arraylike')
+    def coord(self, incoord: ArrayLike):
+
+        incoord = np.asarray(incoord)
+
+        if len(incoord.shape) > 1:
+            raise ValueError(
+                ut.cstr('Nucleus coordinates must be (1x3) array', 'red')
+            )
+
+        elif incoord.shape[0] != 3:
+            raise ValueError(
+                ut.cstr('Nucleus coordinates must be (1x3) array', 'red')
+            )
         self._coord = incoord
         return
 
@@ -1520,7 +1588,6 @@ class Molecule():
 
         self.labels = xyzp.add_label_indices(labels)
         self.coords = coords
-        self.n_atoms = len(labels)
 
         # List of Nucleus objects
         self.nuclei = nuclei
@@ -1528,10 +1595,11 @@ class Molecule():
         # Susceptibility object
         self.susc = copy.deepcopy(Susceptibility())
 
-        # Experiment object
-        self._exp = None
-
     pass
+
+    @property
+    def n_atoms(self):
+        return len(self.labels)
 
     def __str__(self):
 
@@ -1669,6 +1737,11 @@ class Molecule():
             CSV file contianing structure, labels, and hyperfine data
         elements: str
             Elements to include, numbered labels, or just string 'all'
+
+        Returns
+        -------
+        Molecule
+            Molecule object
         '''
 
         data = pd.read_csv(
@@ -1806,8 +1879,7 @@ class Molecule():
         return base
 
     @classmethod
-    def from_QCA(cls, ab_initio: rdrs.QCA,
-                 converter='Null',
+    def from_QCA(cls, ab_initio: rdrs.QCA, converter: str = 'Null',
                  elements: list[str] | str = 'all') -> 'Molecule':
         '''
         Creates Molecule from ab_initio data, converting A values if requested
@@ -1821,7 +1893,7 @@ class Molecule():
             null applies no conversion
         elements: list[str] | str
             Elements to include, numbered labels, ranges, \n
-            'all_H', or just 'all'
+            'all_H', 'H', or just 'all'
         Returns
         -------
         Molecule
@@ -1905,12 +1977,12 @@ class Molecule():
         file_name: str
             Name of csv file from which diamagnetic shifts are read
         file_type: str {'csv', 'dft'}
-            Type of file to read. DFT
+            Type of file to read.
         ref_file_name: str, optional
             Name of csv file from which reference shifts are read.\n
             If not specified then no reference is subtracted.
         ref_file_type: str, optional {'csv', 'dft'}
-            Type of file to read for reference. DFT
+            Type of file to read for reference.
         '''
 
         if file_type == 'csv':
@@ -1988,7 +2060,7 @@ class Molecule():
 
     def average_shifts(self):
         '''
-        Averages total shifts by all Nuclei according to chem_label.\n
+        Averages total shifts of Nuclei according to their chem_label.\n
         Average values are then stored in Nucleus.avg_shift attribute
         '''
 
@@ -2017,7 +2089,10 @@ class Molecule():
         ----------
         av_chemlabels: list[str] or list[list[str]]
             List of chemical labels specifying nuclei for which averaging\n
-            will take place.
+            will take place.\n
+            list - entries are averaged separately\n
+            list of lists - sublists group dissimilar labels which will be \n
+            averaged together
         '''
 
         # Convert all entries into lists
@@ -2063,7 +2138,8 @@ class Molecule():
 
     def rotate_hyperfines(self, rot_mat: ArrayLike):
         '''
-        Rotates all hyperfines using specified rotation matrix
+        Rotates all hyperfine tensors of this molecule using specified\n
+        rotation matrix
 
         Parameters
         ----------
@@ -2255,9 +2331,10 @@ class Molecule():
                 diff = np.sum(_coord - nuc.coord)
                 if diff > 1e-8:
                     raise ValueError(
-                        (
+                        ut.cstr(
                             f'Coordinates of {nuc.label} in chem_labels file\n'
-                            ' do not match those of molecule.'
+                            ' do not match those of molecule.',
+                            'red'
                         )
                     )
 
@@ -2276,7 +2353,7 @@ class Molecule():
         verbose: bool, default True
             If True, echo filename to screen
         comment: str, optional
-            Additional comment line WITH comment character
+            Additional comment line INCLUDING comment character
         delimiter, str, default = ','
             CSV delimiter to use
         '''
@@ -2336,12 +2413,12 @@ class Molecule():
 
         Parameters
         ----------
-        file_name: str
+        file_name: str, defualt 'molecule.csv'
             File to which Molecule data is written in CSV format
         verbose: bool, default True
             If True, echo filename to screen
         comment: str, optional
-            Additional comment line WITH comment character
+            Additional comment line INCLUDING comment character
         delimiter, str, default = ','
             CSV delimiter to use
         '''
@@ -2401,6 +2478,13 @@ class Molecule():
         '''
         Save xyz file of current structure with chemlabels in format
         used by chemcraft
+
+        Parameters
+        ----------
+        file_name: str, defualt 'molecule.csv'
+            File to which Molecule data is written in CSV format
+        verbose: bool, default True
+            If True, echo filename to screen
         '''
 
         _clabs = {nuc.label: nuc.chem_label for nuc in self.nuclei}
@@ -2423,6 +2507,15 @@ class Molecule():
                  comment: str = ''):
         '''
         Save xyz file of current structure
+
+        Parameters
+        ----------
+        file_name: str, defualt 'molecule.csv'
+            File to which Molecule data is written in CSV format
+        verbose: bool, default True
+            If True, echo filename to screen
+        comment: str, optional
+            Additional comment line
         '''
 
         _comment = (
