@@ -1,4 +1,3 @@
-
 '''
 This module contains objects and methods for extracting
 data from quantum chemistry program files

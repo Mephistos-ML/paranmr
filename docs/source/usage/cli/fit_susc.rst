@@ -29,7 +29,7 @@ An example input file for ``fit_susc`` can be found in the ``simple_pnmr`` `repo
 .. table:: Table 1: ``fit_susc`` subprogram input file keywords and subkeywords.
 
     +-----------------------------+-------------------------+-------------------------------------+-------------------------------------------------------------------------+----------------------+
-    | Keyword                     | Subkeyword              | Value                               | Description                                                             | Mandatory            |
+    | Keyword                     | Subkeyword(s)           | Value                               | Description                                                             | Mandatory            |
     +=============================+=========================+=====================================+=========================================================================+======================+
     | ``project``                 | ``name``                | Directory Name                      | Name of directory to which all output files are written                 | |:white_check_mark:| |
     |                             |                         |                                     |                                                                         |                      |
@@ -62,20 +62,30 @@ An example input file for ``fit_susc`` can be found in the ``simple_pnmr`` `repo
     +-----------------------------+-------------------------+-------------------------------------+-------------------------------------------------------------------------+----------------------+
     | ``hyperfine``               | ``average``             | List of Chemical labels             | Specifies atoms for which hyperfines are averaged.                      | |:x:|                |
     |                             |                         |                                     |                                                                         |                      |
-    |                             |                         |                                     | e.g. ``[Me1, tBu2]`` replaces hyperfines for atoms with chemical        |                      |
+    |                             |                         | or list of lists of chemical labels | e.g. ``[Me1, tBu2]`` replaces hyperfine tensors for atoms with chemical |                      |
     |                             |                         |                                     |                                                                         |                      |
-    |                             |                         |                                     | labels of ``Me1`` and ``tBu2`` with the average of all occurances of    |                      |
+    |                             |                         |                                     | labels of ``Me1`` with the average of all atoms bearing that label, and |                      |
     |                             |                         |                                     |                                                                         |                      |
-    |                             |                         |                                     | each label.                                                             |                      |
+    |                             |                         |                                     | that the same will happen, separately, for ``tBu2``.                    |                      |
+    |                             |                         |                                     |                                                                         |                      |
+    |                             |                         |                                     | If a list of lists is provided, then a more complex averaging scheme is |                      |
+    |                             |                         |                                     | performed.                                                              |                      |
+    |                             |                         |                                     |                                                                         |                      |
+    |                             |                         |                                     | e.g ``[[Me1, Me2], [tBu1, tBu2]]``                                      |                      |
+    |                             |                         |                                     |                                                                         |                      |
+    |                             |                         |                                     | Implies that the hyperfine tensors of ``Me1`` and ``Me2`` will be       |                      |
+    |                             |                         |                                     |                                                                         |                      |
+    |                             |                         |                                     | averaged together, as will those of ``tBu1`` and ``tBu2``.              |                      |
     +-----------------------------+-------------------------+-------------------------------------+-------------------------------------------------------------------------+----------------------+
-    | ``hyperfine``               | ``pdip_centre``         | Atomic Label(s)                     | Atomic label(s) (including index) of atom on which unpaired electron    | |:x:|                |
-    |                             |                         |                                     | resides.                                                                |                      |
+    | ``hyperfine``               | ``pdip_centre``         | Atomic Label(s)                     | Atomic label(s) (including index) of electron position in point dipole  | |:x:|                |
+    |                             |                         |                                     | approximation.                                                          |                      |
     |                             |                         |                                     |                                                                         |                      |
     |                             |                         |                                     |                                                                         |                      |
     |                             |                         |                                     | Used only when ``method:pdip``                                          |                      |
     +-----------------------------+-------------------------+-------------------------------------+-------------------------------------------------------------------------+----------------------+
-    | ``experiment``              | ``files``               | File Name(s)                        | File(s) containing experimental NMR peak data as ``.csv``.              | |:white_check_mark:| |
+    | ``experiment``              | ``files``               | File Name(s)                        | File(s) containing experimental NMR peak data for a given temperature   |              | |:white_check_mark:| |
     |                             |                         |                                     |                                                                         |                      |
+    |                             |                         |                                     | as ``.csv``                                                             |                      |
     |                             |                         |                                     |                                                                         |                      |
     |                             |                         |                                     | See :ref:`here <exp_csv>` for format information.                       |                      |
     +-----------------------------+-------------------------+-------------------------------------+-------------------------------------------------------------------------+----------------------+
@@ -86,18 +96,18 @@ An example input file for ``fit_susc`` can be found in the ``simple_pnmr`` `repo
     +-----------------------------+-------------------------+-------------------------------------+-------------------------------------------------------------------------+----------------------+
     | ``chem_labels``             | ``file``                | File Name                           | File containing chemical labels, atom labels, and optionally            | |:white_check_mark:| |
     |                             |                         |                                     |                                                                         |                      |
-    |                             |                         |                                     | and optionally chmeical math labels used for plotting.                  |                      |
+    |                             |                         |                                     | chemical math labels in Mathtext format which are used in plots.        |                      |
     |                             |                         |                                     |                                                                         |                      |
     |                             |                         |                                     |                                                                         |                      |
     |                             |                         |                                     | See :ref:`here <chemlabels_csv>` Format for more information            |                      |
     +-----------------------------+-------------------------+-------------------------------------+-------------------------------------------------------------------------+----------------------+
-    | ``nuclei``                  | ``include``             | List of atom labels with indexing,  | Specifies nuclei for which shifts will be calculated                    | |:white_check_mark:| |
+    | ``nuclei``                  | ``include``             | List of atom labels with indexing,  | Specifies nuclei for which shifts will be calculated/fitted             | |:white_check_mark:| |
     |                             |                         |                                     |                                                                         |                      |
     |                             |                         | or just X where X is an atomic      |                                                                         |                      |
     |                             |                         |                                     |                                                                         |                      |
     |                             |                         | symbol and signifies all occurrences|                                                                         |                      |
     |                             |                         |                                     |                                                                         |                      |
-    |                             |                         | e.g. ``[all_C, all_H]``             |                                                                         |                      |
+    |                             |                         | e.g. ``[C, H25]``                   |                                                                         |                      |
     +-----------------------------+-------------------------+-------------------------------------+-------------------------------------------------------------------------+----------------------+
     | ``diamagnetic``             | ``method``              | ``dft``/``pdip``/``raw``            | Method for calculation of diamagnetic shifts                            | |:x:|                |
     |                             |                         |                                     |                                                                         |                      |
@@ -114,14 +124,6 @@ An example input file for ``fit_susc`` can be found in the ``simple_pnmr`` `repo
     |                             |                         |                                     |  - ``method:dft`` supports Gaussian ``.log`` or Orca ``.out``           |                      |
     |                             |                         |                                     |                                                                         |                      |
     |                             |                         |                                     |  - ``method:raw`` supports ``.csv`` file - see :ref:`here <dia_csv>`.   |                      |
-    +-----------------------------+-------------------------+-------------------------------------+-------------------------------------------------------------------------+----------------------+
-    | ``diamagnetic``             | ``average``             | List of Chemical labels             | Specifies atoms for which diamagnetic shifts are averaged.              | |:x:|                |
-    |                             |                         |                                     |                                                                         |                      |
-    |                             |                         |                                     | e.g. ``[Me1, tBu2]`` replaces diamagnetic shifts for atoms with chemical|                      |
-    |                             |                         |                                     |                                                                         |                      |
-    |                             |                         |                                     | labels of ``Me1`` and ``tBu2`` with the average of all occurrences of   |                      |
-    |                             |                         |                                     |                                                                         |                      |
-    |                             |                         |                                     | each label.                                                             |                      |
     +-----------------------------+-------------------------+-------------------------------------+-------------------------------------------------------------------------+----------------------+
     | ``diamagnetic_reference``   | ``method``              | ``dft``/``pdip``/``raw``            | Method for calculation of reference diamagnetic shifts                  | |:x:|                |
     |                             |                         |                                     |                                                                         |                      |
@@ -140,24 +142,15 @@ An example input file for ``fit_susc`` can be found in the ``simple_pnmr`` `repo
     |                             |                         |                                     |                                                                         |                      |
     |                             |                         |                                     |  - ``method:raw`` supports ``.csv`` file - see :ref:`here <dia_csv>`.   |                      |
     +-----------------------------+-------------------------+-------------------------------------+-------------------------------------------------------------------------+----------------------+
-    | ``susc_fit``                | ``type``                | ``split``/``isoaxrho``              | Form of susceptibility tensor to fit.                                   | |:white_check_mark:| |
+    | ``susc_fit``                | ``type``                | ``split``/``isoaxrho``/``full``     | Form of susceptibility tensor to fit.                                   | |:white_check_mark:| |
     |                             |                         |                                     |                                                                         |                      |
-    |                             |                         |                                     | Options:                                                                |                      |
-    |                             |                         |                                     |                                                                         |                      |
-    |                             |                         |                                     |  - ``split`` fits :math:`\chi_\mathrm{iso}`                             |                      |
-    |                             |                         |                                     |    and :math:`\Delta\chi`                                               |                      |
-    |                             |                         |                                     |                                                                         |                      |
-    |                             |                         |                                     |  - ``isoaxrho`` fits :math:`\chi_\mathrm{iso}, \chi_\mathrm{ax}`,       |                      |
-    |                             |                         |                                     |    and :math:`\chi_\mathrm{rho}`                                        |                      |
-    |                             |                         |                                     |                                                                         |                      |
-    |                             |                         |                                     | See Fitters for more information                                        |                      |
+    |                             |                         | ``isoeigen``/``eigen``              | See :ref:`Susceptibility Models <susc_models>`. for more information    |                      |
     +-----------------------------+-------------------------+-------------------------------------+-------------------------------------------------------------------------+----------------------+
     | ``susc_fit``                | ``variables``           | List of                             | Specifies variables of model, whether each is fitted or fixed, and      | |:white_check_mark:| |
     |                             |                         |                                     |                                                                         |                      |
     |                             |                         | ``variable_name: [fit/fix, value]`` | the initial or fixed value of that variable in Å :sup:`3`               |                      |
     |                             |                         |                                     |                                                                         |                      |
-    |                             |                         |                                     |                                                                         |                      |
-    |                             |                         | e.g. ``iso [fit, 0.02]``            | See Fitters for more information                                        |                      |
+    |                             |                         | e.g. ``iso [fit, 0.02]``            | See :ref:`Susceptibility Models <susc_models>`. for more information    |                      |
     +-----------------------------+-------------------------+-------------------------------------+-------------------------------------------------------------------------+----------------------+
     | ``assignment``              | ``method``              | ``fixed``/``permute``               | Specifies how to carry out assignment of experimental signals to        | |:white_check_mark:| |
     |                             |                         |                                     |                                                                         |                      |
@@ -167,16 +160,17 @@ An example input file for ``fit_susc`` can be found in the ``simple_pnmr`` `repo
     |                             |                         |                                     |                                                                         |                      |
     |                             |                         |                                     |  - ``fixed`` uses assignment given in experiment file                   |                      |
     |                             |                         |                                     |                                                                         |                      |
-    |                             |                         |                                     |  - ``permute`` permutes labels using ``groups`` keyword information     |                      |
+    |                             |                         |                                     |  - ``permute`` permutes labels in assignment file according to          |                      |
+    |                             |                         |                                     |    ``assignment: groups``                                               |                      |
     +-----------------------------+-------------------------+-------------------------------------+-------------------------------------------------------------------------+----------------------+
-    | ``assignment``              | ``groups``              | ``- [label1, label2, ...]``         | Specifies a group of atoms whose assignments will be permuted           | |:x:|                |
+    | ``assignment``              | ``groups``              | ``- [chemlabel1, chemlabel2, ...]`` | Specifies a group of atoms whose assignments will be permuted           | |:x:|                |
     |                             |                         |                                     |                                                                         |                      |
-    |                             |                         | One set per line                    | using chemlabels - Only required if assignment method is ``permute``.   |                      |
+    |                             |                         | One group per line                  | using chemlabels - Only required if assignment method is ``permute``.   |                      |
     |                             |                         |                                     |                                                                         |                      |
     |                             |                         | with no repeated labels             |                                                                         |                      |
     |                             |                         |                                     |                                                                         |                      |
     |                             |                         |                                     |                                                                         |                      |
-    |                             |                         |                                     | See Permutation for more information                                    |                      |
+    |                             |                         |                                     | See :ref:`Permutation <permutation>` for more information               |                      |
     +-----------------------------+-------------------------+-------------------------------------+-------------------------------------------------------------------------+----------------------+
 
 Optional arguments
@@ -194,7 +188,7 @@ Additionally, certain aspects of the program can be controlled on the command li
     +------------------------------+--------------------------------------------------------------------------+
     | ``--dry_run``                | Parses all files but exits prior to fitting                              |
     +------------------------------+--------------------------------------------------------------------------+
-    | ``--susc_units (string)``    | Controls units of susceptibility values in plots                         |
+    | ``--susc_units (string)``    | Controls units of susceptibility values in plots and output files        |
     |                              |                                                                          |
     |                              | Options:                                                                 |
     |                              |                                                                          |
@@ -253,16 +247,17 @@ Additionally, certain aspects of the program can be controlled on the command li
     +------------------------------+--------------------------------------------------------------------------+
     | ``--show_single``            | Show plots for first temperature and hide for the rest                   |
     +------------------------------+--------------------------------------------------------------------------+
+    | ``--pcs_isosurface``         | Saves PCS isosurface for each temperature to separate cube files         |
+    +------------------------------+--------------------------------------------------------------------------+
 
 Output Files
 ------------
 
-All output files are added to the ``project`` directory specified in the input file.
-
-Typically, ``fit_susc`` outputs the following files, and each filename is printed to screen.
+All output files are added to the ``project`` directory specified in the input file. The name of each file created by ``fit_susc`` is printed to screen
+with a short description. For completeness, the following files can be created by ``fit_susc``.
 
 1. ``assigned_experiment_<TEMPERATURE>_K.csv`` - If ``assignment: method: permute`` - Assigned experiment file at a given temperature with the same format as the input experiment.
-2. ``dft_hyperfines.csv`` - If ``hyperfine: method: dft`` - Raw hperfine coupling constants from DFT output file.
+2. ``dft_hyperfines.csv`` - If ``hyperfine: method: dft`` - Raw hyperfine coupling constants from DFT output file.
 3. ``hyperfines_and_shifts_<TEMPERATURE>_K.csv`` - Hyperfine coupling constants, chemical shifts, coordinates, and labels of each atom in system for the specified temperature.
 4. ``pcs_isosurf_<TEMPERATURE>_K.cube`` - Pseudocontact shift isosurface cube file
 5. ``susceptibility_components_chi.png`` - :math:`\chi` vs :math:`\mathrm{T}` - If more than one temperature is specified and ``--isoaxrho_plots on or save``
@@ -272,6 +267,7 @@ Typically, ``fit_susc`` outputs the following files, and each filename is printe
 Example
 -------
 
-Here is an example of...
+An example input file and associated datafiles can be found in the ``simple_pnmr``
+`repository <https://gitlab.com/suturina-group/simple_pnmr/-/tree/main/examples/fit_susc?ref_type=heads>`__ in ``examples/fit_susc``
 
 .. footbibliography::

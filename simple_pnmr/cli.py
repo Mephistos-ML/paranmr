@@ -22,7 +22,7 @@ from . import visualise as vis
 from . import outputs
 
 # Change figure save dialog to use current working directory
-mpl.rcParams["savefig.directory"] = ""
+mpl.rcParams['savefig.directory'] = ''
 
 os.environ['OPENBLAS_NUM_THREADS'] = '1'
 
@@ -30,6 +30,7 @@ os.environ['OPENBLAS_NUM_THREADS'] = '1'
 mpl.rcParams.update({'font.size': 12})
 
 # Set spawn as default start method - MUCH faster on WSL2 than default fork
+# if not using pathos multiprocessing instead
 # mp.set_start_method('spawn', force=True)
 
 # Print r2 to terminal for each assignment
@@ -251,11 +252,11 @@ def fit_susc_func(uargs):
             config.diamagnetic_ref_method
         )
 
-    # Rotationally average hyperfines and diamagnetic shifts for
-    # nuclei with equivalent chemlabels
+    # Rotationally average hyperfines
     if len(config.hyperfine_average):
         base_molecule.average_hyperfine(config.hyperfine_average)
 
+    # Create experiments
     experiments = main.Experiment.from_file(
         config.experiment_files
     )
@@ -1203,9 +1204,10 @@ def read_args(arg_list=None):
 
     parser = argparse.ArgumentParser(
         description=description,
-        epilog=epilog,
-        formatter_class=argparse.RawDescriptionHelpFormatter
+        epilog=epilog
     )
+
+    parser._positionals.title = 'Subprograms'
 
     subparsers = parser.add_subparsers(dest='prog')
 
@@ -1247,7 +1249,7 @@ def read_args(arg_list=None):
         'input_file',
         type=str,
         help=(
-            'Input file for fit_susc'
+            'Input file for fit_susc -- see documentation for format'
         )
     )
 
@@ -1276,7 +1278,7 @@ def read_args(arg_list=None):
         default='A3',
         help=(
             'Controls susceptibility units of plots \n'
-            '(wrap with "")'
+            '(wrap with "")\n'
             'Default: A3'
         )
     )
@@ -1563,7 +1565,7 @@ def read_args(arg_list=None):
         'input_file',
         type=str,
         help=(
-            'Input file for predict'
+            'Input file for predict - see documentation for format'
         )
     )
 
@@ -1576,7 +1578,7 @@ def read_args(arg_list=None):
         default='A3',
         help=(
             'Controls susceptibility units of plots and output files \n'
-            '(wrap with "")'
+            '(wrap with "")\n'
             'Default: A3'
         )
     )

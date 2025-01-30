@@ -12,7 +12,7 @@ If you are new to python, we recommend using `Anaconda <https://www.anaconda.com
 `Anaconda guide <https://docs.anaconda.com/free/anaconda/install/>`_ for more information. Anaconda may be available
 at your institution through your IT provider - **note we do not offer support for installing Anaconda/python**.
 
-If you're using Anaconda, run the following command in your Anaconda enabled terminal to install
+If you're using Anaconda, run the following command in your Anaconda enabled terminal with a `conda env` activated to install
 the ``pip`` package manager.
 
 .. code-block:: bash

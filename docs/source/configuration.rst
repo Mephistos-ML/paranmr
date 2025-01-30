@@ -72,7 +72,7 @@ Terminal output
 ^^^^^^^^^^^^^^^
 
 Mac and Linux users will see a colour-coded terminal output. By default this is disabled for Windows users since ``CMD`` does
-not support ASCII colour codes. If you are on Windows and are using an ASCII enabled terminal (e.g. Windows Terminal) you can
+not support ASCII colour codes. If you are on Windows and are using an ASCII enabled terminal (e.g. `Windows Terminal <https://en.wikipedia.org/wiki/Windows_Terminal>`__) you can
 enable colour-coded output by setting the ``pnmr_termcolor`` environment variable to any value in the system environment variable window.
 
 .. _csv_files:
@@ -92,4 +92,4 @@ Note that when specifying a semicolon delimiter on Linux and Mac, you must escap
     export pnmr_csvdelimiter=,
 
 Windows Users can use the system environment variable window, or the commands in the :ref:`env_var` section.
-Note that unlike Linux/Mac no escape character is required for the semi-colon - it is just ;.
+Note that unlike for Linux/Mac no escape character is required for the semi-colon - it is just ;.
