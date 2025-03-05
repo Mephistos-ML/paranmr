@@ -1047,9 +1047,7 @@ class Susceptibility:
             '(Å^3 mol^-1)': constants.Avogadro,
             '(A^3 mol^-1)': constants.Avogadro,
             '(cm^3)': 1E-24,
-            '(cm^3 mol^-1)': 1E-24 * constants.Avogadro,
-            '(emu)': 1E-24 / (4 * np.pi),
-            '(emu mol^-1)': 1E-24 * constants.Avogadro / (4 * np.pi)
+            '(cm^3 mol^-1)': 1E-24 * constants.Avogadro / (4 * np.pi),
         }
 
         # Check names of columns and convert units to angstrom cubed
@@ -1186,7 +1184,7 @@ class Susceptibility:
             'invalid value encountered in divide'
         )
 
-        isosurf = 1E3 * np.real(isosurf)
+        isosurf = 1E3 * np.real(isosurf) 
 
         coords *= 1.88973
 

@@ -422,16 +422,8 @@ def plot_fitted_shifts(molecule: main.Molecule, experiment: main.Experiment,
         unit_label = r'$\mathregular{cm^3}$'
         per_line = 3
     elif susc_units == 'cm3 mol-1':
-        conv = 1E-24 * constants.Avogadro
-        unit_label = r'$\mathregular{cm^3 \ mol^{-1}}$'
-        per_line = 2
-    elif susc_units == 'emu':
-        conv = 1E-24 / (4 * np.pi)
-        unit_label = r'$\mathregular{emu}$'
-        per_line = 3
-    elif susc_units == 'emu mol-1':
         conv = 1E-24 * constants.Avogadro / (4 * np.pi)
-        unit_label = r'$\mathregular{emu \ mol^{-1}}$'
+        unit_label = r'$\mathregular{cm^3 \ mol^{-1}}$'
         per_line = 2
 
     # Add fitted and fixed parameters to top of plot
@@ -467,6 +459,10 @@ def plot_fitted_shifts(molecule: main.Molecule, experiment: main.Experiment,
     )
 
     fig.tight_layout()
+    
+    for ax in fig.get_axes():
+        ax.invert_xaxis()
+        ax.invert_yaxis()
 
     if save:
         fig.savefig(save_name, dpi=400)
@@ -567,7 +563,8 @@ def plot_pred_spectrum(molecule: main.Molecule,
         closest_y,
         lw=0,
         marker='x',
-        color='k'
+        color='k',
+        markersize=7
     )
 
     # Horizontal line 10% above the highest peak
@@ -617,7 +614,8 @@ def plot_pred_spectrum(molecule: main.Molecule,
             label,
             rotation='vertical',
             ha='center',
-            va='bottom'
+            va='bottom',
+            fontsize='14'
         )
 
         # Draw segmented line from peak to label via horizontal line
@@ -632,7 +630,8 @@ def plot_pred_spectrum(molecule: main.Molecule,
         )
 
     ax.set_xlabel(r'{} $\delta$ (ppm)'.format(
-        ut.isotope_format(isotope))
+        ut.isotope_format(isotope)),
+        fontsize='14'
     )
 
     # Deactivate borders, y axis and y ticks
@@ -770,7 +769,7 @@ def plot_shift_spread(molecule: main.Molecule,
     # Total Theoretical shift violin plot
     _violin = ax.violinplot(
         dataset=[total[o] for o in _order],
-        positions=xvals + width * widthscaler,
+        positions=(xvals + width * widthscaler),
         widths=width,
         vert=True,
         showmeans=True
@@ -784,13 +783,14 @@ def plot_shift_spread(molecule: main.Molecule,
     # Experiment circle marker plot
     if experiment is not None:
         ax.plot(
-            xvals + width * widthscaler,
-            [exps[o] for o in _order],
+            (xvals + width * widthscaler),
+            [exps[o] for o in _order], 
             label='Exp.',
             color='k',
             lw=0,
             marker='o',
-            fillstyle='none'
+            fillstyle='none',
+            markersize=7
         )
         legend_markers = [
             lines.Line2D(
@@ -810,8 +810,8 @@ def plot_shift_spread(molecule: main.Molecule,
         for nuc in molecule.nuclei:
             fc[nuc.chem_math_label].append(nuc.shift.fc)
         _violin = ax.violinplot(
-            dataset=[fc[o] for o in _order],
-            positions=xvals + width * widthscaler,
+            dataset=[fc[o] for o in _order], 
+            positions=(xvals + width * widthscaler),
             widths=width,
             vert=True,
             showmeans=True
@@ -832,8 +832,8 @@ def plot_shift_spread(molecule: main.Molecule,
         for nuc in molecule.nuclei:
             pc[nuc.chem_math_label].append(nuc.shift.pc)
         _violin = ax.violinplot(
-            dataset=[pc[o] for o in _order],
-            positions=xvals + width * widthscaler,
+            dataset=[pc[o] for o in _order], 
+            positions=(xvals + width * widthscaler), 
             widths=width,
             vert=True,
             showmeans=True
@@ -854,8 +854,8 @@ def plot_shift_spread(molecule: main.Molecule,
         for nuc in molecule.nuclei:
             dia[nuc.chem_math_label].append(nuc.shift.dia)
         _violin = ax.violinplot(
-            dataset=[dia[o] for o in _order],
-            positions=xvals + width * widthscaler,
+            dataset=[dia[o] for o in _order], 
+            positions=(xvals + width * widthscaler), 
             widths=width,
             vert=True,
             showmeans=True
@@ -877,7 +877,7 @@ def plot_shift_spread(molecule: main.Molecule,
     # Shift label, specify isotope/nucleus if only one type plotted
     if np.unique([nuc.isotope for nuc in molecule.nuclei]).size == 1:
         ax.set_ylabel(r'{} $\delta$ (ppm)'.format(
-            ut.isotope_format(molecule.nuclei[0].isotope))
+            ut.isotope_format(molecule.nuclei[0].isotope)), fontsize='14'
         )
     else:
         ax.set_ylabel(r'$\delta$ (ppm)')
@@ -887,23 +887,30 @@ def plot_shift_spread(molecule: main.Molecule,
 
     ax.xaxis.set_minor_locator(ticker.MultipleLocator(1))
     ax.set_xticks(xvals[::1] + 0.5)
-    ax.set_xticklabels(_order, rotation=45)
-
+    ax.set_xticklabels(_order, rotation=45, fontsize='14')
+    
     ax.grid(axis='x', ls='--', which='minor')
     ax.set_xlim(0.5, len(_order) + 1.5)
     ax.xaxis.set_tick_params('major', length=0)
 
     # Manually create custom legend
     # Violin plots dont support label kwarg
-    fig.legend(
+    legend = ax.legend(
         legend_markers,
         legend_labels,
-        loc=7,
-        frameon=False
+        loc='upper right',
+        bbox_to_anchor=(0.97, 0.97),   # Place the legend inside the plot (top right corner)
+        frameon=True,                  # Enable the legend border
+        fancybox=True,                 # Rounded corners for the legend box (optional)
+        framealpha=1.0,                # Fully opaque background
+        fontsize='12'                  # Adjust the font size if needed
     )
+    legend.get_frame().set_facecolor('white')    # Set the background color of the legend to white
+    legend.get_frame().set_edgecolor('black')    # Set the border color of the legend to black
+    legend.get_frame().set_linewidth(1.2)        # Set the border thickness (optional)
 
     fig.tight_layout()
-    fig.subplots_adjust(right=0.825)
+    fig.subplots_adjust(right=0.950)
 
     if save:
         fig.savefig(save_name, dpi=400)
@@ -1039,12 +1046,13 @@ def plot_shift_contrib(molecule: main.Molecule,
             ]
 
     ax.plot(
-        xvals + 0.5,
+        (xvals + 0.5), 
         [total[o] for o in order],
         label='Total',
         color='k',
         lw=0,
-        marker='x'
+        marker='x',
+        markersize=7
     )
 
     # Fermi contact part
@@ -1054,7 +1062,7 @@ def plot_shift_contrib(molecule: main.Molecule,
         for nuc in molecule.nuclei:
             fc[nuc.chem_math_label] += nuc.shift.fc / cl_to_al[nuc.chem_math_label] # noqa
         ax.bar(
-            xvals + width * widthscaler,
+            (xvals + width * widthscaler), 
             [fc[o] for o in order],
             width,
             label='Fermi',
@@ -1069,7 +1077,7 @@ def plot_shift_contrib(molecule: main.Molecule,
         for nuc in molecule.nuclei:
             pc[nuc.chem_math_label] += nuc.shift.pc / cl_to_al[nuc.chem_math_label] # noqa
         ax.bar(
-            xvals + width * widthscaler,
+            (xvals + width * widthscaler), 
             [pc[o] for o in order],
             width,
             label='Pseudo',
@@ -1084,7 +1092,7 @@ def plot_shift_contrib(molecule: main.Molecule,
         for nuc in molecule.nuclei:
             dia[nuc.chem_math_label] += nuc.shift.dia / cl_to_al[nuc.chem_math_label] # noqa
         ax.bar(
-            xvals + width * widthscaler,
+            (xvals + width * widthscaler), 
             [dia[o] for o in order],
             width,
             label='Dia.',
@@ -1094,13 +1102,14 @@ def plot_shift_contrib(molecule: main.Molecule,
 
     if experiment is not None:
         ax.plot(
-            xvals + 0.5,
+            (xvals + 0.5), 
             [exps[o] for o in order],
             label='Exp.',
             color='k',
             lw=0,
             marker='o',
-            fillstyle='none'
+            fillstyle='none',
+            markersize=7
         )
 
     ax.hlines(0., 0, len(total.values()), color='k', lw=.5)
@@ -1109,7 +1118,7 @@ def plot_shift_contrib(molecule: main.Molecule,
 
     if np.unique([nuc.isotope for nuc in molecule.nuclei]).size == 1:
         ax.set_ylabel(r'{} $\delta$ (ppm)'.format(
-            ut.isotope_format(molecule.nuclei[0].isotope))
+            ut.isotope_format(molecule.nuclei[0].isotope)), fontsize='14'
         )
     else:
         ax.set_ylabel(r'$\delta$ (ppm)')
@@ -1117,16 +1126,27 @@ def plot_shift_contrib(molecule: main.Molecule,
     ax.set_xlim([-0.5, xvals[-1] + 1.5])
 
     ax.set_xticks(xvals + 0.5)
-    ax.set_xticklabels(order, rotation=45)
+    ax.set_xticklabels(order, rotation=45, fontsize='14')   
 
     ax.yaxis.set_major_locator(ticker.AutoLocator())
     ax.yaxis.set_minor_locator(ticker.AutoMinorLocator())
 
     ax.xaxis.set_tick_params('major', length=0)
 
-    fig.legend(loc=7, frameon=False)
+    legend = ax.legend(
+        loc='upper right',
+        bbox_to_anchor=(0.97, 0.97),  # Place the legend inside the plot (top right corner)
+        frameon=True,                 # Enable the legend border
+        fancybox=True,                # Rounded corners for the legend box (optional)
+        framealpha=1.0,               # Set legend background opacity (1.0 = fully opaque)
+        fontsize='12'                 # Adjust the font size if needed
+    )
+    legend.get_frame().set_facecolor('white')   # Set the background color of the legend to white
+    legend.get_frame().set_edgecolor('black')   # Set the border color of the legend to black
+    legend.get_frame().set_linewidth(1.2)       # Set the border thickness
+
     fig.tight_layout()
-    fig.subplots_adjust(right=0.825)
+    fig.subplots_adjust(right=0.950)
 
     if save:
         fig.savefig(save_name, dpi=400)
@@ -1299,14 +1319,8 @@ def plot_isoaxrho(molecules: list[main.Molecule], save: bool = True,
             conv = 1E-24
             unit_label = r'$\mathregular{cm^3}$'
         elif susc_units == 'cm3 mol-1':
-            conv = 1E-24 * constants.Avogadro
-            unit_label = r'$\mathregular{cm^3 \ mol^{-1}}$'
-        elif susc_units == 'emu':
-            conv = 1E-24 / (4 * np.pi)
-            unit_label = r'$\mathregular{emu}$'
-        elif susc_units == 'emu mol-1':
             conv = 1E-24 * constants.Avogadro / (4 * np.pi)
-            unit_label = r'$\mathregular{emu \ mol^{-1}}$'
+            unit_label = r'$\mathregular{cm^3 \ mol^{-1}}$'
 
         y_labels = {
             'chiT': {

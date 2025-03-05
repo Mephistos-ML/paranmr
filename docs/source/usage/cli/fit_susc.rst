@@ -194,7 +194,6 @@ Additionally, certain aspects of the program can be controlled on the command li
     |                              |                                                                          |
     |                              | - ``A3`` :math:`\mathrm{Å}^3`                                            |
     |                              | - ``cm3 mol-1`` :math:`\mathrm{cm}^3 \ \mathrm{mol}^{-1}`                |
-    |                              | - ``emu mol-1`` :math:`\mathrm{emu} \ \mathrm{mol}^{-1}`                 |
     |                              |                                                                          |
     |                              | Default ``A3``                                                           |
     +------------------------------+--------------------------------------------------------------------------+

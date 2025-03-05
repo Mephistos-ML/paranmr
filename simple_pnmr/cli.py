@@ -481,7 +481,7 @@ def fit_susc_func(uargs):
                     save_name=os.path.join(config.project_name, f'shift_spread_{molecule.susc.temperature:.2f}_K{PFF}'), # noqa
                     verbose=True,
                     window_title=f'Spread of predicted shift components at {experiment.temperature:.2f} K', # noqa
-                    order='ascending'
+                    order='descending'
                 )
 
             if uargs.contrib_plots in _PLOT_ACTIVE:
@@ -497,7 +497,8 @@ def fit_susc_func(uargs):
                         f'mean_components_{experiment.temperature:.2f}_K{PFF}'
                     ),
                     verbose=True,
-                    window_title=f'Predicted shift components at {experiment.temperature:.2f} K' # noqa
+                    window_title=f'Predicted shift components at {experiment.temperature:.2f} K', # noqa
+                    order='descending'
                 )
 
                 plt.close('all')
@@ -1074,7 +1075,7 @@ def predict_func(uargs):
         # Bar chart for means
         vis.plot_shift_contrib(
             molecule,
-            experiment=None,
+            experiment=experiment,
             save=True,
             show=False,
             save_name=os.path.join(config.project_name, f'pred_mean_components_{molecule.susc.temperature:.2f}_K{PFF}'), # noqa
@@ -1272,7 +1273,7 @@ def read_args(arg_list=None):
     fit_susc.add_argument(
         '--susc_units',
         '-su',
-        choices=['emu mol-1', 'cm3 mol-1', 'A3'],
+        choices=['cm3 mol-1', 'A3'],
         metavar='<str>',
         type=str,
         default='A3',
@@ -1320,14 +1321,14 @@ def read_args(arg_list=None):
         choices=['on', 'show', 'save', 'off'],
         metavar='<str>',
         type=str,
-        default='off',
+        default='on',
         help=(
             'Plot mean of contributions to mean calculated shifts \n'
             ' - \'on\' shows and saves the plots\n'
             ' - \'show\' shows the plots\n'
             ' - \'save\' saves the plots\n'
             ' - \'off\' neither shows nor saves\n'
-            'Default: off'
+            'Default: on'
         )
     )
 
@@ -1572,7 +1573,7 @@ def read_args(arg_list=None):
     predict.add_argument(
         '--susc_units',
         '-su',
-        choices=['emu mol-1', 'cm3 mol-1', 'A3'],
+        choices=['cm3 mol-1', 'A3'],
         metavar='<str>',
         type=str,
         default='A3',
