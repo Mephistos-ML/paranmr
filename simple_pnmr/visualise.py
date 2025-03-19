@@ -898,8 +898,7 @@ def plot_shift_spread(molecule: main.Molecule,
     legend = ax.legend(
         legend_markers,
         legend_labels,
-        loc='upper right',
-        bbox_to_anchor=(0.97, 0.97),   # Place the legend inside the plot (top right corner)
+        loc='best',
         frameon=True,                  # Enable the legend border
         fancybox=True,                 # Rounded corners for the legend box (optional)
         framealpha=1.0,                # Fully opaque background
@@ -1134,8 +1133,7 @@ def plot_shift_contrib(molecule: main.Molecule,
     ax.xaxis.set_tick_params('major', length=0)
 
     legend = ax.legend(
-        loc='upper right',
-        bbox_to_anchor=(0.97, 0.97),  # Place the legend inside the plot (top right corner)
+        loc='best',
         frameon=True,                 # Enable the legend border
         fancybox=True,                # Rounded corners for the legend box (optional)
         framealpha=1.0,               # Set legend background opacity (1.0 = fully opaque)
