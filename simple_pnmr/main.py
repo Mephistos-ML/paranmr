@@ -1117,6 +1117,10 @@ class Susceptibility:
                             file_name: str = 'pcs_isosurf.cube',
                             comment='', verbose: bool = True) -> None:
         '''
+        Saves the PCS isosurface using the dipolar hyperfine tensor
+        calculated in the same way as in `calc_pdip`, incorporating the
+        susceptibility tensor.
+
         Parameters
         ----------
         labels: array_like
@@ -1124,13 +1128,14 @@ class Susceptibility:
         coords: array_like
             Atomic coordinates in Angstrom
         center_atom: str
-            Atomic label of central atom (including indexing number)
+            Atomic label of the central atom (including indexing number)
         file_name: str, default 'pcs_isosurf.cube'
             Output cube file name
         comment: str, default ''
-            Comment line added to cube file
+            Comment line added to the cube file
         verbose: bool, default True
             If True, echo file_name to terminal
+
         Returns
         -------
         None
@@ -1143,87 +1148,82 @@ class Susceptibility:
         step = 0.5
         lower = -15
 
+        # Create a 3D grid of points where PCS values will be evaluated
         x, y, z = np.meshgrid(
             np.arange(lower, upper + step, step),
             np.arange(lower, upper + step, step),
             np.arange(lower, upper + step, step)
         )
-        r = np.sqrt(x**2 + y**2 + z**2)
 
-        warnings.filterwarnings(
-            'ignore',
-            'invalid value encountered in divide'
-        )
+        # Convert coordinates to atomic units (Bohr)
+        coords *= 1.88973  
 
-        y2m2 = 0.25 * np.sqrt(15 / (2 * np.pi)) * (x - 1j * y)**2 / r**2
-        y2m1 = 0.5 * np.sqrt(15 / (2 * np.pi)) * (x - 1j * y) * z / r**2
-        y20 = 0.25 * np.sqrt(15 / np.pi) * (3 * z**2 - r**2) / r**2
-        y21 = - 0.5 * np.sqrt(15 / (2 * np.pi)) * (x + 1j * y) * z / r**2
-        y22 = 0.25 * np.sqrt(15 / (2 * np.pi)) * (x + 1j * y)**2 / r**2
+        # Find the central atom's index
+        center_idx = np.where(labels == center_atom)[0]
+        if len(center_idx) == 0:
+            raise ValueError(f'Center atom {center_atom} not found in labels')
 
-        y2m2 = np.nan_to_num(y2m2, nan=0.)
-        y2m1 = np.nan_to_num(y2m1, nan=0.)
-        y20 = np.nan_to_num(y20, nan=0.)
-        y21 = np.nan_to_num(y21, nan=0.)
-        y22 = np.nan_to_num(y22, nan=0.)
+        # Shift all coordinates so that the central atom is at the origin
+        coords -= coords[center_idx[0]]
 
-        n_pts = np.shape(x)[0]
+        # Ensure that the susceptibility tensor is initialized
+        if self.dtensor is None:
+            raise ValueError("Susceptibility tensor (dtensor) is not initialized!")
 
-        isosurf = self.irred[0] * y2m2
-        isosurf += self.irred[1] * y2m1
-        isosurf += self.irred[2] * y20
-        isosurf += self.irred[3] * y21
-        isosurf += self.irred[4] * y22
+        chi_tensor = self.dtensor  # Load the deviatoric susceptibility tensor (in Å³)
 
-        isosurf *= 1 / (4 * np.pi) * 1.88973**3
+        # Initialize the isosurface array
+        isosurf = np.zeros_like(x, dtype=float)
 
-        isosurf /= r**3
+        # Compute PCS values for each grid point
+        for i in range(x.shape[0]):
+            for j in range(x.shape[1]):
+                for k in range(x.shape[2]):
+                    r_point = np.array([x[i, j, k], y[i, j, k], z[i, j, k]])
 
-        warnings.filterwarnings(
-            'default',
-            'invalid value encountered in divide'
-        )
+                    # Avoid division by zero by skipping points at the origin
+                    if np.allclose(r_point, np.zeros(3)):
+                        continue  # Skip calculation if r is zero
 
-        isosurf = 1E3 * np.real(isosurf) 
+                    # Compute the dipolar hyperfine tensor
+                    pdip = Hyperfine.calc_pdip(r_point)
 
-        coords *= 1.88973
+                    # Compute the paramagnetic chemical shift (PCS)
+                    pcs_value = (1 / 3) * np.trace(chi_tensor @ pdip)
+                    isosurf[i, j, k] = pcs_value
 
-        # Set central atom
-        coords -= coords[np.where(labels == center_atom)[0]]
+        # Scale the PCS values (convert to ppb)
+        isosurf *= 1E7  
 
-        # Create Gaussian Cube file as string for current orbital
-        cube = ''
-
-        cube += f'{comment}\n'
-        cube += 'Comment line\n'
-        cube += '{:d}   {:.6f} {:.6f} {:.6f}\n'.format(len(labels), lower, lower, lower) # noqa
-        cube += '{:d}   {:.6f}    0.000000    0.000000\n'.format(n_pts, step)
-        cube += '{:d}   0.000000    {:.6f}    0.000000\n'.format(n_pts, step)
-        cube += '{:d}   0.000000    0.000000    {:.6f}\n'.format(n_pts, step)
-        for lbl, c in zip(labels, coords):
-            cube += '{:d}   0.000000  {:.6f} {:.6f} {:.6f}\n'.format(xyzp.lab_to_num(lbl), *c) # noqa
-        a = 0
-
-        for xit in range(n_pts):
-            for yit in range(n_pts):
-                for zit in range(n_pts):
-                    a += 1
-                    cube += '{:.5e} '.format(isosurf[xit, yit, zit])
-                    if a == 6:
-                        cube += '\n'
-                        a = 0
-                cube += '\n'
-                a = 0
-
+        # Write the computed PCS isosurface to a cube file
         with open(file_name, 'w') as f:
-            f.write(cube)
+            f.write(f'{comment}\n')
+            f.write('Comment line\n')
+            f.write('{:d}   {:.6f} {:.6f} {:.6f}\n'.format(len(labels), lower, lower, lower))
+            f.write('{:d}   {:.6f}    0.000000    0.000000\n'.format(x.shape[0], step))
+            f.write('{:d}   0.000000    {:.6f}    0.000000\n'.format(y.shape[1], step))
+            f.write('{:d}   0.000000    0.000000    {:.6f}\n'.format(z.shape[2], step))
+
+            # Write atomic labels and coordinates
+            for lbl, c in zip(labels, coords):
+                f.write('{:d}   0.000000  {:.6f} {:.6f} {:.6f}\n'.format(xyzp.lab_to_num(lbl), *c))
+
+            # Write PCS values into the cube file
+            a = 0
+            for i in range(x.shape[0]):
+                for j in range(x.shape[1]):
+                    for k in range(x.shape[2]):
+                        a += 1
+                        f.write('{:.5e} '.format(isosurf[i, j, k]))
+                        if a == 6:
+                            f.write('\n')
+                            a = 0
+                    f.write('\n')
+                    a = 0
 
         if verbose:
-            ut.cprint(
-                f'\n PCS Isosurface written to \n {file_name}\n',
-                'cyan'
-            )
-
+            ut.cprint(f'\n PCS Isosurface written to \n {file_name}\n', 'cyan')
+            
         return
 
 

@@ -83,7 +83,7 @@ An example input file for ``fit_susc`` can be found in the ``simple_pnmr`` `repo
     |                             |                         |                                     |                                                                         |                      |
     |                             |                         |                                     | Used only when ``method:pdip``                                          |                      |
     +-----------------------------+-------------------------+-------------------------------------+-------------------------------------------------------------------------+----------------------+
-    | ``experiment``              | ``files``               | File Name(s)                        | File(s) containing experimental NMR peak data for a given temperature   |              | |:white_check_mark:| |
+    | ``experiment``              | ``files``               | File Name(s)                        | File(s) containing experimental NMR peak data for a given temperature   | |:white_check_mark:| |
     |                             |                         |                                     |                                                                         |                      |
     |                             |                         |                                     | as ``.csv``                                                             |                      |
     |                             |                         |                                     |                                                                         |                      |
