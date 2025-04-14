@@ -27,7 +27,7 @@ mpl.rcParams['savefig.directory'] = ''
 os.environ['OPENBLAS_NUM_THREADS'] = '1'
 
 # Change matplotlib font size to be larger
-mpl.rcParams.update({'font.size': 12})
+mpl.rcParams.update({'font.size': 14})
 
 # Set spawn as default start method - MUCH faster on WSL2 than default fork
 # if not using pathos multiprocessing instead
