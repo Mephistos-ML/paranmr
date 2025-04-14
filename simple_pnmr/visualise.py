@@ -455,7 +455,7 @@ def plot_fitted_shifts(molecule: main.Molecule, experiment: main.Experiment,
     expression += rf'  $\gamma$ = {molecule.susc.gamma:.3f}'
 
     ax.text(
-        0.0, 1.02, s=expression, fontsize=10, transform=ax.transAxes
+        0.0, 1.02, s=expression, fontsize=11, transform=ax.transAxes
     )
 
     fig.tight_layout()
@@ -615,7 +615,7 @@ def plot_pred_spectrum(molecule: main.Molecule,
             rotation='vertical',
             ha='center',
             va='bottom',
-            fontsize='14'
+            fontsize='18'
         )
 
         # Draw segmented line from peak to label via horizontal line
@@ -631,7 +631,7 @@ def plot_pred_spectrum(molecule: main.Molecule,
 
     ax.set_xlabel(r'{} $\delta$ (ppm)'.format(
         ut.isotope_format(isotope)),
-        fontsize='14'
+        fontsize='18'
     )
 
     # Deactivate borders, y axis and y ticks
@@ -877,7 +877,7 @@ def plot_shift_spread(molecule: main.Molecule,
     # Shift label, specify isotope/nucleus if only one type plotted
     if np.unique([nuc.isotope for nuc in molecule.nuclei]).size == 1:
         ax.set_ylabel(r'{} $\delta$ (ppm)'.format(
-            ut.isotope_format(molecule.nuclei[0].isotope)), fontsize='14'
+            ut.isotope_format(molecule.nuclei[0].isotope)), fontsize='18'
         )
     else:
         ax.set_ylabel(r'$\delta$ (ppm)')
@@ -887,7 +887,7 @@ def plot_shift_spread(molecule: main.Molecule,
 
     ax.xaxis.set_minor_locator(ticker.MultipleLocator(1))
     ax.set_xticks(xvals[::1] + 0.5)
-    ax.set_xticklabels(_order, rotation=45, fontsize='14')
+    ax.set_xticklabels(_order, rotation=45, fontsize='18')
     
     ax.grid(axis='x', ls='--', which='minor')
     ax.set_xlim(0.5, len(_order) + 1.5)
@@ -898,8 +898,7 @@ def plot_shift_spread(molecule: main.Molecule,
     legend = ax.legend(
         legend_markers,
         legend_labels,
-        loc='upper right',
-        bbox_to_anchor=(0.97, 0.97),   # Place the legend inside the plot (top right corner)
+        loc='best',
         frameon=True,                  # Enable the legend border
         fancybox=True,                 # Rounded corners for the legend box (optional)
         framealpha=1.0,                # Fully opaque background
@@ -1118,7 +1117,7 @@ def plot_shift_contrib(molecule: main.Molecule,
 
     if np.unique([nuc.isotope for nuc in molecule.nuclei]).size == 1:
         ax.set_ylabel(r'{} $\delta$ (ppm)'.format(
-            ut.isotope_format(molecule.nuclei[0].isotope)), fontsize='14'
+            ut.isotope_format(molecule.nuclei[0].isotope)), fontsize='18'
         )
     else:
         ax.set_ylabel(r'$\delta$ (ppm)')
@@ -1126,7 +1125,7 @@ def plot_shift_contrib(molecule: main.Molecule,
     ax.set_xlim([-0.5, xvals[-1] + 1.5])
 
     ax.set_xticks(xvals + 0.5)
-    ax.set_xticklabels(order, rotation=45, fontsize='14')   
+    ax.set_xticklabels(order, rotation=45, fontsize='18')   
 
     ax.yaxis.set_major_locator(ticker.AutoLocator())
     ax.yaxis.set_minor_locator(ticker.AutoMinorLocator())
@@ -1134,8 +1133,7 @@ def plot_shift_contrib(molecule: main.Molecule,
     ax.xaxis.set_tick_params('major', length=0)
 
     legend = ax.legend(
-        loc='upper right',
-        bbox_to_anchor=(0.97, 0.97),  # Place the legend inside the plot (top right corner)
+        loc='best',
         frameon=True,                 # Enable the legend border
         fancybox=True,                # Rounded corners for the legend box (optional)
         framealpha=1.0,               # Set legend background opacity (1.0 = fully opaque)

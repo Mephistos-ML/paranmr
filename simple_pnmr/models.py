@@ -304,9 +304,9 @@ class SusceptibilityModel(ABC):
         raise NotImplementedError
 
     def residuals(self, parameters: dict[str, float],
-                  nuclei: list[main.Nucleus],
-                  al_to_para_shift: dict[str, float],
-                  average_labels: list[list[str]] = []) -> list[float]:
+                nuclei: list[main.Nucleus],
+                al_to_para_shift: dict[str, float],
+                average_labels: list[list[str]] = []) -> list[float]:
         '''
         Calculates difference between true susceptibility and trial
         susceptibility calculated using model
@@ -331,25 +331,21 @@ class SusceptibilityModel(ABC):
 
         trial_shifts = self.model(parameters, nuclei)
 
-        # Replace trial shifts with average
-        if len(average_labels):
-            average_trial_shifts = [
-                np.mean([trial_shifts[lab] for lab in group])
-                for group in average_labels
-            ]
-
-            _avg = {
-                lab: shift
-                for group, shift in zip(average_labels, average_trial_shifts)
-                for lab in group
-            }
-
+        # Initialize weights for all atom labels to 1.0
+        weights = {lab: 1.0 for lab in trial_shifts.keys()}
+        if average_labels:
+            # For each group, compute the average shift and assign a weight factor
+            # such that the overall contribution of the group is independent of its size
             for group in average_labels:
+                group_average = np.mean([trial_shifts[lab] for lab in group])
+                group_size = len(group)
                 for lab in group:
-                    trial_shifts[lab] = _avg[lab]
-
+                    trial_shifts[lab] = group_average
+                    weights[lab] = np.sqrt(group_size)  # residuals will be divided by this
+ 
+        # Compute residuals using uniform weighting for single signals and scaled weights for groups
         residuals = [
-            exp_shift - trial_shifts[atom_label]
+            (exp_shift - trial_shifts[atom_label]) / weights.get(atom_label, 1.0)
             for atom_label, exp_shift in al_to_para_shift.items()
         ]
 
