@@ -4,6 +4,7 @@ This module contains utility objects and methods
 """
 
 import numpy as np
+import numpy.linalg as la
 from numpy.typing import NDArray
 import scipy.constants as consts
 import sys
@@ -416,7 +417,7 @@ def find_index_of_nearest(array, value):
 
 
 def isotope_format(isotope_string: str) -> str:
-    '''
+    r'''
     Converts isotope string into Mathtext, compatible with matplotlib
 
     Parameters
@@ -440,3 +441,34 @@ def isotope_format(isotope_string: str) -> str:
     lets = isotope_string[split_at:]
 
     return r'$^\mathregular{{{}}} \mathregular{{{}}}$'.format(nums, lets)
+    
+def calc_hfc_susc_rotation_matrix(hfc_coords, susc_coords) -> NDArray:
+    '''
+    Generates rotation matrix R for transformation of A tensor into frame of susceptibility tensor.\n
+    n.b. A and chi are not neccessarily in the same original frame.\n
+
+    Tranformation is\n
+    Q_SUSC = R * Q_HFC
+
+    Rotation matrix is constructed using coordinates from chi and HFC calculations.
+    Parameters
+    ----------
+
+    Returns
+    -------
+
+    '''
+
+    hfc_coords = np.asarray(hfc_coords)
+    susc_coords = np.asarray(susc_coords)
+
+    # Create common centre of origin as mean of coordinates
+    hfc_coords -= hfc_coords.mean(axis=0)
+    susc_coords -= susc_coords.mean(axis=0)
+
+    # Compute optimal rotation matrix via SVD to align HFC coordinates to susceptibilty frame
+    covariance_matrix = hfc_coords.T @ susc_coords
+    u_svd, _, vt_svd = la.svd(covariance_matrix)
+    rotation_matrix = la.inv(u_svd @ vt_svd)
+
+    return rotation_matrix
