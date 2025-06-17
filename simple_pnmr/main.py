@@ -519,6 +519,18 @@ class Hyperfine():
         self._eigvecs = None
         return
 
+    def rotate_tensor(self, rot_mat: NDArray):
+        '''
+        Rotate hyperfine tensor using given rotation matrix
+
+        Parameters
+        ----------
+        rotmat: ndarray of floats
+            3x3 rotation matrix
+        '''
+        self.tensor = la.inv(rot_mat) @ self.tensor @ rot_mat
+        return
+
     @property
     def iso(self) -> float:
         '''
@@ -817,7 +829,7 @@ class Susceptibility:
     def eigvecs(self) -> NDArray:
         '''
         Eigenvectors of Susceptibility Tensor
-        Dimensionless
+        Dimensionless and same order as eigenvalues (low to high abs value)
         '''
         # Recalculate if not populated
         if self._eigvecs is None:
@@ -2152,7 +2164,7 @@ class Molecule():
         '''
 
         for nuc in self.nuclei:
-            nuc.A.tensor = la.inv(rot_mat) @ nuc.A.tensor @ rot_mat
+            nuc.A.rotate_tensor(rot_mat)
 
         return
 

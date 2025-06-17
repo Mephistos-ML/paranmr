@@ -1038,6 +1038,16 @@ def predict_func(uargs):
         for _ in range(len(experiments))
     ]
 
+    # Transform hypefine tensors into eigenframe of susceptibility tensor
+    # Find transformation between HFC and SUSC frames
+    _, susc_coords = rdrs.read_orca5_output_xyz(config.susceptibility_file)
+    hfc_to_susc_rmat = ut.calc_hfc_susc_rotation_matrix(base_molecule.coords, susc_coords)
+    # Combine with eigenvectors of SUSC to give total transformation matrix for each temperature
+    for molecule, susc in zip(molecules, suscs):
+        hfc_to_eigensusc = susc.eigvecs.T @ hfc_to_susc_rmat
+        # Apply to each molecule
+        molecule.rotate_hyperfines(hfc_to_eigensusc.T)
+
     if len(config.experiment_spectrum_files):
         for experiment, spectrum in zip(experiments, config.experiment_spectrum_files): # noqa
             experiment.load_spectrum_from_file(spectrum)
