@@ -8,6 +8,7 @@ import numpy as np
 from numpy.typing import NDArray, ArrayLike
 import xyz_py.atomic as atomic
 import copy
+import pandas as pd
 
 from . import utils as ut
 from . import main
@@ -525,7 +526,7 @@ def plot_pred_spectrum(molecule: main.Molecule,
         if nuc.isotope == isotope:
             _total += lorentzian(
                 ppm_grid,
-                nuc.shift.lw,
+                1/5,
                 nuc.shift.avg,
                 1
             )
@@ -661,6 +662,10 @@ def plot_pred_spectrum(molecule: main.Molecule,
 
     if show:
         plt.show()
+
+    # Extract the xyz file with coordinates of the spectrum for further plotting if necessary
+    # df = pd.DataFrame({'x': ppm_grid, 'y': _total})
+    # df.to_csv('spectrum_data.csv', index=False) 
 
     return fig, ax
 

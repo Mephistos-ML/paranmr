@@ -1073,6 +1073,7 @@ def predict_func(uargs):
         # Spread
         vis.plot_shift_spread(
             molecule,
+            experiment=experiment,
             save=True,
             show=False,
             terms=_terms,

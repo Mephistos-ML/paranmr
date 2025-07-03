@@ -1,4 +1,4 @@
-# This file was generated with simple_pnmr v0.0.0 at 14:40:07 16-06-2025 
+# This file was generated with simple_pnmr v0.0.0 at 13:39:33 23-06-2025 
 # T = 298.00 K
 atom_label (),chem_label (),x (Å),y (Å),z (Å),Aiso (ppm Å^-3),Adip_xx (ppm Å^-3),Adip_xy (ppm Å^-3),Adip_xz (ppm Å^-3),Adip_yy (ppm Å^-3),Adip_yz (ppm Å^-3),Adip_zz (ppm Å^-3),δ_total_avg (ppm),δ_total (ppm),δ_dia (ppm),δ_fc (ppm),δ_pc (ppm),linewidth (Hz)
 C1,C_tphz4,0.73210,3.61944,0.00000,1596.57905,-701.70796,0.03596,348.66403,2208.77421,-0.07443,-1507.06625,424.38350,424.38366,0.00000,450.01597,-25.63231,1
