@@ -1088,7 +1088,8 @@ def read_orca6_output_a_tensors(file_name: str) -> tuple[
                     ])
 
                     a_iso[label] = 1 / 3 * np.trace(full)
-                    a_dip[label] = full - a_iso[label]
+                    a_dip[label] = full - np.eye(3) * a_iso[label]
+
 
     return a_iso, a_dip
 

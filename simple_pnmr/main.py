@@ -519,18 +519,6 @@ class Hyperfine():
         self._eigvecs = None
         return
 
-    def rotate_tensor(self, rot_mat: NDArray):
-        '''
-        Rotate hyperfine tensor using given rotation matrix
-
-        Parameters
-        ----------
-        rotmat: ndarray of floats
-            3x3 rotation matrix
-        '''
-        self.tensor = la.inv(rot_mat) @ self.tensor @ rot_mat
-        return
-
     @property
     def iso(self) -> float:
         '''
@@ -829,7 +817,7 @@ class Susceptibility:
     def eigvecs(self) -> NDArray:
         '''
         Eigenvectors of Susceptibility Tensor
-        Dimensionless and same order as eigenvalues (low to high abs value)
+        Dimensionless
         '''
         # Recalculate if not populated
         if self._eigvecs is None:
@@ -1351,8 +1339,11 @@ class Shift():
         '''
         Calculate Fermi Contact part of chemical shift
         '''
-        shift = chi.iso * A.iso
+        # shift = chi.iso * A.iso
 
+        # return shift
+        debug_iso = 0.21063014633520344 # Cubic Angstrom (without temperature), spin only falue for S = 2
+        shift = debug_iso * A.iso
         return shift
 
     @staticmethod
@@ -2164,7 +2155,7 @@ class Molecule():
         '''
 
         for nuc in self.nuclei:
-            nuc.A.rotate_tensor(rot_mat)
+            nuc.A.tensor = la.inv(rot_mat) @ nuc.A.tensor @ rot_mat
 
         return
 
