@@ -290,8 +290,8 @@ def fit_susc_func(uargs):
 
     name_to_susc_fit: dict[str, models.SusceptibilityModel] = {
         'full': models.FullSuscFitter,
-        'isoaxrho': models.IsoAxRhoFitter,
         'split': models.SplitFitter,
+        'isoaxrho': models.IsoAxRhoFitter,
         'eigen': models.EigenFitter,
         'isoeigen': models.IsoEigenFitter
     }
@@ -1052,6 +1052,9 @@ def predict_func(uargs):
     # Update susceptibility tensor of Molecule using model
     for molecule, susc, experiment in zip(molecules, suscs, experiments):
         molecule.susc = susc
+        
+        # Set spin-only value of the magnetic susceptibility
+        susc.iso = ut.get_spin_only_susceptibility(uargs, susc.temperature)
 
         # Calculate shifts using new susceptibility tensor
         molecule.calculate_shifts()

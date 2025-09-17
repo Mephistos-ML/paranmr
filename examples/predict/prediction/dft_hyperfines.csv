@@ -1,8 +1,4 @@
-<<<<<<< HEAD
-#This file was generated with simple_pnmr v0.0.0 on 13:39:27 23-06-2025 
-=======
-#This file was generated with simple_pnmr v0.0.0 on 12:21:13 12-03-2025 
->>>>>>> parent of f559c7d (Merge branch 'matrix_molecular_frame' into 'main')
+#This file was generated with simple_pnmr v0.0.0 on 12:16:33 17-09-2025 
 # Data taken from file /Users/ernestborysenko/git/simple_pnmr/examples/predict/hyperfine_tpssh.log
 atom_label, Aiso (MHz), Adip_xx (MHz), Adip_xy (MHz), Adip_xz (MHz), Adip_yy (MHz), Adip_yz (MHz), Adip_zz (MHz)
 Ni1, 14.87302, -0.45420, 0.00000, 0.00000, 1.30420, 0.00000, -0.85000

@@ -759,6 +759,97 @@ class SplitFitter(SusceptibilityModel):
 
         return tensor
 
+class IsoAxRhoFitter(SusceptibilityModel):
+
+    NAME = 'Isotropic, Axial, and Rhombic Components of Susceptibility'
+
+    VARNAMES = [
+        'iso',
+        'ax',
+        'rho',
+    ]
+
+    VARNAMES_MM = {
+        'iso': r'$\chi_\mathregular{iso}$',
+        'ax': r'$\chi_\mathregular{ax}$',
+        'rho': r'$\chi_\mathregular{rho}$',
+    }
+
+    UNITS_MM = {
+        'iso': r'Å$^3$',
+        'ax': r'Å$^3$',
+        'rho': r'Å$^3$',
+    }
+
+    BOUNDS = {
+        'iso': [0., np.inf],
+        'ax': [-np.inf, np.inf],
+        'rho': [-np.inf, np.inf],
+    }
+
+    @staticmethod
+    def model(parameters: dict[str, float],
+              nuclei: list[main.Nucleus]) -> dict[str, float]:
+        '''
+        Computes model function fermi + psuedo contact shift
+
+        Parameters
+        ----------
+        parameters: dict[str, float]
+            keys are VARNAMES, values are float values
+        nuclei: list[main.Nucleus]
+            Nuclei for which shifts will be calculated
+
+        Returns
+        -------
+        dict[str, float]
+            keys are nucleus.label, values are paramagnetic shifts
+
+        '''
+
+        delta_params = copy.deepcopy(parameters)
+        tnsr = IsoAxRhoFitter.totensor(delta_params)
+
+        shifts = {
+            nuc.label: 1. / 3. * np.trace(tnsr @ nuc.A.tensor)
+            for nuc in nuclei
+        }
+
+        return shifts
+
+    @staticmethod
+    def totensor(params: dict[str, float]) -> NDArray:
+        '''
+        Converts set of parameters for this model
+        into a numpy array representation of the susceptibility tensor
+
+        Parameters
+        ----------
+        params: dict[str, float]
+            Keys are VARNAMES, values are float values
+
+        Returns
+        -------
+        NDArray of floats
+            Susceptibility tensor as numpy array
+        '''
+
+        tensor = np.array(
+            [
+                [
+                    -params['ax']/3 + params['rho'], 0.0, 0.0
+                ],
+                [
+                    0.0, -params['ax']/3 - params['rho'], 0.0
+                ],
+                [
+                    0.0, 0.0, 2/3 * params['ax']
+                ]
+            ]
+        )
+        tensor += np.eye(3) * params['iso']
+
+        return tensor
 
 class EigenFitter(SusceptibilityModel):
 
@@ -940,194 +1031,6 @@ class IsoEigenFitter(SusceptibilityModel):
         ])
 
         return tensor
-
-
-class IsoAxRhoFitter(SusceptibilityModel):
-
-    NAME = 'Isotropic, Axial, and Rhombic Components of Susceptibility'
-
-    VARNAMES = [
-        'iso',
-        'ax',
-        'rho'
-    ]
-
-    VARNAMES_MM = {
-        'iso': r'$\chi_\mathregular{iso}$',
-        'ax': r'$\Delta\chi_\mathregular{ax}$',
-        'rho': r'$\Delta\chi_\mathregular{rho}$',
-    }
-
-    UNITS_MM = {
-        'iso': r'Å$^3$',
-        'ax': r'Å$^3$',
-        'rho': r'Å$^3$',
-    }
-
-    BOUNDS = {
-        'iso': [0, np.inf],
-        'ax': [-np.inf, np.inf],
-        'rho': [-np.inf, np.inf],
-    }
-
-    @staticmethod
-    def model(parameters: dict[str, float],
-              nuclei: list[main.Nucleus]) -> dict[str, float]:
-        '''
-        Computes model function fermi + (axial)psuedo contact shift
-
-        Parameters
-        ----------
-        parameters: dict[str, float]
-            keys are VARNAMES, values are float values
-        nuclei: list[main.Nucleus]
-            Nuclei for which shifts will be calculated
-
-        Returns
-        -------
-        dict[str, float]
-            keys are nucleus.label, values are paramagnetic shifts
-        '''
-
-        iso = parameters['iso']
-        ax = parameters['ax']
-        rho = parameters['rho']
-
-        shifts = {
-            nuc.label: nuc.shift.dia + iso * nuc.A.iso + 1. / 3. * (rho * (nuc.A.dip[0, 0] - nuc.A.dip[1, 1]) - ax * (nuc.A.dip[0, 0] + nuc.A.dip[1, 1])) # noqa
-            for nuc in nuclei
-        }
-
-        return shifts
-
-    @staticmethod
-    def design_matrix(nuclei: list[main.Nucleus],
-                      fix_vars: dict[str, float]):
-        '''
-        Computes model function of paramagnetic chemical shift
-
-        Parameters
-        ----------
-        nuclei: list[main.Nucleus]
-            Nuclei for which shifts will be calculated
-        fix_vars: dict[str, float]:
-            Parameters to fix (i.e. not fit)
-            keys are names in VARNAMES, values are float values
-
-        Returns
-        -------
-        ndarray of floats
-            Design matrix A in Ax=b problem
-        '''
-        to_pop = {
-            'iso': 0,
-            'ax': 1,
-            'rho': 2,
-        }
-
-        design = []
-
-        for nuc in nuclei:
-
-            # This is a single row corresponding to the current nucleus
-            # A terms separated by corresponding chi term
-            _row = [
-                # Chi iso
-                nuc.A.tensor[0, 0] + nuc.A.tensor[1, 1] + nuc.A.tensor[2, 2],
-                # Chi axial
-                1. / 3. * (- nuc.A.tensor[0, 0] - nuc.A.tensor[1, 1] + 2* nuc.A.tensor[2, 2]), # noqa
-                # Chi rhombi
-                nuc.A.tensor[0, 0] - nuc.A.tensor[1, 1]
-            ]
-
-            # If any chi terms are fixed, remove their corresponding columns
-            # from the design matrix
-            pop_these = []
-            for var in fix_vars.keys():
-                pop_these.append(to_pop[var])
-            _row = [ve for it, ve in enumerate(_row) if it not in pop_these]
-            design.append(_row)
-
-        design = 1. / 3. * np.asarray(design)
-
-        return design
-
-    @staticmethod
-    def target_vector(nuclei: list[main.Nucleus], experiment: main.Experiment,
-                      fix_vars: dict[str, float]):
-        '''
-        Computes model function of paramagnetic chemical shift
-
-        Parameters
-        ----------
-        nuclei: list[main.Nucleus]
-            Nuclei for which shifts will be calculated
-        experiment: main.Experiment
-            Experimental data object
-        fix_vars: dict[str, float]:
-            Parameters to fix (i.e. not fit)
-            keys are names in VARNAMES, values are float values
-
-        Returns
-        -------
-        ndarray of floats
-            Target vector b in Ax=b problem
-        '''
-
-        target = []
-
-        for nuc in nuclei:
-            _tgt = experiment[nuc.chem_label]
-
-            # Remove any fixed variable terms from the target vector
-            to_subtract = {
-                'iso': nuc.A.tensor[0, 0] + nuc.A.tensor[1, 1] + nuc.A.tensor[2, 2], # noqa
-                'ax': 1. / 3. * (- nuc.A.tensor[0, 0] - nuc.A.tensor[1, 1] + 2* nuc.A.tensor[2, 2]), # noqa
-                'rho': nuc.A.tensor[0, 0] - nuc.A.tensor[1, 1]
-            }
-
-            for key, val in fix_vars.items():
-                _tgt -= 1. / 3. * to_subtract[key] * val
-
-            # Remove diamagnetic shift
-            _tgt -= nuc.shift.dia
-            target.append(_tgt)
-
-        target = np.asarray(target)
-
-        return target
-
-    @staticmethod
-    def totensor(params: dict[str, float]) -> NDArray:
-        '''
-        Converts set of parameters for this model
-        into a numpy array representation of the susceptibility tensor
-
-        Parameters
-        ----------
-        params: dict[str, float]
-            Keys are VARNAMES, values are float values
-
-        Returns
-        -------
-        NDArray of floats
-            Susceptibility tensor as numpy array
-        '''
-
-        iso = params['iso']
-        ax = params['ax']
-        rho = params['rho']
-
-        tensor = np.diag(
-            [
-                -1 / 3 * ax + rho + iso,
-                -1 / 3 * ax - rho + iso,
-                2 / 3 * ax + iso
-            ]
-        )
-
-        return tensor
-
 
 class FullSuscFitter(SusceptibilityModel):
 

@@ -1493,3 +1493,15 @@ def read_orca_susceptibility(file_name, section):
                     line = next(f)
 
     return susceptibilities
+
+def read_orca_spin(file_name, section):
+    with open(file_name, 'r') as f:
+        for line in f:
+            if f'QDPT WITH {section.upper()}' in line:
+                while True:
+                    line = next(f)
+                    if 'Spin multiplicity =' in line:
+                        spin = (float(line.split('Spin multiplicity =')[1].strip()) - 1) / 2
+                        break
+
+    return spin

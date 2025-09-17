@@ -1338,12 +1338,9 @@ class Shift():
     def calc_fcs(A: Hyperfine, chi: 'Susceptibility') -> float:
         '''
         Calculate Fermi Contact part of chemical shift
-        '''
-        # shift = chi.iso * A.iso
+        # '''
+        shift = chi.iso * A.iso
 
-        # return shift
-        debug_iso = 0.21063014633520344 # Cubic Angstrom (without temperature), spin only falue for S = 2
-        shift = debug_iso * A.iso
         return shift
 
     @staticmethod

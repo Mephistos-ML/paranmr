@@ -12,11 +12,18 @@ import math
 import re
 
 from . import string_tools as st
+from . import readers as rdrs
+from . import inputs as inps
 
+# Physical constants
 MU0 = consts.physical_constants["vacuum mag. permeability"][0]  # [N A^-2]
+MUB = consts.physical_constants["Bohr magneton"][0]
 HBAR = consts.hbar  # [J s radian-1]
 H = consts.h  # [J s radian-1]
+KB = 1.380649e-23 # Boltzmann constant k [J·K⁻¹]
+GE = 2.002319 # g value of free electron
 EGAMMA = consts.physical_constants["electron gyromag. ratio in MHz/T"][0]
+
 
 # Values from easyspin, most abundant isotope taken
 # unless otherwise stated
@@ -416,7 +423,7 @@ def find_index_of_nearest(array, value):
 
 
 def isotope_format(isotope_string: str) -> str:
-    '''
+    r'''
     Converts isotope string into Mathtext, compatible with matplotlib
 
     Parameters
@@ -440,3 +447,17 @@ def isotope_format(isotope_string: str) -> str:
     lets = isotope_string[split_at:]
 
     return r'$^\mathregular{{{}}} \mathregular{{{}}}$'.format(nums, lets)
+
+def get_spin_only_susceptibility(uargs, temperature):
+    config = inps.PredictConfig.from_file(uargs.input_file)
+
+    S = rdrs.read_orca_spin(config.susceptibility_file,section=config.susceptibility_format.split('orca_')[1])
+    T = temperature
+
+    # Calculate spin-only magnetic susceptibility
+    chi_only_iso = (MU0 * MUB**2 * GE**2 * S * (S + 1)) / (3 * KB * T) * ( 10 ** 32) # Si [10^-32 m^3]
+
+    # Convert from Si to A^3
+    chi_only_iso = chi_only_iso * 10**-2
+
+    return chi_only_iso

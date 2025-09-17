@@ -20,7 +20,7 @@ nuclei:
   include: H
 
 susc_fit:
-  type: split
+  type: full
   variables:
     iso: [fit, 0.01]
     dxx: [fit, 0.1]
