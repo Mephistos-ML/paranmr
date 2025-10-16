@@ -8,6 +8,7 @@ import copy
 import os
 from glob import glob
 import numpy as np
+import csv
 
 
 class Config(ABC):
@@ -80,6 +81,13 @@ class Config(ABC):
                 raise KeyError(f'Error: missing keyword {keyword}')
             for subkeyword in cls.REQ_KEYWORDS[keyword]:
                 if subkeyword not in parsed[keyword]:
+                    # Allow nuclei:include to be omitted if nuclei:include_groups is provided
+                    if keyword == 'nuclei' and subkeyword == 'include':
+                        nuclei_block = parsed.get('nuclei', {}) if isinstance(parsed, dict) else {}
+                        if isinstance(nuclei_block, dict):
+                            include_groups_val = nuclei_block.get('include_groups', [])
+                            if include_groups_val not in (None, [], ''):
+                                continue
                     raise KeyError(
                         f'Error: missing keyword {keyword}:{subkeyword}'
                     )
@@ -153,7 +161,8 @@ class FitSuscConfig(Config):
             'groups'
         ],
         'nuclei': [
-            'include'
+            'include',
+            'include_groups'
         ],
         'susc_fit': [
             'type',
@@ -217,6 +226,7 @@ class FitSuscConfig(Config):
         self._assignment_method = ''
         self._assignment_groups = []
         self._nuclei_include = ''
+        self._nuclei_include_groups = []  # list of chem_labels to expand into atom labels
         self._susc_fit_type = ''
         self._susc_fit_variables = ''
         self._susc_fit_average_shifts = []
@@ -225,7 +235,65 @@ class FitSuscConfig(Config):
         for key in kwargs:
             setattr(self, key, kwargs[key])
 
+        self._resolve_nuclei_include_groups()
+
         pass
+    @property
+    def nuclei_include_groups(self) -> list | str:
+        return self._nuclei_include_groups
+
+    @nuclei_include_groups.setter
+    def nuclei_include_groups(self, values: list | str):
+        # Accept a single string or a list of strings representing chem_labels
+        if isinstance(values, str):
+            self._nuclei_include_groups = [values]
+        else:
+            self._nuclei_include_groups = list(values)
+        # Do not expand here because chem_labels_file may not yet be set; expansion happens in _resolve_nuclei_include_groups()
+        return
+    def _resolve_nuclei_include_groups(self):
+        """Expand nuclei include groups (chem_labels) into atom labels using chem_labels_file.
+        Merge the expanded atoms into self._nuclei_include. Remove duplicates preserving order.
+        Safe to call multiple times.
+        """
+        groups = getattr(self, '_nuclei_include_groups', []) or []
+        if not groups:
+            return
+        # If chem_labels_file is not set yet, skip silently
+        chem_file = getattr(self, '_chem_labels_file', '')
+        if not chem_file:
+            return
+        expanded_atoms: list[str] = []
+        try:
+            with open(chem_file, newline='') as csvfile:
+                reader = csv.DictReader(csvfile)
+                for row in reader:
+                    clabel = row.get('chem_label')
+                    alabel = row.get('atom_label')
+                    if clabel in groups and alabel:
+                        expanded_atoms.append(alabel)
+        except FileNotFoundError:
+            raise FileNotFoundError(f'chem_labels_file not found: {chem_file}')
+        except Exception as e:
+            raise e
+        # Merge with existing nuclei_include
+        current = self._nuclei_include
+        if isinstance(current, str) and current:
+            merged = [current] + expanded_atoms
+        elif isinstance(current, list):
+            merged = current + expanded_atoms
+        elif not current:
+            merged = expanded_atoms
+        else:
+            merged = expanded_atoms
+        # Deduplicate preserving order
+        seen = set()
+        deduped = []
+        for x in merged:
+            if x not in seen:
+                seen.add(x)
+                deduped.append(x)
+        self._nuclei_include = deduped
 
     @property
     def hyperfine_rotate(self) -> str:
@@ -632,7 +700,8 @@ class PlotAConfig(FitSuscConfig):
             'pdip_centre'
         ],
         'nuclei': [
-            'include'
+            'include',
+            'include_groups'
         ],
         'project': [
             'name'

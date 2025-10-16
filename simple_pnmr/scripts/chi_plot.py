@@ -32,7 +32,6 @@ It can also perform linear regression on provided experimental standard deviatio
 """
 
 # Standard library imports
-import sys
 import math
 import argparse
 import csv
@@ -92,7 +91,7 @@ def get_chiT_tensors(f, start_line: str) -> tuple[list[float], dict[float, np.nd
         # Advance past blank lines
         line = next(f); line = next(f)
 
-    temps = sorted(tensors.keys())
+    temps = tensors.keys()
     return temps, tensors, line
 
 def get_g_matrix(f, start_line: str) -> tuple[np.ndarray, float, str]:
@@ -327,6 +326,7 @@ def write_results_csv(
     chi_rho_fit_pred: list[float] | None,
     chi_iso_sdev_pred: list[float] | None,
     chi_ax_sdev_pred: list[float] | None,
+    chi_rho_sdev_pred: list[float] | None,
     temps_csv: list[float] | None,
     inv_t_csv: list[float] | None,
     chi_iso_fit_csv: list[float] | None,
@@ -334,16 +334,19 @@ def write_results_csv(
     chi_rho_fit_csv: list[float] | None,
     chi_iso_sdev_csv: list[float] | None,
     chi_ax_sdev_csv: list[float] | None,
+    chi_rho_sdev_csv: list[float] | None,
     a_iso: float | None,
     b_iso: float | None,
     a_ax: float | None,
     b_ax: float | None,
     a_rho: float | None,
     b_rho: float | None,
-    a_iso_sd: float | None,
-    b_iso_sd: float | None,
-    a_ax_sd: float | None,
-    b_ax_sd: float | None,
+    a_iso_se: float | None,
+    b_iso_se: float | None,
+    a_ax_se: float | None,
+    b_ax_se: float | None,
+    a_rho_se: float | None,
+    b_rho_se: float | None,
 ) -> None:
     """
     Write all calculated NEVPT2/analytic quantities and (if available) linear-regression
@@ -366,7 +369,7 @@ def write_results_csv(
     # Optional series
     opt_series = [
         chi_iso_fit_pred, chi_ax_fit_pred, chi_rho_fit_pred,
-        chi_iso_sdev_pred, chi_ax_sdev_pred,
+        chi_iso_sdev_pred, chi_ax_sdev_pred, chi_rho_sdev_pred
     ]
 
     # Compute minimum valid length across mandatory series
@@ -382,12 +385,12 @@ def write_results_csv(
 
     headers = [
         'Temperature (K)', '1/T (1/K)',
-        'chi_iso_NEPT2_norm', 'chi_ax_NEPT2_norm', 'chi_rho_NEPT2_norm',
+        'chi_iso_NEVPT2_norm', 'chi_ax_NEVPT2_norm', 'chi_rho_NEVPT2_norm',
         'chi_iso_analytic', 'chi_ax_analytic', 'chi_rho_analytic',
         '(g^2)_iso', '(g^2)_ax', '(g^2)_rho',
         'D (cm^-1)', 'E (cm^-1)', 'D (J)', 'E (J)',
         'chi_iso_fit_LR', 'chi_ax_fit_LR', 'chi_rho_fit_LR',
-        'chi_iso_sdev_LR', 'chi_ax_sdev_LR',
+        'chi_iso_sdev_LR', 'chi_ax_sdev_LR', 'chi_rho_sdev_LR'
     ]
 
     with open(output_csv_path, 'w', newline='') as f:
@@ -401,7 +404,7 @@ def write_results_csv(
                 g_sq_iso[i], g_sq_ax[i], g_sq_rh[i],
                 D_cm_inv[i], E_cm_inv[i], D_J[i], E_J[i],
                 _get_opt(chi_iso_fit_pred, i), _get_opt(chi_ax_fit_pred, i), _get_opt(chi_rho_fit_pred, i),
-                _get_opt(chi_iso_sdev_pred, i), _get_opt(chi_ax_sdev_pred, i),
+                _get_opt(chi_iso_sdev_pred, i), _get_opt(chi_ax_sdev_pred, i), _get_opt(chi_rho_sdev_pred, i)
             ]
             writer.writerow(row)
 
@@ -413,7 +416,7 @@ def write_results_csv(
             raw_headers = [
                 'CSV Temperature (K)', 'CSV 1/T (1/K)',
                 'chi_iso_fitted_raw', 'chi_ax_fitted_raw', 'chi_rho_fitted_raw',
-                'chi_iso_sdev_raw', 'chi_ax_sdev_raw',
+                'chi_iso_sdev_raw', 'chi_ax_sdev_raw', 'chi_rho_sdev_raw'
             ]
             writer.writerow(raw_headers)
             # Determine length safely
@@ -425,53 +428,116 @@ def write_results_csv(
             for j in range(n_raw):
                 iso_sd = '' if (chi_iso_sdev_csv is None or j >= len(chi_iso_sdev_csv) or chi_iso_sdev_csv[j] is None) else chi_iso_sdev_csv[j]
                 ax_sd  = '' if (chi_ax_sdev_csv  is None or j >= len(chi_ax_sdev_csv)  or chi_ax_sdev_csv[j]  is None) else chi_ax_sdev_csv[j]
+                rho_sd  = '' if (chi_rho_sdev_csv  is None or j >= len(chi_rho_sdev_csv)  or chi_rho_sdev_csv[j]  is None) else chi_rho_sdev_csv[j]
                 writer.writerow([
                     temps_csv[j], inv_t_csv[j],
                     chi_iso_fit_csv[j], chi_ax_fit_csv[j], chi_rho_fit_csv[j],
-                    iso_sd, ax_sd,
+                    iso_sd, ax_sd, rho_sd
                 ])
 
         # Append LR coefficients as a summary block
         writer.writerow([])
-        lr_headers = ['target', 'slope_a', 'intercept_b']
+        lr_headers = ['target', 'slope_a', 'intercept_b', 'slope_err', 'intercept_err']
         writer.writerow(lr_headers)
-        def _w(name, a, b):
-            writer.writerow([name, '' if a is None else a, '' if b is None else b])
-        _w('chi_iso (fit)', a_iso, b_iso)
-        _w('chi_ax (fit)',  a_ax,  b_ax)
-        _w('chi_rho (fit)', a_rho, b_rho)
-        _w('chi_iso_sdev (fit)', a_iso_sd, b_iso_sd)
-        _w('chi_ax_sdev (fit)',  a_ax_sd,  b_ax_sd)
+        def _w(name, a, b, a_err, b_err):
+            writer.writerow([
+                name,
+                '' if a is None else a,
+                '' if b is None else b,
+                '' if a_err is None else a_err,
+                '' if b_err is None else b_err,
+            ])
+        _w('chi_iso (fit)', a_iso, b_iso, a_iso_se, b_iso_se)
+        _w('chi_ax (fit)',  a_ax,  b_ax,  a_ax_se,  b_ax_se)
+        _w('chi_rho (fit)', a_rho, b_rho, a_rho_se, b_rho_se)
 
-
-# Top-level linear regression helper for chi(T) CSV fitting
-def linreg_predict(x_train: list[float], y_train: list[float], x_pred: list[float]) -> tuple[list[float] | None, float | None, float | None]:
+# Weighted linear regression with optional known pointwise standard deviations.
+def weighted_linreg_predict(x_train: list[float],
+                            y_train: list[float],
+                            x_pred: list[float],
+                            sigma: list[float] | None = None) -> tuple[list[float] | None, float | None, float | None, list[float] | None, float | None, float | None]:
     """
-    Simple linear regression y = a*x + b using numpy.polyfit.
+    Perform weighted least squares for the linear model y = a*x + b.
 
-    Args:
-        x_train (list[float]): Training x values (e.g., 1/T for CSV data).
-        y_train (list[float]): Training y values (e.g., chi*T for CSV data).
-        x_pred (list[float]): X values where predictions are desired.
+    If `sigma` is provided (pointwise standard deviations for y_train), uses
+    weights w_i = 1/sigma_i^2 for those entries where sigma_i is not None and > 0.
+    Missing or non-positive sigmas fall back to the median of available sigmas.
 
-    Returns:
-        (y_pred, a, b):
-            y_pred (list[float] | None): Predicted y values for x_pred, or None if fitting is not possible.
-            a (float | None): slope of the linear regression.
-            b (float | None): intercept of the linear regression.
+    Returns
+    -------
+    y_pred : list[float] | None
+        Predicted y values at x_pred.
+    a, b : float | None
+        Fitted slope and intercept.
+    y_pred_std : list[float] | None
+        Standard deviation of the predicted MEAN at each x_pred based on the
+        parameter covariance matrix (i.e., sqrt(f^T Cov f), with f=[x,1]).
     """
     if x_train is None or y_train is None:
-        return None, None, None
+        return None, None, None, None, None, None
     if len(x_train) < 2 or len(y_train) < 2:
-        return None, None, None
+        return None, None, None, None, None, None
     try:
-        coeffs = np.polyfit(np.array(x_train, dtype=float), np.array(y_train, dtype=float), 1)
-        a, b = float(coeffs[0]), float(coeffs[1])
-        y_pred = (a * np.array(x_pred, dtype=float) + b).tolist()
-        return y_pred, a, b
+        x = np.asarray(x_train, dtype=float)
+        y = np.asarray(y_train, dtype=float)
+        # Build design matrix A = [x, 1]
+        A = np.column_stack([x, np.ones_like(x)])
+
+        # Prepare weights
+        if sigma is not None and any(s is not None for s in sigma):
+            # Convert sigma list to array, replacing None/<=0 with median of valid sigmas
+            s_arr = np.array([np.nan if (s is None or (isinstance(s, (int, float)) and s <= 0)) else float(s) for s in sigma], dtype=float)
+            valid = np.isfinite(s_arr) & (s_arr > 0)
+            if np.any(valid):
+                med = float(np.median(s_arr[valid]))
+                s_arr[~valid] = med
+                w = 1.0 / (s_arr ** 2)
+            else:
+                w = np.ones_like(x)
+        else:
+            w = np.ones_like(x)
+        W_sqrt = np.sqrt(w)
+        A_w = A * W_sqrt[:, None]
+        y_w = y * W_sqrt
+
+        # Solve (A^T W A) theta = (A^T W y)
+        theta, *_ = np.linalg.lstsq(A_w, y_w, rcond=None)
+        a = float(theta[0]); b = float(theta[1])
+
+        # Parameter covariance
+        # If weights are absolute (known variances), use Cov = (A^T W A)^{-1}
+        # Otherwise scale by the residual variance s2.
+        ATA = A_w.T @ A_w
+        ATA_inv = np.linalg.inv(ATA)
+        resid = y - (a * x + b)
+        dof = max(0, len(x) - 2)
+        # Weighted residual sum of squares
+        RSS_w = float((resid**2 * w).sum())
+        if np.allclose(w, w[0]):  # unweighted or constant weights
+            s2 = RSS_w / w[0] / dof if dof > 0 else 0.0
+            Cov = ATA_inv * s2
+        else:
+            # For known sigmas, best is Cov = (A^T W A)^{-1}
+            Cov = ATA_inv
+            # If degrees of freedom exist and weights are heuristic, inflate by RSS/(n-2)
+            if dof > 0 and not (sigma is not None and any(s is not None for s in sigma)):
+                s2 = RSS_w / dof
+                Cov = Cov * s2
+
+        # Predictions and their standard deviations (of the mean)
+        xp = np.asarray(x_pred, dtype=float)
+        F = np.column_stack([xp, np.ones_like(xp)])
+        y_pred = (F @ theta).astype(float)
+        # Var(y_pred) = diag(F Cov F^T)
+        y_var = np.einsum('ij,jk,ik->i', F, Cov, F)
+        y_var = np.maximum(y_var, 0.0)
+        y_pred_std = np.sqrt(y_var)
+        sigma_a = math.sqrt(Cov[0, 0]) if np.isfinite(Cov[0, 0]) else None
+        sigma_b = math.sqrt(Cov[1, 1]) if np.isfinite(Cov[1, 1]) else None
+        return y_pred.tolist(), a, b, y_pred_std.tolist(), sigma_a, sigma_b
     except Exception as e:
-        logging.warning(f"Linear regression failed: {e}")
-        return None, None, None
+        logging.warning(f"Weighted linear regression failed: {e}")
+        return None, None, None, None, None, None
 
 def rotate_tensor_to_chi_basis(
     tensor: np.ndarray, chi_eigenvectors_list: list[np.ndarray], temps: list[float]
@@ -600,6 +666,7 @@ def read_susceptibility_csv(csv_path: str) -> tuple[list[dict[str, float | None]
     rho_col, rho_unit = find_col('chi_rho')
     iso_sdev_col, iso_sdev_unit = find_optional_col('chi_iso-s-dev')
     ax_sdev_col, ax_sdev_unit = find_optional_col('chi_ax-s-dev')
+    rho_sdev_col, rho_sdev_unit = find_optional_col('chi_rho-s-dev')
 
     rows = []
     for row in reader:
@@ -612,9 +679,24 @@ def read_susceptibility_csv(csv_path: str) -> tuple[list[dict[str, float | None]
         except ValueError:
             continue
         try:
-            chi_iso_val = float(str(row.get(iso_col, '')).strip())
-            chi_ax_val  = float(str(row.get(ax_col,  '')).strip())
-            chi_rho_val = float(str(row.get(rho_col, '')).strip())
+            # Determine a multiplier to convert input units to cm^3 mol^-1
+            unit_iso = (iso_unit or '').strip()  # header unit for chi_iso
+            # This tool only supports two exact units coming from the paired program:
+            #   'cm^3 mol^-1'  (already molar)
+            #   'Å^3'          (Angstrom^3 per particle)
+            # For 'Å^3', convert to cm^3·mol^-1 using: 1 Å^3 = 1e-24 cm^3, per-particle → per-mol: × N_A,
+            # and retain the legacy normalization factor 1/(4π) as required by this workflow.
+            if unit_iso == 'cm^3 mol^-1':
+                to_cm3_per_mol = 1.0
+            elif unit_iso == 'Å^3':
+                to_cm3_per_mol = 1e-24 * Avogadro / (4 * np.pi)
+            else:
+                logging.warning(f"Unrecognized susceptibility unit '{unit_iso}'. Assuming cm^3 mol^-1.")
+                to_cm3_per_mol = 1.0
+
+            chi_iso_val = float(str(row.get(iso_col, '')).strip()) * to_cm3_per_mol
+            chi_ax_val  = float(str(row.get(ax_col,  '')).strip()) * to_cm3_per_mol
+            chi_rho_val = float(str(row.get(rho_col, '')).strip()) * to_cm3_per_mol
         except ValueError:
             continue
 
@@ -629,20 +711,28 @@ def read_susceptibility_csv(csv_path: str) -> tuple[list[dict[str, float | None]
         chi_iso_sdev_val = None
         if iso_sdev_col is not None:
             try:
-                sdev_raw = float(str(row.get(iso_sdev_col, '')).strip())
+                sdev_raw = float(str(row.get(iso_sdev_col, '')).strip()) * to_cm3_per_mol
                 # Convert the std dev of chi to std dev of chi*T with the same scaling
-                chi_iso_sdev_val = (sdev_raw * T / Avogadro) * conv
+                chi_iso_sdev_val = ((sdev_raw * T / Avogadro) * conv)
             except ValueError:
                 chi_iso_sdev_val = None
 
         chi_ax_sdev_val = None
         if ax_sdev_col is not None:
             try:
-                sdev_raw_ax = float(str(row.get(ax_sdev_col, '')).strip())
+                sdev_raw_ax = float(str(row.get(ax_sdev_col, '')).strip()) * to_cm3_per_mol
                 # Convert the std dev of chi to std dev of chi*T with the same scaling
-                chi_ax_sdev_val = (sdev_raw_ax * T / Avogadro) * conv
+                chi_ax_sdev_val = ((sdev_raw_ax * T / Avogadro) * conv)
             except ValueError:
                 chi_ax_sdev_val = None
+
+        chi_rho_sdev_val = None
+        if rho_sdev_col is not None:
+            try:
+                sdev_raw_rho = float(str(row.get(rho_sdev_col, '')).strip()) * to_cm3_per_mol
+                chi_rho_sdev_val = ((sdev_raw_rho * T / Avogadro) * conv)
+            except ValueError:
+                chi_rho_sdev_val = None
 
         rows.append({
             'Temperature (K)': T,
@@ -651,6 +741,7 @@ def read_susceptibility_csv(csv_path: str) -> tuple[list[dict[str, float | None]
             'chi_rho': chi_rho_fit_csv,
             'chi_iso_sdev': chi_iso_sdev_val,
             'chi_ax_sdev': chi_ax_sdev_val,
+            'chi_rho_sdev': chi_rho_sdev_val,
         })
 
     units = {
@@ -663,6 +754,9 @@ def read_susceptibility_csv(csv_path: str) -> tuple[list[dict[str, float | None]
 
     if ax_sdev_col is not None:
         units['chi_ax_sdev'] = ax_sdev_unit
+
+    if rho_sdev_col is not None:
+        units['chi_rho_sdev'] = rho_sdev_unit
 
     return rows, units
 
@@ -717,6 +811,7 @@ def plot_chi_temperature_dependence(
     chi_iso_fit_csv, chi_ax_fit_csv, chi_rho_fit_csv = [], [], []
     chi_iso_sdev_csv = []
     chi_ax_sdev_csv = []
+    chi_rho_sdev_csv = []
     temps_csv = []
     if csv_path is not None:
         try:
@@ -736,6 +831,10 @@ def plot_chi_temperature_dependence(
                         chi_ax_sdev_csv.append(r['chi_ax_sdev'])
                     else:
                         chi_ax_sdev_csv.append(None)
+                    if r.get('chi_rho_sdev') is not None:
+                        chi_rho_sdev_csv.append(r['chi_rho_sdev'])
+                    else:
+                        chi_rho_sdev_csv.append(None)
                         
         except Exception as e:
             logging.error(f"There is an error in processing CSV '{csv_path}' in plot_chi_temperature_dependence: {e}")
@@ -763,6 +862,9 @@ def plot_chi_temperature_dependence(
     for i in range(len(chi_ax_sdev_csv)):
         if chi_ax_sdev_csv[i] is not None:
             chi_ax_sdev_csv[i] /= norm_factor
+    for i in range(len(chi_rho_sdev_csv)):
+        if chi_rho_sdev_csv[i] is not None:
+            chi_rho_sdev_csv[i] /= norm_factor
 
     # Rotate g-tensors into each χ eigenframe
     rotated_g_tensors = rotate_tensor_to_chi_basis(g_matrix, chi_eigenvectors, temps)
@@ -776,7 +878,7 @@ def plot_chi_temperature_dependence(
     # Now compute D and E components for each rotated tensor
     D_list, E_list = calculate_E_D_components(rotated_eff_H_tensors)
     
-    # Convert to joules for each temperature // need to change to Kelvins
+    # Convert to joules for each temperature
     D_J = [d * h * c * 100 for d in D_list]
     E_J = [e * h * c * 100 for e in E_list]
 
@@ -785,66 +887,53 @@ def plot_chi_temperature_dependence(
     inv_t_csv = [1.0 / T for T in temps_csv] if len(temps_csv) > 0 else []
 
     # Linear regression of CSV data onto the NEVPT2 inverse-temperature grid
-    # We fit y = a * x + b with x = 1/T
+    # We fit y = a * x + b with x = 1/T, using WEIGHTED least squares by the
+    # provided experimental standard deviations where available. The predicted
+    # uncertainty bands come from parameter covariance propagation, not from
+    # a separate regression of the standard deviations.
     chi_iso_fit_pred = None
     chi_ax_fit_pred = None
     chi_rho_fit_pred = None
-    # Standard-deviation LR predictions (optional)
-    chi_iso_sdev_pred = None
+    chi_iso_sdev_pred = None  # now: std of prediction (mean) from WLS
     chi_ax_sdev_pred = None
+    chi_rho_sdev_pred = None
     a_iso = b_iso = a_ax = b_ax = a_rho = b_rho = None
-    a_iso_sd = b_iso_sd = a_ax_sd = b_ax_sd = None
+    a_iso_se = b_iso_se = a_ax_se = b_ax_se = a_rho_se = b_rho_se = None
 
-    if csv_path is not None:
-        if len(inv_t_csv) >= 2:
-            # LR for chi values
-            chi_iso_fit_pred, a_iso, b_iso = linreg_predict(inv_t_csv, chi_iso_fit_csv, inv_t)
-            chi_ax_fit_pred,  a_ax,  b_ax  = linreg_predict(inv_t_csv, chi_ax_fit_csv,  inv_t)
-            chi_rho_fit_pred, a_rho, b_rho = linreg_predict(inv_t_csv, chi_rho_fit_csv, inv_t)
-
-            # LR for standard deviations (where available)
-            # Filter out rows without sdev values
-            try:
-                x_iso_sdev = [x for x, y in zip(inv_t_csv, chi_iso_sdev_csv) if y is not None]
-                y_iso_sdev = [y for y in chi_iso_sdev_csv if y is not None]
-                if len(x_iso_sdev) >= 2:
-                    chi_iso_sdev_pred, a_iso_sd, b_iso_sd = linreg_predict(x_iso_sdev, y_iso_sdev, inv_t)
-                    # enforce non-negative predicted std dev
-                    if chi_iso_sdev_pred is not None:
-                        chi_iso_sdev_pred = [max(0.0, float(v)) for v in chi_iso_sdev_pred]
-            except Exception as e:
-                logging.warning(f"LR on chi_iso standard deviations failed: {e}")
-
-            try:
-                x_ax_sdev = [x for x, y in zip(inv_t_csv, chi_ax_sdev_csv) if y is not None]
-                y_ax_sdev = [y for y in chi_ax_sdev_csv if y is not None]
-                if len(x_ax_sdev) >= 2:
-                    chi_ax_sdev_pred, a_ax_sd, b_ax_sd = linreg_predict(x_ax_sdev, y_ax_sdev, inv_t)
-                    if chi_ax_sdev_pred is not None:
-                        chi_ax_sdev_pred = [max(0.0, float(v)) for v in chi_ax_sdev_pred]
-            except Exception as e:
-                logging.warning(f"LR on chi_ax standard deviations failed: {e}")
-        else:
-            ut.cprint('Not enough CSV points for linear regression (need at least 2).', 'cian')
+    if csv_path is not None and len(inv_t_csv) >= 2:
+        # ISO (use sigma if present)
+        chi_iso_fit_pred, a_iso, b_iso, chi_iso_sdev_pred, a_iso_se, b_iso_se = weighted_linreg_predict(
+            inv_t_csv, chi_iso_fit_csv, inv_t, sigma=chi_iso_sdev_csv if len(chi_iso_sdev_csv) == len(inv_t_csv) else None
+        )
+        # AX (use sigma if present)
+        chi_ax_fit_pred, a_ax, b_ax, chi_ax_sdev_pred, a_ax_se, b_ax_se = weighted_linreg_predict(
+            inv_t_csv, chi_ax_fit_csv, inv_t, sigma=chi_ax_sdev_csv if len(chi_ax_sdev_csv) == len(inv_t_csv) else None
+        )
+        # RHO (use sigma if present)
+        chi_rho_fit_pred, a_rho, b_rho, chi_rho_sdev_pred, a_rho_se, b_rho_se = weighted_linreg_predict(
+            inv_t_csv, chi_rho_fit_csv, inv_t, sigma=chi_rho_sdev_csv if len(chi_rho_sdev_csv) == len(inv_t_csv) else None
+        )
+    else:
+        ut.cprint('Not enough CSV points for linear regression (need at least 2).', 'cyan')
 
     # Analytical chi iso, ax and rho calculation:
     chi_iso_analytic = [
-        g_sq_iso[i] - (f_S / (45 * k * temps[i])) * (D_J[i] * g_sq_ax[i] + 3 * E_J[i] * g_sq_rh[i]) # need to remove K
+        g_sq_iso[i] - (f_S / (45 * k * temps[i])) * (D_J[i] * g_sq_ax[i] + 3 * E_J[i] * g_sq_rh[i])
         for i in range(len(temps))
     ]
 
     chi_ax_analytic = [
-        g_sq_ax[i] - (f_S / (30 * k * temps[i])) * ((D_J[i]) * (g_sq_ax[i] + 3 * g_sq_iso[i]) - 3 * E_J[i] * g_sq_rh[i]) # need to remove K
+        g_sq_ax[i] - (f_S / (30 * k * temps[i])) * ((D_J[i]) * (g_sq_ax[i] + 3 * g_sq_iso[i]) - 3 * E_J[i] * g_sq_rh[i])
         for i in range(len(temps))
     ]
 
     chi_rho_analytic = [
-        g_sq_rh[i] + (f_S / (30 * k * temps[i])) * (E_J[i] * (g_sq_ax[i] - 3 * g_sq_iso[i]) + D_J[i] * g_sq_rh[i]) # need to remove K
+        g_sq_rh[i] + (f_S / (30 * k * temps[i])) * (E_J[i] * (g_sq_ax[i] - 3 * g_sq_iso[i]) + D_J[i] * g_sq_rh[i])
         for i in range(len(temps))
     ]
 
     # --- Write results CSV next to the PNG ---
-    output_png = 'chi_plot.png'
+    output_png = 'chi_plot_all.png'
     output_csv = output_png.replace('.png', '.csv')
     write_results_csv(
         output_csv,
@@ -868,6 +957,7 @@ def plot_chi_temperature_dependence(
         chi_rho_fit_pred,
         chi_iso_sdev_pred,
         chi_ax_sdev_pred,
+        chi_rho_sdev_pred,
         temps_csv,
         inv_t_csv,
         chi_iso_fit_csv,
@@ -875,108 +965,240 @@ def plot_chi_temperature_dependence(
         chi_rho_fit_csv,
         chi_iso_sdev_csv,
         chi_ax_sdev_csv,
+        chi_rho_sdev_csv,
         a_iso,
         b_iso,
         a_ax,
         b_ax,
         a_rho,
         b_rho,
-        a_iso_sd,
-        b_iso_sd,
-        a_ax_sd,
-        b_ax_sd,
+        a_iso_se,
+        b_iso_se,
+        a_ax_se,
+        b_ax_se,
+        a_rho_se,
+        b_rho_se,
     )
 
-    # Plot isotropic, axial, and rhombic components against inverse temperature
-    fig, ax = plt.subplots(figsize=(10, 8))
+    # ----- Plot helpers -----
+    def _finalize_axes(ax, inv_t, inv_t_csv, ylabel_suffix='', y_pad_frac=0.2, legend_ncol=None):
+        ax.set_xlabel(r'$1/\mathrm{Temperature}\ (1/\mathrm{K})$', fontsize=16, labelpad = 10)
+        ax.set_ylabel(r'Normalized $\chi\,T$ (dimensionless)' + ('' if not ylabel_suffix else f' — {ylabel_suffix}'), fontsize=16, labelpad=10)
+        sec_ax = ax.secondary_xaxis(
+            'top',
+            functions=(
+                lambda inv: np.divide(1, inv, out=np.full_like(inv, np.nan), where=inv!=0),
+                lambda T: np.divide(1, T,   out=np.full_like(T,   np.nan), where=T!=0)
+            )
+        )
+        sec_ax.set_xlabel('Temperature (K)', fontsize=16, labelpad=12)
+        # Legend columns
+        if legend_ncol is not None:
+            legend = ax.legend(loc='upper left', fontsize=10, ncol=legend_ncol)
+            legend.get_frame().set_edgecolor('black')
+            legend.get_frame().set_alpha(1)
+        else:
+            # Fallback: more columns if CSV points are present
+            if len(inv_t_csv) > 0:
+                legend = ax.legend(loc='upper left', fontsize=10, ncol=5)
+                legend.get_frame().set_edgecolor('black')
+                legend.get_frame().set_alpha(1)
+            else:
+                legend = ax.legend(loc='upper left', fontsize=10, ncol=2)
+                legend.get_frame().set_edgecolor('black')
+                legend.get_frame().set_alpha(1)
+        ax.grid(True)
+        # Add extra vertical breathing room above and below the data
+        try:
+            y_min, y_max = ax.get_ylim()
+            y_range = (y_max - y_min)
+            if np.isfinite(y_range) and y_range > 0:
+                pad = y_range * float(y_pad_frac)
+                ax.set_ylim(y_min - pad, y_max + pad)
+        except Exception:
+            pass
+        # Layout is handled via constrained_layout at figure creation
+        return legend
 
+    def _weighted_r2(x_tr, y_tr, sigma_tr, a, b):
+        """Compute weighted R^2 for y = a*x + b using optional sigmas as 1/sigma^2 weights.
+        Returns float or None if inputs are insufficient.
+        """
+        try:
+            if (x_tr is None) or (y_tr is None) or (a is None) or (b is None):
+                return None
+            if len(x_tr) != len(y_tr) or len(x_tr) < 2:
+                return None
+            x = np.asarray(x_tr, dtype=float)
+            y = np.asarray(y_tr, dtype=float)
+            # weights
+            if sigma_tr is not None and len(sigma_tr) == len(x_tr):
+                s = np.array([
+                    (np.nan if (v is None or (isinstance(v, (int, float)) and v <= 0)) else float(v))
+                    for v in sigma_tr
+                ], dtype=float)
+                valid = np.isfinite(s) & (s > 0)
+                if np.any(valid):
+                    med = float(np.median(s[valid]))
+                    s[~valid] = med
+                    w = 1.0 / (s ** 2)
+                else:
+                    w = np.ones_like(x)
+            else:
+                w = np.ones_like(x)
+            yhat = a * x + b
+            wy_sum = float((w * y).sum())
+            w_sum = float(w.sum()) if float(w.sum()) != 0 else 1.0
+            y_bar_w = wy_sum / w_sum
+            ss_res_w = float((w * (y - yhat) ** 2).sum())
+            ss_tot_w = float((w * (y - y_bar_w) ** 2).sum())
+            if ss_tot_w == 0:
+                return None
+            return 1.0 - ss_res_w / ss_tot_w
+        except Exception:
+            return None
+
+    def _annotate_fit(ax, r2, a, b, sa, sb):
+        # Returns plain text caption: R^2, Slope and Intercept with errors
+        def _fmt(v):
+            if v is None:
+                return '—'
+            try:
+                if not np.isfinite(v):
+                    return '—'
+                return f"{v:.3g}"
+            except Exception:
+                return '—'
+        text = (
+            rf"$\mathbf{{R^2:}}$ {_fmt(r2)}   |   "
+            rf"$\mathbf{{Slope\ (a):}}$ {_fmt(a)} ± {_fmt(sa)}   |   "
+            rf"$\mathbf{{Intercept\ (b):}}$ {_fmt(b)} ± {_fmt(sb)}"
+        )
+        return text
+
+    def _add_caption(fig, text, ax=None):
+        if not text:
+            return
+        target_ax = ax or fig.axes[0]
+        target_ax.text(
+            0.985, 0.03, text,
+            ha='right', va='bottom',
+            transform=target_ax.transAxes,
+            fontsize=11, color='#333333',
+                bbox=dict(
+                    facecolor='white',
+                    edgecolor='black',
+                    boxstyle='round,pad=0.4',
+                    linewidth=0.8
+                )
+        )
+
+    def _plot_component(color_name, inv_t, nevpt2_series, analytic_series, g_sq_series,
+                        inv_t_csv, fit_csv, sdev_csv,
+                        fit_pred, sdev_pred,
+                        a, b, a_se, b_se,
+                        suffix, outfile):
+        fig_c, ax_c = plt.subplots(figsize=(10, 6), constrained_layout=True)
+        # NEVPT2, analytic, and g^2 curves
+        ax_c.plot(inv_t, nevpt2_series, label=fr'$\chi_{{{suffix}}}$ NEVPT2', color=color_name)
+        ax_c.plot(inv_t, analytic_series,  label=fr'$\chi_{{{suffix}}}$ Analytical', color=color_name, linestyle='--')
+        g_label = {'iso': r'$(g^2)_{\mathrm{iso}}$', 'ax': r'$(g^2)_{\mathrm{ax}}$', 'rho': r'$(g^2)_{\rho}$'}[suffix]
+        ax_c.plot(inv_t, g_sq_series, label=g_label, color=color_name, linestyle=':')
+        # CSV points and error bars
+        if len(inv_t_csv) == len(fit_csv) and len(inv_t_csv) > 0:
+            ax_c.plot(inv_t_csv, fit_csv, label=fr'$\chi_{{{suffix}}}$ Fitted', color=color_name, marker='o', linestyle='', markersize=5)
+            if sdev_csv is not None and len(sdev_csv) == len(inv_t_csv) and any(v is not None for v in sdev_csv):
+                yerr = [v if (v is not None) else 0.0 for v in sdev_csv]
+                ax_c.errorbar(inv_t_csv, fit_csv, yerr=yerr, fmt='none', ecolor=color_name, alpha=0.5, capsize=2)
+        # Linear regression prediction and band
+        if fit_pred is not None:
+            ax_c.plot(inv_t, fit_pred, label=fr'$\chi_{{{suffix}}}$ Fitted (LR)', linestyle='-.', linewidth=1.5, color=color_name)
+        if fit_pred is not None and sdev_pred is not None:
+            center = np.array(fit_pred, dtype=float)
+            sdev   = np.array(sdev_pred, dtype=float)
+            ax_c.fill_between(inv_t, center - sdev, center + sdev, alpha=0.15, facecolor=color_name)
+        # Compute weighted R2 for this component and pass to annotation
+        r2_val = _weighted_r2(inv_t_csv, fit_csv, sdev_csv, a, b)
+        caption = _annotate_fit(ax_c, r2_val, a, b, a_se, b_se)
+        # Add label mapping for axis label
+        label_map = {'iso': 'Isotropic', 'ax': 'Axiality', 'rho': 'Rhombicity'}
+        _finalize_axes(ax_c, inv_t, inv_t_csv, label_map.get(suffix, suffix), legend_ncol=10)
+        _add_caption(fig_c, caption, ax_c)
+        plt.savefig(outfile, dpi=600)
+        return fig_c, ax_c
+
+    # --- ISO-only plot ---
+    _plot_component(
+        'blue', inv_t,
+        chi_iso_nevpt2_si, chi_iso_analytic, g_sq_iso,
+        inv_t_csv, chi_iso_fit_csv, chi_iso_sdev_csv,
+        chi_iso_fit_pred, chi_iso_sdev_pred,
+        a_iso, b_iso, a_iso_se, b_iso_se,
+        'iso', 'chi_plot_iso.png'
+    )
+
+    # --- AX-only plot ---
+    _plot_component(
+        'green', inv_t,
+        chi_ax_nevpt2_si, chi_ax_analytic, g_sq_ax,
+        inv_t_csv, chi_ax_fit_csv, chi_ax_sdev_csv,
+        chi_ax_fit_pred, chi_ax_sdev_pred,
+        a_ax, b_ax, a_ax_se, b_ax_se,
+        'ax', 'chi_plot_ax.png'
+    )
+
+    # --- RHO-only plot ---
+    _plot_component(
+        'red', inv_t,
+        chi_rho_nevpt2_si, chi_rho_analytic, g_sq_rh,
+        inv_t_csv, chi_rho_fit_csv, chi_rho_sdev_csv,
+        chi_rho_fit_pred, chi_rho_sdev_pred,
+        a_rho, b_rho, a_rho_se, b_rho_se,
+        'rho', 'chi_plot_rho.png'
+    )
+
+    # --- Combined ALL plot ---
+    fig, ax = plt.subplots(figsize=(10, 8), constrained_layout=True)
     ax.plot(inv_t, chi_iso_nevpt2_si, label=r'$\chi_{iso}$ NEVPT2', color='blue')
     ax.plot(inv_t, chi_ax_nevpt2_si,  label=r'$\chi_{ax}$ NEVPT2', color='green')
     ax.plot(inv_t, chi_rho_nevpt2_si, label=r'$\chi_{rho}$ NEVPT2', color='red')
-
     ax.plot(inv_t, chi_iso_analytic, label=r'$\chi_{iso}$ Analytical', color='blue', linestyle='--')
-    ax.plot(inv_t, chi_ax_analytic, label=r'$\chi_{ax}$ Analytical', color='green', linestyle='--')
+    ax.plot(inv_t, chi_ax_analytic,  label=r'$\chi_{ax}$ Analytical', color='green', linestyle='--')
     ax.plot(inv_t, chi_rho_analytic, label=r'$\chi_{rho}$ Analytical', color='red', linestyle='--')
-    
     ax.plot(inv_t, g_sq_iso, label=r'$(g^2)_{\mathrm{iso}}$', color='blue', linestyle=':')
-    ax.plot(inv_t, g_sq_ax, label=r'$(g^2)_{\mathrm{ax}}$', color='green', linestyle=':')
-    ax.plot(inv_t, g_sq_rh, label=r'$(g^2)_{\rho}$', color='red', linestyle=':')
-    
-    # Plot CSV-fitted series against their own inverse-temperature axis to avoid length mismatch
+    ax.plot(inv_t, g_sq_ax,  label=r'$(g^2)_{\mathrm{ax}}$',  color='green', linestyle=':')
+    ax.plot(inv_t, g_sq_rh,  label=r'$(g^2)_{\rho}$',         color='red', linestyle=':')
     if len(inv_t_csv) == len(chi_iso_fit_csv) == len(chi_ax_fit_csv) == len(chi_rho_fit_csv) and len(inv_t_csv) > 0:
         ax.plot(inv_t_csv, chi_iso_fit_csv, label=r'$\chi_{iso}$ Fitted', color='blue', marker='o', linestyle='', markersize=5)
         ax.plot(inv_t_csv, chi_ax_fit_csv,  label=r'$\chi_{ax}$ Fitted',  color='green', marker='o', linestyle='', markersize=5)
         ax.plot(inv_t_csv, chi_rho_fit_csv, label=r'$\chi_{rho}$ Fitted', color='red', marker='o', linestyle='', markersize=5)
-        # Draw standard deviation as vertical error bars for chi_iso (CSV)
         if len(chi_iso_sdev_csv) == len(inv_t_csv) and any(v is not None for v in chi_iso_sdev_csv):
-            # Replace None with 0 for yerr while keeping array length consistent
             yerr = [v if (v is not None) else 0.0 for v in chi_iso_sdev_csv]
-            ax.errorbar(inv_t_csv, chi_iso_fit_csv, yerr=yerr, fmt='none', ecolor='blue', alpha = 0.5, capsize=2)
-
-        # Draw standard deviation as vertical error bars for chi_ax (CSV)
+            ax.errorbar(inv_t_csv, chi_iso_fit_csv, yerr=yerr, fmt='none', ecolor='blue', alpha=0.5, capsize=2)
         if len(chi_ax_sdev_csv) == len(inv_t_csv) and any(v is not None for v in chi_ax_sdev_csv):
-            # Replace None with 0 for yerr while keeping array length consistent
             yerr = [v if (v is not None) else 0.0 for v in chi_ax_sdev_csv]
-            ax.errorbar(inv_t_csv, chi_ax_fit_csv, yerr=yerr, fmt='none', ecolor='green', alpha = 0.5, capsize=2)
-
-    elif len(inv_t_csv) > 0:
-        logging.warning('CSV arrays have inconsistent lengths; skipping CSV plots.')
-
-    # Plot linear-regression predictions as lines on the NEVPT2 grid
+            ax.errorbar(inv_t_csv, chi_ax_fit_csv, yerr=yerr, fmt='none', ecolor='green', alpha=0.5, capsize=2)
+        if len(chi_rho_sdev_csv) == len(inv_t_csv) and any(v is not None for v in chi_rho_sdev_csv):
+            yerr = [v if (v is not None) else 0.0 for v in chi_rho_sdev_csv]
+            ax.errorbar(inv_t_csv, chi_rho_fit_csv, yerr=yerr, fmt='none', ecolor='red', alpha=0.5, capsize=2)
     if chi_iso_fit_pred is not None:
         ax.plot(inv_t, chi_iso_fit_pred, label=r'$\chi_{iso}$ Fitted (LR)', linestyle='-.', linewidth=1.5, color='blue')
     if chi_ax_fit_pred is not None:
         ax.plot(inv_t, chi_ax_fit_pred,  label=r'$\chi_{ax}$ Fitted (LR)',  linestyle='-.', linewidth=1.5, color='green')
     if chi_rho_fit_pred is not None:
         ax.plot(inv_t, chi_rho_fit_pred, label=r'$\chi_{rho}$ Fitted (LR)', linestyle='-.', linewidth=1.5, color='red')
-
-    # Add LR-predicted sdev bands around LR lines where available
-    import numpy as _np  # local alias to avoid shadowing
-    if chi_iso_fit_pred is not None and chi_iso_sdev_pred is not None:
-        iso_center = _np.array(chi_iso_fit_pred, dtype=float)
-        iso_sdev   = _np.array(chi_iso_sdev_pred, dtype=float)
-        ax.fill_between(inv_t, iso_center - iso_sdev, iso_center + iso_sdev, alpha=0.15, facecolor='blue')
-    if chi_ax_fit_pred is not None and chi_ax_sdev_pred is not None:
-        ax_center = _np.array(chi_ax_fit_pred, dtype=float)
-        ax_sdev   = _np.array(chi_ax_sdev_pred, dtype=float)
-        ax.fill_between(inv_t, ax_center - ax_sdev, ax_center + ax_sdev, alpha=0.15, facecolor='green')
-
-    ax.set_xlabel(r'$1/\mathrm{Temperature}\ (1/\mathrm{K})$', fontsize=16)
-    # ax.set_ylabel(r'$\mathrm{\chi}\,T\ (10^{-32}\ \mathrm{m^3\,K})$', fontsize=16)
-    ax.set_ylabel(r'Normalized $\chi\,T$ (dimensionless)', fontsize=16)
-
-    # Add secondary x-axis to show Temperature (K) corresponding to inverse temperature
-    sec_ax = ax.secondary_xaxis(
-        'top',
-        functions=(
-            lambda inv: np.divide(1, inv, out=np.full_like(inv, np.nan), where=inv!=0),
-            lambda T: np.divide(1, T,   out=np.full_like(T,   np.nan), where=T!=0)
-        )
-    )
-    sec_ax.set_xlabel('Temperature (K)', fontsize=16)
-
-    # Add legend
-    if len(inv_t_csv) > 0:
-            legend = ax.legend(loc='upper left', fontsize=10, ncol=5)
-    else:
-        legend = ax.legend(loc='upper left', fontsize=10, ncol=3)
-
+    legend = _finalize_axes(ax, inv_t, inv_t_csv, 'All Components')
+    # Adjust ylim to avoid legend clipping as in original
     fig.canvas.draw()
     legend_bbox = legend.get_window_extent()
-
     ax_bbox = ax.get_window_extent()
-
     if legend_bbox.y0 < ax_bbox.y1:
         y_min, y_max = ax.get_ylim()
         y_padding = (y_max - y_min) * 0.10
         ax.set_ylim(y_min, y_max + y_padding)
+    plt.savefig('chi_plot_all.png', dpi=600)
 
-    # Add grid
-    ax.grid(True)
-
-    plt.tight_layout()
-    plt.savefig('chi_plot.png', dpi=600, bbox_inches='tight')
-
+    # Close figures to free memory, but return the combined as function output
     plt.show()
     plt.close('all')
     return fig, ax
@@ -1022,8 +1244,8 @@ def main():
 
     # Save plot
     _fig, _ax = plot_chi_temperature_dependence(args.susc_file, args.section, args.csv_file)
-    ut.cprint("Saved plot to 'chi_plot.png'",'cyan')
-    ut.cprint("Saved table to 'chi_plot.csv'",'cyan')
+    ut.cprint("Saved plots: chi_plot_iso.png, chi_plot_ax.png, chi_plot_rho.png, chi_plot_all.png", 'cyan')
+    ut.cprint("Saved table: chi_plot_all.csv", 'cyan')
 
 if __name__ == '__main__':
     main()

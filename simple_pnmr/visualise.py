@@ -1318,7 +1318,7 @@ def plot_isoaxrho(molecules: list[main.Molecule], save: bool = True,
         elif susc_units == 'A3 mol-1':
             conv = constants.Avogadro
             unit_label = r'$\mathregular{\AA^3 \ mol^{-1}}$'
-        elif susc_units == 'cm3 ':
+        elif susc_units == 'cm3':
             conv = 1E-24
             unit_label = r'$\mathregular{cm^3}$'
         elif susc_units == 'cm3 mol-1':
@@ -1334,19 +1334,19 @@ def plot_isoaxrho(molecules: list[main.Molecule], save: bool = True,
             'chi': {
                 'iso': rf'$\chi_\mathregular{{iso}}$ / {unit_label}',
                 'axial': rf'$\Delta\chi_\mathregular{{ax}}$ / {unit_label}',
-                'rhombic': rf'$\Delta\chi_\mathregular{{rh}}$ / {unit_label}'
+                'rhombic': rf'$\Delta\chi_\mathregular{{rh}}$ / {unit_label}' #!!!!!
             }
         }
 
         # Switch units
         chi_component *= conv
-        if use_errors:
-            chi_errors *= conv
+        if use_errors and chi_errors is not None:
+            chi_errors = np.asarray(chi_errors, dtype=float) * conv
 
         if y_mode.lower() == 'chit':
             chi_component *= temperature
-            if use_errors:
-                chi_errors *= temperature
+            if use_errors and chi_errors is not None:
+                chi_errors = chi_errors * temperature
 
         if not use_errors:
             ax.plot(
@@ -1377,13 +1377,21 @@ def plot_isoaxrho(molecules: list[main.Molecule], save: bool = True,
         ax.spines[['right', 'top']].set_visible(False)
 
         if y_mode.lower() == 'chit':
-            # Perform fit
+            # Prepare sigma only if there are positive errors; otherwise, fit unweighted
+            sigma = None
+            abs_sigma = False
+            if use_errors and chi_errors is not None:
+                # Ensure array and check for any strictly positive entries
+                _errs = np.asarray(chi_errors, dtype=float)
+                if np.any(_errs > 0):
+                    sigma = _errs
+                    abs_sigma = True
             popt, pcov = curve_fit(
                 funk,
                 temperature,
                 chi_component,
-                sigma=chi_errors if len(chi_errors) else None,
-                absolute_sigma=True if len(chi_errors) else False
+                sigma=sigma,
+                absolute_sigma=abs_sigma
             )
             perr = np.sqrt(np.diag(pcov))
             # plot fit
@@ -1443,16 +1451,25 @@ def plot_isoaxrho(molecules: list[main.Molecule], save: bool = True,
             axial_err = np.zeros(len(susc_models))
         else:
             axial_err = np.array([model.fit_stdev['ax'] for model in susc_models]) # noqa
-        if 'rho' in susc_models[0].fix_vars:
-            rhombic_err = np.zeros(len(susc_models))
+        if 'rho_over_ax' in susc_models[0].fix_vars:
+            rhombic_over_ax_err = np.zeros(len(susc_models))
         else:
-            rhombic_err = np.array([model.fit_stdev['rho'] for model in susc_models]) # noqa
+            rhombic_over_ax_err = np.array([model.fit_stdev['rho_over_ax'] for model in susc_models]) # noqa
         use_errors = True
     else:
         use_errors = False
         iso_err = np.zeros(len(susc_models))
         axial_err = np.zeros(len(susc_models))
-        rhombic_err = np.zeros(len(susc_models))
+        rhombic_over_ax_err = np.zeros(len(susc_models))
+
+    # Use per-component weighting flags: do not weight if the parameter was fixed
+    if len(susc_models) and isinstance(susc_models[0], models.IsoAxRhoFitter):
+        _fix = susc_models[0].fix_vars
+    else:
+        _fix = {}
+    use_iso_errors = use_errors and ('iso' not in _fix)
+    use_ax_errors = use_errors and ('ax' not in _fix)
+    use_rh_errors = use_errors and ('rho_over_ax' not in _fix)
 
     # Isotropic
     if np.sum(np.abs(isotropic)) > 1E-8:
@@ -1463,7 +1480,7 @@ def plot_isoaxrho(molecules: list[main.Molecule], save: bool = True,
             ax[0, 0],
             ax[1, 0],
             'iso',
-            use_errors=use_errors,
+            use_errors=use_iso_errors,
             chi_errors=iso_err,
             susc_units=susc_units
         )
@@ -1481,7 +1498,7 @@ def plot_isoaxrho(molecules: list[main.Molecule], save: bool = True,
             ax[0, 1],
             ax[1, 1],
             'axial',
-            use_errors=len(susc_models),
+            use_errors=use_ax_errors,
             chi_errors=axial_err,
             susc_units=susc_units
         )
@@ -1499,8 +1516,8 @@ def plot_isoaxrho(molecules: list[main.Molecule], save: bool = True,
             ax[0, 2],
             ax[1, 2],
             'rhombic',
-            use_errors=len(susc_models),
-            chi_errors=rhombic_err,
+            use_errors=use_rh_errors,
+            chi_errors=rhombic_over_ax_err,
             susc_units=susc_units
         )
     else:

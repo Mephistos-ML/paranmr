@@ -179,6 +179,7 @@ def fit_susc_func(uargs):
             converter='MHz_to_Ang-3',
             elements=config.nuclei_include
         )
+        ut.cprint(f"Group(s)/Atoms included: {config.nuclei_include}", "cyan")
     # generate using point dipole approximation
     elif config.hyperfine_method == 'pdip':
 
@@ -1325,7 +1326,7 @@ def read_args(arg_list=None):
         choices=['on', 'show', 'save', 'off'],
         metavar='<str>',
         type=str,
-        default='on',
+        default='save',
         help=(
             'Plot mean of contributions to mean calculated shifts \n'
             ' - \'on\' shows and saves the plots\n'
@@ -1349,6 +1350,15 @@ def read_args(arg_list=None):
             ' - \'save\' saves the plots\n'
             ' - \'off\' neither shows nor saves\n'
             'Default: save'
+        )
+    )
+
+    fit_susc.add_argument(
+        '--include_groups',
+        nargs='+',
+        default=[],
+        help=(
+            'List of chemical label groups (from chem_labels.csv) to include instead of enumerating each atom manually'
         )
     )
 

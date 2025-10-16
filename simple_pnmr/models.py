@@ -761,30 +761,30 @@ class SplitFitter(SusceptibilityModel):
 
 class IsoAxRhoFitter(SusceptibilityModel):
 
-    NAME = 'Isotropic, Axial, and Rhombic Components of Susceptibility'
+    NAME = 'Isotropic, Axial, and Rhombic over Axial Components of Susceptibility'
 
     VARNAMES = [
         'iso',
         'ax',
-        'rho',
+        'rho_over_ax',
     ]
 
     VARNAMES_MM = {
         'iso': r'$\chi_\mathregular{iso}$',
         'ax': r'$\chi_\mathregular{ax}$',
-        'rho': r'$\chi_\mathregular{rho}$',
+        'rho_over_ax': r'$\chi_\mathregular{rho} / \chi_\mathregular{ax}$',
     }
 
     UNITS_MM = {
         'iso': r'Å$^3$',
         'ax': r'Å$^3$',
-        'rho': r'Å$^3$',
+        'rho_over_ax': '', # need to solve the problem with units
     }
 
     BOUNDS = {
         'iso': [0., np.inf],
         'ax': [-np.inf, np.inf],
-        'rho': [-np.inf, np.inf],
+        'rho_over_ax': [0.0, 1/3],
     }
 
     @staticmethod
@@ -837,10 +837,10 @@ class IsoAxRhoFitter(SusceptibilityModel):
         tensor = np.array(
             [
                 [
-                    -params['ax']/3 + params['rho'], 0.0, 0.0
+                    -params['ax']/3 + params['rho_over_ax'] * params['ax'], 0.0, 0.0
                 ],
                 [
-                    0.0, -params['ax']/3 - params['rho'], 0.0
+                    0.0, -params['ax']/3 - params['rho_over_ax'] * params['ax'], 0.0
                 ],
                 [
                     0.0, 0.0, 2/3 * params['ax']
