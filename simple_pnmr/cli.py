@@ -20,6 +20,7 @@ from . import inputs as inps
 from . import models
 from . import visualise as vis
 from . import outputs
+from collections import defaultdict
 
 # Change figure save dialog to use current working directory
 mpl.rcParams['savefig.directory'] = ''
@@ -1015,6 +1016,176 @@ def predict_func(uargs):
         ut.red_exit(
             'Error: No susceptibility data found for specified temperature(s)'
         )
+        
+# Calculate linewidths using user-specified relaxation model
+    if hasattr(config, "relaxation_model") and config.relaxation_model is not None:
+
+        # Solomon linewidths if relaxation model is SBM
+        nuclei_labels = config.nuclei_include if isinstance(
+            config.nuclei_include, list) else [config.nuclei_include]
+        # Use all nuclei in th emolecule that match the requested element(s)
+        nuclei_coords = {
+            nuc.label: nuc.coord
+            for nuc in base_molecule.nuclei
+            if ut.st.remove_numbers(nuc.label) in nuclei_labels
+        }
+        electron_coords = config.relaxation_electron_coords
+        B0 = config.relaxation_magnetic_field_tesla
+
+        # Build Aiso, gamma and omega dictionaries for selected nuclei
+        # Converts nuclear gyromagnetic ratios from MHz/T to rad/s/T
+        # and multiplies Aiso by 1e6 to convert from MHz to Hz
+
+        qc_hyperfine_data = rdrs.QCA.guess_from_file(config.hyperfine_file)  # noqa
+        A_iso_dict_MHz = qc_hyperfine_data.a_iso  # MHz
+        A_iso_dict = {
+            nuc.label: A_iso_dict_MHz[nuc.label] * 1e6
+            for nuc in base_molecule.nuclei
+            if nuc.label in nuclei_coords
+        }
+
+        gamma_I_dict = {
+            label: ut.NUCLEAR_GAMMAS[ut.st.remove_numbers(
+                label)] * 2 * np.pi * 1e6
+            for label in nuclei_coords
+        }
+        omega_I_dict = {
+            label: gamma_I_dict[label] * B0
+            for label in nuclei_coords
+        }
+
+        omega_S = ut.EGAMMA * B0 * 2 * np.pi * 1e6
+        tau_c1 = 1 / ((1 / config.relaxation_tR) +
+                      (1 / config.relaxation_T1e))
+        tau_c2 = 1 / ((1 / config.relaxation_tR) +
+                      (1 / config.relaxation_T2e))
+        tau_e1 = config.relaxation_T1e
+        tau_e2 = config.relaxation_T2e
+        tau_R = config.relaxation_tR
+
+        multiplicity = rdrs.read_gaussian_log_spin(config.hyperfine_file)
+        spin = (multiplicity - 1) / 2
+
+        if config.relaxation_model == "sbm":
+            # Calculate SBM dipolar rates
+            sbm_dipolar_r2_rates = ut.sbm_r2_dipolar(
+                list(nuclei_coords.keys()),
+                nuclei_coords,
+                electron_coords,
+                gamma_I_dict,
+                omega_I_dict,
+                omega_S,
+                tau_c1,
+                tau_c2,
+                spin
+            )
+
+            # Calculate SBM contact rates
+            sbm_contact_r2_rates = ut.sbm_r2_contact(
+                list(nuclei_coords.keys()),
+                A_iso_dict,
+                omega_I_dict,
+                omega_S,
+                tau_e1,
+                tau_e2,
+                spin
+            )
+            # Combine rates into a single dictionary
+            rates = {
+                label: sbm_dipolar_r2_rates[label] +
+                sbm_contact_r2_rates[label]
+                for label in nuclei_coords
+            }
+
+        # Curie mechanism only
+        elif config.relaxation_model == "curie":
+            curie_r2_rates = ut.gueron_r2_curie(
+                list(nuclei_coords.keys()),
+                nuclei_coords,
+                electron_coords,
+                gamma_I_dict,
+                omega_I_dict,
+                B0,
+                config.relaxation_temperature,
+                tau_R,
+                spin
+            )
+            rates = {label: curie_r2_rates[label]
+                     for label in nuclei_coords}
+
+        # Combined SBM and Curie mechanisms
+        elif config.relaxation_model == "sbm curie" or config.relaxation_model == "curie sbm":  # noqa
+
+            sbm_dipolar_r2_rates = ut.sbm_r2_dipolar(
+                list(nuclei_coords.keys()),
+                nuclei_coords,
+                electron_coords,
+                gamma_I_dict,
+                omega_I_dict,
+                omega_S,
+                tau_c1,
+                tau_c2,
+                spin
+            )
+            print("SBM Dipolar Rates:")
+            for label, rate in sbm_dipolar_r2_rates.items():
+                print(f"{label}: {rate:.3e} s^-1")
+
+            # Calculate SBM contact rates
+            sbm_contact_r2_rates = ut.sbm_r2_contact(
+                list(nuclei_coords.keys()),
+                A_iso_dict,
+                omega_I_dict,
+                omega_S,
+                tau_e1,
+                tau_e2,
+                spin
+            )
+            print("SBM Contact Rates:")
+            for label, rate in sbm_contact_r2_rates.items():
+                print(f"{label}: {rate:.3e} s^-1")
+
+            curie_r2_rates = ut.gueron_r2_curie(
+                list(nuclei_coords.keys()),
+                nuclei_coords,
+                electron_coords,
+                gamma_I_dict,
+                omega_I_dict,
+                B0,
+                config.relaxation_temperature,
+                tau_R,
+                spin
+            )
+            print("Curie Rates:")
+            for label, rate in curie_r2_rates.items():
+                print(f"{label}: {rate:.3e} s^-1")
+
+            rates = {
+                label: sbm_dipolar_r2_rates[label] + sbm_contact_r2_rates[label] + curie_r2_rates[label]  # noqa
+                for label in nuclei_coords
+            }
+
+        # Group rates by chemical label
+        rates_by_chem_label = defaultdict(list)
+        for nuc in base_molecule.nuclei:
+            if nuc.label in rates:
+                rates_by_chem_label[nuc.chem_label].append(
+                    rates[nuc.label])
+
+        # Calculate average linewidths for each chemical label
+        avg_lw_by_chem_label = {
+            chem_label: np.mean([rate / np.pi for rate in rate_list])
+            for chem_label, rate_list in rates_by_chem_label.items()
+        }
+
+        print("Average linewidths by chemical label (Hz):")
+        for chem_label, lw in avg_lw_by_chem_label.items():
+            print(f"{chem_label}: {lw:.3e} Hz")
+
+        # Assign average linewidths to nuclei in the molecule (in ppm)
+        for nuc in base_molecule.nuclei:
+            if nuc.chem_label in avg_lw_by_chem_label:
+                nuc.shift.lw = avg_lw_by_chem_label[nuc.chem_label] / (abs(omega_I_dict[nuc.label]) / (2 * np.pi)) * 1e6  # noqa
 
     # Load experimental data from file into list of experiment objects
     if len(config.experiment_files):

@@ -1,0 +1,26 @@
+project:
+  name: prediction_feii
+
+hyperfine:
+  method: dft 
+  file: bp86_single_point_b3lyp_geometry.log 
+
+chem_labels:
+  file: Chem_Labels_with_LaTeX_Formatting.csv
+
+nuclei:
+  include: H
+
+susceptibility:
+  format: orca_nev
+  file: MesBDIFeCl2LiTHF2_geomB3LYP_nevpt2_lft.out
+  temperatures: [298.00000]
+
+relaxation:
+  model: sbm curie
+  electron_coords: [0.00000, 0.000000, 0.648650]
+  magnetic_field_tesla: 11.7
+  temperature: 298.0
+  T1e: 10e-12
+  T2e: 10e-12
+  tR: 300e-12
