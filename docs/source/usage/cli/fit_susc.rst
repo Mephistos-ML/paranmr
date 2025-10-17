@@ -101,13 +101,23 @@ An example input file for ``fit_susc`` can be found in the ``simple_pnmr`` `repo
     |                             |                         |                                     |                                                                         |                      |
     |                             |                         |                                     | See :ref:`here <chemlabels_csv>` Format for more information            |                      |
     +-----------------------------+-------------------------+-------------------------------------+-------------------------------------------------------------------------+----------------------+
-    | ``nuclei``                  | ``include``             | List of atom labels with indexing,  | Specifies nuclei for which shifts will be calculated/fitted             | |:white_check_mark:| |
+    | ``nuclei``                  | ``include``             | Atomic symbols                      | Specifies nuclei for which shifts will be calculated/fitted             | |:white_check_mark:| |
+    |                             |                         |                                     |                                                                         |                      |
+    |                             |                         | e.g. ``H, C``                       |                                                                         |                      |
+    |                             |                         |                                     |                                                                         |                      |
+    |                             |                         |                                     |                                                                         |                      |
+    |                             |                         |                                     |                                                                         |                      |
+    |                             |                         |                                     |                                                                         |                      |
+    |                             |                         |                                     |                                                                         |                      |
+    |                             |                         |                                     |                                                                         |                      |
+    +-----------------------------+-------------------------+-------------------------------------+-------------------------------------------------------------------------+----------------------+
+    | ``nuclei``                  | ``include_groups``      | List of atom labels with indexing,  | Specifies nuclei for which shifts will be calculated/fitted             | |:white_check_mark:| |
     |                             |                         |                                     |                                                                         |                      |
     |                             |                         | or just X where X is an atomic      |                                                                         |                      |
     |                             |                         |                                     |                                                                         |                      |
     |                             |                         | symbol and signifies all occurrences|                                                                         |                      |
     |                             |                         |                                     |                                                                         |                      |
-    |                             |                         | e.g. ``[C, H25]``                   |                                                                         |                      |
+    |                             |                         | e.g. ``[H25, C12]``                 |                                                                         |                      |
     +-----------------------------+-------------------------+-------------------------------------+-------------------------------------------------------------------------+----------------------+
     | ``diamagnetic``             | ``method``              | ``dft``/``pdip``/``raw``            | Method for calculation of diamagnetic shifts                            | |:x:|                |
     |                             |                         |                                     |                                                                         |                      |

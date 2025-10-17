@@ -133,6 +133,7 @@ class FitSuscConfig(Config):
         ],
         'nuclei': [
             'include',
+            'include_groups'
         ],
         'susc_fit': [
             'type',
@@ -226,7 +227,7 @@ class FitSuscConfig(Config):
         self._assignment_method = ''
         self._assignment_groups = []
         self._nuclei_include = ''
-        self._nuclei_include_groups = []  # list of chem_labels to expand into atom labels
+        self._nuclei_include_groups = []
         self._susc_fit_type = ''
         self._susc_fit_variables = ''
         self._susc_fit_average_shifts = []
