@@ -1,8 +1,8 @@
-# simple_pnmr
+# SimpNMR
 
 ## Documentation and Installation
 
-To get started, head to the online documentation for `simple_pnmr` [here](https://suturina-group.gitlab.io/simple_pnmr/).
+To get started, head to the online documentation for `SimpNMR` [here](https://suturina-group.gitlab.io/simple_pnmr/).
 
 ## Developers
 

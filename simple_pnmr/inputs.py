@@ -132,8 +132,7 @@ class FitSuscConfig(Config):
             'method',
         ],
         'nuclei': [
-            'include',
-            'include_groups'
+            'include'
         ],
         'susc_fit': [
             'type',
