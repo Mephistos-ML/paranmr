@@ -132,8 +132,7 @@ class FitSuscConfig(Config):
             'method',
         ],
         'nuclei': [
-            'include',
-            'include_groups'
+            'include'
         ],
         'susc_fit': [
             'type',
@@ -624,6 +623,15 @@ class PredictConfig(FitSuscConfig):
             'file',
             'format',
             'temperatures'
+        ],
+        'relaxation': [
+            'model',
+            'electron_coords',
+            'magnetic_field_tesla',
+            'temperature',
+            'T1e',
+            'T2e',
+            'tR'
         ]
     }
 
@@ -632,6 +640,12 @@ class PredictConfig(FitSuscConfig):
         self._susceptibility_file = ''
         self._susceptibility_format = ''
         self._susceptibility_temperatures = []
+        self._relaxation_model = ''
+        self._relaxation_electron_coords = None
+        self._relaxation_magnetic_field_tesla = None
+        self._relaxation_T1e = None
+        self._relaxation_T2e = None
+        self._relaxation_tR = None
 
         super().__init__(**kwargs)
 
@@ -670,6 +684,133 @@ class PredictConfig(FitSuscConfig):
             self._susceptibility_temperatures = [float(val) for val in value]
         else:
             raise ValueError(f'Cannot set temperature to {value}')
+        return None
+    
+    @property
+    def relaxation_model(self) -> str:
+        return self._relaxation_model
+
+    @relaxation_model.setter
+    def relaxation_model(self, value: str):
+        if value.lower() not in ['sbm', 'curie', 'sbm curie', 'curie sbm']:
+            raise ValueError(f'Unknown relaxation: model {value}')
+        else:
+            self._relaxation_model = value.lower()
+        return None
+    
+    @property
+    def relaxation_electron_coords(self) -> list[float]:
+        return self._relaxation_electron_coords
+
+    # Relaxation electron coordinates are a list of floats
+
+    @relaxation_electron_coords.setter
+    def relaxation_electron_coords(self, value: list[float] | float):
+        if value is None:
+            raise ValueError(
+                f"If 'relaxation' is specified, Cartesian 'electron_coords' must be set")
+        if isinstance(value, (list, tuple)) and len(value) == 3:
+            try:
+                self._relaxation_electron_coords = [
+                    float(val) for val in value]
+            except Exception:
+                raise ValueError(
+                    f"Cannot convert electron coordinates {value} to list of floats")
+        else:
+            raise ValueError(
+                f"Electron coordinates must be a list of 3 floats")
+        return None
+
+    @property
+    def relaxation_magnetic_field_tesla(self) -> float | None:
+        return self._relaxation_magnetic_field_tesla
+
+    @relaxation_magnetic_field_tesla.setter
+    def relaxation_magnetic_field_tesla(self, value: float | None):
+        if value is None:
+            self._relaxation_magnetic_field_tesla = float(0.0)
+        else:
+            try:
+                if float(value) < 0:
+                    raise ValueError(
+                        f'Magnetic field must be zero or positive')
+                self._relaxation_magnetic_field_tesla = float(value)
+            except:
+                raise ValueError(
+                    f'Cannot convert magnetic field value {value} to float')
+        return None
+
+    @property
+    def relaxation_temperature(self) -> float | None:
+        return self._relaxation_temperature
+
+    @relaxation_temperature.setter
+    def relaxation_temperature(self, value: float | None):
+        # Only require temperature if 'curie' is in the relaxation model
+        if hasattr(self, '_relaxation_model') and 'curie' in self._relaxation_model:
+            if value is None:
+                raise ValueError(
+                    f"If 'curie' relaxation is specified, 'temperature' must be set")
+            try:
+                if float(value) <= 0:
+                    raise ValueError(f'Temperature must be positive')
+                self._relaxation_temperature = float(value)
+            except Exception:
+                raise ValueError(
+                    f"Cannot convert temperature value {value} to float")
+        else:
+            # If 'curie' is not in the model, temperature is not required
+            self._relaxation_temperature = None
+        return None
+
+    @property
+    def relaxation_T1e(self) -> float | None:
+        return self._relaxation_T1e
+
+    @relaxation_T1e.setter
+    def relaxation_T1e(self, value: float | None):
+        if value is None:
+            raise ValueError(
+                f"If 'relaxation' is specified, 'T1e' must be set")
+        try:
+            if float(value) <= 0:
+                raise ValueError(f'T1e must be positive')
+            self._relaxation_T1e = float(value)
+        except Exception:
+            raise ValueError(f"Cannot convert T1e value {value} to float")
+        return None
+
+    @property
+    def relaxation_T2e(self) -> float | None:
+        return self._relaxation_T2e
+
+    @relaxation_T2e.setter
+    def relaxation_T2e(self, value: float | None):
+        if value is None:
+            raise ValueError(
+                f"If 'relaxation' is specified, 'T2e' must be set")
+        try:
+            if float(value) <= 0:
+                raise ValueError(f'T2e must be positive')
+            self._relaxation_T2e = float(value)
+        except Exception:
+            raise ValueError(f"Cannot convert T2e value {value} to float")
+        return None
+
+    @property
+    def relaxation_tR(self) -> float | None:
+        return self._relaxation_tR
+
+    @relaxation_tR.setter
+    def relaxation_tR(self, value: float | None):
+        if value is None:
+            raise ValueError(f"If 'relaxation' is specified, 'tR' must be set")
+        try:
+            if float(value) <= 0:
+                raise ValueError(f'tR must be positive')
+            self._relaxation_tR = float(value)
+        except Exception:
+            raise ValueError(f"Cannot convert tR value {value} to float")
         return None
 
     @classmethod

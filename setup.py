@@ -13,7 +13,7 @@ setuptools.setup(
     author='Suturina Group',
     author_email='',
     description='A package for fitting ', # noqa
-    url='https://github.com/jonkragskow/simple_pnmr',
+    url='https://gitlab.com/suturina-group/simple_pnmr',
     classifiers=[
         'Programming Language :: Python :: 3',
         'License :: OSI Approved :: GNU General Public License v3 (GPLv3)',

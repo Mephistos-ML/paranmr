@@ -98,13 +98,15 @@ def save_susc(molecules: list[main.Molecule],
         'gamma-s-dev (degrees)': None,
         'r2 ()': None,
         'r2_adjusted ()': None,
-        'MAE (ppm)': None
+        'MAE (ppm)': None,
+        'RMSE (ppm)': None,
     }
 
     if len(susc_models):
         out['r2 ()'] = [model.r2 for model in susc_models]
         out['r2_adjusted ()'] = [model.adj_r2 for model in susc_models]
         out['MAE (ppm)'] = [model.mae for model in susc_models]
+        out['RMSE (ppm)'] = [model.rmse for model in susc_models]
         for key in susc_models[0].fit_stdev:
             out[f'chi_{key}-s-dev ({unit_label})'] = [
                 model.fit_stdev[key] * conv for model in susc_models
@@ -117,7 +119,7 @@ def save_susc(molecules: list[main.Molecule],
     df = pd.DataFrame(data=out)
 
     _comment = (
-        f'#This file was generated with simple_pnmr v{__version__}'
+        f'#This file was generated with SimpNMR v{__version__}'
         ' at {}\n'.format(
             datetime.datetime.now().strftime('%H:%M:%S %d-%m-%Y ')
         )

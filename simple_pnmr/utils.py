@@ -20,8 +20,8 @@ MU0 = consts.physical_constants["vacuum mag. permeability"][0]  # [N A^-2]
 MUB = consts.physical_constants["Bohr magneton"][0]
 HBAR = consts.hbar  # [J s radian-1]
 H = consts.h  # [J s radian-1]
-KB = 1.380649e-23 # Boltzmann constant k [J·K⁻¹]
-GE = 2.002319 # g value of free electron
+KB = 1.380649e-23  # Boltzmann constant k [J·K⁻¹]
+GE = 2.002319  # g value of free electron
 EGAMMA = consts.physical_constants["electron gyromag. ratio in MHz/T"][0]
 
 
@@ -154,13 +154,13 @@ def a_tensor_mhz_to_angstrom(a_tensors: dict[str: NDArray]) -> dict[
     a_tensors_ang = {
         key: _mhz_to_angstrom(val, NUCLEAR_GAMMAS[st.remove_numbers(key)])
         for key, val in a_tensors.items()
-        if st.remove_numbers(key) in NUCLEAR_GAMMAS.keys() and NUCLEAR_GAMMAS[st.remove_numbers(key)] # noqa
+        if st.remove_numbers(key) in NUCLEAR_GAMMAS.keys() and NUCLEAR_GAMMAS[st.remove_numbers(key)]  # noqa
     }
 
     return a_tensors_ang
 
 
-def _mhz_to_angstrom(val_mhz: NDArray | float, nuclear_gamma: float) -> NDArray | float: # noqa
+def _mhz_to_angstrom(val_mhz: NDArray | float, nuclear_gamma: float) -> NDArray | float:  # noqa
     """
     Converts A tensor in MHz to ppm Angstrom^-3 using specified nuclear
     gyromagnetic ratio
@@ -278,7 +278,7 @@ def cstr(string: str, color: str):
     -------
     str
         Input string with colours
-    ''' # noqa
+    '''  # noqa
 
     ccodes = {
         'red': '\u001b[31m',
@@ -349,7 +349,7 @@ def cprint(string: str, color: str):
     Returns
     -------
     None
-    ''' # noqa
+    '''  # noqa
 
     return print(cstr(string, color))
 
@@ -416,7 +416,7 @@ def read_exp_metadata(file_name: str) -> tuple[float, float, str]:
 
 def find_index_of_nearest(array, value):
     idx = np.searchsorted(array, value, side="left")
-    if idx > 0 and (idx == len(array) or math.fabs(value - array[idx-1]) < math.fabs(value - array[idx])): # noqa
+    if idx > 0 and (idx == len(array) or math.fabs(value - array[idx-1]) < math.fabs(value - array[idx])):  # noqa
         return idx - 1
     else:
         return idx
@@ -436,7 +436,7 @@ def isotope_format(isotope_string: str) -> str:
     str
         Mathtext formatted string with enclosing $$\n
         e.g. $^\mathregular{13}\mathregular{C}$
-    ''' # noqa
+    '''  # noqa
 
     # Split at number letter boundary
     for it, char in enumerate(isotope_string):
@@ -448,16 +448,125 @@ def isotope_format(isotope_string: str) -> str:
 
     return r'$^\mathregular{{{}}} \mathregular{{{}}}$'.format(nums, lets)
 
+
 def get_spin_only_susceptibility(uargs, temperature):
     config = inps.PredictConfig.from_file(uargs.input_file)
 
-    S = rdrs.read_orca_spin(config.susceptibility_file,section=config.susceptibility_format.split('orca_')[1])
+    S = rdrs.read_orca_spin(config.susceptibility_file,
+                            section=config.susceptibility_format.split('orca_')[1])
     T = temperature
 
     # Calculate spin-only magnetic susceptibility
-    chi_only_iso = (MU0 * MUB**2 * GE**2 * S * (S + 1)) / (3 * KB * T) * ( 10 ** 32) # Si [10^-32 m^3]
+    chi_only_iso = (MU0 * MUB**2 * GE**2 * S * (S + 1)) / \
+        (3 * KB * T) * (10 ** 32)  # Si [10^-32 m^3]
 
     # Convert from Si to A^3
     chi_only_iso = chi_only_iso * 10**-2
 
     return chi_only_iso
+
+
+def sbm_r2_dipolar(
+        nuclei_labels,
+        nuclei_coords,
+        electron_coords,
+        gamma_I_dict,
+        omega_I_dict,
+        omega_S,
+        tau_c1,
+        tau_c2,
+        spin
+):
+    def J(omega, tau):
+        return tau / (1 + (omega * tau) ** 2)
+
+    rates = {}
+    for label in nuclei_labels:
+        r = np.linalg.norm(nuclei_coords[label] - electron_coords) * 1e-10
+        gamma_I = gamma_I_dict[label]
+        omega_I = omega_I_dict[label]
+        prefactor = (
+            (1 / 15)
+            * (1 / r**6)
+            * (MU0 / (4 * np.pi))**2
+            * (gamma_I * GE * MUB)**2
+            * spin * (spin + 1)
+        )
+        spectral_density = (
+            4 * J(0, tau_c1)
+            + 3 * J(omega_I, tau_c1)
+            + 6 * J(omega_S, tau_c2)
+            + 6 * J(omega_I + omega_S, tau_c2)
+            + J(omega_I - omega_S, tau_c2)
+        )
+        rate = prefactor * spectral_density
+        rates[label] = rate
+
+    return rates
+
+
+def sbm_r2_contact(
+        nuclei_labels,
+        Aiso_dict,
+        omega_I_dict,
+        omega_S,
+        tau_e1,
+        tau_e2,
+        spin
+):
+    def J(omega, tau):
+        return tau / (1 + (omega * tau) ** 2)
+
+    rates = {}
+
+    for label in nuclei_labels:
+        Aiso = Aiso_dict[label]
+        omega_I = omega_I_dict[label]
+        prefactor = (
+            (1 / 3)
+            * Aiso**2
+            * spin * (spin + 1)
+        )
+        spectral_density = (
+            J(0, tau_e1)
+            + J(omega_I - omega_S, tau_e2)
+        )
+        rate = prefactor * spectral_density
+        rates[label] = rate
+    return rates
+
+
+def gueron_r2_curie(
+        nuclei_labels,
+        nuclei_coords,
+        electron_coords,
+        gamma_I_dict,
+        omega_I_dict,
+        B0,
+        T,
+        tau_R,
+        spin
+):
+
+    def J(omega, tau):
+        return tau / (1 + (omega * tau) ** 2)
+
+    rates = {}
+
+    for label in nuclei_labels:
+        r = np.linalg.norm(nuclei_coords[label] - electron_coords) * 1e-10
+        gamma_I = gamma_I_dict[label]
+        omega_I = omega_I_dict[label]
+        prefactor = (
+            (1 / 5)
+            * (1 / r**6)
+            * (MU0 / (4 * np.pi))**2
+            * (- gamma_I * B0 / (3 * consts.k * T))**2
+            * (GE * MUB)**4
+            * (spin * (spin + 1))**2
+        )
+        spectral_density = (4 * J(0, tau_R) + 3 * J(omega_I, tau_R))
+        rate = prefactor * spectral_density
+        rates[label] = rate
+
+    return rates

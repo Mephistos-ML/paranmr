@@ -24,7 +24,7 @@ The main input file for the ``fit_susc`` subprogram is a YAML (``.yml`` or ``.ya
 
 The input file contains a series of keywords for which there are subkeywords and associated values - these are detailed in Table 1.
 
-An example input file for ``fit_susc`` can be found in the ``simple_pnmr`` `repository <https://github.com/JonKragskow/simple_pnmr>`_, at ``examples/fit_susc/input.yml``.
+An example input file for ``fit_susc`` can be found in the ``SimpNMR`` `repository <https://gitlab.com/suturina-group/simple_pnmr>`_, at ``examples/fit_susc/input.yml``.
 
 .. table:: Table 1: ``fit_susc`` subprogram input file keywords and subkeywords.
 

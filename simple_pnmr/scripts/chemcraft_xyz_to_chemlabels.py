@@ -1,7 +1,7 @@
 '''
-            simple_pnmr
+            SimpNMR
 
-        Copyright (C) 2024
+        Copyright (C) 2025
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU Affero General Public License as published
@@ -66,7 +66,7 @@ def main():
     parser = argparse.ArgumentParser(
         description=(
             'This script converts annotated chemcraft .xyz files into a\n'
-            'chemlabels csv file for use with simple_pnmr'
+            'chemlabels csv file for use with SimpNMR'
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter
     )

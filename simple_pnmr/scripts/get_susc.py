@@ -1,5 +1,5 @@
 '''
-            simpNMR
+            SimpNMR
 
         Copyright (C) 2025
 

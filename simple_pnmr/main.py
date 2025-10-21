@@ -367,7 +367,7 @@ class Experiment():
         df.sort_values(['shift (ppm)'], inplace=True)
 
         _comment = (
-            f'#This file was generated with simple_pnmr v{__version__}'
+            f'#This file was generated with SimpNMR v{__version__}'
             ' at {}\n'.format(
                 datetime.datetime.now().strftime('%H:%M:%S %d-%m-%Y ')
             )
@@ -2373,7 +2373,7 @@ class Molecule():
         df = pd.DataFrame(data=data)
 
         _comment = (
-            f'#This file was generated with simple_pnmr v{__version__}'
+            f'#This file was generated with SimpNMR v{__version__}'
             ' at {}\n'.format(
                 datetime.datetime.now().strftime('%H:%M:%S %d-%m-%Y ')
             )
@@ -2447,7 +2447,7 @@ class Molecule():
         df = pd.DataFrame(data=data)
 
         _comment = (
-            f'# This file was generated with simple_pnmr v{__version__}'
+            f'# This file was generated with SimpNMR v{__version__}'
             ' at {}\n'.format(
                 datetime.datetime.now().strftime('%H:%M:%S %d-%m-%Y ')
             )
@@ -2519,7 +2519,7 @@ class Molecule():
         '''
 
         _comment = (
-            f'This file was generated with simple_pnmr v{__version__}'
+            f'This file was generated with SimpNMR v{__version__}'
             ' at {}. '.format(
                 datetime.datetime.now().strftime('%H:%M:%S %d-%m-%Y')
             )

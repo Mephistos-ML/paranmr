@@ -561,7 +561,7 @@ class QCA(ABC):
         )
 
         _comments = (
-            f'#This file was generated with simple_pnmr v{__version__}'
+            f'#This file was generated with SimpNMR v{__version__}'
             ' on {}\n'.format(
                 datetime.datetime.now().strftime('%H:%M:%S %d-%m-%Y ')
             )

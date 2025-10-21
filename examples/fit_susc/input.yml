@@ -20,14 +20,11 @@ nuclei:
   include: H
 
 susc_fit:
-  type: full
+  type: isoaxrho
   variables:
-    iso: [fit, 0.01]
-    dxx: [fit, 0.1]
-    dxy: [fix, 0.]
-    dxz: [fix, 0.]
-    dyy: [fit, 0.1]
-    dyz: [fix, 0.]
+    iso: [fit, 0.001]
+    ax: [fit, 0.001]
+    rho_over_ax: [fix, 0.00]
   average_shifts: 'all'
 
 # Permutation groups which modify initial

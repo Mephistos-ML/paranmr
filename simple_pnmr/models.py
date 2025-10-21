@@ -55,6 +55,8 @@ class SusceptibilityModel(ABC):
 
         # Residual
         self._mae = None
+        # RMSE
+        self._rmse = None
 
         return
 
@@ -198,6 +200,19 @@ class SusceptibilityModel(ABC):
     def mae(self, value):
         if isinstance(value, (np.floating, float)):
             self._mae = value
+        else:
+            raise TypeError
+        return
+
+    @property
+    def rmse(self) -> float:
+        'Root mean square error (RMSE) of fit'
+        return self._rmse
+
+    @rmse.setter
+    def rmse(self, value):
+        if isinstance(value, (np.floating, float)) or np.isnan(value):
+            self._rmse = value
         else:
             raise TypeError
         return
@@ -472,6 +487,8 @@ class SusceptibilityModel(ABC):
                 for label in self.fit_vars.keys()
             }
             self.fit_status = False
+            self.mae = np.NaN
+            self.rmse = np.NaN
             self.r2 = np.NaN
             self.adj_r2 = np.NaN
         else:
@@ -494,6 +511,7 @@ class SusceptibilityModel(ABC):
             # R2
             self.mae = np.sum(np.abs(curr_fit.fun)) / len(curr_fit.fun)
             ss_res = np.sum(curr_fit.fun**2)
+            self.rmse = np.sqrt(ss_res / len(curr_fit.fun))
             ecs = [
                 al_to_para_shift[nuc.label]
                 for nuc in molecule.nuclei
@@ -569,6 +587,7 @@ class LinearSusceptibilityModel(SusceptibilityModel):
                 for label in self.fit_vars.keys()
             }
             self.fit_status = False
+            self.rmse = np.NaN
             self.r2 = np.NaN
             self.adj_r2 = np.NaN
         else:
@@ -596,6 +615,7 @@ class LinearSusceptibilityModel(SusceptibilityModel):
 
             # R2
             ss_res = np.sum(curr_fit.fun**2)
+            self.rmse = np.sqrt(ss_res / len(curr_fit.fun))
             ecs = [
                 experiment[nuc.chem_label]
                 for nuc in molecule.nuclei

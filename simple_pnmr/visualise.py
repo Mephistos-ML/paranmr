@@ -443,9 +443,11 @@ def plot_fitted_shifts(molecule: main.Molecule, experiment: main.Experiment,
 
     expression += '\n'
 
-    expression += rf'$r^2_\mathregular{{adj.}}$ = {susc_model.adj_r2:.5f}'
+    expression += rf'$r^2_\mathregular{{adj.}}$ = {susc_model.adj_r2:.5f}       '
+    expression += rf'$\mathrm{{MAE}} = {susc_model.mae:.5f}\ \mathrm{{ppm}}$       '
+    expression += rf'$\mathrm{{RMSE}} = {susc_model.rmse:.5f}\ \mathrm{{ppm}}$'
 
-    expression += '\n------------------------------\n'
+    expression += '\n-------------------------------------------------\n'
 
     if not any(['ax' in susc_model.VARNAMES]):
         expression += rf'$\Delta\chi_\mathregular{{ax}}$ = {molecule.susc.axiality * conv:.3f} {unit_label}' # noqa
@@ -526,7 +528,7 @@ def plot_pred_spectrum(molecule: main.Molecule,
         if nuc.isotope == isotope:
             _total += lorentzian(
                 ppm_grid,
-                1/5,
+                nuc.shift.lw,
                 nuc.shift.avg,
                 1
             )
