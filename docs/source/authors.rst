@@ -1,9 +1,6 @@
 Authors
 =======
 
-Authors
-=======
-
 The ``SimpNMR`` package has been developed by the following contributors:
 
 - Dr. Elizaveta Suturina — principal investigator, Suturina Group, University of Bath.  
@@ -20,4 +17,4 @@ The version number can be obtained using the terminal command
 
 .. code-block::
 
-   pip show simple_pnmr
+   pip show simpnmr

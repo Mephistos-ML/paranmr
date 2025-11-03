@@ -24,16 +24,10 @@ pages:
   - pip install anybadge ${PKG_NAME} --upgrade
   - make html
   - mv build/html ../public
-  - export VERSION=$(grep -oP '__version__ = "\K[^"]+' ../simple_pnmr/__version__.py)
+  - export VERSION=$(grep -oP '__version__ = "\K[^"]+' ../simpnmr/__version__.py)
   - rm -f ../public/docs.svg
   - anybadge -l Documentation -v $VERSION -f ../public/docs.svg --color green -o
   artifacts:
     paths:
     - public
     expire_in: 1 day
-  # rules:
-  #   - if: '$force == "docs" && $CI_COMMIT_REF_NAME == "main"'
-  #     when:
-  #       manual
-  #   - when:
-  #       never

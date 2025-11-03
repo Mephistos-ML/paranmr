@@ -24,7 +24,7 @@ The main input file for the ``fit_susc`` subprogram is a YAML (``.yml`` or ``.ya
 
 The input file contains a series of keywords for which there are subkeywords and associated values - these are detailed in Table 1.
 
-An example input file for ``fit_susc`` can be found in the ``SimpNMR`` `repository <https://gitlab.com/suturina-group/simple_pnmr>`_, at ``examples/fit_susc/input.yml``.
+An example input file for ``fit_susc`` can be found in the ``SimpNMR`` `repository <https://gitlab.com/suturina-group/simpnmr>`_, at ``examples/fit_susc/input.yml``.
 
 .. table:: Table 1: ``fit_susc`` subprogram input file keywords and subkeywords.
 
@@ -276,7 +276,7 @@ with a short description. For completeness, the following files can be created b
 Example
 -------
 
-An example input file and associated datafiles can be found in the ``simple_pnmr``
-`repository <https://gitlab.com/suturina-group/simple_pnmr/-/tree/main/examples/fit_susc?ref_type=heads>`__ in ``examples/fit_susc``
+An example input file and associated datafiles can be found in the ``SimpNMR``
+`repository <https://gitlab.com/suturina-group/simpnmr/-/tree/main/examples/fit_susc?ref_type=heads>`__ in ``examples/fit_susc``
 
 .. footbibliography::

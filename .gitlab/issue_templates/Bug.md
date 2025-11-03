@@ -1,7 +1,7 @@
 ## Quick Information
 <!-- This is to help replicate the issue as closely as possible !-->
 - **Operating System:** Windows/MacOS/Linux <!-- Delete as appropriate !-->
-- **Version of ccfit2:** <!-- Obtained with `pip show simple_pnmr` !-->
+- **Version of ccfit2:** <!-- Obtained with `pip show simpnmr` !-->
 - **Python version:** <!-- Obtained with `python --version` !-->
 
 ## Steps to reproduce

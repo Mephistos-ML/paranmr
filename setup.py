@@ -8,12 +8,12 @@ import setuptools
 __version__ = '0.0.0'
 
 setuptools.setup(
-    name='simple_pnmr',
+    name='SimpNMR',
     version=__version__,
     author='Suturina Group',
     author_email='',
     description='A package for fitting ', # noqa
-    url='https://gitlab.com/suturina-group/simple_pnmr',
+    url='https://gitlab.com/suturina-group/simpnmr',
     classifiers=[
         'Programming Language :: Python :: 3',
         'License :: OSI Approved :: GNU General Public License v3 (GPLv3)',
@@ -36,12 +36,12 @@ setuptools.setup(
     ],
     entry_points={
         'console_scripts': [
-            'pnmr = simple_pnmr.cli:interface',
-            'plot_A_funcs = simple_pnmr.scripts.batch_hf_plot:main',
-            'plot_chi_funcs = simple_pnmr.scripts.batch_susc_plot:main',
-            'chi_plot = simple_pnmr.scripts.chi_plot:main',
-            'get_susc = simple_pnmr.scripts.get_susc:main',
-            'xyz_to_chemlabel = simple_pnmr.scripts.chemcraft_xyz_to_chemlabels:main' # noqa,
+            'simpnmr = simpnmr.cli:interface',
+            'plot_A_funcs = simpnmr.scripts.batch_hf_plot:main',
+            'plot_chi_funcs = simpnmr.scripts.batch_susc_plot:main',
+            'chi_plot = simpnmr.scripts.chi_plot:main',
+            'get_susc = simpnmr.scripts.get_susc:main',
+            'xyz_to_chemlabel = simpnmr.scripts.chemcraft_xyz_to_chemlabels:main' # noqa,
         ]
     }
 )

@@ -20,7 +20,7 @@ This script contains a program to split rate (ac and dc *_params.csv) files
 '''
 import argparse
 import xyz_py as xyzp
-from simple_pnmr import utils as ut
+from simpnmr import utils as ut
 import csv
 
 

@@ -3,7 +3,7 @@
 Command Line Interface
 ======================
 
-The command line interface to ``simple_pnmr``.
+The command line interface to ``SimpNMR``.
 
-.. automodule:: simple_pnmr.cli
+.. automodule:: simpnmr.cli
     :members:

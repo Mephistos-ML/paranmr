@@ -9,9 +9,9 @@ Configuration
 Environment Variables
 ^^^^^^^^^^^^^^^^^^^^^
 
-Some default settings of ``simple_pnmr`` can be configured using the environment variables listed in Table 1.
+Some default settings of ``SimpNMR`` can be configured using the environment variables listed in Table 1.
 
-Note, these options only apply when ``simple_pnmr`` is used through its command line interface (CLI),
+Note, these options only apply when ``SimpNMR`` is used through its command line interface (CLI),
 and in the case of custom fonts, users must have the specified font installed on their system.
 
 Additionally, changing some of the environment variables used for plotting may lead

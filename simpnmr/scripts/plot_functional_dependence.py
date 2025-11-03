@@ -19,43 +19,19 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 This script contains a program to split rate (ac and dc *_params.csv) files
 '''
 
-
 import argparse
-import matplotlib as mpl
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
-from matplotlib.lines import Line2D
 import numpy as np
 import copy
 import pandas as pd
-import yaml
-import yaml_include
 
-import simple_pnmr.main as pnmr
-import simple_pnmr.visualise as vis
-import simple_pnmr.readers as rdrs
-
-mpl.rc('xtick', labelsize=12)
-mpl.rc('ytick', labelsize=12)
-
-plt.rcParams['font.family'] = "Arial"
-
-# cmfont = font_manager.FontProperties(
-#     fname='/usr/share/fonts/truetype/cmu/cmunss.ttf'
-# )
-
-# mpl.rcParams['font.family'] = 'serif'
-# mpl.rcParams['font.serif'] = cmfont.get_name()
-# mpl.rcParams['mathtext.fontset'] = 'cm'
-# mpl.rcParams['axes.unicode_minus'] = False
-
-yaml.add_constructor(
-    "!inc", yaml_include.Constructor(base_dir='.')
-)
+import simpnmr.main as pnmr
+import simpnmr.readers as rdrs
 
 
 def load_hyperfine_data(sources: dict[str, str],
-                        chem_labels: str, elements='H') -> list[pnmr.Molecule]:
+                        chem_labels: str) -> list[pnmr.Molecule]:
     '''
     Loads hyperfine data from a range of sources
 
@@ -66,14 +42,12 @@ def load_hyperfine_data(sources: dict[str, str],
         Values are file in which data is stored
     chem_labels: str
         File containing chemical labels and optionally math labels
-    elements: str, default 'H'
-        Elements to include
 
     Returns
     -------
     dict[str, pnmr.Molecule]
         Keys are name of sources (copied from `sources`)\n
-        Values are Molecule objects for each source
+        Vvalues are Molecule objects for each source
     '''
 
     all_molecules = dict.fromkeys(sources, None)
@@ -85,7 +59,7 @@ def load_hyperfine_data(sources: dict[str, str],
         # Create molecule object from quantum chemical hyperfine data
         # to convert units
         molecule = pnmr.Molecule.from_QCA(
-            calc_data, converter='null', elements=elements
+            calc_data, converter='MHz_to_Ang-3', elements='all_H'
         )
 
         molecule.add_chem_labels_from_file(chem_labels)
@@ -130,8 +104,7 @@ def plot_component(func_comps: dict[str, dict[str, float]], ylabel: str,
         fig, ax = plt.subplots(
             1,
             1,
-            num=figure_title,
-            figsize=[5.5, 3.5]
+            num=figure_title
         )
 
     # width of bars, and shift to apply for starting positions
@@ -161,68 +134,41 @@ def plot_component(func_comps: dict[str, dict[str, float]], ylabel: str,
     ax.xaxis.set_minor_locator(ticker.MultipleLocator(1))
     ax.yaxis.set_minor_locator(ticker.AutoMinorLocator())
     ax.set_xticks(xvals + 0.5)
-    ax.set_xticklabels(func_comps[_frst].keys(), rotation=45)
+    ax.set_xticklabels(func_comps[_frst].keys())
     ax.grid(axis='x', ls='--', which='minor')
     ax.set_xlim(0.5, len(func_comps[_frst]) + 1.5)
     ax.xaxis.set_tick_params('major', length=0)
 
     ax.hlines(0, 0.5, len(func_comps[_frst]) + 1.5, lw=0.5, color='k')
 
-    fig.legend(loc=7, frameon=False)
-    ax.set_ylabel(ylabel, fontsize=12)
+    ax.legend()
+    ax.set_ylabel(ylabel)
     fig.tight_layout()
-    fig.subplots_adjust(right=0.73)
 
     if save:
-        plt.savefig(f'{savename}', dpi=500, transparent=True)
+        plt.savefig(f'{savename}', dpi=500)
     if show:
         plt.show()
 
     return fig, ax
 
 
-def plot_normalisation(norms: dict[str, float], chemlabels: dict[str, float],
-                       save=True, show=True, savename='normalisation.png',
+def plot_normalisation(norms: dict[str, float], save=True, show=True,
+                       savename='normalisation.png',
                        figure_title='Normalisation'):
-
-    unilabs = set(chemlabels.values())
-
-    colours = {
-        lab: col
-        for col, lab in zip(vis.SAFE_COLOURS, unilabs)
-    }
 
     fig, ax = plt.subplots(num=figure_title)
 
     for name, value in norms.items():
         print(name, value)
 
-    for it, (key, val) in enumerate(norms.items()):
-        ax.plot(
-            it,
-            val,
-            lw=0,
-            marker='x',
-            mew=2.,
-            color=colours[chemlabels[key]]
-        )
-
-    legend_elements = [
-        Line2D(
-            [0], [0], marker='x', color=colour, label=label, mew=2, lw=0
-        )
-        for label, colour in colours.items()
-    ]
-
-    ax.legend(handles=legend_elements)
+    for it, val in enumerate(norms.values()):
+        ax.plot(it, val, lw=0, marker='x', color='k')
 
     ax.set_xticks(np.arange(len(norms)))
     ax.set_xticklabels(norms.keys(), rotation=45)
 
-    ax.set_ylabel(
-        r'$A_\mathregular{iso, max} (\mathregular{MHz})$',
-        fontsize=12
-    )
+    ax.set_ylabel(r'$A_\mathregular{iso, max}$')
 
     fig.tight_layout()
 
@@ -245,7 +191,10 @@ def main():
     parser.add_argument(
         'input_file',
         type=str,
-        help='.csv file containing source file information'
+        help=(
+            '.csv file with two columns "names" and "files", where "files"\n'
+            'contains Quantum chemistry output file names'
+        )
     )
 
     parser.add_argument(
@@ -261,16 +210,6 @@ def main():
         help='Appends to window titles'
     )
 
-    parser.add_argument(
-        '--elements',
-        type=str,
-        nargs='*',
-        default='all',
-        help=(
-            'Elements to include in plot'
-        )
-    )
-
     uargs = parser.parse_args()
 
     # Load input file
@@ -283,13 +222,12 @@ def main():
 
     sources = {
         name: file
-        for name, file in zip(config['name'], config['input_file'])
+        for name, file in zip(config['names'], config['files'])
     }
 
     molecules = load_hyperfine_data(
         sources,
-        chem_labels=uargs.chem_labels,
-        elements=uargs.elements
+        chem_labels=uargs.chem_labels
     )
 
     all_isos = {
@@ -300,30 +238,22 @@ def main():
         for name, molecule in molecules.items()
     }
 
-    # for name, valdict in all_isos.items():
-    #     all_isos[name] = dict(
-    #         sorted(valdict.items(), key=lambda item: item[1], reverse=True)
-    #     )
-
     # Isotropic parts
     plot_component(
         all_isos,
-        r'$A_\mathregular{iso} \mathregular{(MHz)}$',
-        figure_title=uargs.window_append,
-        savename='isotropic.png'
+        r'$A_\mathregular{iso} \mathregular{(ppm \ \AA^{-3})}$',
+        figure_title=uargs.window_append
     )
 
     # Isotropic parts relative to largest value for that functional
 
     all_relative_isos = copy.deepcopy(all_isos)
     norm_vals = dict.fromkeys(all_isos, 0.)
-    norm_clabs = dict.fromkeys(all_isos, '')
 
     for name, relative_isos in all_isos.items():
         for lab in relative_isos.keys():
             all_relative_isos[name][lab] /= np.max(np.abs(list(relative_isos.values()))) # noqa
             norm_vals[name] = np.max(np.abs(list(relative_isos.values())))
-            norm_clabs[name] = list(relative_isos.keys())[np.argmax(np.abs(list(relative_isos.values())))] # noqa
 
     for name, valdict in all_relative_isos.items():
         all_relative_isos[name] = dict(
@@ -332,7 +262,6 @@ def main():
 
     plot_normalisation(
         norm_vals,
-        norm_clabs,
         figure_title=uargs.window_append
     )
 
@@ -366,14 +295,12 @@ def main():
 
     plot_component(
         all_ax,
-        r'$A_\mathregular{ax} \mathregular{(MHz)}$',
-        figure_title=uargs.window_append,
-        savename='axial.png'
+        r'$A_\mathregular{ax}$',
+        figure_title=uargs.window_append
     )
 
     plot_component(
         all_rho,
-        r'$A_\mathregular{rho} \mathregular{(MHz)}$',
-        figure_title=uargs.window_append,
-        savename='rhombic.png'
+        r'$A_\mathregular{rho}$',
+        figure_title=uargs.window_append
     )

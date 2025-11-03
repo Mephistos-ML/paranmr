@@ -1371,7 +1371,7 @@ def read_args(arg_list=None):
 
     epilog = (
         'To display options for a specific program, use\n\n'
-        f'      {ut.cstr('simple_pnmr SUBPROGRAM -h', 'green')}'
+        f'      {ut.cstr('simpnmr SUBPROGRAM -h', 'green')}'
     )
 
     parser = argparse.ArgumentParser(
@@ -1611,7 +1611,7 @@ def read_args(arg_list=None):
         'input_file',
         type=str,
         help=(
-            'simple_pnmr Input file'
+            'simpnmr Input file'
         )
     )
 
@@ -1766,7 +1766,7 @@ def read_args(arg_list=None):
         type=str,
         nargs='+',
         help=(
-            'simple_pnmr experiment.csv files'
+            'simpnmr experiment.csv files'
         )
     )
 

@@ -24,17 +24,17 @@ the ``pip`` package manager.
 Installation
 ------------
 
-The ``simple_pnmr`` python package and its command line interface can be installed using the ``pip`` package manager
+The ``SimpNMR`` python package and its command line interface can be installed using the ``pip`` package manager
 
 .. code-block:: bash
 
-    pip install simple_pnmr
+    pip install simpnmr
 
 To test your installation was successful, run the following command
 
 .. code-block:: bash
 
-    simple_pnmr -h
+    simpnmr -h
 
 You should see the help text for ``SimpNMR``. You are now ready to start using ``SimpNMR``, head to the :ref:`guide` pages for more information, 
 or over to :ref:`configuration` to customise your installation.
@@ -44,8 +44,8 @@ or over to :ref:`configuration` to customise your installation.
 Updating
 --------
 
-To update ``simple_pnmr``, run
+To update ``SimpNMR``, run
 
 .. code-block:: bash
 
-    pip install simple_pnmr --upgrade
+    pip install simpnmr --upgrade

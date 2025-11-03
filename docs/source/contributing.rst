@@ -1,7 +1,7 @@
 Contributing
 ============
 
-We welcome contributions to ``SimpNMR``, please create an `Issue <https://gitlab.com/suturina-group/simple_pnmr/-/issues>`_  on GitLab (with a template) if you wish to add functionality.
+We welcome contributions to ``SimpNMR``, please create an `Issue <https://gitlab.com/suturina-group/simpnmr/-/issues>`_  on GitLab (with a template) if you wish to add functionality.
 
 When contributing, you **must** follow the following rules which help to standardise development.
 
@@ -28,9 +28,9 @@ Documentation
 -------------
 
 Our documentation is written in `Sphinx <https://www.sphinx-doc.org/en/master/>`_ and uses
-the `Read the Docs` theme. The source-code for the docs is available at ``simple_pnmr/docs/source``.
+the `Read the Docs` theme. The source-code for the docs is available at ``simpnmr/docs/source``.
 
-To build the documentation **locally**, navigate to ``simple_pnmr/docs`` and install the python dependencies with
+To build the documentation **locally**, navigate to ``simpnmr/docs`` and install the python dependencies with
 
 .. code-block:: bash
 
@@ -44,7 +44,7 @@ To build the documentation run
 
     make clean html
 
-The compiled html pages will be available at ``simple_pnmr/docs/build/html``.
+The compiled html pages will be available at ``simpnmr/docs/build/html``.
 
 Please ensure the documentation builds successfully prior to committing/merging.
 

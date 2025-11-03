@@ -5,8 +5,8 @@ To update ``SimpNMR`` to the latest version, run
 
 .. code-block:: bash
 
-    pip install simple_pnmr --upgrade
+    pip install simpnmr --upgrade
 
 Version 1.0.0
 -------------
- - Initial Release of simple_pnmr
+ - Initial Release of SimpNMR

@@ -90,7 +90,7 @@ The input file contains a series of keywords for which there are subkeywords and
     |                             |                         |                                     |                                                                         |                      |
     |                             |                         |                                     | - ``format:molcas`` uses data from an OpenMOLCAS ``.out`` file          |                      |
     |                             |                         |                                     |                                                                         |                      |
-    |                             |                         |                                     | - ``format:csv`` uses data from a ``simple_pnmr`` ``susceptibility.csv``|                      |
+    |                             |                         |                                     | - ``format:csv`` uses data from a ``SimpNMR`` ``susceptibility.csv``|                      |
     |                             |                         |                                     |                                                                         |                      |
     |                             |                         |                                     | - ``format:txt`` uses a tensor a ``.txt`` file                          |                      |
     |                             |                         |                                     |                                                                         |                      |
