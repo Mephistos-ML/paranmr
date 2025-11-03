@@ -31,9 +31,9 @@ pages:
     paths:
     - public
     expire_in: 1 day
-  rules:
-    - if: '$force == "docs" && $CI_COMMIT_REF_NAME == "main"'
-      when:
-        manual
-    - when:
-        never
+  # rules:
+  #   - if: '$force == "docs" && $CI_COMMIT_REF_NAME == "main"'
+  #     when:
+  #       manual
+  #   - when:
+  #       never
