@@ -303,6 +303,51 @@ def calculate_E_D_components(rotated_eff_H_tensors: list[np.ndarray]) -> tuple[l
     return D, E
 
 
+# --- Helper: Analytic (g^2)_iso from LR intercepts for D estimation ---
+from typing import Optional
+
+def calculate_g_sq_iso_analytic(b_iso_intercept: float, b_ax_intercept: float, K: float = 1.0) -> float:
+    """
+    Compute (g^2)_iso analytically from the **linear-regression intercepts** of
+    the scalar (isotropic) and axial chi·T vs 1/T fits.
+
+    Parameters
+    ----------
+    b_iso_intercept : float
+        Intercept of the isotropic fit (chi_iso·T) at 1/T → 0 (T → ∞).
+        According to the working convention, this equals 2.0023 * g_iso * K.
+    b_ax_intercept : float
+        Intercept of the axial fit (chi_ax·T) at 1/T → 0 (T → ∞), i.e. (g^2)_ax * K.
+    K : float, optional
+        Curie-like factor used before normalization. In this workflow, chi values have already
+        been normalized by the Curie constant (norm_factor), so use K=1.0 (default).
+
+    Returns
+    -------
+    float
+        (g^2)_iso computed under a weak-rhombicity model (g_x ≈ g_y), using the LR intercepts.
+    """
+    # Isotropic g from the **intercept** of the scalar susceptibility (includes g_e = 2.0023 factor)
+    g_iso = (b_iso_intercept / K) / 2.0023
+
+    # Squared axial part from the **intercept**: (g^2)_ax ≈ b_ax_intercept / K
+    g_sq_ax = b_ax_intercept / K
+
+    # Assume small rhombicity: g_x ≈ g_y. Solve components consistent with g_iso and g_sq_ax.
+    # Let g_x = g_y. Then determine g_z from the isotropic average of principal g's.
+    g_x = -np.sqrt(g_sq_ax / 3.0 + g_iso**2) + 2.0 * g_iso
+    g_y = g_x
+    g_z = 3.0 * g_iso - 2.0 * g_x
+
+    g_sq_iso_analytic = (g_x**2 + g_y**2 + g_z**2) / 3.0
+
+    print(
+        f"[DEBUG] b_iso_intercept = {(b_iso_intercept):.6g}, g_iso={(g_iso):.6g}, b_iso_intercept = {(b_iso_intercept):.6g}, g_sq_ax = {(g_sq_ax):.6g},g_x={(g_x):.6g}, g_z={g_z:.6g}"
+    )
+
+    return float(g_sq_iso_analytic)
+
+
 # --- Helper to write all computed series to a CSV file ---
 def write_results_csv(
     output_csv_path: str,
@@ -455,13 +500,28 @@ def write_results_csv(
 def weighted_linreg_predict(x_train: list[float],
                             y_train: list[float],
                             x_pred: list[float],
-                            sigma: list[float] | None = None) -> tuple[list[float] | None, float | None, float | None, list[float] | None, float | None, float | None]:
+                            sigma: list[float] | None = None,
+                            fixed_intercept: float | None = None
+                            ) -> tuple[list[float] | None, float | None, float | None, list[float] | None, float | None, float | None]:
     """
     Perform weighted least squares for the linear model y = a*x + b.
 
     If `sigma` is provided (pointwise standard deviations for y_train), uses
     weights w_i = 1/sigma_i^2 for those entries where sigma_i is not None and > 0.
     Missing or non-positive sigmas fall back to the median of available sigmas.
+
+    Parameters
+    ----------
+    x_train : list[float]
+        Training x values.
+    y_train : list[float]
+        Training y values.
+    x_pred : list[float]
+        X values to predict at.
+    sigma : list[float] | None
+        Optional standard deviations for y_train.
+    fixed_intercept : float | None
+        If provided, holds b fixed at this value and fits only the slope a.
 
     Returns
     -------
@@ -472,6 +532,8 @@ def weighted_linreg_predict(x_train: list[float],
     y_pred_std : list[float] | None
         Standard deviation of the predicted MEAN at each x_pred based on the
         parameter covariance matrix (i.e., sqrt(f^T Cov f), with f=[x,1]).
+    sigma_a, sigma_b : float | None
+        Standard errors of the fitted slope and intercept.
     """
     if x_train is None or y_train is None:
         return None, None, None, None, None, None
@@ -480,64 +542,167 @@ def weighted_linreg_predict(x_train: list[float],
     try:
         x = np.asarray(x_train, dtype=float)
         y = np.asarray(y_train, dtype=float)
-        # Build design matrix A = [x, 1]
-        A = np.column_stack([x, np.ones_like(x)])
+        if fixed_intercept is not None:
+            # Fit y - b_fixed = a * x using weighted least squares
+            y_centered = y - float(fixed_intercept)
+            # Build design matrix with a single column [x]
+            A = x.reshape(-1, 1)
 
-        # Prepare weights
-        if sigma is not None and any(s is not None for s in sigma):
-            # Convert sigma list to array, replacing None/<=0 with median of valid sigmas
-            s_arr = np.array([np.nan if (s is None or (isinstance(s, (int, float)) and s <= 0)) else float(s) for s in sigma], dtype=float)
-            valid = np.isfinite(s_arr) & (s_arr > 0)
-            if np.any(valid):
-                med = float(np.median(s_arr[valid]))
-                s_arr[~valid] = med
-                w = 1.0 / (s_arr ** 2)
+            # Prepare weights (reuse logic from existing branch)
+            if sigma is not None and any(s is not None for s in sigma):
+                s_arr = np.array([np.nan if (s is None or (isinstance(s, (int, float)) and s <= 0)) else float(s) for s in sigma], dtype=float)
+                valid = np.isfinite(s_arr) & (s_arr > 0)
+                if np.any(valid):
+                    med = float(np.median(s_arr[valid]))
+                    s_arr[~valid] = med
+                    w = 1.0 / (s_arr ** 2)
+                else:
+                    w = np.ones_like(x)
             else:
                 w = np.ones_like(x)
+            W_sqrt = np.sqrt(w)
+            A_w = A * W_sqrt[:, None]
+            y_w = y_centered * W_sqrt
+
+            # Solve for slope a
+            theta, *_ = np.linalg.lstsq(A_w, y_w, rcond=None)
+            a = float(theta[0])
+            b = float(fixed_intercept)
+
+            # Parameter covariance for a
+            ATA = A_w.T @ A_w
+            ATA_inv = np.linalg.inv(ATA)
+            resid = y_centered - a * x
+            dof = max(0, len(x) - 1)  # one parameter (a)
+            RSS_w = float((resid**2 * w).sum())
+            if np.allclose(w, w[0]):
+                s2 = RSS_w / w[0] / dof if dof > 0 else 0.0
+                Cov = ATA_inv * s2
+            else:
+                Cov = ATA_inv
+                if dof > 0 and not (sigma is not None and any(s is not None for s in sigma)):
+                    s2 = RSS_w / dof
+                    Cov = Cov * s2
+
+            # Predictions and their std (of the mean)
+            xp = np.asarray(x_pred, dtype=float)
+            y_pred = (a * xp + b).astype(float)
+            y_var = (xp**2) * Cov[0, 0]
+            y_var = np.maximum(y_var, 0.0)
+            y_pred_std = np.sqrt(y_var)
+
+            sigma_a = math.sqrt(Cov[0, 0]) if np.isfinite(Cov[0, 0]) else None
+            sigma_b = 0.0  # fixed intercept
+            return y_pred.tolist(), a, b, y_pred_std.tolist(), sigma_a, sigma_b
         else:
-            w = np.ones_like(x)
-        W_sqrt = np.sqrt(w)
-        A_w = A * W_sqrt[:, None]
-        y_w = y * W_sqrt
+            # Build design matrix A = [x, 1]
+            A = np.column_stack([x, np.ones_like(x)])
 
-        # Solve (A^T W A) theta = (A^T W y)
-        theta, *_ = np.linalg.lstsq(A_w, y_w, rcond=None)
-        a = float(theta[0]); b = float(theta[1])
+            # Prepare weights
+            if sigma is not None and any(s is not None for s in sigma):
+                # Convert sigma list to array, replacing None/<=0 with median of valid sigmas
+                s_arr = np.array([np.nan if (s is None or (isinstance(s, (int, float)) and s <= 0)) else float(s) for s in sigma], dtype=float)
+                valid = np.isfinite(s_arr) & (s_arr > 0)
+                if np.any(valid):
+                    med = float(np.median(s_arr[valid]))
+                    s_arr[~valid] = med
+                    w = 1.0 / (s_arr ** 2)
+                else:
+                    w = np.ones_like(x)
+            else:
+                w = np.ones_like(x)
+            W_sqrt = np.sqrt(w)
+            A_w = A * W_sqrt[:, None]
+            y_w = y * W_sqrt
 
-        # Parameter covariance
-        # If weights are absolute (known variances), use Cov = (A^T W A)^{-1}
-        # Otherwise scale by the residual variance s2.
-        ATA = A_w.T @ A_w
-        ATA_inv = np.linalg.inv(ATA)
-        resid = y - (a * x + b)
-        dof = max(0, len(x) - 2)
-        # Weighted residual sum of squares
-        RSS_w = float((resid**2 * w).sum())
-        if np.allclose(w, w[0]):  # unweighted or constant weights
-            s2 = RSS_w / w[0] / dof if dof > 0 else 0.0
-            Cov = ATA_inv * s2
-        else:
-            # For known sigmas, best is Cov = (A^T W A)^{-1}
-            Cov = ATA_inv
-            # If degrees of freedom exist and weights are heuristic, inflate by RSS/(n-2)
-            if dof > 0 and not (sigma is not None and any(s is not None for s in sigma)):
-                s2 = RSS_w / dof
-                Cov = Cov * s2
+            # Solve (A^T W A) theta = (A^T W y)
+            theta, *_ = np.linalg.lstsq(A_w, y_w, rcond=None)
+            a = float(theta[0]); b = float(theta[1])
 
-        # Predictions and their standard deviations (of the mean)
-        xp = np.asarray(x_pred, dtype=float)
-        F = np.column_stack([xp, np.ones_like(xp)])
-        y_pred = (F @ theta).astype(float)
-        # Var(y_pred) = diag(F Cov F^T)
-        y_var = np.einsum('ij,jk,ik->i', F, Cov, F)
-        y_var = np.maximum(y_var, 0.0)
-        y_pred_std = np.sqrt(y_var)
-        sigma_a = math.sqrt(Cov[0, 0]) if np.isfinite(Cov[0, 0]) else None
-        sigma_b = math.sqrt(Cov[1, 1]) if np.isfinite(Cov[1, 1]) else None
-        return y_pred.tolist(), a, b, y_pred_std.tolist(), sigma_a, sigma_b
+            # Parameter covariance
+            # If weights are absolute (known variances), use Cov = (A^T W A)^{-1}
+            # Otherwise scale by the residual variance s2.
+            ATA = A_w.T @ A_w
+            ATA_inv = np.linalg.inv(ATA)
+            resid = y - (a * x + b)
+            dof = max(0, len(x) - 2)
+            # Weighted residual sum of squares
+            RSS_w = float((resid**2 * w).sum())
+            if np.allclose(w, w[0]):  # unweighted or constant weights
+                s2 = RSS_w / w[0] / dof if dof > 0 else 0.0
+                Cov = ATA_inv * s2
+            else:
+                # For known sigmas, best is Cov = (A^T W A)^{-1}
+                Cov = ATA_inv
+                # If degrees of freedom exist and weights are heuristic, inflate by RSS/(n-2)
+                if dof > 0 and not (sigma is not None and any(s is not None for s in sigma)):
+                    s2 = RSS_w / dof
+                    Cov = Cov * s2
+
+            # Predictions and their standard deviations (of the mean)
+            xp = np.asarray(x_pred, dtype=float)
+            F = np.column_stack([xp, np.ones_like(xp)])
+            y_pred = (F @ theta).astype(float)
+            # Var(y_pred) = diag(F Cov F^T)
+            y_var = np.einsum('ij,jk,ik->i', F, Cov, F)
+            y_var = np.maximum(y_var, 0.0)
+            y_pred_std = np.sqrt(y_var)
+            sigma_a = math.sqrt(Cov[0, 0]) if np.isfinite(Cov[0, 0]) else None
+            sigma_b = math.sqrt(Cov[1, 1]) if np.isfinite(Cov[1, 1]) else None
+            return y_pred.tolist(), a, b, y_pred_std.tolist(), sigma_a, sigma_b
     except Exception as e:
         logging.warning(f"Weighted linear regression failed: {e}")
         return None, None, None, None, None, None
+
+def compute_D(
+    S: float,
+    b_ax: float,
+    g_sq_iso_analytic: float,
+    slope_ax: float,
+) -> float:
+    """
+    Estimate the axial ZFS parameter D (in cm^-1) from the weighted linear regression
+    of χ·T vs 1/T using:
+        a_ax  = −(f_S/(30k)) * D_J * ( (g^2)_ax + 3 (g^2)_iso )
+
+    Here (g^2)_ax and (g^2)_iso are taken from the **intercepts** of the LR fits:
+        b_ax  ≈ (g^2)_ax,   b_iso ≈ (g^2)_iso   (limit T → ∞).
+
+    Parameters
+    ----------
+    S : float
+        Spin quantum number.
+    b_ax : float
+        Intercept of χ_ax·T vs 1/T (≈ (g^2)_ax).
+    b_iso : float
+        Intercept of χ_iso·T vs 1/T (≈ (g^2)_iso).
+    slope_ax : float
+        Slope a_ax from LR of χ_ax·T vs 1/T.
+
+    Returns
+    -------
+    float
+        D in cm^-1.
+    """
+
+    # Use only the axial slope (assume E ≈ 0) and LR intercepts for (g^2)
+    f_S = (2.0 * S - 1.0) * (2.0 * S + 3.0)
+    if f_S == 0.0:
+        raise ValueError("Invalid spin S leading to f_S = 0.")
+
+    numerator = 30 * slope_ax
+    denominator = - f_S * (b_ax + 3 * g_sq_iso_analytic)
+    if denominator == 0.0:
+        raise ZeroDivisionError("Cannot determine D.")
+
+    D_cm_inv = (numerator / denominator) * 0.695
+
+    print(
+        f"[DEBUG] compute_D (E≈0, LR intercepts) -> S={S},"
+        f"b_ax={(b_ax):.6g}, g_sq_iso={(g_sq_iso_analytic):.6g}, slope_ax={slope_ax:.6g}"
+    )
+
+    return D_cm_inv
 
 def rotate_tensor_to_chi_basis(
     tensor: np.ndarray, chi_eigenvectors_list: list[np.ndarray], temps: list[float]
@@ -763,7 +928,7 @@ def read_susceptibility_csv(csv_path: str) -> tuple[list[dict[str, float | None]
 # Script to parse ORCA output and plot magnetic susceptibility components vs inverse temperature
 
 def plot_chi_temperature_dependence(
-    file_name: str, section: str, csv_path: str | None = None
+    file_name: str, section: str, csv_path: str | None = None, fix_intercept_highT: bool = False
 ) -> tuple[plt.Figure, plt.Axes]:
     """
     Reads susceptibility tensors from an ORCA output file and plots
@@ -775,6 +940,8 @@ def plot_chi_temperature_dependence(
 
     Returns:
         fig, ax: Matplotlib figure and axes objects of the plot.
+
+    If fix_intercept_highT=True, each LR intercept b is fixed to the corresponding chi·T value at the highest available CSV temperature.
     """
 
     # Parse ORCA output file for the given section to extract susceptibility tensors
@@ -783,7 +950,7 @@ def plot_chi_temperature_dependence(
     tensors = {}
 
     # Set minimal temperature considered
-    t_limit = 160
+    t_limit = 248
 
     try:
         with open(file_name, 'r') as f:
@@ -901,20 +1068,48 @@ def plot_chi_temperature_dependence(
     a_iso_se = b_iso_se = a_ax_se = b_ax_se = a_rho_se = b_rho_se = None
 
     if csv_path is not None and len(inv_t_csv) >= 2:
-        # ISO (use sigma if present)
+        fixed_b_iso = fixed_b_ax = fixed_b_rho = None
+        if fix_intercept_highT and len(temps_csv) >= 1:
+            idx_maxT_csv = max(range(len(temps_csv)), key=lambda i: temps_csv[i])
+            fixed_b_iso = chi_iso_fit_csv[idx_maxT_csv]
+            fixed_b_ax  = chi_ax_fit_csv[idx_maxT_csv]
+            fixed_b_rho = chi_rho_fit_csv[idx_maxT_csv]
+            print(f"[DEBUG] Fixed intercepts at T_max={temps_csv[idx_maxT_csv]:.2f} K: b_iso={fixed_b_iso:.6g}, b_ax={fixed_b_ax:.6g}, b_rho={fixed_b_rho:.6g}")
         chi_iso_fit_pred, a_iso, b_iso, chi_iso_sdev_pred, a_iso_se, b_iso_se = weighted_linreg_predict(
-            inv_t_csv, chi_iso_fit_csv, inv_t, sigma=chi_iso_sdev_csv if len(chi_iso_sdev_csv) == len(inv_t_csv) else None
+            inv_t_csv, chi_iso_fit_csv, inv_t, sigma=chi_iso_sdev_csv if len(chi_iso_sdev_csv) == len(inv_t_csv) else None,
+            fixed_intercept=fixed_b_iso
         )
-        # AX (use sigma if present)
         chi_ax_fit_pred, a_ax, b_ax, chi_ax_sdev_pred, a_ax_se, b_ax_se = weighted_linreg_predict(
-            inv_t_csv, chi_ax_fit_csv, inv_t, sigma=chi_ax_sdev_csv if len(chi_ax_sdev_csv) == len(inv_t_csv) else None
+            inv_t_csv, chi_ax_fit_csv, inv_t, sigma=chi_ax_sdev_csv if len(chi_ax_sdev_csv) == len(inv_t_csv) else None,
+            fixed_intercept=fixed_b_ax
         )
-        # RHO (use sigma if present)
         chi_rho_fit_pred, a_rho, b_rho, chi_rho_sdev_pred, a_rho_se, b_rho_se = weighted_linreg_predict(
-            inv_t_csv, chi_rho_fit_csv, inv_t, sigma=chi_rho_sdev_csv if len(chi_rho_sdev_csv) == len(inv_t_csv) else None
+            inv_t_csv, chi_rho_fit_csv, inv_t, sigma=chi_rho_sdev_csv if len(chi_rho_sdev_csv) == len(inv_t_csv) else None,
+            fixed_intercept=fixed_b_rho
         )
     else:
         ut.cprint('Not enough CSV points for linear regression (need at least 2).', 'cyan')
+
+    # --- Estimate D from LR slope/intercepts so compute_D prints its debug line ---
+    if (a_ax is not None) and (b_ax is not None) and (b_iso is not None):
+        try:
+            ut.cprint("Estimating D from LR slope/intercepts (using b_ax, b_iso):", 'yellow')
+            # Use LR intercepts (x=0, T→∞) as inputs to reconstruct (g^2)_iso analytically.
+            # Since chi has been normalized by norm_factor above, K=1.0 here.
+            g_sq_iso_analytic = calculate_g_sq_iso_analytic(
+                b_iso_intercept=b_iso,
+                b_ax_intercept=b_ax,
+                K=1.0,
+            )
+            D_from_LR = compute_D(
+                S=S,
+                b_ax=b_ax,
+                g_sq_iso_analytic=g_sq_iso_analytic,
+                slope_ax=a_ax,
+            )
+            print(f"[INFO] D from LR: {D_from_LR:.4f} cm^-1")
+        except Exception as e:
+            logging.warning(f"compute_D invocation failed: {e}")
 
     # Analytical chi iso, ax and rho calculation:
     chi_iso_analytic = [
@@ -935,6 +1130,7 @@ def plot_chi_temperature_dependence(
     # --- Write results CSV next to the PNG ---
     output_png = 'chi_plot_all.png'
     output_csv = output_png.replace('.png', '.csv')
+    
     write_results_csv(
         output_csv,
         temps,
@@ -982,8 +1178,8 @@ def plot_chi_temperature_dependence(
 
     # ----- Plot helpers -----
     def _finalize_axes(ax, inv_t, inv_t_csv, ylabel_suffix='', y_pad_frac=0.2, legend_ncol=None):
-        ax.set_xlabel(r'$1/\mathrm{Temperature}\ (1/\mathrm{K})$', fontsize=16, labelpad = 10)
-        ax.set_ylabel(r'Normalized $\chi\,T$ (dimensionless)' + ('' if not ylabel_suffix else f' — {ylabel_suffix}'), fontsize=16, labelpad=10)
+        ax.set_xlabel(r'$1/\mathrm{Temperature}\ (1/\mathrm{K})$', fontsize=22, labelpad = 10)
+        ax.set_ylabel(r'$\chi\,T$ (dimensionless)', fontsize=22, labelpad=10)
         sec_ax = ax.secondary_xaxis(
             'top',
             functions=(
@@ -991,20 +1187,20 @@ def plot_chi_temperature_dependence(
                 lambda T: np.divide(1, T,   out=np.full_like(T,   np.nan), where=T!=0)
             )
         )
-        sec_ax.set_xlabel('Temperature (K)', fontsize=16, labelpad=12)
+        sec_ax.set_xlabel('Temperature (K)', fontsize=22, labelpad=12)
         # Legend columns
         if legend_ncol is not None:
-            legend = ax.legend(loc='upper left', fontsize=10, ncol=legend_ncol)
+            legend = ax.legend(loc='upper left', fontsize=12, ncol=legend_ncol)
             legend.get_frame().set_edgecolor('black')
             legend.get_frame().set_alpha(1)
         else:
             # Fallback: more columns if CSV points are present
             if len(inv_t_csv) > 0:
-                legend = ax.legend(loc='upper left', fontsize=10, ncol=5)
+                legend = ax.legend(loc='upper left', fontsize=12, ncol=5)
                 legend.get_frame().set_edgecolor('black')
                 legend.get_frame().set_alpha(1)
             else:
-                legend = ax.legend(loc='upper left', fontsize=10, ncol=2)
+                legend = ax.legend(loc='upper left', fontsize=12, ncol=2)
                 legend.get_frame().set_edgecolor('black')
                 legend.get_frame().set_alpha(1)
         ax.grid(True)
@@ -1018,6 +1214,8 @@ def plot_chi_temperature_dependence(
         except Exception:
             pass
         # Layout is handled via constrained_layout at figure creation
+        ax.tick_params(axis='both', which='major', labelsize=18)
+        sec_ax.tick_params(axis='x', which='major', labelsize=18)
         return legend
 
     def _weighted_r2(x_tr, y_tr, sigma_tr, a, b):
@@ -1084,7 +1282,7 @@ def plot_chi_temperature_dependence(
             0.985, 0.03, text,
             ha='right', va='bottom',
             transform=target_ax.transAxes,
-            fontsize=11, color='#333333',
+            fontsize=16, color='#333333',
                 bbox=dict(
                     facecolor='white',
                     edgecolor='black',
@@ -1098,7 +1296,7 @@ def plot_chi_temperature_dependence(
                         fit_pred, sdev_pred,
                         a, b, a_se, b_se,
                         suffix, outfile):
-        fig_c, ax_c = plt.subplots(figsize=(10, 6), constrained_layout=True)
+        fig_c, ax_c = plt.subplots(figsize=(10, 4.5), constrained_layout=True)
         # NEVPT2, analytic, and g^2 curves
         ax_c.plot(inv_t, nevpt2_series, label=fr'$\chi_{{{suffix}}}$ NEVPT2', color=color_name)
         ax_c.plot(inv_t, analytic_series,  label=fr'$\chi_{{{suffix}}}$ Analytical', color=color_name, linestyle='--')
@@ -1162,16 +1360,20 @@ def plot_chi_temperature_dependence(
     ax.plot(inv_t, chi_iso_nevpt2_si, label=r'$\chi_{iso}$ NEVPT2', color='blue')
     ax.plot(inv_t, chi_ax_nevpt2_si,  label=r'$\chi_{ax}$ NEVPT2', color='green')
     ax.plot(inv_t, chi_rho_nevpt2_si, label=r'$\chi_{rho}$ NEVPT2', color='red')
+
     ax.plot(inv_t, chi_iso_analytic, label=r'$\chi_{iso}$ Analytical', color='blue', linestyle='--')
     ax.plot(inv_t, chi_ax_analytic,  label=r'$\chi_{ax}$ Analytical', color='green', linestyle='--')
     ax.plot(inv_t, chi_rho_analytic, label=r'$\chi_{rho}$ Analytical', color='red', linestyle='--')
+
     ax.plot(inv_t, g_sq_iso, label=r'$(g^2)_{\mathrm{iso}}$', color='blue', linestyle=':')
     ax.plot(inv_t, g_sq_ax,  label=r'$(g^2)_{\mathrm{ax}}$',  color='green', linestyle=':')
     ax.plot(inv_t, g_sq_rh,  label=r'$(g^2)_{\rho}$',         color='red', linestyle=':')
+
     if len(inv_t_csv) == len(chi_iso_fit_csv) == len(chi_ax_fit_csv) == len(chi_rho_fit_csv) and len(inv_t_csv) > 0:
         ax.plot(inv_t_csv, chi_iso_fit_csv, label=r'$\chi_{iso}$ Fitted', color='blue', marker='o', linestyle='', markersize=5)
         ax.plot(inv_t_csv, chi_ax_fit_csv,  label=r'$\chi_{ax}$ Fitted',  color='green', marker='o', linestyle='', markersize=5)
         ax.plot(inv_t_csv, chi_rho_fit_csv, label=r'$\chi_{rho}$ Fitted', color='red', marker='o', linestyle='', markersize=5)
+
         if len(chi_iso_sdev_csv) == len(inv_t_csv) and any(v is not None for v in chi_iso_sdev_csv):
             yerr = [v if (v is not None) else 0.0 for v in chi_iso_sdev_csv]
             ax.errorbar(inv_t_csv, chi_iso_fit_csv, yerr=yerr, fmt='none', ecolor='blue', alpha=0.5, capsize=2)
@@ -1181,17 +1383,21 @@ def plot_chi_temperature_dependence(
         if len(chi_rho_sdev_csv) == len(inv_t_csv) and any(v is not None for v in chi_rho_sdev_csv):
             yerr = [v if (v is not None) else 0.0 for v in chi_rho_sdev_csv]
             ax.errorbar(inv_t_csv, chi_rho_fit_csv, yerr=yerr, fmt='none', ecolor='red', alpha=0.5, capsize=2)
+
     if chi_iso_fit_pred is not None:
         ax.plot(inv_t, chi_iso_fit_pred, label=r'$\chi_{iso}$ Fitted (LR)', linestyle='-.', linewidth=1.5, color='blue')
     if chi_ax_fit_pred is not None:
         ax.plot(inv_t, chi_ax_fit_pred,  label=r'$\chi_{ax}$ Fitted (LR)',  linestyle='-.', linewidth=1.5, color='green')
     if chi_rho_fit_pred is not None:
         ax.plot(inv_t, chi_rho_fit_pred, label=r'$\chi_{rho}$ Fitted (LR)', linestyle='-.', linewidth=1.5, color='red')
+
     legend = _finalize_axes(ax, inv_t, inv_t_csv, 'All Components')
+
     # Adjust ylim to avoid legend clipping as in original
     fig.canvas.draw()
     legend_bbox = legend.get_window_extent()
     ax_bbox = ax.get_window_extent()
+
     if legend_bbox.y0 < ax_bbox.y1:
         y_min, y_max = ax.get_ylim()
         y_padding = (y_max - y_min) * 0.10
@@ -1238,14 +1444,20 @@ def main():
         default='INFO',
         help='Logging verbosity'
     )
+    parser.add_argument(
+        '--fix-intercept-highT',
+        action='store_true',
+        help='Fix LR intercept b to the chi·T value at the highest available CSV temperature for iso/ax/rho fits.'
+    )
     args = parser.parse_args()
 
     logging.basicConfig(level=getattr(logging, args.log_level), format='[%(levelname)s] %(message)s')
 
     # Save plot
-    _fig, _ax = plot_chi_temperature_dependence(args.susc_file, args.section, args.csv_file)
+    _fig, _ax = plot_chi_temperature_dependence(args.susc_file, args.section, args.csv_file, fix_intercept_highT=args.fix_intercept_highT)
     ut.cprint("Saved plots: chi_plot_iso.png, chi_plot_ax.png, chi_plot_rho.png, chi_plot_all.png", 'cyan')
     ut.cprint("Saved table: chi_plot_all.csv", 'cyan')
 
 if __name__ == '__main__':
     main()
+

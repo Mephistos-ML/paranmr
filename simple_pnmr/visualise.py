@@ -9,6 +9,7 @@ from numpy.typing import NDArray, ArrayLike
 import xyz_py.atomic as atomic
 import copy
 import pandas as pd
+import os
 
 from . import utils as ut
 from . import main
@@ -665,9 +666,10 @@ def plot_pred_spectrum(molecule: main.Molecule,
     if show:
         plt.show()
 
-    # Extract the xyz file with coordinates of the spectrum for further plotting if necessary
-    # df = pd.DataFrame({'x': ppm_grid, 'y': _total})
-    # df.to_csv('spectrum_data.csv', index=False) 
+    # Write spectrum data (ppm and normalized intensity) to CSV for external visualization
+    df = pd.DataFrame({'x': ppm_grid, 'y': _total})
+    csv_path = os.path.join(os.path.dirname(save_name), f'spectrum_xyz_{molecule.susc.temperature:.2f}_K.csv')
+    df.to_csv(csv_path, index=False)
 
     return fig, ax
 
