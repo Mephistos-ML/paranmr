@@ -1,7 +1,7 @@
 What's New
 ==========
 
-To update ``simple_pnmr`` to the latest version, run
+To update ``SimpNMR`` to the latest version, run
 
 .. code-block:: bash
 

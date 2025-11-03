@@ -8,9 +8,9 @@ This page contains some frequently asked questions. Please consult this page bef
 Errors ...
 ^^^^^^^^^^
 
-... ``'simple_pnmr' is not recognized as an internal or external command, operable program or batch file.``
+... ``'SimpNMR' is not recognized as an internal or external command, operable program or batch file.``
 
-    You are attempting to run ``simple_pnmr`` in a command prompt window that does not have python enabled/installed.
+    You are attempting to run ``SimpNMR`` in a command prompt window that does not have python enabled/installed.
     *We do not offer support/help for this.*
 
 I want to...

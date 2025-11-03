@@ -36,7 +36,7 @@ To test your installation was successful, run the following command
 
     simple_pnmr -h
 
-You should see the help text for ``simple_pnmr``. You are now ready to start using ``simple_pnmr``, head to the :ref:`guide` pages for more information, 
+You should see the help text for ``SimpNMR``. You are now ready to start using ``SimpNMR``, head to the :ref:`guide` pages for more information, 
 or over to :ref:`configuration` to customise your installation.
 
 .. _updating:

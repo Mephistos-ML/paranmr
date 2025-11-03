@@ -3,13 +3,13 @@
 Files
 -----
 
-This page outlines the file formats used in ``simple_pnmr``.
+This page outlines the file formats used in ``SimpNMR``.
 
 
 Input Files
 ^^^^^^^^^^^
 
-The command line interface to ``simple_pnmr`` makes use of several input files.
+The command line interface to ``SimpNMR`` makes use of several input files.
 
 Each subprogram uses its own input file with its own required keywords and subkeywords, though the format of a given
 keyword is constant across different input files.
