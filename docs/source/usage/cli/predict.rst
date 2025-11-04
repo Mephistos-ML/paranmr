@@ -72,12 +72,12 @@ The input file contains a series of keywords for which there are subkeywords and
     | ``experiment``              | ``spectrum_files``      | File Name                           | File(s) containing experimental NMR spectrum ``.csv``.                  | |:x:|                |
     |                             |                         |                                     |                                                                         |                      |
     |                             |                         |                                     |                                                                         |                      |
-    |                             |                         |                                     | See :ref:`here <exp_spectrum>` for format information.                  |                      |
+    |                             |                         |                                     | See :ref:`here <exp_csv>` for format information.                       |                      |
     +-----------------------------+-------------------------+-------------------------------------+-------------------------------------------------------------------------+----------------------+
     | ``susceptibility``          | ``file``                | File Name                           | File(s) containing susceptibility data                                  | |:white_check_mark:| |
     |                             |                         |                                     |                                                                         |                      |
     |                             |                         |                                     |                                                                         |                      |
-    |                             |                         |                                     | See :ref:`here <exp_spectrum>` for format information.                  |                      |
+    |                             |                         |                                     | See :ref:`here <general_csv>` for format information.                   |                      |
     +-----------------------------+-------------------------+-------------------------------------+-------------------------------------------------------------------------+----------------------+
     | ``susceptibility``          | ``format``              | ``orca_nev``/``orca_cas``/``molcas``| Format of file(s) containing susceptibility data                        | |:white_check_mark:| |
     |                             |                         |                                     |                                                                         |                      |
@@ -90,11 +90,11 @@ The input file contains a series of keywords for which there are subkeywords and
     |                             |                         |                                     |                                                                         |                      |
     |                             |                         |                                     | - ``format:molcas`` uses data from an OpenMOLCAS ``.out`` file          |                      |
     |                             |                         |                                     |                                                                         |                      |
-    |                             |                         |                                     | - ``format:csv`` uses data from a ``SimpNMR`` ``susceptibility.csv``|                      |
+    |                             |                         |                                     | - ``format:csv`` uses data from a ``simpnmr`` ``susceptibility.csv``    |                      |
     |                             |                         |                                     |                                                                         |                      |
     |                             |                         |                                     | - ``format:txt`` uses a tensor a ``.txt`` file                          |                      |
     |                             |                         |                                     |                                                                         |                      |
-    |                             |                         |                                     | See :ref:`here <susceptibility_csv>` for format information.            |                      |
+    |                             |                         |                                     | See :ref:`here <general_csv>` for format information.                   |                      |
     +-----------------------------+-------------------------+-------------------------------------+-------------------------------------------------------------------------+----------------------+
     | ``susceptibility``          | ``temperature``         | Float values                        | Temperature(s) to use from susceptibility file                          | |:white_check_mark:| |
     |                             |                         |                                     |                                                                         |                      |

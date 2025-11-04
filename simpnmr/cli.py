@@ -1179,7 +1179,7 @@ def predict_func(uargs):
                 if nuc.chem_label in avg_lw_by_chem_label:
                     nuc.shift.lw = avg_lw_by_chem_label[nuc.chem_label] / (abs(omega_I_dict[nuc.label]) / (2 * np.pi)) * 1e6  # noqa
     else:
-        ut.cprint("No relaxation model specified — linewidths will be fixed at 1 ppm.", "cyan")
+        ut.cprint(" No relaxation model specified — linewidths will be fixed at 1 ppm.", "cyan")
 
     # Load experimental data from file into list of experiment objects
     if len(config.experiment_files):

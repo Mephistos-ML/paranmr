@@ -4,6 +4,9 @@ Scripting
 =========
 
 
-The ``SimpNMR`` package can be easily integrated into any python program/script, for full details of the classes and functions available, see :ref:`modules`.
+The ``SimpNMR`` package can be integrated into Python scripts and applications.
+For a complete reference of the available classes and functions, see :ref:`modules`.
 
-These pages contain several guided examples of using ``SimpNMR`` in a python script/program.
+These pages provide several guided examples of using ``SimpNMR`` from Python code.
+
+This section is currently under development. More detailed scripting examples and advanced integration guides will be added in future updates.

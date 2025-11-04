@@ -39,9 +39,9 @@ to **unsupported** and unexpected behaviour - you have been warned!
 |                         | windows terminal                                        |
 +-------------------------+---------------------------------------------------------+
 
-The process for setting these variables depends on your platform
+The process for setting these variables depends on your platform.
 
-Mac and Linux users:
+On macOS and Linux, you can set an environment variable in a shell with:
 
 .. code-block:: bash
 
@@ -54,26 +54,26 @@ For example:
     export pnmr_plotformat=.png
 
 
-Windows CMD (Command Prompt) users can set variables temporarily using
+On Windows, ``CMD`` (Command Prompt) users can set variables temporarily using:
 
 .. code-block:: doscon
 
-    set variablename=
+    set variablename=VALUE
 
-while Windows Powershell (PS) users can use
+while Windows PowerShell (PS) users can use:
 
 .. code-block:: doscon
 
-    $env:variablename=
+    $env:variablename="VALUE"
 
-these will persist only for the current window. To set Windows environment variables permanently, use the system environment variable window.
+These settings only persist for the current window. To set Windows environment variables permanently, use the *Environment Variables* dialog in the System Properties.
 
 Terminal output
 ^^^^^^^^^^^^^^^
 
-Mac and Linux users will see a colour-coded terminal output. By default this is disabled for Windows users since ``CMD`` does
-not support ASCII colour codes. If you are on Windows and are using an ASCII enabled terminal (e.g. `Windows Terminal <https://en.wikipedia.org/wiki/Windows_Terminal>`__) you can
-enable colour-coded output by setting the ``pnmr_termcolor`` environment variable to any value in the system environment variable window.
+macOS and Linux users will see colour-coded terminal output by default. For Windows users this is disabled by default, since ``CMD`` does
+not support ASCII colour codes. If you are on Windows and are using an ASCII-enabled terminal (e.g. `Windows Terminal <https://en.wikipedia.org/wiki/Windows_Terminal>`__) you can
+enable colour-coded output by setting the ``pnmr_termcolor`` environment variable to any value in the *Environment Variables* dialog or in your terminal session.
 
 .. _csv_files:
 
@@ -91,5 +91,5 @@ Note that when specifying a semicolon delimiter on Linux and Mac, you must escap
     # Comma ,
     export pnmr_csvdelimiter=,
 
-Windows Users can use the system environment variable window, or the commands in the :ref:`env_var` section.
-Note that unlike for Linux/Mac no escape character is required for the semi-colon - it is just ;.
+Windows users can use the *Environment Variables* dialog, or the commands in the :ref:`env_var` section.
+Note that unlike for Linux/macOS, no escape character is required for the semicolon – it is just ``;``.

@@ -24,7 +24,7 @@ the ``pip`` package manager.
 Installation
 ------------
 
-The ``SimpNMR`` python package and its command line interface can be installed using the ``pip`` package manager
+The ``simpnmr`` python package and its command line interface can be installed using the ``pip`` package manager
 
 .. code-block:: bash
 
@@ -36,7 +36,7 @@ To test your installation was successful, run the following command
 
     simpnmr -h
 
-You should see the help text for ``SimpNMR``. You are now ready to start using ``SimpNMR``, head to the :ref:`guide` pages for more information, 
+You should see the help text for ``simpnmr``. You are now ready to start using ``SimpNMR``, head to the :ref:`guide` pages for more information, 
 or over to :ref:`configuration` to customise your installation.
 
 .. _updating:

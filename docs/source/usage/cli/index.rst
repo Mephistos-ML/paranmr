@@ -3,6 +3,8 @@
 Command Line Interface
 ======================
 
+This section describes the ``SimpNMR`` command line interface (CLI) and its subprograms.
+
 .. toctree::
    :maxdepth: 1
    :hidden:
@@ -10,17 +12,18 @@ Command Line Interface
     Fitting Susceptibilities <fit_susc>
     Predicting pNMR Shifts <predict>
 
-The ``SimpNMR`` command line interface (CLI) contains different subprograms that can be listed using the terminal command
+The ``SimpNMR`` command line interface (CLI) provides several subprograms for common workflows.
+You can list the available subprograms in a terminal with:
 
 .. code-block:: bash
 
     simpnmr -h
 
-More information can be found on each of these subprograms by typing their name followed by ``-h`` into a terminal, e.g.
+To see help for a specific subprogram, run its name followed by ``-h``, for example:
 
 .. code-block:: bash
 
     simpnmr fit_susc -h
     simpnmr predict -h
 
-Further explanations of the functionality included in the command line interface are given within these pages.
+More detailed explanations of each subprogram are given on the pages linked above.

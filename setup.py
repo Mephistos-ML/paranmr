@@ -5,10 +5,10 @@ import setuptools
 
 # DO NOT EDIT THIS NUMBER!
 # IT IS AUTOMATICALLY CHANGED BY python-semantic-release
-__version__ = '0.0.0'
+__version__ = '0.0.1'
 
 setuptools.setup(
-    name='SimpNMR',
+    name='simpnmr',
     version=__version__,
     author='Suturina Group',
     author_email='',
