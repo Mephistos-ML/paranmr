@@ -1061,8 +1061,9 @@ def predict_func(uargs):
             tau_e1 = config.relaxation_T1e
             tau_e2 = config.relaxation_T2e
             tau_R = config.relaxation_tR
-            multiplicity = rdrs.read_gaussian_log_spin(config.hyperfine_file) # NEED ORCA READER, TOO!
-            #multiplicity = 5
+            multiplicity = rdrs.read_gaussian_log_spin(
+                config.hyperfine_file)  # NEED ORCA READER, TOO!
+            # multiplicity = 5
             spin = (multiplicity - 1) / 2
             if config.relaxation_model == "sbm":
                 # Calculate SBM dipolar rates (R1)
@@ -1256,12 +1257,8 @@ def predict_func(uargs):
                 if nuc.chem_label in avg_lw_by_chem_label:
                     nuc.shift.lw = avg_lw_by_chem_label[nuc.chem_label] / (abs(omega_I_dict[nuc.label]) / (2 * np.pi)) * 1e6  # noqa
     else:
-<<<<<<< HEAD:simpnmr/cli.py
-        ut.cprint(" No relaxation model specified — linewidths will be fixed at 1 ppm.", "cyan")
-=======
         ut.cprint(
-            "No relaxation model specified — linewidths will be fixed at 1 ppm.", "cyan")
->>>>>>> 372ba09 (feat: implement additional relaxation mechanism [WIP]):simple_pnmr/cli.py
+            " No relaxation model specified — linewidths will be fixed at 1 ppm.", "cyan")
 
     # Load experimental data from file into list of experiment objects
     if len(config.experiment_files):
