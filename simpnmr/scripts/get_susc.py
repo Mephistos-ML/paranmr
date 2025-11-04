@@ -26,7 +26,7 @@ import argparse
 import numpy as np
 import numpy.linalg as la
 import csv
-from simple_pnmr import ut
+from simpnmr import ut
 
 def compute_matrix_properties(susc_file, section, temperature):
     '''

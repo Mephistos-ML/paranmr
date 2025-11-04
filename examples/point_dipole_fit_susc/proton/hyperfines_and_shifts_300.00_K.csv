@@ -1,6 +1,6 @@
-# This file was generated with simple_pnmr v0.0.0 at 11:23:57 31-10-2024 
-# Hyperfines from file /home/jon/git/simple_pnmr/examples/point_dipole_fit_susc/m06-2x.xyz
-# Diamagnetic shifts from file /home/jon/git/simple_pnmr/examples/point_dipole_fit_susc/dia.csv
+# This file was generated with simpnmr v0.0.0 at 11:23:57 31-10-2024 
+# Hyperfines from file /home/jon/git/simpnmr/examples/point_dipole_fit_susc/m06-2x.xyz
+# Diamagnetic shifts from file /home/jon/git/simpnmr/examples/point_dipole_fit_susc/dia.csv
 # T = 300.00 K
 atom_label (),chem_label (),x (Å),y (Å),z (Å),Aiso (ppm Å^-3),Adip_xx (ppm Å^-3),Adip_xy (ppm Å^-3),Adip_xz (ppm Å^-3),Adip_yy (ppm Å^-3),Adip_yz (ppm Å^-3),Adip_zz (ppm Å^-3),δ_total_avg (ppm),δ_total (ppm),δ_dia (ppm),δ_fc (ppm),δ_pc (ppm),linewidth (Hz)
 H1,c8eq,0.48026,0.98156,4.27147,0.00000,-782.79271,132.53191,615.74803,-815.36446,544.71478,1598.15717,-15.67628,-15.67628,2.43000,0.00000,-18.10628,1

@@ -1,12 +1,30 @@
 What's New
 ==========
 
-To update ``simple_pnmr`` to the latest version, run
+To update ``SimpNMR`` to the latest version, run
 
 .. code-block:: bash
 
-    pip install simple_pnmr --upgrade
+    pip install simpnmr --upgrade
 
-Version 1.0.0
+
+Changelog
+---------
+
+This page lists user-visible changes for each release of ``SimpNMR``.
+
+Version 0.0.1
 -------------
- - Initial Release of simple_pnmr
+
+Initial public release of ``SimpNMR``. Highlights:
+
+- Command line interface with subprograms for:
+
+  - ``simpnmr predict`` – predict pNMR shifts using magnetic susceptibility tensors and hyperfine coupling constants.
+  - ``simpnmr fit_susc`` – fit magnetic susceptibility tensors to paramagnetic NMR data.
+
+- YAML-based configuration files for defining reproducible workflows.
+- Structured input and output file handling suitable for scripting and automation.
+- Initial user documentation and API reference.
+
+This page will be updated with notes for future releases of ``SimpNMR``.

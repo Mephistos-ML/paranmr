@@ -8,12 +8,29 @@ Usage
    :caption: Contents:
    :hidden:
 
-There are two interfaces to ``simple_pnmr``, which one you choose depends on the complexity of the data
-you are processing, and your familiarity with using a command line/terminal application.
+There are two main interfaces to ``SimpNMR``. Which one you use will depend on the complexity of the data
+you are processing and your familiarity with the command line and Python.
 
-For most users, we recommend the command line interface to ``simple_pnmr`` which surfaces a number of
-advanced features, and allows fitting of suscpetibility and hyperfine tensors. The command line interface is included
-in the installation of the ``simple_pnmr`` package, see :ref:`Installation` for details.
+Command line interface
+----------------------
 
-More advanced users may be interested in using the the ``simple_pnmr`` package in their own python code.
-This functionality is documented within this manual, see :ref:`guide_scripting` and :ref:`modules`.
+For most users, we recommend the command line interface (CLI). It:
+
+- provides subprograms for common workflows (such as fitting susceptibility tensors and predicting pNMR shifts),
+- exposes many advanced features without requiring you to write Python code,
+- is well-suited to running repeatable calculations using YAML configuration files.
+
+The CLI is installed together with the ``SimpNMR`` package. See :ref:`Installation` for instructions on how to install it,
+and :ref:`guide` for an overview of the available subprograms and their options.
+
+Python scripting interface
+--------------------------
+
+More advanced users may wish to work with the ``SimpNMR`` package directly from their own Python code. This is useful if you:
+
+- need to integrate ``SimpNMR`` into larger data-processing or simulation workflows,
+- want to automate or customise analyses beyond what the CLI offers,
+- prefer to work interactively in Python (for example, in Jupyter notebooks).
+
+The Python API is documented in this manual. See :ref:`guide_scripting` for guided examples,
+and :ref:`modules` for a detailed reference of the available classes and functions.

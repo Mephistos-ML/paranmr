@@ -18,7 +18,7 @@ sys.path.insert(0, os.path.abspath('../../'))
 
 # -- Project information -----------------------------------------------------
 
-project = 'simple_pnmr'
+project = 'simpnmr'
 copyright = '{:d}'.format(datetime.date.today().year)
 
 # -- General configuration ---------------------------------------------------
@@ -55,8 +55,8 @@ exclude_patterns = []
 # a list of builtin themes.
 #
 html_theme = 'sphinx_rtd_theme'
-# html_logo = '../../images/simple_pnmr.png'
-# html_favicon = '../../images/simple_pnmr.ico'
+# html_logo = '../../images/simpnmr.png'
+# html_favicon = '../../images/simpnmr.ico'
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
@@ -94,6 +94,6 @@ latex_elements = {
 latex_show_urls = 'footnote'
 root_doc = 'index'
 latex_documents = [
-    (root_doc, 'simple_pnmr.tex', 'simple_pnmr Documentation',
+    (root_doc, 'simpnmr.tex', 'simpnmr Documentation',
      '', 'manual'),
 ]

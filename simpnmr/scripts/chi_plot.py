@@ -41,7 +41,7 @@ import logging
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.constants import mu_0, physical_constants, k, Avogadro, h, c
-from simple_pnmr import utils as ut
+from simpnmr import utils as ut
 
 # Physical constants from scipy.constants:
 #   mu_0: Vacuum permeability [H/m]

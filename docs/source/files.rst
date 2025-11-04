@@ -3,13 +3,13 @@
 Files
 -----
 
-This page outlines the file formats used in ``simple_pnmr``.
+This page outlines the file formats used in ``SimpNMR``.
 
 
 Input Files
 ^^^^^^^^^^^
 
-The command line interface to ``simple_pnmr`` makes use of several input files.
+The command line interface to ``simpnmr`` makes use of several input files.
 
 Each subprogram uses its own input file with its own required keywords and subkeywords, though the format of a given
 keyword is constant across different input files.
@@ -27,7 +27,7 @@ In general, the following rules apply to input files
 General ``.csv`` file parsing rules
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-In general, any ``.csv`` file read by ``simple_pnmr`` follows the following set of rules
+In general, any ``.csv`` file read by ``simpnmr`` follows the following set of rules
 
 1. Column names are case-insensitive
 2. Comment lines (``#``) are ignored (apart from metadata lines e.g. Experiment files)
@@ -116,4 +116,4 @@ This must be a ``.csv`` file containing a series of columns, each denoting a spe
 At least of each property must be present in the file (in any order), and a comma delimited header line
 containing the headers in Table 4 must be present above the data columns.
 
-Users can convert annotated chemcraft ``.xyz`` files into a Chemical label file using ``simple_pnmr``'s included ``xyz_to_chemlabel`` script. Run ``xyz_to_chemlabel -h`` for more information.
+Users can convert annotated chemcraft ``.xyz`` files into a Chemical label file using ``simpnmr``'s included ``xyz_to_chemlabel`` script. Run ``xyz_to_chemlabel -h`` for more information.
