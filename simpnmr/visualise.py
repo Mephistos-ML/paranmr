@@ -667,8 +667,8 @@ def plot_pred_spectrum(molecule: main.Molecule,
         plt.show()
 
     # Write spectrum data (ppm and normalized intensity) to CSV for external visualization
-    df = pd.DataFrame({'x': ppm_grid, 'y': _total})
-    csv_path = os.path.join(os.path.dirname(save_name), f'spectrum_xyz_{molecule.susc.temperature:.2f}_K.csv')
+    df = pd.DataFrame({'shift (ppm)': ppm_grid, 'intensity (a.u.)': _total})
+    csv_path = os.path.join(os.path.dirname(save_name), f'shift_vs_intensity_{molecule.susc.temperature:.2f}_K.csv')
     df.to_csv(csv_path, index=False)
 
     return fig, ax

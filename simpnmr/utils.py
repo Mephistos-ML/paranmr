@@ -10,6 +10,7 @@ import sys
 from extto.core import find_lines
 import math
 import re
+from scipy import constants
 
 from . import string_tools as st
 from . import readers as rdrs
@@ -465,6 +466,39 @@ def get_spin_only_susceptibility(uargs, temperature):
 
     return chi_only_iso
 
+def get_true_iso_susceptibility(uargs, temperature):
+    """
+    Returns the "true" isotropic susceptibility χ_true,iso, corrected for the
+    anisotropic g-tensor.
+
+    χ_true,iso = (g_e / 3) * (χ_x / g_x + χ_y / g_y + χ_z / g_z)
+    """
+    config = inps.PredictConfig.from_file(uargs.input_file)
+
+    T = float(temperature)
+
+    section = config.susceptibility_format.split("orca_")[1]
+
+    g_tensor = rdrs.read_orca_g_tensor(
+        config.susceptibility_file,
+        section=section
+    )
+
+    chi_tensors = rdrs.read_orca_susceptibility(
+        config.susceptibility_file,
+        section=section
+    )
+
+    if T in chi_tensors:
+        chi_tensor = chi_tensors[T] / T
+
+    # APPROACH 2
+    chi_true_iso = GE / 3.0 * np.trace(chi_tensor * np.linalg.inv(g_tensor.T)) # cm3 mol-1
+
+    # Convert cm^3 mol^-1 to A^3
+    chi_true_iso = chi_true_iso * (1 / (1e-24 * constants.Avogadro / (4 * np.pi))) # A3
+    
+    return chi_true_iso
 
 def sbm_r2_dipolar(
         nuclei_labels,
