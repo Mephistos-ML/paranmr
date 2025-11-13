@@ -15,7 +15,6 @@ from . import string_tools as st
 from .__version__ import __version__
 from . import utils as ut
 
-
 class QCStructure(ABC):
     '''
     Abstract Base Class (template) for Quantum Chemistry Structure classes
@@ -1467,16 +1466,32 @@ def read_gaussian16_log_cs(file_name):
     return cs_iso, cs_aniso
 
 
-def read_orca_susceptibility(file_name, section):
+def read_orca_susceptibility(file_name: str, section: str) -> dict[float, np.ndarray]:
+    '''
+    Extracts temperature-dependent molar magnetic susceptibility tensors from an ORCA output file.
+
+    Parameters
+    ----------
+    file_name : str
+        Name of the ORCA output file.
+    section : str
+        Label of the QDPT section to read (for example, 'casscf' or 'nevpt2').
+
+    Returns
+    -------
+    dict[float, np.ndarray]
+        Dictionary mapping temperature in K to a 3x3 susceptibility tensor as a NumPy array.
+    '''
 
     susceptibilities = {}
 
     with open(file_name, 'r') as f:
         for line in f:
             if f'QDPT WITH {section.upper()}' in line:
-                while 'TEMPERATURE DEPENDENT MOLAR MAGNETIC SUSCEPTIBILITY TENSOR' not in line: # noqa
+                while 'TEMPERATURE DEPENDENT MOLAR MAGNETIC SUSCEPTIBILITY TENSOR' not in line:  # noqa
                     line = next(f)
-                for _ in range(6):
+                # Move down until we reach the first temperature header line
+                while 'TEMPERATURE/K' not in line:
                     line = next(f)
                 while 'TEMPERATURE/K' in line:
                     _temp = float(line.split('TEMPERATURE/K:')[1])
@@ -1494,14 +1509,109 @@ def read_orca_susceptibility(file_name, section):
 
     return susceptibilities
 
-def read_orca_spin(file_name, section):
+def read_orca_spin(file_name: str) -> float:
+    '''
+    Reads the spin quantum number S from the specified QDPT section in an ORCA output file.
+
+    Parameters
+    ----------
+    file_name : str
+        Name of the ORCA output file.
+    section : str
+        Label of the QDPT section to read (for example, 'casscf' or 'nevpt2').
+
+    Returns
+    -------
+    float
+        Spin quantum number S, derived from the spin multiplicity (2S+1).
+    '''
+
+def read_orca_spin(file_name: str) -> float:
     with open(file_name, 'r') as f:
         for line in f:
-            if f'QDPT WITH {section.upper()}' in line:
-                while True:
-                    line = next(f)
-                    if 'Spin multiplicity =' in line:
-                        spin = (float(line.split('Spin multiplicity =')[1].strip()) - 1) / 2
-                        break
+            if '*xyz' in line.replace(' ', ''):
+                mult = int(line.split()[-1])
+                spin = (mult - 1) / 2
+                break
 
     return spin
+
+def read_orca_g_tensor(file_name: str, section: str) -> np.ndarray | None:
+    '''
+    Extracts the electronic g-tensor from the effective Hamiltonian section in an ORCA output file.
+
+    Parameters
+    ----------
+    file_name : str
+        Name of the ORCA output file.
+    section : str
+        Label of the QDPT section to read (for example, 'casscf' or 'nevpt2').
+
+    Returns
+    -------
+    np.ndarray or None
+        3x3 electronic g-tensor as a NumPy array if found, otherwise ``None``.
+    '''
+
+    g_tensor = None
+
+    with open(file_name, "r") as f:
+        for line in f:
+            # Find the correct QDPT section
+            if f"QDPT WITH {section.upper()}" in line:
+                # Go down to the G-matrix header
+                for line in f:
+                    if "ELECTRONIC G-MATRIX FROM EFFECTIVE HAMILTONIAN" in line:
+                        break
+                # Find "g-matrix:"
+                for line in f:
+                    if "g-matrix:" in line:
+                        # Next three lines are the rows of the tensor
+                        row_1 = [float(val) for val in next(f).split()]
+                        row_2 = [float(val) for val in next(f).split()]
+                        row_3 = [float(val) for val in next(f).split()]
+                        g_tensor = np.array([row_1, row_2, row_3])
+                        break
+                break
+
+    return g_tensor
+
+def read_eff_hamiltonian_tensor(file_name: str, section: str) -> np.ndarray | None:
+    '''
+    Extracts the raw electronic effective Hamiltonian tensor from an ORCA output file.
+
+    Parameters
+    ----------
+    file_name : str
+        Name of the ORCA output file.
+    section : str
+        Label of the QDPT section to read (for example, 'casscf' or 'nevpt2').
+
+    Returns
+    -------
+    np.ndarray or None
+        3x3 effective Hamiltonian tensor in cm-1 as a NumPy array if found, otherwise ``None``.
+    '''
+
+    eff_H_raw = None
+
+    with open(file_name, "r") as f:
+        for line in f:
+            # Find the correct QDPT section
+            if f"QDPT WITH {section.upper()}" in line:
+                # Go down to the G-matrix header
+                for line in f:
+                    if "Effective Hamiltonian from projected relativistic states and relativistic energies:" in line:
+                        break
+                # Find "Raw matrix"
+                for line in f:
+                    if "Raw matrix (cm-1):" in line:
+                        # Next three lines are the rows of the tensor
+                        row_1 = [float(val) for val in next(f).split()]
+                        row_2 = [float(val) for val in next(f).split()]
+                        row_3 = [float(val) for val in next(f).split()]
+                        eff_H_raw = np.array([row_1, row_2, row_3])
+                        break
+                break
+
+    return eff_H_raw

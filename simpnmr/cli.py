@@ -1060,6 +1060,7 @@ def predict_func(uargs):
             tau_e1 = config.relaxation_T1e
             tau_e2 = config.relaxation_T2e
             tau_R = config.relaxation_tR
+
             # multiplicity = rdrs.read_gaussian_log_spin(config.hyperfine_file)
             multiplicity = 5
             spin = (multiplicity - 1) / 2
@@ -1221,6 +1222,8 @@ def predict_func(uargs):
         
         # Set spin-only value of the magnetic susceptibility
         if config.susceptibility_format in ('orca_cas', 'orca_nev'):
+            susc.iso = ut.get_true_iso_susceptibility(uargs, susc.temperature)
+        elif config.susceptibility_format in ('csv'):
             susc.iso = ut.get_spin_only_susceptibility(uargs, susc.temperature)
 
         # Calculate shifts using new susceptibility tensor
