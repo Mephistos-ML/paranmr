@@ -39,12 +39,12 @@ pages:
   #       never
 
 release:
-  stage: deploy
+  stage: release
   image: python:3.11
-  before_script:
-    - pip install python-semantic-release
   script:
+    - pip install python-semantic-release
+    - git fetch --tags
     - semantic-release version || true
     - semantic-release publish || true
-  rules:
-    - if: '$CI_COMMIT_BRANCH == "main"'
+  only:
+    - main
