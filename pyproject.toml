@@ -12,8 +12,3 @@ upload_to_pypi = true
 
 [tool.semantic_release.remote]
 type = "gitlab"
-
-[tool.semantic_release.pypi]
-repository = "https://upload.pypi.org/legacy/"
-username = "__token__"
-password = "{env:PYPI_TOKEN}"
