@@ -35,7 +35,7 @@ release:
   stage: release
   image: python:3.11
   script:
-    - pip install python-semantic-release
+    - pip install python-semantic-release build
     - git fetch --tags
     - semantic-release version || true
     - semantic-release publish || true
