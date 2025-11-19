@@ -21,6 +21,7 @@ from . import models
 from . import visualise as vis
 from . import outputs
 from collections import defaultdict
+from . import transform as tfm
 
 # Change figure save dialog to use current working directory
 mpl.rcParams['savefig.directory'] = ''
@@ -993,6 +994,10 @@ def predict_func(uargs):
     if len(config.hyperfine_average):
         base_molecule.average_hyperfine(config.hyperfine_average)
 
+    # Rotate hyperfine tensors from DFT frame into chi eigenframe
+    rot_mat, trans_mat = tfm.get_rotation_and_transformation()
+    base_molecule.rotate_hyperfines(rot_mat)
+
     # Load susceptibility information
     if 'orca' in config.susceptibility_format:
         suscs = main.Susceptibility.from_orca(
@@ -1220,13 +1225,13 @@ def predict_func(uargs):
     for molecule, susc, experiment in zip(molecules, suscs, experiments):
         molecule.susc = susc
         
-        # Set spin-only value of the magnetic susceptibility
+        # Set [2.0023/3 * Tr(chi/g)] or spin-only value of the magnetic susceptibility
         if config.susceptibility_format in ('orca_cas', 'orca_nev'):
             susc.iso = ut.get_true_iso_susceptibility(uargs, susc.temperature)
         elif config.susceptibility_format in ('csv'):
             susc.iso = ut.get_spin_only_susceptibility(uargs, susc.temperature)
 
-        # Calculate shifts using new susceptibility tensor
+        # Calculate shifts using new susceptibility tensor and rotated hyperfines
         molecule.calculate_shifts()
 
         # Calculate average shifts
