@@ -2,6 +2,17 @@
 
 <!-- version list -->
 
+## v1.0.7 (2025-11-19)
+
+### Bug Fixes
+
+- Test semantic-release after fetching tags
+  ([`057e35c`](https://gitlab.com/suturina-group/simpnmr/-/commit/057e35c1cb7705b3060f09b2074beac5a3e888ca))
+
+- Test semantic-release after fetching tags
+  ([`2828a87`](https://gitlab.com/suturina-group/simpnmr/-/commit/2828a87a13316e1b40bb51ad13d5db1729ffd3b2))
+
+
 ## v1.0.6 (2025-11-19)
 
 ### Bug Fixes
