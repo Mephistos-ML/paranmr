@@ -35,10 +35,11 @@ release:
   stage: release
   image: python:3.11
   script:
+    - echo "GITLAB_TOKEN length: ${#GITLAB_TOKEN}"
+    - env | grep -E 'GITLAB|GL_TOKEN|CI_JOB_TOKEN' || echo "no gitlab-related token in env"
     - pip install python-semantic-release build
     - git fetch --tags
     - git checkout main
-    - semantic-release version || true
-    - semantic-release publish || true
+    - semantic-release publish
   only:
     - main
