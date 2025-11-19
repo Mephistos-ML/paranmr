@@ -8,6 +8,16 @@ version_source = "tag"
 branch = "main"
 hvcs = "gitlab"
 
+[tool.semantic_release.remote]
+name = "origin"
+type = "gitlab"
+ignore_token_for_push = false
+token = { env = "CI_GITLAB_TOKEN" }
+
+[tool.semantic_release.publish]
+dist_glob_patterns = ["dist/*"]
+upload_to_vcs_release = true
+
 upload_to_pypi = true
 upload_to_repository = true
 
