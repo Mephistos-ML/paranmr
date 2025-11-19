@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 version_variables = ["simpnmr/__version__.py:__version__"]
 branch = "main"
 commit_parser = "conventional"
-build_command = "python -m build --sdst --wheel ."
+build_command = "python -m build --sdist --wheel ."
 changelog_file = "CHANGELOG.md"
 upload_to_pypi = true
 
