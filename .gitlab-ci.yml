@@ -35,6 +35,8 @@ release:
   stage: release
   image: python:3.11
   script:
+    - env | grep GITLAB || echo "GITLAB_TOKEN is not visible"
+    - echo "len(GITLAB_TOKEN)=${#GITLAB_TOKEN}"
     - pip install python-semantic-release build
     - git fetch --tags
     - git checkout main
