@@ -46,6 +46,7 @@ release:
     - pip install python-semantic-release build
     - git config --global user.name "semantic-release"
     - git config --global user.email "semantic-release@example.com"
+    - git checkout -B "$CI_COMMIT_BRANCH" "$CI_COMMIT_SHA"
   script:
     - semantic-release version --push --vcs-release
     - semantic-release publish
