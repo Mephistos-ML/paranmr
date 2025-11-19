@@ -1,7 +1,11 @@
+[build-system]
+requires = ["setuptools>=61", "wheel"]
+build-backend = "setuptools.build_meta"
+
 [tool.semantic_release]
 version_variable = [
-    'simpnmr/__version__.py:__version__',
-    ]
-upload_to_pypi=false
+    "simpnmr/__version__.py:__version__",
+]
+upload_to_pypi = false
 branch = "main"
-hvcs="gitlab"
+hvcs = "gitlab"

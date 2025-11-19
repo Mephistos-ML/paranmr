@@ -37,3 +37,14 @@ pages:
   #       manual
   #   - when:
   #       never
+
+release:
+  stage: deploy
+  image: python:3.11
+  before_script:
+    - pip install python-semantic-release
+  script:
+    - semantic-release version
+    - semantic-release publish
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
