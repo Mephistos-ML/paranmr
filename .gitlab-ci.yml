@@ -38,6 +38,6 @@ release:
     - pip install python-semantic-release build
     - git fetch --tags
     - git checkout main
-    - semantic-release publish
+    - semantic-release version
   only:
     - main
