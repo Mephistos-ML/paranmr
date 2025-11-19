@@ -50,6 +50,6 @@ release:
   script:
     - semantic-release version --push --vcs-release
     - semantic-release publish
-    - python -m twine upload --disable-trusted-publishing dist/*
+    - python -m twine upload --non-interactive dist/*
   rules:
     - if: '$CI_COMMIT_BRANCH == "main"'
