@@ -3,9 +3,17 @@ requires = ["setuptools>=61", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [tool.semantic_release]
-version_variable = [
-    "simpnmr/__version__.py:__version__",
-]
-upload_to_pypi = false
+version_variables = ["simpnmr/__version__.py:__version__"]
 branch = "main"
-hvcs = "gitlab"
+commit_parser = "conventional"
+build_command = "python -m build --sdst --wheel ."
+changelog_file = "CHANGELOG.md"
+upload_to_pypi = true
+
+[tool.semantic_release.remote]
+type = "gitlab"
+
+[tool.semantic_release.pypi]
+repository = "https://upload.pypi.org/legacy/"
+username = "__token__"
+password = "{env:PYPI_TOKEN}"
