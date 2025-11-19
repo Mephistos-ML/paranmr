@@ -43,12 +43,13 @@ release:
   image: python:3.11
   before_script:
     - pip install --upgrade pip
-    - pip install python-semantic-release build
+    - pip install python-semantic-release build twine
     - git config --global user.name "semantic-release"
     - git config --global user.email "semantic-release@example.com"
     - git checkout -B "$CI_COMMIT_BRANCH" "$CI_COMMIT_SHA"
   script:
     - semantic-release version --push --vcs-release
     - semantic-release publish
+    - python3 -m twine upload dist/*
   rules:
     - if: '$CI_COMMIT_BRANCH == "main"'
