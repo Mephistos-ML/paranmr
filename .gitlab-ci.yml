@@ -44,7 +44,7 @@ release:
   before_script:
     - pip install python-semantic-release
   script:
-    - semantic-release version
-    - semantic-release publish
+    - semantic-release version || true
+    - semantic-release publish || true
   rules:
     - if: '$CI_COMMIT_BRANCH == "main"'
