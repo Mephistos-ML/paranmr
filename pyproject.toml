@@ -10,10 +10,5 @@ build_command = "python -m build --sdist --wheel ."
 changelog_file = "CHANGELOG.md"
 upload_to_pypi = true
 
-[tool.semantic_release.pypi]
-repository = "https://upload.pypi.org/legacy/"
-username = { env = "PYPI_USERNAME" }
-password = { env = "PYPI_PASSWORD" }
-
 [tool.semantic_release.remote]
 type = "gitlab"
