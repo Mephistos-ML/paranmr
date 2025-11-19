@@ -32,14 +32,15 @@ pages:
     expire_in: 1 day
 
 release:
-  stage: release
   image: python:3.11
+  stage: release
   script:
-    - env | grep GITLAB || echo "GITLAB_TOKEN is not visible"
-    - echo "len(GITLAB_TOKEN)=${#GITLAB_TOKEN}"
     - pip install python-semantic-release build
     - git fetch --tags
     - git checkout main
+    - git config user.name "CI Release Bot"
+    - git config user.email "ci@simpnmr.gitlab"
+    - git remote set-url origin "https://oauth2:${CI_GITLAB_TOKEN}@gitlab.com/suturina-group/simpnmr.git"
     - semantic-release version
   only:
     - main
