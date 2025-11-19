@@ -51,6 +51,11 @@ release:
     - rm -rf dist/*
     - semantic-release version --push --vcs-release
     - semantic-release publish
-    - python -m twine upload --non-interactive --skip-existing dist/*
+    - |
+      if ls dist/* 1> /dev/null 2>&1; then
+        python -m twine upload --non-interactive --skip-existing dist/*
+      else
+        echo "No distributions to upload, skipping twine."
+      fi
   rules:
     - if: '$CI_COMMIT_BRANCH == "main"'

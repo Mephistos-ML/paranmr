@@ -8,7 +8,7 @@ branch = "main"
 commit_parser = "conventional"
 build_command = "python -m build --sdist --wheel ."
 changelog_file = "CHANGELOG.md"
-upload_to_pypi = true
+commit_message = "chore(release): {version} [skip ci]"
 
 [tool.semantic_release.remote]
 type = "gitlab"
