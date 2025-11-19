@@ -37,6 +37,7 @@ release:
   script:
     - pip install python-semantic-release build
     - git fetch --tags
+    - git checkout main
     - semantic-release version || true
     - semantic-release publish || true
   only:
