@@ -998,6 +998,10 @@ def predict_func(uargs):
     rot_mat, trans_mat = tfm.get_rotation_and_transformation()
     base_molecule.rotate_hyperfines(rot_mat)
 
+    # Transform HFC coordinates into the chi eigenframe and save
+    if 'orca' in config.susceptibility_format:
+        tfm.rotate_coords_to_chi_frame(config.project_name)
+
     # Load susceptibility information
     if 'orca' in config.susceptibility_format:
         suscs = main.Susceptibility.from_orca(
@@ -1185,7 +1189,7 @@ def predict_func(uargs):
                 if nuc.chem_label in avg_lw_by_chem_label:
                     nuc.shift.lw = avg_lw_by_chem_label[nuc.chem_label] / (abs(omega_I_dict[nuc.label]) / (2 * np.pi)) * 1e6  # noqa
     else:
-        ut.cprint(" No relaxation model specified — linewidths will be fixed at 1 ppm.", "cyan")
+        ut.cprint("\n No relaxation model specified — linewidths will be fixed at 1 ppm.\n", "cyan")
 
     # Load experimental data from file into list of experiment objects
     if len(config.experiment_files):

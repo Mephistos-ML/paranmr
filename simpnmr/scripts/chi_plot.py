@@ -27,12 +27,14 @@ from __future__ import annotations
 
 # Library imports
 import math
+import re
 import argparse
 import csv
 import sys
 import logging
 from sympy import symbols, nsolve
 from dataclasses import dataclass
+from typing import Optional, List
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.constants import mu_0, physical_constants, k, Avogadro, h, c
@@ -63,6 +65,10 @@ SHORT_LABELS = {
     r'$(g^2)_{\mathrm{ax}}$': r'$(g^2)_{\mathrm{ax}}$',
     r'$(g^2)_{\rho}$': r'$(g^2)_{\rho}$'
 }
+
+FloatList = List[float]
+OptFloat = Optional[float]
+OptFloatList = Optional[List[float]]
 
 def weighted_linreg_predict(x_train: list[float],
                             y_train: list[float],
@@ -439,7 +445,43 @@ def _plot_component(
     caption = _annotate_fit(r2_val, a, b, a_se, b_se)
 
     label_map = {'iso': 'Isotropic', 'ax': 'Axiality', 'rho': 'Rhombicity'}
-    _finalize_axes(ax_c, inv_t, inv_t_csv, label_map.get(suffix, suffix), legend_ncol=10, base_ylabel=ylabel_base)
+    ylabel_suffix = label_map.get(suffix, suffix)
+    ylabel_for_axes = ylabel_base
+
+    chi_subscripts = {'iso': r'\mathrm{iso}', 'ax': r'\mathrm{ax}', 'rho': r'\mathrm{rh}'}
+    if (
+        ylabel_base
+        and suffix in chi_subscripts
+        and '\\chi' in ylabel_base
+        and '\\chi_' not in ylabel_base
+    ):
+        math_chunks = list(re.finditer(r'\$([^$]+)\$', ylabel_base))
+        unit_chunk = math_chunks[1].group(1) if len(math_chunks) > 1 else ''
+        tail_text = ylabel_base[math_chunks[-1].end():].strip() if math_chunks else ''
+        chi_chunk = math_chunks[0].group(1) if math_chunks else ''
+        has_T = 'T' in chi_chunk
+
+        tail_math = ''
+        if tail_text:
+            tail_math = tail_text.strip()
+            if tail_math:
+                if tail_math.isalpha():
+                    tail_math = rf'\,\mathrm{{{tail_math}}}'
+                else:
+                    tail_math = rf'\,{tail_math}'
+
+        # Build a single mathtext block: $\chi_sub (T) / unit (K)$
+        ylabel_for_axes = (
+            rf'$'
+            rf'\chi_{{{chi_subscripts[suffix]}}}'
+            f'{"\\,T" if has_T else ""}'
+            f'{" / " + unit_chunk if unit_chunk else ""}'
+            f'{tail_math}'
+            rf'$'
+        )
+        ylabel_suffix = ''
+
+    _finalize_axes(ax_c, inv_t, inv_t_csv, ylabel_suffix, legend_ncol=10, base_ylabel=ylabel_for_axes)
     _add_caption(fig_c, caption, ax_c)
 
     if outfile:
@@ -480,11 +522,10 @@ def _prepare_csv_data(
         chi_ax_sdev_csv.append(r.get('chi_ax_sdev'))
         chi_rho_sdev_csv.append(r.get('chi_rho_sdev'))
 
-    if len(temps_csv) < 2:
+    if len(temps_csv) < 1:
         msg = (
-            "Not enough CSV data points for linear regression. "
-            f"Found {len(temps_csv)} rows with T >= {t_limit} K in '{csv_path}'. "
-            "Provide at least 2 points above the temperature threshold."
+            "No usable CSV data points. "
+            f"Found {len(temps_csv)} rows with T >= {t_limit} K in '{csv_path}'."
         )
         raise RuntimeError(msg)
 
@@ -493,7 +534,6 @@ def _prepare_csv_data(
     mu_B = physical_constants['Bohr magneton'][0]
     S = float(spin_S)
     norm_factor = (mu_0 * mu_B**2 * S * (S + 1)) / (3 * k)
-
     chi_iso_fit_csv = _normalize_list(chi_iso_fit_csv, norm_factor)
     chi_ax_fit_csv = _normalize_list(chi_ax_fit_csv, norm_factor)
     chi_rho_fit_csv = _normalize_list(chi_rho_fit_csv, norm_factor)
@@ -1727,43 +1767,39 @@ def compute_chi_temperature_dependence(
             S,
         ) = _prepare_csv_data(csv_path, spin_S, fix_intercept_highT=fix_intercept_highT)
 
-        if len(inv_t_csv) < 2:
-            raise RuntimeError(
-                f"Not enough CSV points for linear regression (need at least 2, got {len(inv_t_csv)})."
-            )
+        n_pts = len(inv_t_csv)
 
-        lr = _run_lr_for_components(
-            inv_t_csv,
-            chi_iso_fit_csv,
-            chi_ax_fit_csv,
-            chi_rho_fit_csv,
-            chi_iso_sdev_csv,
-            chi_ax_sdev_csv,
-            chi_rho_sdev_csv,
-            fixed_b_iso,
-            fixed_b_ax,
-            fixed_b_rho,
-        )
+        # Initialise LR-related outputs to sane defaults
+        chi_iso_fit_pred = chi_ax_fit_pred = chi_rho_fit_pred = None
+        chi_iso_sdev_pred = chi_ax_sdev_pred = chi_rho_sdev_pred = None
+        a_iso = b_iso = a_ax = b_ax = a_rho = b_rho = None
+        a_iso_se = b_iso_se = a_ax_se = b_ax_se = a_rho_se = b_rho_se = None
+        a_iso_TIP = b_iso_TIP = a_ax_TIP = b_ax_TIP = None
+        a_iso_TIP_se = b_iso_TIP_se = a_ax_TIP_se = b_ax_TIP_se = None
+        chi_iso_fit_pred_TIP = chi_ax_fit_pred_TIP = None
+        chi_iso_sdev_pred_TIP = chi_ax_sdev_pred_TIP = None
 
-        chi_iso_fit_pred, a_iso, b_iso, chi_iso_sdev_pred, a_iso_se, b_iso_se = lr['iso']
-        chi_ax_fit_pred, a_ax, b_ax, chi_ax_sdev_pred, a_ax_se, b_ax_se = lr['ax']
-        chi_rho_fit_pred, a_rho, b_rho, chi_rho_sdev_pred, a_rho_se, b_rho_se = lr['rho']
-
-        g_sq_iso_analytic_val = g_sq_ax_val = g_sq_rh_val = None
+        # Defaults for quantities derived from LR (g, D, E)
+        g_sq_iso = g_sq_ax = g_sq_rh = []
         D_list = E_list = D_J = E_J = []
 
-        # Recover g/D/E from LR (as in legacy CSV-only pipeline)
-        if (a_ax is not None) and (b_ax is not None) and (b_iso is not None):
-            try:
-                use_axial_only = (b_rho is None) or (abs(b_rho) < 1e-6) or (a_rho is None)
+        if n_pts == 1:
+            # Single-point CSV: no regression is possible, but the (chi*T) values
+            # themselves can be treated as LR intercepts b_iso, b_ax, b_rho.
 
+            b_iso = chi_iso_fit_csv[0]
+            b_ax  = chi_ax_fit_csv[0] 
+            b_rho = chi_rho_fit_csv[0]
+
+            try:
+                use_axial_only = (b_rho is None) or (abs(b_rho) < 1e-6)
                 if use_axial_only:
                     gx, gy, gz = solve_g_principals_from_LR(
                         b_iso=b_iso,
                         b_ax=b_ax,
                         b_rh=None,
                     )
-                    g_sq_iso_analytic_val = calculate_g_sq_iso_analytic(
+                    g_sq_iso_val = calculate_g_sq_iso_analytic(
                         b_iso_intercept=b_iso,
                         b_ax_intercept=b_ax,
                     )
@@ -1775,62 +1811,138 @@ def compute_chi_temperature_dependence(
                         b_ax=b_ax,
                         b_rh=b_rho,
                     )
-                    g_sq_iso_analytic_val = ((gx**2 + gy**2 + gz**2) / 3.0)
+                    g_sq_iso_val = ((gx**2 + gy**2 + gz**2) / 3.0)
                     g_sq_ax_val = float(b_ax)
                     g_sq_rh_val = float(b_rho)
 
-                D_J_LR, E_J_LR = solve_D_E_from_LR(
-                    a_ax=a_ax,
-                    a_rh=a_rho,
-                    S=S,
-                    gx=gx,
-                    gy=gy,
-                    gz=gz,
+                # Replicate to match the (single-point) temperature grid
+                g_sq_iso = [g_sq_iso_val]
+                g_sq_ax = [g_sq_ax_val]
+                g_sq_rh = [g_sq_rh_val]
+
+                ut.cprint(
+                    f"CSV-only single-point: gx = {gx:.4f}, gy = {gy:.4f}, gz = {gz:.4f}",
+                    'cyan',
                 )
-                D_from_LR = None if D_J_LR is None else D_J_LR / (h * c * 100)
-                E_from_LR = None if E_J_LR is None else E_J_LR / (h * c * 100)
-
-                # Replicate values across temperature points so plots/CSV stay consistent in length
-                n_pts = len(inv_t_csv)
-                if g_sq_iso_analytic_val is not None:
-                    g_sq_iso = [g_sq_iso_analytic_val] * n_pts
-                    g_sq_ax = [g_sq_ax_val] * n_pts if g_sq_ax_val is not None else []
-                    g_sq_rh = [g_sq_rh_val] * n_pts if g_sq_rh_val is not None else []
-                else:
-                    g_sq_iso = g_sq_ax = g_sq_rh = []
-
-                if D_from_LR is not None:
-                    D_list = [D_from_LR] * n_pts
-                    D_J = [D_J_LR] * n_pts
-                if E_from_LR is not None:
-                    E_list = [E_from_LR] * n_pts
-                    E_J = [E_J_LR] * n_pts
-
-                # Report back to user
-                if use_axial_only:
+                if abs(S <= 0):
                     ut.cprint(
-                        f"CSV-only fit (axial-only): gx = {gx:.4f}, gy = {gy:.4f}, gz = {gz:.4f}",  # type: ignore[arg-type]
-                        'cyan',
+                        "Single-point S <= 1/2: χ·T_norm(T_meas) = b, ZFS terms are absent, "
+                        "so this is interpreted as an exact high-T intercept.",
+                        'yellow',
                     )
                 else:
                     ut.cprint(
-                        f"CSV-only fit (full rhombic): gx = {gx:.4f}, gy = {gy:.4f}, gz = {gz:.4f}",  # type: ignore[arg-type]
-                        'cyan',
+                        "Single-point S>1/2: χ·T_norm(T_meas) ≈ b; high-T 1/T terms from D and E "
+                        "cannot be separated, so interpreting b as the intercept is only an approximation.",
+                        'yellow',
                     )
-                if D_from_LR is not None:
-                    ut.cprint(f"D = {D_from_LR:.4f} cm^-1", 'cyan')
-                if E_from_LR is not None:
-                    ut.cprint(f"E = {E_from_LR:.4} cm^-1", 'cyan')
             except Exception as e:
-                logging.warning(f"CSV-only g/D/E estimation failed: {e}")
+                logging.warning(f"CSV-only single-point g estimation failed: {e}")
                 g_sq_iso = g_sq_ax = g_sq_rh = []
-                D_list = E_list = D_J = E_J = []
-        else:
-            g_sq_iso = g_sq_ax = g_sq_rh = []
-        a_iso_TIP = b_iso_TIP = a_ax_TIP = b_ax_TIP = None
-        a_iso_TIP_se = b_iso_TIP_se = a_ax_TIP_se = b_ax_TIP_se = None
-        chi_iso_fit_pred_TIP = chi_ax_fit_pred_TIP = chi_iso_sdev_pred_TIP = chi_ax_sdev_pred_TIP = None
 
+        elif n_pts >= 2:
+            # Standard CSV-only workflow with weighted linear regression
+            lr = _run_lr_for_components(
+                inv_t_csv,
+                chi_iso_fit_csv,
+                chi_ax_fit_csv,
+                chi_rho_fit_csv,
+                chi_iso_sdev_csv,
+                chi_ax_sdev_csv,
+                chi_rho_sdev_csv,
+                fixed_b_iso,
+                fixed_b_ax,
+                fixed_b_rho,
+            )
+
+            chi_iso_fit_pred, a_iso, b_iso, chi_iso_sdev_pred, a_iso_se, b_iso_se = lr['iso']
+            chi_ax_fit_pred, a_ax, b_ax, chi_ax_sdev_pred, a_ax_se, b_ax_se = lr['ax']
+            chi_rho_fit_pred, a_rho, b_rho, chi_rho_sdev_pred, a_rho_se, b_rho_se = lr['rho']
+
+            g_sq_iso_analytic_val = g_sq_ax_val = g_sq_rh_val = None
+
+            # Recover g/D/E from LR (as in legacy CSV-only pipeline)
+            if (a_ax is not None) and (b_ax is not None) and (b_iso is not None):
+                try:
+                    use_axial_only = (b_rho is None) or (abs(b_rho) < 1e-6) or (a_rho is None)
+
+                    if use_axial_only:
+                        gx, gy, gz = solve_g_principals_from_LR(
+                            b_iso=b_iso,
+                            b_ax=b_ax,
+                            b_rh=None,
+                        )
+                        g_sq_iso_analytic_val = calculate_g_sq_iso_analytic(
+                            b_iso_intercept=b_iso,
+                            b_ax_intercept=b_ax,
+                        )
+                        g_sq_ax_val = float(b_ax)
+                        g_sq_rh_val = 0.0
+                    else:
+                        gx, gy, gz = solve_g_principals_from_LR(
+                            b_iso=b_iso,
+                            b_ax=b_ax,
+                            b_rh=b_rho,
+                        )
+                        g_sq_iso_analytic_val = ((gx**2 + gy**2 + gz**2) / 3.0)
+                        g_sq_ax_val = float(b_ax)
+                        g_sq_rh_val = float(b_rho)
+
+                    D_J_LR, E_J_LR = solve_D_E_from_LR(
+                        a_ax=a_ax,
+                        a_rh=a_rho,
+                        S=S,
+                        gx=gx,
+                        gy=gy,
+                        gz=gz,
+                    )
+                    D_from_LR = None if D_J_LR is None else D_J_LR / (h * c * 100)
+                    E_from_LR = None if E_J_LR is None else E_J_LR / (h * c * 100)
+
+                    # Replicate values across temperature points so plots/CSV stay consistent in length
+                    if g_sq_iso_analytic_val is not None:
+                        g_sq_iso = [g_sq_iso_analytic_val] * n_pts
+                        g_sq_ax = [g_sq_ax_val] * n_pts if g_sq_ax_val is not None else []
+                        g_sq_rh = [g_sq_rh_val] * n_pts if g_sq_rh_val is not None else []
+                    else:
+                        g_sq_iso = g_sq_ax = g_sq_rh = []
+
+                    if D_from_LR is not None:
+                        D_list = [D_from_LR] * n_pts
+                        D_J = [D_J_LR] * n_pts
+                    if E_from_LR is not None:
+                        E_list = [E_from_LR] * n_pts
+                        E_J = [E_J_LR] * n_pts
+
+                    # Report back to user
+                    if use_axial_only:
+                        ut.cprint(
+                            f"CSV-only fit (axial-only): gx = {gx:.4f}, gy = {gy:.4f}, gz = {gz:.4f}",  # type: ignore[arg-type]
+                            'cyan',
+                        )
+                    else:
+                        ut.cprint(
+                            f"CSV-only fit (full rhombic): gx = {gx:.4f}, gy = {gy:.4f}, gz = {gz:.4f}",  # type: ignore[arg-type]
+                            'cyan',
+                        )
+                    if D_from_LR is not None:
+                        ut.cprint(f"D = {D_from_LR:.4f} cm^-1", 'cyan')
+                    if E_from_LR is not None:
+                        ut.cprint(f"E = {E_from_LR:.4} cm^-1", 'cyan')
+                except Exception as e:
+                    logging.warning(f"CSV-only g/D/E estimation failed: {e}")
+                    g_sq_iso = g_sq_ax = g_sq_rh = []
+                    D_list = E_list = D_J = E_J = []
+            else:
+                g_sq_iso = g_sq_ax = g_sq_rh = []
+
+        else:
+            # No valid points after preprocessing (should not occur because _prepare_csv_data
+            # already checks for len(temps_csv) >= 1), but keep a guard just in case.
+            raise RuntimeError(
+                f"No CSV temperatures above the selected threshold; got {n_pts} valid points."
+            )
+        print(b_iso, b_ax, b_rho)
         return _make_analysis(
             temps=temps_csv,
             inv_t=inv_t_csv,
