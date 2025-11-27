@@ -3,7 +3,7 @@ project:
 
 hyperfine:
  method: dft 
- file: ../DATA/HFC/FeH_opt_Cs_HFC_B3LYP_EPRII.out 
+ file: ../DATA/Q_CHEM/FeH_opt_Cs_HFC_TPSSH_def2TZVP.out 
 
 diamagnetic:
  method: csv

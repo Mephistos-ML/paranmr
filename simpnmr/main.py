@@ -39,6 +39,8 @@ class Signal():
         Chemical label of signal
     l_to_g: float, default 1.
         Ratio of Lorentzian to Gaussian lineshape for this signal
+    R1: float, optional
+        Longitudinal relaxation rate in s^-1
 
     Attributes
     ----------
@@ -52,15 +54,18 @@ class Signal():
         Chemical label of signal
     l_to_g: float
         Ratio of Lorentzian to Gaussian lineshape for this signal
+    R1: float
+        Longitudinal relaxation rate in s^-1
     '''
 
-    def __init__(self, shift, width, area, assignment='UNK', l_to_g=1):
+    def __init__(self, shift, width, area, assignment='UNK', l_to_g=1, r1=None):
 
         self.shift = shift
         self.width = width
         self.area = area
         self.assignment = assignment
         self.l_to_g = l_to_g
+        self.r1 = r1
 
         return
 
@@ -73,8 +78,8 @@ class Experiment():
     ----------
     temperature: float
         Temperature of experiment
-    larmor: float
-        Larmor frequency of nucleus in spectrometer
+    magnetic_field: float
+        Magnetic field of spectrometer in Tesla
     nucleus: str
         Nucleus of experiment
     signals: list[Signal]
@@ -89,8 +94,8 @@ class Experiment():
         Temperature of experiment
     signals: list[Signal]
         Signals of experiment
-    larmor: float
-        Larmor frequency of nucleus in spectrometer
+    magnetic_field: float
+        Magnetic field of spectrometer in Tesla
     isotope: str
         Isotope of experiment
     spectrum: None | ArrayLike
@@ -98,11 +103,11 @@ class Experiment():
         is intensity.
     '''
 
-    def __init__(self, temperature: float, larmor: float, isotope: str,
+    def __init__(self, temperature: float, magnetic_field: float, isotope: str,
                  signals: list[Signal], spectrum: ArrayLike = None) -> None:
         self._signals = signals
         self.temperature = temperature
-        self.larmor = larmor
+        self.magnetic_field = magnetic_field
         self.isotope = isotope.title()
 
         if spectrum is not None:
@@ -178,16 +183,16 @@ class Experiment():
         return
 
     @property
-    def larmor(self) -> float:
-        return self._larmor
+    def magnetic_field(self) -> float:
+        return self._magnetic_field
 
-    @larmor.setter
-    def larmor(self, value: float):
+    @magnetic_field.setter
+    def magnetic_field(self, value: float):
         try:
             value = float(value)
         except TypeError:
-            raise TypeError('larmor must be floatable')
-        self._larmor = value
+            raise TypeError('magnetic field must be floatable')
+        self._magnetic_field = value
         return
 
     @property
@@ -264,7 +269,12 @@ class Experiment():
             'integral ()': 'area',
             'integral': 'area',
             'integrals ()': 'area',
-            'L/G ()': 'L/G'
+            'L/G ()': 'L/G',
+            'r1': 'R1',
+            'r1 (s^-1)': 'R1',
+            'R1 (s^-1)': 'R1',
+            '1/T1': 'R1',
+            '1/T1 (s^-1)': 'R1'
         }
         others = {}
         for key, val in name_convertor.items():
@@ -277,9 +287,10 @@ class Experiment():
         for file_name in file_names:
             _data = pd.read_csv(file_name, comment='#', skipinitialspace=True)
             _data.rename(columns=name_convertor, inplace=True)
-            _temperature, _larmor, _isotope = ut.read_exp_metadata(file_name)
+            _temperature, _magnetic_field, _isotope = ut.read_exp_metadata(
+                file_name)
             _data['temperature'] = _temperature
-            _data['larmor'] = _larmor
+            _data['magnetic field'] = _magnetic_field
             _data['isotope'] = _isotope
             final.append(_data)
 
@@ -316,7 +327,7 @@ class Experiment():
         experiments = [
             cls(
                 _e['temperature'][0],
-                _e['larmor'][0],
+                _e['magnetic field'][0],
                 _e['isotope'][0],
                 [
                     Signal(
@@ -324,7 +335,9 @@ class Experiment():
                         signal['width'],
                         signal['area'],
                         signal['assignment'],
-                        l_to_g=signal['L/G']
+                        l_to_g=signal['L/G'],
+                        r1=signal.get('R1', None)
+
                     )
                     for _, signal in _e.iterrows()
                 ]
@@ -373,7 +386,7 @@ class Experiment():
             )
         )
         _comment += f'#temperature = {self.temperature:.3f}\n'
-        _comment += f'#larmor = {self.larmor:.3f}\n'
+        _comment += f'#magnetic field = {self.magnetic_field:.3f}\n'
         _comment += f'#isotope = {self.isotope}\n'
 
         _comment += comment + '\n'
@@ -399,7 +412,7 @@ class Experiment():
 
     @classmethod
     def generate_permutations(cls, experiment: 'Experiment',
-                              groups: list[list[str]] = []) -> list['Experiment']: # noqa
+                              groups: list[list[str]] = []) -> list['Experiment']:  # noqa
         '''
         Generates a set of new experiments in which signal assignments
         are permuted based on a given list of groups
@@ -457,6 +470,18 @@ class Experiment():
         ]
 
         return all_new_assgn
+
+    @property
+    def r1_by_assignment(self):
+        '''
+        Dictionary mapping signal assignments to R1 values
+        '''
+        r1_dict = {
+            signal.assignment: signal.r1
+            for signal in self.signals
+            if signal.r1 is not None
+        }
+        return r1_dict
 
 
 class Hyperfine():
@@ -686,6 +711,7 @@ class Susceptibility:
     temperature: float
         Temperature that this tensor corresponds to [Kelvin]
     '''
+
     def __init__(self, tensor: NDArray = np.zeros([3, 3]),
                  temperature: float = 0.) -> None:
 
@@ -974,15 +1000,15 @@ class Susceptibility:
     def irred(self, value):
         if not isinstance(value, np.ndarray):
             raise TypeError(
-                'Irreducible Spherical Components must be 5 element arraylike of complex numbers' # noqa
+                'Irreducible Spherical Components must be 5 element arraylike of complex numbers'  # noqa
             )
         elif value.shape != (5,):
             raise TypeError(
-                'Irreducible Spherical Components must be 5 element arraylike of complex numbers' # noqa
+                'Irreducible Spherical Components must be 5 element arraylike of complex numbers'  # noqa
             )
         elif not np.iscomplexobj(value):
             raise TypeError(
-                'Irreducible Spherical Components must be 5 element arraylike of complex numbers' # noqa
+                'Irreducible Spherical Components must be 5 element arraylike of complex numbers'  # noqa
             )
         self._irred = value
         return
@@ -1014,20 +1040,20 @@ class Susceptibility:
         '''
         irred = np.zeros(5, dtype=np.complex128)
         # chi_-2
-        irred[0] = + np.sqrt(2 * np.pi / 15) * (tensor[0, 0] - tensor[1, 1] + 1j*(tensor[0, 1] + tensor[1, 0])) # noqa
+        irred[0] = + np.sqrt(2 * np.pi / 15) * (tensor[0, 0] - tensor[1, 1] + 1j*(tensor[0, 1] + tensor[1, 0]))  # noqa
         # chi_-1
-        irred[1] = - np.sqrt(2 * np.pi / 15) * (tensor[0, 2] - tensor[2, 0] + 1j*(tensor[1, 2] + tensor[2, 1])) # noqa
+        irred[1] = - np.sqrt(2 * np.pi / 15) * (tensor[0, 2] - tensor[2, 0] + 1j*(tensor[1, 2] + tensor[2, 1]))  # noqa
         # chi_0
-        irred[2] = + np.sqrt(4 * np.pi/45)*(2*tensor[2, 2] - tensor[0, 0] - tensor[1, 1]) # noqa
+        irred[2] = + np.sqrt(4 * np.pi/45)*(2*tensor[2, 2] - tensor[0, 0] - tensor[1, 1])  # noqa
         # chi_+1
-        irred[3] = - np.sqrt(2 * np.pi / 15) * (tensor[0, 2] - tensor[2, 0] - 1j*(tensor[1, 2] + tensor[2, 1])) # noqa
+        irred[3] = - np.sqrt(2 * np.pi / 15) * (tensor[0, 2] - tensor[2, 0] - 1j*(tensor[1, 2] + tensor[2, 1]))  # noqa
         # chi_2
-        irred[4] = + np.sqrt(2 * np.pi / 15) * (tensor[0, 0] - tensor[1, 1] - 1j*(tensor[0, 1] + tensor[1, 0])) # noqa
+        irred[4] = + np.sqrt(2 * np.pi / 15) * (tensor[0, 0] - tensor[1, 1] - 1j*(tensor[0, 1] + tensor[1, 0]))  # noqa
 
         return irred
 
     @classmethod
-    def from_csv(cls, file_name: str) -> list['Susceptibility']: # noqa
+    def from_csv(cls, file_name: str) -> list['Susceptibility']:  # noqa
         '''
         Loads susceptibility information from .csv file\n
         Headers must match those of the file generated by\n
@@ -1070,9 +1096,9 @@ class Susceptibility:
         suscs = [
             cls(
                 np.array([
-                    [row['chi_xx (Å^3)'], row['chi_xy (Å^3)'], row['chi_xz (Å^3)']], # noqa
-                    [row['chi_xy (Å^3)'], row['chi_yy (Å^3)'], row['chi_yz (Å^3)']], # noqa
-                    [row['chi_xz (Å^3)'], row['chi_yz (Å^3)'], row['chi_zz (Å^3)']], # noqa
+                    [row['chi_xx (Å^3)'], row['chi_xy (Å^3)'], row['chi_xz (Å^3)']],  # noqa
+                    [row['chi_xy (Å^3)'], row['chi_yy (Å^3)'], row['chi_yz (Å^3)']],  # noqa
+                    [row['chi_xz (Å^3)'], row['chi_yz (Å^3)'], row['chi_zz (Å^3)']],  # noqa
                 ]), temperature=row['Temperature (K)']
             )
             for _, row in data.iterrows()
@@ -1156,7 +1182,7 @@ class Susceptibility:
         )
 
         # Convert coordinates to atomic units (Bohr)
-        coords *= 1.88973  
+        coords *= 1.88973
 
         # Find the central atom's index
         center_idx = np.where(labels == center_atom)[0]
@@ -1168,9 +1194,11 @@ class Susceptibility:
 
         # Ensure that the susceptibility tensor is initialized
         if self.dtensor is None:
-            raise ValueError("Susceptibility tensor (dtensor) is not initialized!")
+            raise ValueError(
+                "Susceptibility tensor (dtensor) is not initialized!")
 
-        chi_tensor = self.dtensor  # Load the deviatoric susceptibility tensor (in Å³)
+        # Load the deviatoric susceptibility tensor (in Å³)
+        chi_tensor = self.dtensor
 
         # Initialize the isosurface array
         isosurf = np.zeros_like(x, dtype=float)
@@ -1193,20 +1221,25 @@ class Susceptibility:
                     isosurf[i, j, k] = pcs_value
 
         # Scale the PCS values (convert to ppb)
-        isosurf *= 1E7  
+        isosurf *= 1E7
 
         # Write the computed PCS isosurface to a cube file
         with open(file_name, 'w') as f:
             f.write(f'{comment}\n')
             f.write('Comment line\n')
-            f.write('{:d}   {:.6f} {:.6f} {:.6f}\n'.format(len(labels), lower, lower, lower))
-            f.write('{:d}   {:.6f}    0.000000    0.000000\n'.format(x.shape[0], step))
-            f.write('{:d}   0.000000    {:.6f}    0.000000\n'.format(y.shape[1], step))
-            f.write('{:d}   0.000000    0.000000    {:.6f}\n'.format(z.shape[2], step))
+            f.write('{:d}   {:.6f} {:.6f} {:.6f}\n'.format(
+                len(labels), lower, lower, lower))
+            f.write('{:d}   {:.6f}    0.000000    0.000000\n'.format(
+                x.shape[0], step))
+            f.write('{:d}   0.000000    {:.6f}    0.000000\n'.format(
+                y.shape[1], step))
+            f.write('{:d}   0.000000    0.000000    {:.6f}\n'.format(
+                z.shape[2], step))
 
             # Write atomic labels and coordinates
             for lbl, c in zip(labels, coords):
-                f.write('{:d}   0.000000  {:.6f} {:.6f} {:.6f}\n'.format(xyzp.lab_to_num(lbl), *c))
+                f.write('{:d}   0.000000  {:.6f} {:.6f} {:.6f}\n'.format(
+                    xyzp.lab_to_num(lbl), *c))
 
             # Write PCS values into the cube file
             a = 0
@@ -1223,7 +1256,7 @@ class Susceptibility:
 
         if verbose:
             ut.cprint(f'\n PCS Isosurface written to \n {file_name}\n', 'cyan')
-            
+
         return
 
 
@@ -1251,6 +1284,7 @@ class Shift():
     linewidth: float
         Linewidth of shift signal
     '''
+
     def __init__(self, dia: float = 0., pc: float = 0.,
                  fc: float = 0., lw: float = 1.) -> None:
         self._pc = dia  # Pseudocontact
@@ -1352,7 +1386,36 @@ class Shift():
 
         return Shift.calc_fcs(A, chi) + Shift.calc_pcs(A, chi)
 
+#RETURN TO: Create a Relaxation class and use it in Nucleus
+#This will allow us to use something like nuc.r1 and nuc.r2 to access relaxation rates
+class Relaxation:
+    '''
+    Contains information on calculated relaxation rates for a given
+    nucleus
 
+    Attributes
+    ----------
+    R1: float
+        Longitudinal relaxation rate [s^-1]
+    R2: float
+        Transverse relaxation rate [s^-1]
+    '''
+
+    def __init__(self, r1=None, r2=None, 
+                 dipolar_r1=None, contact_r1=None, curie_r1=None, 
+                 dipolar_r2=None, contact_r2=None, curie_r2=None):
+        self.r1 = r1
+        self.r2 = r2
+        self.dipolar_r1 = dipolar_r1
+        self.contact_r1 = contact_r1
+        self.curie_r1 = curie_r1
+        self.dipolar_r2 = dipolar_r2
+        self.contact_r2 = contact_r2
+        self.curie_r2 = curie_r2
+        pass
+
+#Add setters and properties as needed
+    
 class Nucleus():
     r'''
     Contains all information on a given nucleus of a molecule
@@ -1394,7 +1457,7 @@ class Nucleus():
         Shift object containing this Nucleus' chemical shift information
     isotope: str
         Isotope of element formatted as nucleon number then symbol e.g. 13C
-    ''' # noqa
+    '''  # noqa
 
     def __init__(self, label: str, coord: list[float], A: Hyperfine,
                  shift: Shift = Shift(), chem_label: str = None,
@@ -1584,6 +1647,7 @@ class Molecule():
     susc: Susceptibility
         Susceptibility object for molecule
     '''
+
     def __init__(self, labels: NDArray[np.str_], coords: NDArray,
                  nuclei: list[Nucleus]) -> None:
 
@@ -1842,18 +1906,18 @@ class Molecule():
         if split:
             tensors = [
                 np.array([
-                    [row['Adip_xx (ppm Å^-3)'], row['Adip_xy (ppm Å^-3)'], row['Adip_xz (ppm Å^-3)']], # noqa
-                    [row['Adip_xy (ppm Å^-3)'], row['Adip_yy (ppm Å^-3)'], row['Adip_yz (ppm Å^-3)']], # noqa
-                    [row['Adip_xz (ppm Å^-3)'], row['Adip_yz (ppm Å^-3)'], row['Adip_zz (ppm Å^-3)']] # noqa
+                    [row['Adip_xx (ppm Å^-3)'], row['Adip_xy (ppm Å^-3)'], row['Adip_xz (ppm Å^-3)']],  # noqa
+                    [row['Adip_xy (ppm Å^-3)'], row['Adip_yy (ppm Å^-3)'], row['Adip_yz (ppm Å^-3)']],  # noqa
+                    [row['Adip_xz (ppm Å^-3)'], row['Adip_yz (ppm Å^-3)'], row['Adip_zz (ppm Å^-3)']]  # noqa
                 ]) + np.eye(3) * row['Aiso (ppm Å^-3)']
                 for _, row in data.iterrows()
             ]
         else:
             tensors = [
                 np.array([
-                    [row['A_xx (ppm Å^-3)'], row['A_xy (ppm Å^-3)'], row['A_xz (ppm Å^-3)']], # noqa
-                    [row['A_xy (ppm Å^-3)'], row['A_yy (ppm Å^-3)'], row['A_yz (ppm Å^-3)']], # noqa
-                    [row['A_xz (ppm Å^-3)'], row['A_yz (ppm Å^-3)'], row['A_zz (ppm Å^-3)']] # noqa
+                    [row['A_xx (ppm Å^-3)'], row['A_xy (ppm Å^-3)'], row['A_xz (ppm Å^-3)']],  # noqa
+                    [row['A_xy (ppm Å^-3)'], row['A_yy (ppm Å^-3)'], row['A_yz (ppm Å^-3)']],  # noqa
+                    [row['A_xz (ppm Å^-3)'], row['A_yz (ppm Å^-3)'], row['A_zz (ppm Å^-3)']]  # noqa
                 ])
                 for _, row in data.iterrows()
             ]
@@ -2006,14 +2070,14 @@ class Molecule():
 
             _relabel = {
                 new: old
-                for old, new in zip(data.cs_iso.keys(), xyzp.add_label_indices(data.cs_iso.keys())) # noqa
+                for old, new in zip(data.cs_iso.keys(), xyzp.add_label_indices(data.cs_iso.keys()))  # noqa
             }
 
             for nuc in self.nuclei:
                 try:
                     nuc.shift.dia = data.cs_iso[_relabel[nuc.label]]
                 except KeyError:
-                    raise KeyError(f'Cannot find {nuc.label} in reference diamagnetic shift file') # noqa
+                    raise KeyError(f'Cannot find {nuc.label} in reference diamagnetic shift file')  # noqa
         else:
             raise ValueError('Unknown file_type')
 
@@ -2032,9 +2096,9 @@ class Molecule():
 
                 for nuc in self.nuclei:
                     try:
-                        nuc.shift.dia = ref['shift'][nuc.label_nn] - nuc.shift.dia # noqa
+                        nuc.shift.dia = ref['shift'][nuc.label_nn] - nuc.shift.dia  # noqa
                     except KeyError:
-                        raise KeyError(f'Cannot find {nuc.label_nn} in reference diamagnetic shift file') # noqa
+                        raise KeyError(f'Cannot find {nuc.label_nn} in reference diamagnetic shift file')  # noqa
 
             elif ref_file_type == 'dft':
                 ref_data = rdrs.QCCS.guess_from_file(ref_file_name)
@@ -2052,9 +2116,9 @@ class Molecule():
 
                 for nuc in self.nuclei:
                     try:
-                        nuc.shift.dia = avg_ref_iso[nuc.label_nn] - nuc.shift.dia # noqa
+                        nuc.shift.dia = avg_ref_iso[nuc.label_nn] - nuc.shift.dia  # noqa
                     except KeyError:
-                        raise KeyError(f'Cannot find {nuc.label_nn} in reference diamagnetic shift file') # noqa
+                        raise KeyError(f'Cannot find {nuc.label_nn} in reference diamagnetic shift file')  # noqa
             else:
                 raise ValueError('Unknown file_type')
         return
@@ -2109,11 +2173,11 @@ class Molecule():
         # averaged together
         # list - entries are averaged separately
         if not all(isinstance(ent, (list, str)) for ent in av_chemlabels):
-            raise TypeError('Unknown type passed to average_hyperfine, labels should be list[list[str]] or list[str]') # noqa
+            raise TypeError('Unknown type passed to average_hyperfine, labels should be list[list[str]] or list[str]')  # noqa
 
         # Check sublists are all string
-        if any([not isinstance(subent, str) for ent in av_chemlabels for subent in ent]): # noqa
-            raise TypeError('Unknown type passed to average_hyperfine, labels should be list[list[str]] or list[str]') # noqa
+        if any([not isinstance(subent, str) for ent in av_chemlabels for subent in ent]):  # noqa
+            raise TypeError('Unknown type passed to average_hyperfine, labels should be list[list[str]] or list[str]')  # noqa
 
         # Check labels exist in molecule
         _fl_av_chemlabels = ut.flatten(av_chemlabels)
@@ -2128,7 +2192,7 @@ class Molecule():
                 [
                     nuc.A.tensor
                     for nuc in self.nuclei
-                    if nuc.chem_label in ents], # noqa
+                    if nuc.chem_label in ents],  # noqa
                 axis=0
             )
             for nuc in self.nuclei:
@@ -2181,7 +2245,7 @@ class Molecule():
         if not len(centre_labels):
             raise ValueError(
                 ut.cstr(
-                    'Error: No paramagnetic centres specified for point dipole', # noqa
+                    'Error: No paramagnetic centres specified for point dipole',  # noqa
                     'red'
                 )
             )
@@ -2312,7 +2376,8 @@ class Molecule():
             }
             for nuc in self.nuclei:
                 if nuc.label in al_to_cl.keys():
-                    nuc.chem_math_label = al_to_cml[nuc.label].lstrip().rstrip() # noqaq
+                    nuc.chem_math_label = al_to_cml[nuc.label].lstrip(
+                    ).rstrip()  # noqaq
         # or if math labels are not provided, set to the same as math labels
         else:
             for nuc in self.nuclei:
@@ -2491,7 +2556,7 @@ class Molecule():
         _clabs = {nuc.label: nuc.chem_label for nuc in self.nuclei}
         with open(file_name, 'w') as f:
             for lab, trio in zip(self.labels, self.coords):
-                f.write('{:5} {:15.7f} {:15.7f} {:15.7f}'.format(xyzp.lab_to_num(lab), *trio)) # noqa
+                f.write('{:5} {:15.7f} {:15.7f} {:15.7f}'.format(xyzp.lab_to_num(lab), *trio))  # noqa
                 if lab in _clabs.keys():
                     f.write('      "{}"\n'.format(_clabs[lab]))
                 else:

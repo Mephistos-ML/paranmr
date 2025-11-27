@@ -12,6 +12,7 @@ import copy
 import sys
 from pathos import multiprocessing as mp
 import re
+from scipy.optimize import curve_fit
 
 from . import main
 from . import readers as rdrs
@@ -1063,7 +1064,6 @@ def predict_func(uargs):
             tau_R = config.relaxation_tR
             multiplicity = rdrs.read_gaussian_log_spin(
                 config.hyperfine_file)  # NEED ORCA READER, TOO!
-            # multiplicity = 5
             spin = (multiplicity - 1) / 2
             if config.relaxation_model == "sbm":
                 # Calculate SBM dipolar rates (R1)
@@ -1084,7 +1084,6 @@ def predict_func(uargs):
                     A_iso_dict,
                     omega_I_dict,
                     omega_S,
-                    tau_e1,
                     tau_e2,
                     spin
                 )
@@ -1164,7 +1163,6 @@ def predict_func(uargs):
                     omega_I_dict,
                     omega_S,
                     tau_e1,
-                    tau_e2,
                     spin
                 )
                 sbm_dipolar_r2_rates = ut.sbm_r2_dipolar(
@@ -1239,23 +1237,30 @@ def predict_func(uargs):
                 chem_label: np.mean(rate_list)
                 for chem_label, rate_list in r1_by_chem_label.items()
             }
+            for chem_label, r1 in avg_r1_by_chem_label.items():
+                print(f"{chem_label}: R₁ = {r1:.3e} s^-1")
             # Calculate average linewidths for each chemical label
             avg_lw_by_chem_label = {
                 chem_label: np.mean([rate / np.pi for rate in rate_list])
                 for chem_label, rate_list in r2_by_chem_label.items()
             }
             # print("Average linewidths by chemical label (Hz):")
-            # for chem_label, lw in avg_lw_by_chem_label.items():
-            #     print(f"{chem_label}: {lw:.3e} Hz")
+            for chem_label, lw in avg_lw_by_chem_label.items():
+                print(f"{chem_label}: λ = {lw:.3e} Hz")
             # Assign average R1 rates to nuclei in the molecule (in s^-1)
-            for nuc in base_molecule.nuclei:
-                if nuc.chem_label in avg_r1_by_chem_label:
-                    nuc.relax.r1 = avg_r1_by_chem_label[nuc.chem_label]
+            # for nuc in base_molecule.nuclei:
+            #    if nuc.chem_label in avg_r1_by_chem_label:
+            #        nuc.relax.r1 = avg_r1_by_chem_label[nuc.chem_label]
             # Assign average linewidths to nuclei in the molecule (in ppm)
 
-            for nuc in base_molecule.nuclei:
-                if nuc.chem_label in avg_lw_by_chem_label:
-                    nuc.shift.lw = avg_lw_by_chem_label[nuc.chem_label] / (abs(omega_I_dict[nuc.label]) / (2 * np.pi)) * 1e6  # noqa
+            # for nuc in base_molecule.nuclei:
+            #    if nuc.chem_label in avg_lw_by_chem_label:
+            #        nuc.shift.lw = avg_lw_by_chem_label[nuc.chem_label] / (abs(omega_I_dict[nuc.label]) / (2 * np.pi)) * 1e6  # noqa
+            # After assigning R1 rates to nuclei
+            # for nuc in base_molecule.nuclei:
+            #        print(
+            # if hasattr(nuc, "relax") and hasattr(nuc.relax, "r1"):
+            #            f"{nuc.label} ({nuc.chem_label}): R1 = {nuc.relax.r1:.3e} s^-1")
     else:
         ut.cprint(
             " No relaxation model specified — linewidths will be fixed at 1 ppm.", "cyan")
@@ -1401,6 +1406,602 @@ def predict_func(uargs):
         )
 
     return
+
+
+def fit_corr_time_func(uargs):
+    '''
+    Wrapper for cli call to fit_corr_time
+    '''
+    config = inps.FitCorrTimeConfig.from_file(uargs.input_file)
+
+    # Make output directory and file
+    os.makedirs(config.project_name, exist_ok=True)
+
+    tau_R_mode, tau_R_guess = config.fit_corr_time_tau_R[0].lower(
+    ), config.fit_corr_time_tau_R[1]
+    tau_R_bounds = config.fit_corr_time_tau_R[2] if len(
+        config.fit_corr_time_tau_R) > 2 else None
+
+    tau_E_mode, tau_E_guess = config.fit_corr_time_tau_E[0].lower(
+    ), config.fit_corr_time_tau_E[1]
+    tau_E_bounds = config.fit_corr_time_tau_E[2] if len(
+        config.fit_corr_time_tau_E) > 2 else None
+
+    if tau_R_mode == "fix" and tau_E_mode == "fit":
+        fix_param = "tau_r"
+    elif tau_R_mode == "fit" and tau_E_mode == "fix":
+        fix_param = "tau_e"
+    elif tau_R_mode == "fit" and tau_E_mode == "fit":
+        fix_param = None  # Fit both
+    elif tau_R_mode == "fix" and tau_E_mode == "fix":
+        ut.red_exit(
+            "Error: Both tau_R and tau_E cannot be fixed. At least one must be set to 'fit'.")
+    else:
+        ut.red_exit("Error: Use syntax 'tau_C: [fit/fix, guess, [upper-bound, lower-bound]]', with bounds optional (tau_C refers to tau_R or tau_E).")  # noqa
+
+    # tau_R_fixed = getattr(config, "fit_corr_time_tau_R", None)
+    # tau_E_fixed = getattr(config, "fit_corr_time_tau_E", None)
+
+    if getattr(config, "fit_corr_time_tau_R", None) is not None and getattr(config, "relaxation_model", None) is not None:
+        # initial_guess = [float(config.fit_corr_time_tau_R),
+        #                 float(config.fit_corr_time_tau_E)]
+
+        # Load experimental data
+        experiments = main.Experiment.from_file(config.experiment_files)
+
+        # Filter signals to only those with valid R1 values
+        # Only include signals for specified elements (e.g., 'C')
+
+        elements = config.nuclei_include if isinstance(
+            config.nuclei_include, list) else [config.nuclei_include]
+
+        all_chem_labels = []
+        all_exp_r1 = []
+        all_temperatures = []
+        all_magnetic_fields = []
+
+        for experiment in experiments:
+            for signal in experiment.signals:
+                if signal.r1 is not None and np.isfinite(signal.r1) and any(signal.assignment.startswith(e) for e in elements):
+                    all_chem_labels.append(signal.assignment)
+                    all_exp_r1.append(signal.r1)
+                    all_temperatures.append(experiment.temperature)
+                    all_magnetic_fields.append(experiment.magnetic_field)
+
+        chem_labels = all_chem_labels
+        exp_r1 = np.array(all_exp_r1)
+        xdata = np.arange(len(chem_labels))
+
+        if len(exp_r1) == 0:
+            ut.red_exit("No valid experimental R1 values found for fitting.")
+            return
+
+        # Load hyperfine data and create molecule object
+        if config.hyperfine_method == 'dft':
+            qc_hyperfine_data = rdrs.QCA.guess_from_file(config.hyperfine_file)
+            qc_hyperfine_data.save_to_csv(
+                os.path.join(config.project_name, 'dft_hyperfines.csv'),
+                verbose=True,
+                delimiter=CSV_DELIMITER,
+                comment=f'# Data taken from file {config.hyperfine_file}'
+            )
+            base_molecule = main.Molecule.from_QCA(
+                qc_hyperfine_data, converter='MHz_to_Ang-3',
+                elements=config.nuclei_include
+            )
+        elif config.hyperfine_method == 'pdip':
+            if os.path.splitext(config.hyperfine_file)[1] == '.xyz':
+                labels, coords = xyzp.load_xyz(config.hyperfine_file)
+            elif os.path.splitext(config.hyperfine_file)[1] in ['.log', '.out']:
+                QCS = rdrs.QCStructure.guess_from_file(config.hyperfine_file)
+                labels = QCS.labels
+                coords = QCS.coords
+            else:
+                ut.cprint(
+                    f'Specified hyperfine file format {os.path.splitext(uargs.structure_file)[1]} unsupported', 'red')
+                sys.exit(1)
+            base_molecule = main.Molecule.from_labels_coords(
+                labels, coords, elements=config.nuclei_include
+            )
+            base_molecule.calc_pdip(config.hyperfine_pdip_centres)
+        elif config.hyperfine_method == 'csv':
+            base_molecule = main.Molecule.from_csv(
+                config.hyperfine_file, elements=config.nuclei_include
+            )
+
+        # Add chemical labels if provided
+        if len(config.chem_labels_file):
+            base_molecule.add_chem_labels_from_file(config.chem_labels_file)
+            base_molecule.save_chemcraft_xyz(
+                file_name=os.path.join(
+                    config.project_name, 'chemcraft_structure.xyz')
+            )
+        base_molecule.save_xyz(
+            file_name=os.path.join(config.project_name, 'structure.xyz'),
+            comment=f'Structure from {config.hyperfine_file}'
+        )
+
+        # Prepare relaxation model inputs
+        nuclei_coords = {nuc.label: nuc.coord for nuc in base_molecule.nuclei}
+        electron_coords = config.relaxation_electron_coords
+        B0 = experiment.magnetic_field
+
+        # Dictionaries for relaxation calculations
+        qc_hyperfine_data = rdrs.QCA.guess_from_file(config.hyperfine_file)
+        A_iso_dict_MHz = qc_hyperfine_data.a_iso
+        A_iso_dict = {
+            nuc.label: A_iso_dict_MHz[nuc.label] * 1e6 for nuc in base_molecule.nuclei}
+        gamma_I_dict = {label: ut.NUCLEAR_GAMMAS[ut.st.remove_numbers(
+            label)] * 2 * np.pi * 1e6 for label in nuclei_coords}
+        omega_I_dict = {
+            label: - gamma_I_dict[label] * B0 for label in nuclei_coords}
+        omega_S = - ut.EGAMMA * B0 * 2 * np.pi * 1e6
+        multiplicity = rdrs.read_gaussian_log_spin(config.hyperfine_file)
+        spin = (multiplicity - 1) / 2
+
+        # --- Model function for curve_fit ---
+        if fix_param == "tau_r":
+            tau_R = float(tau_R_guess)
+            initial_guess = [float(tau_E_guess)]
+
+            def r1_model(chem_label_indices, tau_E):
+                tau_c1 = 1 / ((1 / tau_R) + (1 / tau_E))
+                tau_c2 = tau_c1
+
+                # Calculate relaxation rates for current tau_R, tau_E
+                if config.relaxation_model == "sbm":
+                    sbm_dipolar_r1_rates = ut.sbm_r1_dipolar(
+                        list(nuclei_coords.keys()),
+                        nuclei_coords,
+                        electron_coords,
+                        gamma_I_dict,
+                        omega_I_dict,
+                        omega_S,
+                        tau_c1,
+                        tau_c2,
+                        spin
+                    )
+                    sbm_contact_r1_rates = ut.sbm_r1_contact(
+                        list(nuclei_coords.keys()),
+                        A_iso_dict,
+                        omega_I_dict,
+                        omega_S,
+                        tau_E,
+                        spin
+                    )
+                    rates_r1 = {
+                        label: sbm_dipolar_r1_rates[label] + sbm_contact_r1_rates[label] for label in nuclei_coords}
+                elif config.relaxation_model == "curie":
+                    curie_r1_rates = ut.gueron_r1_curie(
+                        list(nuclei_coords.keys()),
+                        nuclei_coords,
+                        electron_coords,
+                        omega_I_dict,
+                        experiment.temperature,
+                        tau_R,
+                        spin
+                    )
+                    rates_r1 = {label: curie_r1_rates[label]
+                                for label in nuclei_coords}
+                elif config.relaxation_model in ["sbm curie", "curie sbm"]:
+                    sbm_dipolar_r1_rates = ut.sbm_r1_dipolar(
+                        list(nuclei_coords.keys()),
+                        nuclei_coords,
+                        electron_coords,
+                        gamma_I_dict,
+                        omega_I_dict,
+                        omega_S,
+                        tau_c1,
+                        tau_c2,
+                        spin
+                    )
+                    sbm_contact_r1_rates = ut.sbm_r1_contact(
+                        list(nuclei_coords.keys()),
+                        A_iso_dict,
+                        omega_I_dict,
+                        omega_S,
+                        tau_E,
+                        spin
+                    )
+                    curie_r1_rates = ut.gueron_r1_curie(
+                        list(nuclei_coords.keys()),
+                        nuclei_coords,
+                        electron_coords,
+                        omega_I_dict,
+                        experiment.temperature,
+                        tau_R,
+                        spin
+                    )
+                    rates_r1 = {
+                        label: sbm_dipolar_r1_rates[label] + sbm_contact_r1_rates[label] + curie_r1_rates[label] for label in nuclei_coords}
+                else:
+                    raise ValueError("Unknown relaxation model")
+
+                # Group rates by chemical label
+                r1_by_chem_label = defaultdict(list)
+                for nuc in base_molecule.nuclei:
+                    if nuc.label in rates_r1:
+                        r1_by_chem_label[nuc.chem_label].append(
+                            rates_r1[nuc.label])
+
+                # Calculate average R1 rates for each chemical label
+                avg_r1_by_chem_label = {chem_label: np.mean(
+                    rate_list) for chem_label, rate_list in r1_by_chem_label.items()}
+
+                # Return predicted R1 rates for the indices in chem_labels
+                indices = np.round(chem_label_indices).astype(int)
+                return np.array([avg_r1_by_chem_label.get(chem_labels[i], np.nan) for i in indices])
+
+            print("xdata:", xdata)
+            print("exp_r1:", exp_r1)
+            print("initial_guess:", initial_guess)
+            print("chem_labels:", chem_labels)
+
+        # --- Run the fit ---
+            if tau_E_bounds:
+                popt, pcov = curve_fit(
+                    r1_model,
+                    xdata,
+                    exp_r1,
+                    p0=initial_guess,
+                    bounds=tau_E_bounds
+                )
+            elif tau_E_bounds is None:
+                popt, pcov = curve_fit(
+                    r1_model,
+                    xdata,
+                    exp_r1,
+                    p0=initial_guess
+                )
+
+            tau_E_fit = popt[0]
+            theory_r1 = r1_model(xdata, tau_E_fit)
+            if tau_E_fit <= 0:
+                ut.red_exit(
+                    f"Error: Fitted tau_E is negative: {tau_E_fit:.3e} s.", "black_yellowbg")
+            else:
+                ut.cprint(f"Fitted tau_E: {tau_E_fit:.3e} s", "cyan")
+
+        elif fix_param == "tau_e":
+            tau_E = float(tau_E_guess)
+            initial_guess = [float(tau_R_guess)]
+
+            def r1_model(chem_label_indices, tau_R):
+                tau_c1 = 1 / ((1 / tau_R) + (1 / tau_E))
+                tau_c2 = tau_c1
+
+                # Calculate relaxation rates for current tau_R, tau_E
+                if config.relaxation_model == "sbm":
+                    sbm_dipolar_r1_rates = ut.sbm_r1_dipolar(
+                        list(nuclei_coords.keys()),
+                        nuclei_coords,
+                        electron_coords,
+                        gamma_I_dict,
+                        omega_I_dict,
+                        omega_S,
+                        tau_c1,
+                        tau_c2,
+                        spin
+                    )
+                    sbm_contact_r1_rates = ut.sbm_r1_contact(
+                        list(nuclei_coords.keys()),
+                        A_iso_dict,
+                        omega_I_dict,
+                        omega_S,
+                        tau_E,
+                        spin
+                    )
+                    rates_r1 = {
+                        label: sbm_dipolar_r1_rates[label] + sbm_contact_r1_rates[label] for label in nuclei_coords}
+                elif config.relaxation_model == "curie":
+                    curie_r1_rates = ut.gueron_r1_curie(
+                        list(nuclei_coords.keys()),
+                        nuclei_coords,
+                        electron_coords,
+                        omega_I_dict,
+                        experiment.temperature,
+                        tau_R,
+                        spin
+                    )
+                    rates_r1 = {label: curie_r1_rates[label]
+                                for label in nuclei_coords}
+                elif config.relaxation_model in ["sbm curie", "curie sbm"]:
+                    sbm_dipolar_r1_rates = ut.sbm_r1_dipolar(
+                        list(nuclei_coords.keys()),
+                        nuclei_coords,
+                        electron_coords,
+                        gamma_I_dict,
+                        omega_I_dict,
+                        omega_S,
+                        tau_c1,
+                        tau_c2,
+                        spin
+                    )
+                    sbm_contact_r1_rates = ut.sbm_r1_contact(
+                        list(nuclei_coords.keys()),
+                        A_iso_dict,
+                        omega_I_dict,
+                        omega_S,
+                        tau_E,
+                        spin
+                    )
+                    curie_r1_rates = ut.gueron_r1_curie(
+                        list(nuclei_coords.keys()),
+                        nuclei_coords,
+                        electron_coords,
+                        omega_I_dict,
+                        experiment.temperature,
+                        tau_R,
+                        spin
+                    )
+                    rates_r1 = {
+                        label: sbm_dipolar_r1_rates[label] + sbm_contact_r1_rates[label] + curie_r1_rates[label] for label in nuclei_coords}
+                else:
+                    raise ValueError("Unknown relaxation model")
+
+                # Group rates by chemical label
+                r1_by_chem_label = defaultdict(list)
+                for nuc in base_molecule.nuclei:
+                    if nuc.label in rates_r1:
+                        r1_by_chem_label[nuc.chem_label].append(
+                            rates_r1[nuc.label])
+
+                # Calculate average R1 rates for each chemical label
+                avg_r1_by_chem_label = {chem_label: np.mean(
+                    rate_list) for chem_label, rate_list in r1_by_chem_label.items()}
+
+                # Return predicted R1 rates for the indices in chem_labels
+                indices = np.round(chem_label_indices).astype(int)
+                return np.array([avg_r1_by_chem_label.get(chem_labels[i], np.nan) for i in indices])
+
+            print("xdata:", xdata)
+            print("exp_r1:", exp_r1)
+            print("initial_guess:", initial_guess)
+            print("chem_labels:", chem_labels)
+
+        # --- Run the fit ---
+            if tau_R_bounds:
+                popt, pcov = curve_fit(
+                    r1_model,
+                    xdata,
+                    exp_r1,
+                    p0=initial_guess,
+                    bounds=tau_R_bounds
+                )
+            elif tau_R_bounds is None:
+                popt, pcov = curve_fit(
+                    r1_model,
+                    xdata,
+                    exp_r1,
+                    p0=initial_guess
+                )
+
+            tau_R_fit = popt[0]
+            theory_r1 = r1_model(xdata, tau_R_fit)
+            if tau_R_fit <= 0:
+                ut.red_exit(
+                    f"Error: Fitted tau_R is negative: {tau_R_fit:.3e} s.", "black_yellowbg")
+            else:
+                ut.cprint(f"Fitted tau_R: {tau_R_fit:.3e} s", "cyan")
+
+        elif not fix_param or fix_param in ['none', '']:
+            # Fit both tau_R and tau_E
+            initial_guess = [float(tau_R_guess), float(tau_E_guess)]
+            bounds = None
+            if tau_R_bounds and tau_E_bounds:
+                bounds = ([tau_R_bounds[0], tau_E_bounds[0]],
+                          [tau_R_bounds[1], tau_E_bounds[1]])
+
+            def r1_model(chem_label_indices, tau_R, tau_E):
+                tau_c1 = 1 / ((1 / tau_R) + (1 / tau_E))
+                tau_c2 = tau_c1
+
+                if config.relaxation_model == "sbm":
+                    sbm_dipolar_r1_rates = ut.sbm_r1_dipolar(
+                        list(nuclei_coords.keys()),
+                        nuclei_coords,
+                        electron_coords,
+                        gamma_I_dict,
+                        omega_I_dict,
+                        omega_S,
+                        tau_c1,
+                        tau_c2,
+                        spin
+                    )
+                    sbm_contact_r1_rates = ut.sbm_r1_contact(
+                        list(nuclei_coords.keys()),
+                        A_iso_dict,
+                        omega_I_dict,
+                        omega_S,
+                        tau_E,
+                        spin
+                    )
+                    rates_r1 = {
+                        label: sbm_dipolar_r1_rates[label] + sbm_contact_r1_rates[label] for label in nuclei_coords}
+                elif config.relaxation_model == "curie":
+                    curie_r1_rates = ut.gueron_r1_curie(
+                        list(nuclei_coords.keys()),
+                        nuclei_coords,
+                        electron_coords,
+                        omega_I_dict,
+                        experiment.temperature,
+                        tau_R,
+                        spin
+                    )
+                    rates_r1 = {label: curie_r1_rates[label]
+                                for label in nuclei_coords}
+                elif config.relaxation_model in ["sbm curie", "curie sbm"]:
+                    sbm_dipolar_r1_rates = ut.sbm_r1_dipolar(
+                        list(nuclei_coords.keys()),
+                        nuclei_coords,
+                        electron_coords,
+                        gamma_I_dict,
+                        omega_I_dict,
+                        omega_S,
+                        tau_c1,
+                        tau_c2,
+                        spin
+                    )
+                    sbm_contact_r1_rates = ut.sbm_r1_contact(
+                        list(nuclei_coords.keys()),
+                        A_iso_dict,
+                        omega_I_dict,
+                        omega_S,
+                        tau_E,
+                        spin
+                    )
+                    curie_r1_rates = ut.gueron_r1_curie(
+                        list(nuclei_coords.keys()),
+                        nuclei_coords,
+                        electron_coords,
+                        omega_I_dict,
+                        experiment.temperature,
+                        tau_R,
+                        spin
+                    )
+                    rates_r1 = {
+                        label: sbm_dipolar_r1_rates[label] + sbm_contact_r1_rates[label] + curie_r1_rates[label] for label in nuclei_coords}
+                else:
+                    raise ValueError("Unknown relaxation model")
+
+                # Group rates by chemical label
+                r1_by_chem_label = defaultdict(list)
+                for nuc in base_molecule.nuclei:
+                    if nuc.label in rates_r1:
+                        r1_by_chem_label[nuc.chem_label].append(
+                            rates_r1[nuc.label])
+
+                # Calculate average R1 rates for each chemical label
+                avg_r1_by_chem_label = {chem_label: np.mean(
+                    rate_list) for chem_label, rate_list in r1_by_chem_label.items()}
+
+                # Return predicted R1 rates for the indices in chem_labels
+                indices = np.round(chem_label_indices).astype(int)
+                return np.array([avg_r1_by_chem_label.get(chem_labels[i], np.nan) for i in indices])
+
+            print("xdata:", xdata)
+            print("exp_r1:", exp_r1)
+            print("initial_guess:", initial_guess)
+            print("chem_labels:", chem_labels)
+
+        # --- Run the fit ---
+            if bounds:
+                popt, pcov = curve_fit(
+                    r1_model,
+                    xdata,
+                    exp_r1,
+                    p0=initial_guess,
+                    bounds=bounds
+                )
+            elif bounds is None:
+                popt, pcov = curve_fit(
+                    r1_model,
+                    xdata,
+                    exp_r1,
+                    p0=initial_guess
+                )
+
+            tau_R_fit, tau_E_fit = popt
+            theory_r1 = r1_model(xdata, tau_R_fit, tau_E_fit)
+            if tau_R_fit <= 0 and tau_E_fit > 0:
+                ut.red_exit(
+                    f"Error: tau_R is negative: {tau_R_fit:.3e} s.", "black_yellowbg")
+            elif tau_E_fit <= 0 and tau_R_fit > 0:
+                ut.red_exit(
+                    f"Error: tau_E is negative: {tau_E_fit:.3e} s.", "black_yellowbg")
+            elif tau_R_fit <= 0 and tau_E_fit <= 0:
+                ut.red_exit(
+                    f"Error: Both tau_R and tau_E are negative: tau_R = {tau_R_fit:.3e} s, tau_E = {tau_E_fit:.3e} s.", "black_yellowbg")
+            else:
+                ut.cprint(f"Fitted tau_R: {tau_R_fit:.3e} s", "cyan")
+                ut.cprint(f"Fitted tau_E: {tau_E_fit:.3e} s", "cyan")
+
+        else:
+            ut.red_exit(
+                "Error: correlation times must be 'tau_r' or 'tau_e'.")
+
+        rsquared = 1 - (np.sum((exp_r1 - theory_r1) ** 2) /
+                        np.sum((exp_r1 - np.mean(exp_r1)) ** 2))
+
+        print("Covariance matrix:\n", pcov)
+
+        # Plot experimental vs theoretical R1
+        plt.figure(figsize=(6, 6))
+        plt.scatter(theory_r1, exp_r1, marker='x', color='blue')
+
+        for x, y, label in zip(theory_r1, exp_r1, chem_labels):
+            plt.text(x, y, label, fontsize=12)
+
+        # Add x = y reference line
+        min_val = min(np.min(theory_r1), np.min(exp_r1))
+        max_val = max(np.max(theory_r1), np.max(exp_r1))
+        plt.plot([min_val, max_val], [min_val, max_val],
+                 'k--', lw=1, label='x = y')
+
+        plt.xlabel('Fitted $R_1$ (s$^{-1}$)', fontsize=14)
+        plt.ylabel('Experimental $R_1$ (s$^{-1}$)', fontsize=14)
+        plt.title('Experimental vs Fitted $R_1$', fontsize=16)
+
+        # Print R² above the plot
+        plt.text(
+            0.01, 0.96, f"$r^2$ = {rsquared:.3f}",
+            fontsize=12,
+            ha='left',
+            va='top',
+            transform=plt.gca().transAxes
+        )
+
+        # Print fitted value just below R², automated by fix_param
+        if fix_param.lower() == "tau_r":
+            plt.text(
+                0.01, 0.91, f"Fitted $\\tau_{{\\mathrm{{E}}}}$: {tau_E_fit:.3e} s",
+                fontsize=12,
+                ha='left',
+                va='top',
+                transform=plt.gca().transAxes
+            )
+        elif fix_param.lower() == "tau_e":
+            plt.text(
+                0.01, 0.91, f"Fitted $\\tau_{{\\mathrm{{R}}}}$: {tau_R_fit:.3e} s",
+                fontsize=12,
+                ha='left',
+                va='top',
+                transform=plt.gca().transAxes
+            )
+        elif not fix_param or fix_param in ['none', '']:
+            plt.text(
+                0.01, 0.91, f"Fitted $\\tau_{{\\mathrm{{R}}}}$: {tau_R_fit:.3e} s\nFitted $\\tau_{{\\mathrm{{E}}}}$: {tau_E_fit:.3e} s",  # noqa
+                fontsize=12,
+                ha='left',
+                va='top',
+                transform=plt.gca().transAxes
+            )
+
+        plt.tight_layout()
+        plt.savefig(os.path.join(
+            config.project_name, 'experimental_vs_fitted_R1.png'))
+        plt.show()
+
+        plt.figure(figsize=(8, 5))
+        # circles for experiment
+        plt.plot(chem_labels, exp_r1, 'o', label='Experimental R1')
+        # squares for theory
+        plt.plot(chem_labels, theory_r1, 's', label='Fitted Theory R1')
+        plt.plot(chem_labels, theory_r1, 'x', color='red',
+                 label='Theory X')  # X marker for theory
+
+        plt.xlabel('Chemical Label')
+        plt.ylabel('R1 (s$^{-1}$)')
+        plt.title('Experimental vs Fitted R1')
+        plt.legend()
+        plt.xticks(rotation=45)
+        plt.tight_layout()
+        plt.savefig(os.path.join(config.project_name, 'r1_fit_comparison.png'))
+        plt.show()
+
+    else:
+        ut.red_exit(
+            "fit_corr_time and relaxation_model must be specified in the input file.")
 
 
 def plot_shift_tdep_func(uargs):
@@ -1847,6 +2448,18 @@ def read_args(arg_list=None):
         help=(
             'simpnmr experiment.csv files'
         )
+    )
+
+    fit_corr_time = subparsers.add_parser(
+        'fit_corr_time',
+        description='Fit correlation times using experimental R1 data'
+    )
+    fit_corr_time.set_defaults(func=fit_corr_time_func)
+
+    fit_corr_time.add_argument(
+        'input_file',
+        type=str,
+        help='Input file for fit_corr_time -- see documentation for format'
     )
 
     # Read sub-parser and parse arguments

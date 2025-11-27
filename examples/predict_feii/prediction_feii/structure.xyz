@@ -1,9 +1,5 @@
 84
-<<<<<<< HEAD
-This file was generated with SimpNMR v0.0.0 at 16:08:13 21-10-2025. Structure from /Users/ernestborysenko/git/simpnmr/examples/predict_feii/bp86_single_point_b3lyp_geometry.log
-=======
-This file was generated with SimpNMR v0.0.0 at 13:04:19 02-11-2025. Structure from /Users/jamiewhipham/Desktop/SIMPNMR/simple_pnmr/examples/predict_feii/bp86_single_point_b3lyp_geometry.log
->>>>>>> 372ba09 (feat: implement additional relaxation mechanism [WIP])
+This file was generated with SimpNMR v0.0.1 at 14:20:06 27-11-2025. Structure from /Users/jamiewhipham/Desktop/SIMPNMR/simpnmr/examples/predict_feii/bp86_single_point_b3lyp_geometry.log
 Fe1         0.0000000       0.0000000       0.6486500
 Cl1        -1.8205190       0.0050630      -0.8931030
 N1          0.0193740       1.5069990       2.0283660

@@ -8,6 +8,7 @@ import copy
 
 from . import main
 from . import utils as ut
+from . import inputs as inps
 
 
 class SusceptibilityModel(ABC):
@@ -319,9 +320,9 @@ class SusceptibilityModel(ABC):
         raise NotImplementedError
 
     def residuals(self, parameters: dict[str, float],
-                nuclei: list[main.Nucleus],
-                al_to_para_shift: dict[str, float],
-                average_labels: list[list[str]] = []) -> list[float]:
+                  nuclei: list[main.Nucleus],
+                  al_to_para_shift: dict[str, float],
+                  average_labels: list[list[str]] = []) -> list[float]:
         '''
         Calculates difference between true susceptibility and trial
         susceptibility calculated using model
@@ -356,11 +357,13 @@ class SusceptibilityModel(ABC):
                 group_size = len(group)
                 for lab in group:
                     trial_shifts[lab] = group_average
-                    weights[lab] = np.sqrt(group_size)  # residuals will be divided by this
- 
+                    # residuals will be divided by this
+                    weights[lab] = np.sqrt(group_size)
+
         # Compute residuals using uniform weighting for single signals and scaled weights for groups
         residuals = [
-            (exp_shift - trial_shifts[atom_label]) / weights.get(atom_label, 1.0)
+            (exp_shift - trial_shifts[atom_label]) /
+            weights.get(atom_label, 1.0)
             for atom_label, exp_shift in al_to_para_shift.items()
         ]
 
@@ -371,7 +374,7 @@ class SusceptibilityModel(ABC):
                                  fix_vars: dict[str, float],
                                  nuclei: list[main.Nucleus],
                                  al_to_para_shift: dict[str, float],
-                                 average_labels: list[list[str]] = []) -> list[float]: # noqa
+                                 average_labels: list[list[str]] = []) -> list[float]:  # noqa
         '''
         Wrapper for `residuals` method, takes new values from fitting routine
         which provides list[float], to construct new fit_vals dict, then
@@ -478,7 +481,7 @@ class SusceptibilityModel(ABC):
         if curr_fit.status == 0:
             if verbose:
                 ut.cprint(
-                    f'\n Fit at {self.temperature} K failed - Too many iterations', # noqa
+                    f'\n Fit at {self.temperature} K failed - Too many iterations',  # noqa
                     'black_yellowbg'
                 )
             self.final_var_values = copy.deepcopy(curr_fit_dict)
@@ -518,7 +521,7 @@ class SusceptibilityModel(ABC):
             ]
             ss_tot = np.sum((ecs - np.mean(ecs))**2)
             self.r2 = 1 - (ss_res / ss_tot)
-            self.adj_r2 = 1 - (1 - self.r2) * (len(ecs) - 1) / (len(ecs) - len(self.fit_vars) - 1) # noqa
+            self.adj_r2 = 1 - (1 - self.r2) * (len(ecs) - 1) / (len(ecs) - len(self.fit_vars) - 1)  # noqa
 
         return
 
@@ -578,7 +581,7 @@ class LinearSusceptibilityModel(SusceptibilityModel):
         if curr_fit.status == 0:
             if verbose:
                 ut.cprint(
-                    f'\n Fit at {self.temperature} K failed - Too many iterations', # noqa
+                    f'\n Fit at {self.temperature} K failed - Too many iterations',  # noqa
                     'black_yellowbg'
                 )
             self.final_var_values = copy.deepcopy(curr_fit_dict)
@@ -622,7 +625,7 @@ class LinearSusceptibilityModel(SusceptibilityModel):
             ]
             ss_tot = np.sum((ecs - np.mean(ecs))**2)
             self.r2 = 1 - (ss_res / ss_tot)
-            self.adj_r2 = 1 - (1 - self.r2) * (len(ecs) - 1) / (len(ecs) - len(self.fit_vars) - 1) # noqa
+            self.adj_r2 = 1 - (1 - self.r2) * (len(ecs) - 1) / (len(ecs) - len(self.fit_vars) - 1)  # noqa
 
         return
 
@@ -771,13 +774,14 @@ class SplitFitter(SusceptibilityModel):
                     params['dxy'], params['dyy'], params['dyz']
                 ],
                 [
-                    params['dxz'], params['dyz'], -params['dxx'] - params['dyy'] # noqa
+                    params['dxz'], params['dyz'], -params['dxx'] - params['dyy']  # noqa
                 ]
             ]
         )
         tensor += np.eye(3) * params['iso']
 
         return tensor
+
 
 class IsoAxRhoFitter(SusceptibilityModel):
 
@@ -798,7 +802,7 @@ class IsoAxRhoFitter(SusceptibilityModel):
     UNITS_MM = {
         'iso': r'Å$^3$',
         'ax': r'Å$^3$',
-        'rho_over_ax': '', # need to solve the problem with units
+        'rho_over_ax': '',  # need to solve the problem with units
     }
 
     BOUNDS = {
@@ -857,10 +861,12 @@ class IsoAxRhoFitter(SusceptibilityModel):
         tensor = np.array(
             [
                 [
-                    -params['ax']/3 + params['rho_over_ax'] * params['ax'], 0.0, 0.0
+                    -params['ax']/3 + params['rho_over_ax'] *
+                    params['ax'], 0.0, 0.0
                 ],
                 [
-                    0.0, -params['ax']/3 - params['rho_over_ax'] * params['ax'], 0.0
+                    0.0, -params['ax']/3 -
+                    params['rho_over_ax'] * params['ax'], 0.0
                 ],
                 [
                     0.0, 0.0, 2/3 * params['ax']
@@ -870,6 +876,7 @@ class IsoAxRhoFitter(SusceptibilityModel):
         tensor += np.eye(3) * params['iso']
 
         return tensor
+
 
 class EigenFitter(SusceptibilityModel):
 
@@ -1017,7 +1024,7 @@ class IsoEigenFitter(SusceptibilityModel):
         dyy = parameters['dyy']
         iso = parameters['iso']
         shifts = {
-            nuc.label: nuc.A.iso * iso + nuc.shift.dia + 1. / 3. * dxx * (nuc.A.tensor[0, 0] - nuc.A.tensor[2, 2]) + 1. / 3. * dyy * (nuc.A.tensor[1, 1] - nuc.A.tensor[2, 2]) # noqa
+            nuc.label: nuc.A.iso * iso + nuc.shift.dia + 1. / 3. * dxx * (nuc.A.tensor[0, 0] - nuc.A.tensor[2, 2]) + 1. / 3. * dyy * (nuc.A.tensor[1, 1] - nuc.A.tensor[2, 2])  # noqa
             for nuc in nuclei
         }
 
@@ -1051,6 +1058,7 @@ class IsoEigenFitter(SusceptibilityModel):
         ])
 
         return tensor
+
 
 class FullSuscFitter(SusceptibilityModel):
 

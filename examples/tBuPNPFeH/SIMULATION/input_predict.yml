@@ -1,0 +1,30 @@
+project:
+  name: PREDICT 
+
+hyperfine:
+  method: dft 
+  file: ../DATA/Q_CHEM/FeH_opt_Cs_HFC_TPSSH_def2TZVP.out
+
+chem_labels:
+  file: ../DATA/LABELS/atom_labels.csv
+
+nuclei:
+  include: [C]
+
+diamagnetic:
+ method: csv
+ file: ../DATA/DIA/Fe_H_dia.csv
+
+susceptibility:
+ format: orca_cas
+ file: /Users/jamiewhipham/Dropbox/FeH_fits/DATA/CHI/FeH_opt_chi_orca6.out
+ temperatures: [297.00]
+
+relaxation:
+  model: sbm curie
+  electron_coords: [0.00000, 0.000000, 0.0]
+  magnetic_field_tesla: 4.7
+  temperature: 297.00
+  T1e: 6.917e-12
+  T2e: 6.917e-12
+  tR: 5.8e-10

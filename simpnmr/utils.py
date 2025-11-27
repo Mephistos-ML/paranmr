@@ -10,6 +10,7 @@ import sys
 from extto.core import find_lines
 import math
 import re
+from collections import defaultdict
 
 from . import string_tools as st
 from . import readers as rdrs
@@ -373,7 +374,7 @@ def read_exp_metadata(file_name: str) -> tuple[float, float, str]:
     Reads metadata from experiment files. Metadata is stored as single lines\n
     beginning with comment character # and formatted as\n
     NAME=VALUE
-    where NAME is one of temperature, larmor, or isotope
+    where NAME is one of temperature, magnetic_field, or isotope
 
     Parameters
     ----------
@@ -385,13 +386,13 @@ def read_exp_metadata(file_name: str) -> tuple[float, float, str]:
     float
         Temperature in Kelvin
     float
-        Larmor frequency for free nucleus in this spectrometer in MHz
+        Magnetic field in Tesla
     str
         Isotope symbol formatted as nucleon number followed by atomic symbol\n
         e.g 1H or 13C
     '''
 
-    temperature, larmor, isotope = None, None, None
+    temperature, magnetic_field, isotope = None, None, None
 
     temperature = float(find_lines(
         file_name,
@@ -399,9 +400,9 @@ def read_exp_metadata(file_name: str) -> tuple[float, float, str]:
         re.IGNORECASE
     )[0])
 
-    larmor = float(find_lines(
+    magnetic_field = float(find_lines(
         file_name,
-        r'# *larmor (\d*\.*\d*)',
+        r'# *magnetic_field (\d*\.*\d*)',
         re.IGNORECASE
     )[0])
 
@@ -411,7 +412,7 @@ def read_exp_metadata(file_name: str) -> tuple[float, float, str]:
         re.IGNORECASE
     )[0]
 
-    return temperature, larmor, isotope
+    return temperature, magnetic_field, isotope
 
 
 def find_index_of_nearest(array, value):
