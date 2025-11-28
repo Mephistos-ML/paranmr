@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v1.1.1 (2025-11-28)
+
+### Bug Fixes
+
+- **version**: Update SimpNMR version to 1.1.1
+  ([`c6bef83`](https://gitlab.com/suturina-group/simpnmr/-/commit/c6bef83ce0886c9d614c494c43a8e710f25bf138))
+
+
 ## v1.1.0 (2025-11-28)
 
 ### Bug Fixes
