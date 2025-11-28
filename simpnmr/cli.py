@@ -1439,14 +1439,8 @@ def fit_corr_time_func(uargs):
     else:
         ut.red_exit("Error: Use syntax 'tau_C: [fit/fix, guess, [upper-bound, lower-bound]]', with bounds optional (tau_C refers to tau_R or tau_E).")  # noqa
 
-    # tau_R_fixed = getattr(config, "fit_corr_time_tau_R", None)
-    # tau_E_fixed = getattr(config, "fit_corr_time_tau_E", None)
-
     if getattr(config, "fit_corr_time_tau_R", None) is not None and getattr(config, "relaxation_model", None) is not None:
-        # initial_guess = [float(config.fit_corr_time_tau_R),
-        #                 float(config.fit_corr_time_tau_E)]
 
-        # Load experimental data
         experiments = main.Experiment.from_file(config.experiment_files)
 
         # Filter signals to only those with valid R1 values
