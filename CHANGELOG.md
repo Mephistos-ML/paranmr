@@ -2,6 +2,23 @@
 
 <!-- version list -->
 
+## v1.1.0 (2025-11-28)
+
+### Bug Fixes
+
+- Update plots in visualise.py (plot_isoaxrho), improve chi_plot.py readability, and fix bug in
+  readers.py (read_orca_spin) for reading XYZ files
+  ([`9b35e85`](https://gitlab.com/suturina-group/simpnmr/-/commit/9b35e8555bc73785071844d66098490c5d4a5ef8))
+
+### Features
+
+- Add chi-frame geometry plotting and support single-point CSV data in chi_plot.py
+  ([`c3580c4`](https://gitlab.com/suturina-group/simpnmr/-/commit/c3580c437e8a08262097715e27dbfee77f55798d))
+
+- **core**: Improve HFC and chi inputs and fix CI pipeline
+  ([`4a1d285`](https://gitlab.com/suturina-group/simpnmr/-/commit/4a1d285b31a6c10888b56eb865bfbc4e4f467d4b))
+
+
 ## v1.0.8 (2025-11-19)
 
 ### Bug Fixes
