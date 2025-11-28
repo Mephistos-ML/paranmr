@@ -453,13 +453,15 @@ def isotope_format(isotope_string: str) -> str:
 def get_spin_only_susceptibility(uargs, temperature):
     config = inps.PredictConfig.from_file(uargs.input_file)
 
-    S = rdrs.read_orca_spin(config.susceptibility_file,
-                            section=config.susceptibility_format.split('orca_')[1])
+    if config.spin_S is not None:
+        spin = config.spin_S
+    else:
+        spin = rdrs.QCSpin.guess_from_file(config.hyperfine_file).S
+
     T = temperature
 
     # Calculate spin-only magnetic susceptibility
-    chi_only_iso = (MU0 * MUB**2 * GE**2 * S * (S + 1)) / \
-        (3 * KB * T) * (10 ** 32)  # Si [10^-32 m^3]
+    chi_only_iso = (MU0 * MUB**2 * GE**2 * spin * (spin + 1)) / (3 * KB * T) * (10 ** 32)  # Si [10^-32 m^3]
 
     # Convert from Si to A^3
     chi_only_iso = chi_only_iso * 10**-2
@@ -492,7 +494,6 @@ def get_true_iso_susceptibility(uargs, temperature):
     if T in chi_tensors:
         chi_tensor = chi_tensors[T] / T
 
-    # APPROACH 2
     chi_true_iso = GE / 3.0 * np.trace(chi_tensor * np.linalg.inv(g_tensor.T)) # cm3 mol-1
 
     # Convert cm^3 mol^-1 to A^3

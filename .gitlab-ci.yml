@@ -31,12 +31,10 @@ pages:
     paths:
     - public
     expire_in: 1 day
-  # rules:
-  #   - if: '$force == "docs" && $CI_COMMIT_REF_NAME == "main"'
-  #     when:
-  #       manual
-  #   - when:
-  #       never
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+      when: on_success
+    - when: never
 
 release:
   stage: deploy
@@ -58,4 +56,8 @@ release:
         echo "No distributions to upload, skipping twine."
       fi
   rules:
+    - if: '$CI_COMMIT_MESSAGE =~ /^chore\(release\):/'
+      when: never
     - if: '$CI_COMMIT_BRANCH == "main"'
+      when: on_success
+    - when: never

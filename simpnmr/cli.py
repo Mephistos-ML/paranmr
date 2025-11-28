@@ -995,8 +995,9 @@ def predict_func(uargs):
         base_molecule.average_hyperfine(config.hyperfine_average)
 
     # Rotate hyperfine tensors from DFT frame into chi eigenframe
-    rot_mat, trans_mat = tfm.get_rotation_and_transformation()
-    base_molecule.rotate_hyperfines(rot_mat)
+    if 'orca' in config.susceptibility_format:
+        rot_mat, trans_mat = tfm.get_rotation_and_transformation()
+        base_molecule.rotate_hyperfines(rot_mat)
 
     # Transform HFC coordinates into the chi eigenframe and save
     if 'orca' in config.susceptibility_format:
@@ -1007,6 +1008,7 @@ def predict_func(uargs):
         suscs = main.Susceptibility.from_orca(
             config.susceptibility_file,
             section=config.susceptibility_format.split('orca_')[1]
+            # section = 'auto'
         )
     elif 'csv' in config.susceptibility_format:
         suscs = main.Susceptibility.from_csv(
@@ -1070,9 +1072,11 @@ def predict_func(uargs):
             tau_e2 = config.relaxation_T2e
             tau_R = config.relaxation_tR
 
-            # multiplicity = rdrs.read_gaussian_log_spin(config.hyperfine_file)
-            multiplicity = 5
-            spin = (multiplicity - 1) / 2
+            if config.spin_S is not None:
+                spin = config.spin_S
+            else:
+                spin = rdrs.QCSpin.guess_from_file(config.hyperfine_file).S
+
             if config.relaxation_model == "sbm":
                 # Calculate SBM dipolar rates
                 sbm_dipolar_r2_rates = ut.sbm_r2_dipolar(
@@ -1225,15 +1229,32 @@ def predict_func(uargs):
     if not config.diamagnetic_file:
         _terms.pop(_terms.index('d'))
 
+    # Try to read the spin from config (YAML)
+    spin = config.spin_S
+
+    # If the spin is not provided, try to infer from QC file safely
+    if spin is None:
+        ext = os.path.splitext(config.hyperfine_file)[1].lower()
+        try:
+            if config.hyperfine_method == 'dft' or ext in ('.log', '.out'):
+                spin_obj = rdrs.QCSpin.guess_from_file(config.hyperfine_file)
+                spin = spin_obj.S
+        except SystemExit:
+            spin = None
+
     # Update susceptibility tensor of Molecule using model
     for molecule, susc, experiment in zip(molecules, suscs, experiments):
         molecule.susc = susc
-        
-        # Set [2.0023/3 * Tr(chi/g)] or spin-only value of the magnetic susceptibility
-        if config.susceptibility_format in ('orca_cas', 'orca_nev'):
+
+        if 'orca' in config.susceptibility_format:
             susc.iso = ut.get_true_iso_susceptibility(uargs, susc.temperature)
-        elif config.susceptibility_format in ('csv'):
+        elif spin is not None:
             susc.iso = ut.get_spin_only_susceptibility(uargs, susc.temperature)
+        else:
+            ut.cprint(
+                "\n Spin not specified and could not be inferred — using χ_iso from susceptibility file (no spin-only correction)\n",
+                "cyan"
+            )
 
         # Calculate shifts using new susceptibility tensor and rotated hyperfines
         molecule.calculate_shifts()

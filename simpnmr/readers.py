@@ -471,6 +471,85 @@ class Gaussian09LogCS(QCCS):
 
         return cls(file_name, labels, coords, cs_iso, cs_aniso, cs_units)
 
+class QCSpin(ABC):
+    """
+    Abstract Base Class for Quantum Chemistry Spin Data classes.
+    """
+
+    def __init__(self, file_name: str, S: float, multiplicity: int):
+        self.file_name = file_name
+        self.S = S
+        self.multiplicity = multiplicity
+
+    @staticmethod
+    def guess_from_file(file_name: str) -> 'QCSpin':
+        SUPPORTED_SPIN_OBJS: list[type["QCSpin"]] = [
+            GaussianLogSpin,
+            OrcaSpin
+        ]
+
+        data = None
+        with open(file_name, 'r') as f:
+            for line in f:
+                for obj in SUPPORTED_SPIN_OBJS:
+                    if obj.COMMON_STR in line:
+                        data = obj.read(file_name)
+                        break
+                if data is not None:
+                    break
+        if data is None:
+            sys.exit(f"Cannot find spin data in {file_name}")
+
+        return data
+
+    FILETYPE: str
+    COMMON_STR: str
+    file_name: str
+    S: float
+    multiplicity: int | None
+
+    @classmethod
+    def read(cls, file_name: str) -> "QCSpin":
+        instance = cls._read(file_name)
+        for attribute in ["FILETYPE", "COMMON_STR", "file_name", "S", "multiplicity"]:
+            try:
+                getattr(instance, attribute)
+            except AttributeError:
+                sys.exit(f"Attribute {attribute} is missing from {cls}")
+        return instance
+
+    @classmethod
+    @abstractmethod
+    def _read(cls, file_name: str) -> "QCSpin":
+        raise NotImplementedError
+
+class GaussianLogSpin(QCSpin):
+    """
+    Spin object for Gaussian LOG files
+    """
+    FILETYPE = "Gaussian LOG"
+    COMMON_STR = "Gaussian(R)"
+
+    @classmethod
+    def _read(cls, file_name: str) -> "GaussianLogSpin":
+        multiplicity = read_gaussian_log_spin(file_name)
+        S = (multiplicity - 1) / 2.0
+        return cls(file_name, S, multiplicity)
+
+
+class OrcaSpin(QCSpin):
+    """
+    Spin object for Orca OUTPUT files
+    """
+    FILETYPE = "Orca OUTPUT"
+    COMMON_STR = "* O   R   C   A *"
+
+    @classmethod
+    def _read(cls, file_name: str) -> "OrcaSpin":
+        S = read_orca_spin(file_name)
+        multiplicity = int(2 * S + 1)
+        return cls(file_name, S, multiplicity)
+
 
 class QCA(ABC):
     '''
@@ -795,7 +874,7 @@ def read_gaussian_log_xyz(file_name: str) -> tuple[
     return labels, coords
 
 
-def read_gaussian_log_spin(file_name: str) -> tuple[npt.NDArray[np.str_], npt.NDArray]: # noqa
+def read_gaussian_log_spin(file_name: str) -> int: # noqa
     '''
     Read Gaussian .log file to extract spin multiplicity (2S+1)
 
@@ -1466,6 +1545,24 @@ def read_gaussian16_log_cs(file_name):
     return cs_iso, cs_aniso
 
 
+# def read_orca_susceptibility_method(file_name:str, section:str)->str:
+#     '''
+#     TODO:
+#     Write description here
+
+#     '''
+#     if section == 'auto':
+#         with open(file_name, 'r') as f:
+#             for line in reversed(f):
+#                 if f'QDPT WITH' in line:
+#                     susc_method = split
+#                     section = susc_method
+#     else:
+#         continue
+
+#     return section
+
+
 def read_orca_susceptibility(file_name: str, section: str) -> dict[float, np.ndarray]:
     '''
     Extracts temperature-dependent molar magnetic susceptibility tensors from an ORCA output file.
@@ -1508,23 +1605,6 @@ def read_orca_susceptibility(file_name: str, section: str) -> dict[float, np.nda
                     line = next(f)
 
     return susceptibilities
-
-def read_orca_spin(file_name: str) -> float:
-    '''
-    Reads the spin quantum number S from the specified QDPT section in an ORCA output file.
-
-    Parameters
-    ----------
-    file_name : str
-        Name of the ORCA output file.
-    section : str
-        Label of the QDPT section to read (for example, 'casscf' or 'nevpt2').
-
-    Returns
-    -------
-    float
-        Spin quantum number S, derived from the spin multiplicity (2S+1).
-    '''
 
 def read_orca_spin(file_name: str) -> float:
     """
