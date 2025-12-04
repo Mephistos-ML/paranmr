@@ -1,5 +1,5 @@
 #temperature 238.15
-#larmor 400
+#magnetic_field 9.4
 #isotope 1H
 assignment,shift,width,area
 tpy1, 186.118,1,1

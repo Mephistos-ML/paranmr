@@ -1750,7 +1750,7 @@ def plot_raw_deconv_pred(molecule: main.Molecule, experiment: main.Experiment,
     )
     _total = np.zeros(np.shape(ppm_grid))
     for signal in experiment.signals:
-        _width = signal.width * 1E-6 * experiment.larmor
+        _width = signal.width * 1E-6 * ut.NUCLEAR_GAMMAS[signal] * experiment.magnetic_field
         _total += signal.l_to_g * lorentzian(
             ppm_grid,
             _width,
@@ -1774,7 +1774,7 @@ def plot_raw_deconv_pred(molecule: main.Molecule, experiment: main.Experiment,
     _total = np.zeros(np.shape(ppm_grid))
     for nucleus in molecule.nuclei:
         if nucleus.isotope == experiment.isotope:
-            _width = 100 * 1E-6 * experiment.larmor
+            _width = 100 * 1E-6 * ut.NUCLEAR_GAMMAS[nucleus.isotope] * experiment.magnetic_field
             _total += lorentzian(
                 ppm_grid,
                 _width,

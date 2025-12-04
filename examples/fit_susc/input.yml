@@ -1,4 +1,3 @@
----
 project:
   name: proton
 
@@ -37,4 +36,3 @@ assignment:
     - [tphz2, tpy2]
     - [tpy6, tpy3, tphz3]
   # method: fixed
-...
