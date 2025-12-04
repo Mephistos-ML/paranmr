@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v1.2.2 (2025-12-04)
+
+### Bug Fixes
+
+- Enable lanthanide support, Correct metadata handling, Add CSV export for fit_susc_corr_time
+  ([`d948a49`](https://gitlab.com/suturina-group/simpnmr/-/commit/d948a4906604162ebc9f410d042a0bcca587f936))
+
+
 ## v1.2.1 (2025-12-04)
 
 
