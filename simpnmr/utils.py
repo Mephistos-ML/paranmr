@@ -11,7 +11,7 @@ from extto.core import find_lines
 import math
 import re
 from scipy import constants
-
+from collections import defaultdict
 from . import string_tools as st
 from . import readers as rdrs
 from . import inputs as inps
@@ -374,7 +374,7 @@ def read_exp_metadata(file_name: str) -> tuple[float, float, str]:
     Reads metadata from experiment files. Metadata is stored as single lines\n
     beginning with comment character # and formatted as\n
     NAME=VALUE
-    where NAME is one of temperature, larmor, or isotope
+    where NAME is one of temperature, magnetic_field, or isotope
 
     Parameters
     ----------
@@ -386,13 +386,13 @@ def read_exp_metadata(file_name: str) -> tuple[float, float, str]:
     float
         Temperature in Kelvin
     float
-        Larmor frequency for free nucleus in this spectrometer in MHz
+        Magnetic field in Tesla
     str
         Isotope symbol formatted as nucleon number followed by atomic symbol\n
         e.g 1H or 13C
     '''
 
-    temperature, larmor, isotope = None, None, None
+    temperature, magnetic_field, isotope = None, None, None
 
     temperature = float(find_lines(
         file_name,
@@ -400,9 +400,9 @@ def read_exp_metadata(file_name: str) -> tuple[float, float, str]:
         re.IGNORECASE
     )[0])
 
-    larmor = float(find_lines(
+    magnetic_field = float(find_lines(
         file_name,
-        r'# *larmor (\d*\.*\d*)',
+        r'# *magnetic_field (\d*\.*\d*)',
         re.IGNORECASE
     )[0])
 
@@ -412,7 +412,7 @@ def read_exp_metadata(file_name: str) -> tuple[float, float, str]:
         re.IGNORECASE
     )[0]
 
-    return temperature, larmor, isotope
+    return temperature, magnetic_field, isotope
 
 
 def find_index_of_nearest(array, value):
@@ -538,16 +538,53 @@ def sbm_r1_dipolar(
     return rates
 
 
+def sbm_r1_dipolar(
+    nuclei_labels,
+    nuclei_coords,
+    electron_coords,
+    gamma_I_dict,
+    omega_I_dict,
+    omega_S,
+    tau_c1,
+    tau_c2,
+    spin
+):
+    def J(omega, tau):
+        return tau / (1 + (omega * tau) ** 2)
+
+    rates = {}
+    for label in nuclei_labels:
+        r = np.linalg.norm(nuclei_coords[label] - electron_coords) * 1e-10
+        gamma_I = gamma_I_dict[label]
+        omega_I = omega_I_dict[label]
+        prefactor = (
+            (1 / 10)
+            * (1 / r**6)
+            * (MU0 / (4 * np.pi))**2
+            * (gamma_I * GE * MUB)**2
+            * spin * (spin + 1)
+        )
+        spectral_density = (
+            3 * J(omega_I, tau_c1)
+            + 6 * J(omega_I + omega_S, tau_c2)
+            + J(omega_I - omega_S, tau_c2)
+        )
+        rate = prefactor * spectral_density
+        rates[label] = rate
+
+    return rates
+
+
 def sbm_r2_dipolar(
-        nuclei_labels,
-        nuclei_coords,
-        electron_coords,
-        gamma_I_dict,
-        omega_I_dict,
-        omega_S,
-        tau_c1,
-        tau_c2,
-        spin
+    nuclei_labels,
+    nuclei_coords,
+    electron_coords,
+    gamma_I_dict,
+    omega_I_dict,
+    omega_S,
+    tau_c1,
+    tau_c2,
+    spin
 ):
     def J(omega, tau):
         return tau / (1 + (omega * tau) ** 2)
@@ -607,13 +644,13 @@ def sbm_r1_contact(
 
 
 def sbm_r2_contact(
-        nuclei_labels,
-        Aiso_dict,
-        omega_I_dict,
-        omega_S,
-        tau_e1,
-        tau_e2,
-        spin
+    nuclei_labels,
+    Aiso_dict,
+    omega_I_dict,
+    omega_S,
+    tau_e1,
+    tau_e2,
+    spin
 ):
     def J(omega, tau):
         return tau / (1 + (omega * tau) ** 2)

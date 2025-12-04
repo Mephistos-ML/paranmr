@@ -1,0 +1,38 @@
+project:
+ name: C_H_SUSC_FIT_ALL
+
+hyperfine:
+ method: dft 
+ file: ../DATA/Q_CHEM/FeH_opt_Cs_HFC_B3LYP_EPRII.out 
+
+diamagnetic:
+ method: csv
+ file: ../DATA/DIA/Fe_H_dia.csv
+
+experiment:
+ files: [../DATA/EXPT/FeH_exp*.csv]
+
+chem_labels:
+ file: ../DATA/LABELS/atom_labels.csv
+
+nuclei:
+ include: [C,H]
+
+assignment:
+ method: fixed
+
+susc_fit:
+  type: isoaxrho
+  variables:
+    iso: [fit, 0.001]
+    ax: [fit, 0.001]
+    rho_over_ax: [fix, 0.00]
+susc_fit:
+ type: split
+ variables:
+  iso: [fit, 0.1]
+  dxx: [fit, 0.1]
+  dxy: [fix, 0.0]
+  dxz: [fit, 0.01]
+  dyy: [fit, 0.1]
+  dyz: [fix, 0.0]

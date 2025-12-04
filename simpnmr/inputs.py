@@ -83,9 +83,11 @@ class Config(ABC):
                 if subkeyword not in parsed[keyword]:
                     # Allow nuclei:include to be omitted if nuclei:include_groups is provided
                     if keyword == 'nuclei' and subkeyword == 'include':
-                        nuclei_block = parsed.get('nuclei', {}) if isinstance(parsed, dict) else {}
+                        nuclei_block = parsed.get(
+                            'nuclei', {}) if isinstance(parsed, dict) else {}
                         if isinstance(nuclei_block, dict):
-                            include_groups_val = nuclei_block.get('include_groups', [])
+                            include_groups_val = nuclei_block.get(
+                                'include_groups', [])
                             if include_groups_val not in (None, [], ''):
                                 continue
                     raise KeyError(
@@ -242,6 +244,7 @@ class FitSuscConfig(Config):
         self._resolve_nuclei_include_groups()
 
         pass
+
     @property
     def nuclei_include_groups(self) -> list | str:
         return self._nuclei_include_groups
@@ -255,6 +258,7 @@ class FitSuscConfig(Config):
             self._nuclei_include_groups = list(values)
         # Do not expand here because chem_labels_file may not yet be set; expansion happens in _resolve_nuclei_include_groups()
         return
+
     def _resolve_nuclei_include_groups(self):
         """Expand nuclei include groups (chem_labels) into atom labels using chem_labels_file.
         Merge the expanded atoms into self._nuclei_include. Remove duplicates preserving order.
@@ -683,6 +687,7 @@ class PredictConfig(FitSuscConfig):
         self._relaxation_model = ''
         self._relaxation_electron_coords = None
         self._relaxation_magnetic_field_tesla = None
+        self._relaxation_temperature = None
         self._relaxation_T1e = None
         self._relaxation_T2e = None
         self._relaxation_tR = None
@@ -726,7 +731,7 @@ class PredictConfig(FitSuscConfig):
         else:
             raise ValueError(f'Cannot set temperature to {value}')
         return None
-    
+
     @property
     def relaxation_model(self) -> str:
         return self._relaxation_model
@@ -738,7 +743,7 @@ class PredictConfig(FitSuscConfig):
         else:
             self._relaxation_model = value.lower()
         return None
-    
+
     @property
     def relaxation_electron_coords(self) -> list[float]:
         return self._relaxation_electron_coords
@@ -857,6 +862,202 @@ class PredictConfig(FitSuscConfig):
     @classmethod
     def from_file(cls, file_name: str) -> 'PredictConfig':
         cls: PredictConfig = super().from_file(file_name)
+        return cls
+
+
+class FitCorrTimeConfig(FitSuscConfig):
+
+    REQ_KEYWORDS = {
+        'hyperfine': [
+            'method',
+            'file'
+        ],
+        'nuclei': [
+            'include',
+        ],
+        'experiment': [
+            'files'
+        ],
+        'fit_corr_time': [
+            'tau_R',
+            'tau_E',
+        ],
+        'relaxation': [
+            'model',
+            'electron_coords',
+        ],
+        'project': [
+            'name'
+        ],
+        'chem_labels': [
+            'file'
+        ]
+    }
+
+    KEYWORDS = {
+        'hyperfine': [
+            'method',
+            'file',
+            'average',
+            'pdip_centre'],
+        'nuclei': [
+            'include'
+        ],
+        'experiment': [
+            'files'
+        ],
+        'fit_corr_time': [
+            'tau_R',
+            'tau_E',
+        ],
+        'relaxation': [
+            'model',
+            'electron_coords',
+        ],
+        'project': [
+            'name'
+        ],
+        'chem_labels': [
+            'file'
+        ]
+    }
+
+    def __init__(self, **kwargs):
+        self._fit_corr_time_tau_R = None
+        self._fit_corr_time_tau_E = None
+        self._fit_corr_time_fix = ''
+        self._relaxation_model = ''
+        self._relaxation_electron_coords = None
+
+        super().__init__(**kwargs)
+
+    @property
+    def fit_corr_time_tau_R(self) -> list:
+        return self._fit_corr_time_tau_R
+
+    @fit_corr_time_tau_R.setter
+    # Accept value as a list: [fit/fix, guess, [upper-bound, lower-bound]]
+    def fit_corr_time_tau_R(self, value):
+        if not isinstance(value, (list, tuple)):
+            raise ValueError(
+                f'tau_R must take the form: [fit/fix, guess, [lower-bound, upper-bound]], with bounds optional')
+        if len(value) < 2:
+            raise ValueError(
+                f'tau_R must take the form: [fit/fix, guess, [lower-bound, upper-bound]], with bounds optional')
+        mode = value[0].lower()
+        if mode not in ['fit', 'fix']:
+            raise ValueError(f'tau_R first element must be "fit" or "fix"')
+        try:
+            guess = float(value[1])
+        except Exception:
+            raise ValueError(
+                f"Cannot convert tau_R guess value {value[1]} to float")
+        if guess <= 0:
+            raise ValueError(f'tau_R guess must be positive')
+        bounds = value[2] if len(value) == 3 else None
+        if bounds is not None:
+            if not isinstance(bounds, (list, tuple)) or len(bounds) != 2:
+                raise ValueError(
+                    f'tau_R bounds must be a list: [upper-bound, lower-bound]')
+            try:
+                lower = float(bounds[0])
+                upper = float(bounds[1])
+            except Exception:
+                raise ValueError(
+                    f"Cannot convert tau_R bounds {bounds} to floats")
+            if upper <= lower:
+                raise ValueError(
+                    f'tau_R upper bound must be greater than lower bound')
+            if lower <= 0 or upper <= 0:
+                raise ValueError(f'tau_R bounds must be positive')
+            self._fit_corr_time_tau_R = [mode, guess, [lower, upper]]
+        if mode == 'fix' and bounds is not None:
+            raise ValueError(f'Remove bounds if correlation time is fixed.')
+        else:
+            self._fit_corr_time_tau_R = [mode, guess]
+        return None
+
+    @property
+    def fit_corr_time_tau_E(self) -> list:
+        return self._fit_corr_time_tau_E
+
+    @fit_corr_time_tau_E.setter
+    # Accept value as a list: [fit/fix, guess, [upper-bound, lower-bound]]
+    def fit_corr_time_tau_E(self, value):
+        if not isinstance(value, (list, tuple)):
+            raise ValueError(
+                f'tau_E must take the form: [fit/fix, guess, [upper-bound, lower-bound]], with bounds optional')
+        if len(value) < 2:
+            raise ValueError(
+                f'tau_E must take the form: [fit/fix, guess, [upper-bound, lower-bound]], with bounds optional')
+        mode = value[0].lower()
+        if mode not in ['fit', 'fix']:
+            raise ValueError(f'tau_E: first element must be "fit" or "fix"')
+        try:
+            guess = float(value[1])
+        except Exception:
+            raise ValueError(f"Cannot convert {value[1]} to float")
+        if guess <= 0:
+            raise ValueError(f'{value[1]} is negative; tau_E must be positive')
+        bounds = value[2] if len(value) == 3 else None
+        if bounds is not None:
+            if not isinstance(bounds, (list, tuple)) or len(bounds) != 2:
+                raise ValueError(
+                    f'tau_E bounds must be a list: [upper-bound, lower-bound]')
+            try:
+                lower = float(bounds[0])
+                upper = float(bounds[1])
+            except Exception:
+                raise ValueError(
+                    f"Cannot convert tau_E bounds {bounds} to floats")
+            if upper <= lower:
+                raise ValueError(
+                    f'tau_E upper bound must be greater than lower bound')
+            if lower <= 0 or upper <= 0:
+                raise ValueError(f'tau_E bounds must be positive')
+            self._fit_corr_time_tau_E = [mode, guess, [lower, upper]]
+        if mode == 'fix' and bounds is not None:
+            raise ValueError(f'Remove bounds if correlation time is fixed.')
+        else:
+            self._fit_corr_time_tau_E = [mode, guess]
+        return None
+
+    @property
+    def relaxation_model(self) -> str:
+        return self._relaxation_model
+
+    @relaxation_model.setter
+    def relaxation_model(self, value: str):
+        if value.lower() not in ['sbm', 'curie', 'sbm curie', 'curie sbm']:
+            raise ValueError(f'Unknown relaxation: model {value}')
+        else:
+            self._relaxation_model = value.lower()
+        return None
+
+    @property
+    def relaxation_electron_coords(self) -> list[float]:
+        return self._relaxation_electron_coords
+
+    @relaxation_electron_coords.setter
+    def relaxation_electron_coords(self, value: list[float] | float):
+        if value is None:
+            raise ValueError(
+                f"If 'relaxation' is specified, Cartesian 'electron_coords' must be set")
+        if isinstance(value, (list, tuple)) and len(value) == 3:
+            try:
+                self._relaxation_electron_coords = [
+                    float(val) for val in value]
+            except Exception:
+                raise ValueError(
+                    f"Cannot convert electron coordinates {value} to list of floats")
+        else:
+            raise ValueError(
+                f"Electron coordinates must be a list of 3 floats")
+        return None
+
+    @classmethod
+    def from_file(cls, file_name: str) -> 'FitCorrTimeConfig':
+        cls: FitCorrTimeConfig = super().from_file(file_name)
         return cls
 
 

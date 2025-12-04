@@ -1170,6 +1170,41 @@ def plot_shift_contrib(molecule: main.Molecule,
 
     return fig, ax
 
+def plot_relax_contrib(molecule: main.Molecule,
+                       experiment: main.Experiment | None,
+                       order='ascending',
+                       save: bool = True, show: bool = True,
+                       save_name: str = 'relaxation_contributions.png',
+                       window_title: str = 'Relaxation Contributions',
+                       verbose: bool = True) -> tuple[plt.Figure, list[plt.Axes]]: # noqa
+    '''
+    Plots contributions to relaxation rates alongside experimental values
+
+    Parameters
+    ----------
+    molecule: main.Molecule
+        Object containing all theoretical relaxation data
+    experiment: main.Experiment | None
+        Object containing all experimental relaxation data, or None to disable
+    order: str {'descending', 'ascending'}
+        Plot columns ordered by total calculated relaxation or experimental relaxation.\n
+        This switches between descending and ascending order.
+    save: bool, default True
+        If True, saves plot to file
+    show: bool, default True
+        If True, shows plot on screen
+    save_name: str, default 'relaxation_contributions.png'
+        If save is True, will save plot to this file name
+    window_title: str, default 'Relaxation Contributions'
+        Title of figure window, not of plot
+    verbose: bool, default True
+        If True, plot file location is written to terminal
+    
+    Returns
+    -------
+    plt.Figure
+    plt.Axes
+    '''
 
 def plot_shift_tdep(experiments: list[main.Experiment], tdep: str = '',
                     save: bool = True, show: bool = True,

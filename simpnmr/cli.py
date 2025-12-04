@@ -12,6 +12,7 @@ import copy
 import sys
 from pathos import multiprocessing as mp
 import re
+from scipy.optimize import curve_fit
 
 from . import main
 from . import readers as rdrs
@@ -192,7 +193,7 @@ def fit_susc_func(uargs):
             labels = QCS.labels
             coords = QCS.coords
         else:
-            ut.cprint(f'Specified hyperfine file format {os.path.splitext(uargs.structure_file)[1]} unsupported', 'red') # noqa
+            ut.cprint(f'Specified hyperfine file format {os.path.splitext(uargs.structure_file)[1]} unsupported', 'red')  # noqa
             sys.exit(1)
 
         # Create molecule
@@ -336,7 +337,7 @@ def fit_susc_func(uargs):
         _terms.pop(_terms.index('d'))
 
     # Run fit for all experiments
-    for molecule, susc_model, experiment in zip(molecules, susc_models, experiments): # noqa
+    for molecule, susc_model, experiment in zip(molecules, susc_models, experiments):  # noqa
 
         # If permuting assignments, then first
         # run all assignment permutations to find best one
@@ -357,7 +358,7 @@ def fit_susc_func(uargs):
             )
 
             ut.cprint(
-                f'\n There are {len(permed_assignments):d} possible permutations', # noqa
+                f'\n There are {len(permed_assignments):d} possible permutations',  # noqa
                 'cyan'
             )
 
@@ -418,7 +419,7 @@ def fit_susc_func(uargs):
                     )
                 ),
                 delimiter=CSV_DELIMITER,
-                comment=f'# Optimal Assignment\n# r2 = {opt_r2:f}\n# T = {experiment.temperature:.2f} K' # noqa
+                comment=f'# Optimal Assignment\n# r2 = {opt_r2:f}\n# T = {experiment.temperature:.2f} K'  # noqa
             )
 
         # Fit susceptibility model to experimental chemical shifts
@@ -448,7 +449,7 @@ def fit_susc_func(uargs):
         visible = ['show', 'on']
 
         if uargs.shift_plots in _PLOT_ACTIVE:
-            if any(cfg in visible for cfg in [uargs.contrib_plots, uargs.spread_plots]): # noqa
+            if any(cfg in visible for cfg in [uargs.contrib_plots, uargs.spread_plots]):  # noqa
                 show = False
             else:
                 show = _SHOW_CONV[uargs.shift_plots]
@@ -465,12 +466,12 @@ def fit_susc_func(uargs):
                     f'shifts_{experiment.temperature:.2f}_K{PFF}'
                 ),
                 verbose=True,
-                window_title=f'Fitted shifts at {experiment.temperature:.2f} K' # noqa
+                window_title=f'Fitted shifts at {experiment.temperature:.2f} K'  # noqa
             )
 
             visible = ['show', 'on']
 
-            if all(cfg not in visible for cfg in [uargs.contrib_plots, uargs.spread_plots]): # noqa
+            if all(cfg not in visible for cfg in [uargs.contrib_plots, uargs.spread_plots]):  # noqa
                 plt.close('all')
 
             if uargs.spread_plots in _PLOT_ACTIVE:
@@ -481,9 +482,9 @@ def fit_susc_func(uargs):
                     terms=_terms,
                     show=_SHOW_CONV[uargs.spread_plots],
                     save=_SAVE_CONV[uargs.spread_plots],
-                    save_name=os.path.join(config.project_name, f'shift_spread_{molecule.susc.temperature:.2f}_K{PFF}'), # noqa
+                    save_name=os.path.join(config.project_name, f'shift_spread_{molecule.susc.temperature:.2f}_K{PFF}'),  # noqa
                     verbose=True,
-                    window_title=f'Spread of predicted shift components at {experiment.temperature:.2f} K', # noqa
+                    window_title=f'Spread of predicted shift components at {experiment.temperature:.2f} K',  # noqa
                     order='descending'
                 )
 
@@ -500,7 +501,7 @@ def fit_susc_func(uargs):
                         f'mean_components_{experiment.temperature:.2f}_K{PFF}'
                     ),
                     verbose=True,
-                    window_title=f'Predicted shift components at {experiment.temperature:.2f} K', # noqa
+                    window_title=f'Predicted shift components at {experiment.temperature:.2f} K',  # noqa
                     order='descending'
                 )
 
@@ -509,9 +510,9 @@ def fit_susc_func(uargs):
     # Write shift data to file
     _comment = f'# Hyperfines from file {config.hyperfine_file}\n'
     if len(config.diamagnetic_file):
-        _comment += f'# Diamagnetic shifts from file {config.diamagnetic_file}\n' # noqa
+        _comment += f'# Diamagnetic shifts from file {config.diamagnetic_file}\n'  # noqa
     if len(config.diamagnetic_ref_file):
-        _comment += f'# Diamagnetic reference from file {config.diamagnetic_ref_file}\n' # noqa
+        _comment += f'# Diamagnetic reference from file {config.diamagnetic_ref_file}\n'  # noqa
     _comment += f'# T = {molecule.susc.temperature:.2f} K'
 
     for molecule in molecules:
@@ -561,7 +562,7 @@ def fit_susc_func(uargs):
             y_mode='chiT',
             window_title='ChiT Susceptibility components',
             susc_units=uargs.susc_units,
-            susc_models=susc_models if model_to_use == models.IsoAxRhoFitter else [], # noqa
+            susc_models=susc_models if model_to_use == models.IsoAxRhoFitter else [],  # noqa
             out_file=os.path.join(
                 config.project_name,
                 'isoaxrho_fit.txt'
@@ -580,7 +581,7 @@ def fit_susc_func(uargs):
             y_mode='chi',
             window_title='Susceptibility components',
             susc_units=uargs.susc_units,
-            susc_models=susc_models if model_to_use == models.IsoAxRhoFitter else [] # noqa
+            susc_models=susc_models if model_to_use == models.IsoAxRhoFitter else []  # noqa
         )
 
     return
@@ -635,7 +636,7 @@ def plot_a_func(uargs):
                 save=uargs.save,
                 show=False,
                 save_name=f'hyperfine_spread_{file_head}{PFF}',
-                window_title=f'Spread of hyperfine data from {uargs.calculation_data}', # noqa
+                window_title=f'Spread of hyperfine data from {uargs.calculation_data}',  # noqa
                 verbose=True
             )
 
@@ -690,12 +691,12 @@ def plot_a_iso_ax_func(uargs):
 
             if os.path.splitext(config.hyperfine_file)[1] == '.xyz':
                 labels, coords = xyzp.load_xyz(config.hyperfine_file)
-            elif os.path.splitext(config.hyperfine_file)[1] in ['.log', '.out']: # noqa
+            elif os.path.splitext(config.hyperfine_file)[1] in ['.log', '.out']:  # noqa
                 QCS = rdrs.QCStructure.guess_from_file(config.hyperfine_file)
                 labels = QCS.labels
                 coords = QCS.coords
             else:
-                ut.cprint(f'Specified hyperfine file format {os.path.splitext(uargs.structure_file)[1]} unsupported', 'red') # noqa
+                ut.cprint(f'Specified hyperfine file format {os.path.splitext(uargs.structure_file)[1]} unsupported', 'red')  # noqa
                 sys.exit(1)
 
             # Create molecule
@@ -718,7 +719,7 @@ def plot_a_iso_ax_func(uargs):
         file_head = os.path.splitext(hf_file)[0]
 
         iso_div_ax = {
-            nuc.chem_math_label: nuc.A.iso / (nuc.A.dip[0, 0] + nuc.A.dip[1, 1]) # noqa
+            nuc.chem_math_label: nuc.A.iso / (nuc.A.dip[0, 0] + nuc.A.dip[1, 1])  # noqa
             for nuc in base_molecule.nuclei
         }
 
@@ -783,12 +784,12 @@ def calc_pdip_func(uargs):
 
     if os.path.splitext(uargs.structure_file)[1] == '.xyz':
         labels, coords = xyzp.load_xyz(uargs.structure_file)
-    elif os.path.splitext(uargs.structure_file)[1] in ['.log', '.out']: # noqa
+    elif os.path.splitext(uargs.structure_file)[1] in ['.log', '.out']:  # noqa
         QCS = rdrs.QCStructure.guess_from_file(uargs.structure_file)
         labels = QCS.labels
         coords = QCS.coords
     else:
-        ut.cprint(f'Specified hyperfine file format {os.path.splitext(uargs.structure_file)[1]} unsupported', 'red') # noqa
+        ut.cprint(f'Specified hyperfine file format {os.path.splitext(uargs.structure_file)[1]} unsupported', 'red')  # noqa
         sys.exit(1)
 
     # Create molecule
@@ -806,7 +807,7 @@ def calc_pdip_func(uargs):
     out = np.array(
         [
             '{}, {}, {:.5f}, {:.5f}, {:.5f}, {:.5f}, {:.5f}, {:.5f}'.format(
-                nuc.label, nuc.chem_label, *nuc.A.dip[0, :], *nuc.A.dip[1, 1:], nuc.A.dip[2, 2] # noqa
+                nuc.label, nuc.chem_label, *nuc.A.dip[0, :], *nuc.A.dip[1, 1:], nuc.A.dip[2, 2]  # noqa
             )
             for nuc in molecule.nuclei
         ]
@@ -816,7 +817,7 @@ def calc_pdip_func(uargs):
     file_head = os.path.splitext(uargs.structure_file)[0]
     file_name = f'point_dipole_A_dip_{file_head}.csv'
 
-    header = 'Label, Adip_xx (ppm Å^-3), Adip_xy (ppm Å^-3), Adip_xz (ppm Å^-3), Adip_yy (ppm Å^-3), Adip_yz (ppm Å^-3), Adip_zz (ppm Å^-3)' # noqa
+    header = 'Label, Adip_xx (ppm Å^-3), Adip_xy (ppm Å^-3), Adip_xz (ppm Å^-3), Adip_yy (ppm Å^-3), Adip_yz (ppm Å^-3), Adip_zz (ppm Å^-3)'  # noqa
 
     np.savetxt(
         file_name,
@@ -866,11 +867,11 @@ def calc_pcs_iso_func(uargs):
         labels = QCS.labels
         coords = QCS.coords
     else:
-        ut.cprint(f'Specified structure file format {os.path.splitext(uargs.structure_file)[1]} unsupported', 'red') # noqa
+        ut.cprint(f'Specified structure file format {os.path.splitext(uargs.structure_file)[1]} unsupported', 'red')  # noqa
         sys.exit(1)
 
     if uargs.central_atom not in labels:
-        ut.red_exit('Specified central atom not present in structure file\n Perhaps try with indexing e.g. Ni1') # noqa
+        ut.red_exit('Specified central atom not present in structure file\n Perhaps try with indexing e.g. Ni1')  # noqa
 
     # Load susceptibility information
     if 'orca' in uargs.susc_format:
@@ -895,7 +896,7 @@ def calc_pcs_iso_func(uargs):
                 labels,
                 coords,
                 uargs.central_atom,
-                comment=f'PCS Isosurface from {uargs.susc_file} at {susc.temperature:.2f} K', # noqa
+                comment=f'PCS Isosurface from {uargs.susc_file} at {susc.temperature:.2f} K',  # noqa
                 file_name=f'pcs_isosurface_{susc.temperature:.2f}_K.cube'
             )
 
@@ -941,7 +942,7 @@ def predict_func(uargs):
             labels = QCS.labels
             coords = QCS.coords
         else:
-            ut.cprint(f'Specified hyperfine file format {os.path.splitext(uargs.structure_file)[1]} unsupported', 'red') # noqa
+            ut.cprint(f'Specified hyperfine file format {os.path.splitext(uargs.structure_file)[1]} unsupported', 'red')  # noqa
             sys.exit(1)
 
         # Create molecule
@@ -1027,7 +1028,7 @@ def predict_func(uargs):
         ut.red_exit(
             'Error: No susceptibility data found for specified temperature(s)'
         )
-        
+
     # Calculate linewidths using user-specified relaxation model (optional)
     if getattr(config, "relaxation_model", None):
         # Solomon linewidths if relaxation model is SBM
@@ -1042,7 +1043,8 @@ def predict_func(uargs):
         electron_coords = config.relaxation_electron_coords
         B0 = config.relaxation_magnetic_field_tesla
         if B0 is None:
-            ut.cprint("Warning: relaxation_magnetic_field_tesla not provided — relaxation effects skipped", "black_yellowbg")
+            ut.cprint(
+                "Warning: relaxation_magnetic_field_tesla not provided — relaxation effects skipped", "black_yellowbg")
         else:
             # Build Aiso, gamma and omega dictionaries for selected nuclei
             # Converts nuclear gyromagnetic ratios from MHz/T to rad/s/T
@@ -1060,10 +1062,10 @@ def predict_func(uargs):
                 for label in nuclei_coords
             }
             omega_I_dict = {
-                label: gamma_I_dict[label] * B0
+                label: - gamma_I_dict[label] * B0
                 for label in nuclei_coords
             }
-            omega_S = ut.EGAMMA * B0 * 2 * np.pi * 1e6
+            omega_S = - ut.EGAMMA * B0 * 2 * np.pi * 1e6
             tau_c1 = 1 / ((1 / config.relaxation_tR) +
                           (1 / config.relaxation_T1e))
             tau_c2 = 1 / ((1 / config.relaxation_tR) +
@@ -1226,7 +1228,6 @@ def predict_func(uargs):
                 # print("Curie Rates:")
                 # for label, rate in curie_r2_rates.items():
                 #     print(f"{label}: {rate:.3e} s^-1")
-
                 rates_r1 = {
                     label: sbm_dipolar_r1_rates[label] + sbm_contact_r1_rates[label] + curie_r1_rates[label]  # noqa
                     for label in nuclei_coords
@@ -1328,12 +1329,12 @@ def predict_func(uargs):
         for susc, exp in zip(suscs, experiments):
             if susc.temperature != exp.temperature:
                 ut.cprint(
-                    f'Warning: Mismatch in Susceptibility ({susc.temperature:.2f} K) and Experimental ({exp.temperature:.2f} K) temperatures', # noqa
+                    f'Warning: Mismatch in Susceptibility ({susc.temperature:.2f} K) and Experimental ({exp.temperature:.2f} K) temperatures',  # noqa
                     'black_yellowbg'
                 )
             if re.sub('[0-9]', '', exp.isotope) not in config.nuclei_include:
                 ut.cprint(
-                    f'Warning: Experimental isotope ({exp.isotope}) not requested in input file ({config.nuclei_include})', # noqa
+                    f'Warning: Experimental isotope ({exp.isotope}) not requested in input file ({config.nuclei_include})',  # noqa
                     'black_yellowbg'
                 )
     else:
@@ -1346,7 +1347,7 @@ def predict_func(uargs):
     ]
 
     if len(config.experiment_spectrum_files):
-        for experiment, spectrum in zip(experiments, config.experiment_spectrum_files): # noqa
+        for experiment, spectrum in zip(experiments, config.experiment_spectrum_files):  # noqa
             experiment.load_spectrum_from_file(spectrum)
 
     _terms = ['pc', 'fc', 'd']
@@ -1397,9 +1398,9 @@ def predict_func(uargs):
             save=True,
             show=False,
             terms=_terms,
-            save_name=os.path.join(config.project_name, f'pred_shift_spread_{molecule.susc.temperature:.2f}_K{PFF}'), # noqa
+            save_name=os.path.join(config.project_name, f'pred_shift_spread_{molecule.susc.temperature:.2f}_K{PFF}'),  # noqa
             verbose=True,
-            window_title=f'Spread of predicted shifts at {susc.temperature:.2f} K', # noqa
+            window_title=f'Spread of predicted shifts at {susc.temperature:.2f} K',  # noqa
             order='descending'
         )
 
@@ -1409,9 +1410,9 @@ def predict_func(uargs):
             experiment=experiment,
             save=True,
             show=False,
-            save_name=os.path.join(config.project_name, f'pred_mean_components_{molecule.susc.temperature:.2f}_K{PFF}'), # noqa
+            save_name=os.path.join(config.project_name, f'pred_mean_components_{molecule.susc.temperature:.2f}_K{PFF}'),  # noqa
             verbose=True,
-            window_title=f'Predicted mean shifts and components at {susc.temperature:.2f} K', # noqa
+            window_title=f'Predicted mean shifts and components at {susc.temperature:.2f} K',  # noqa
             order='descending'
         )
 
@@ -1435,7 +1436,7 @@ def predict_func(uargs):
                 show=False,
                 save_name=os.path.join(
                     config.project_name,
-                    f'pred_and_exp_spectrum_{molecule.susc.temperature:.2f}_K{PFF}' # noqa
+                    f'pred_and_exp_spectrum_{molecule.susc.temperature:.2f}_K{PFF}'  # noqa
                 )
             )
         vis.plot_pred_spectrum(
@@ -1482,6 +1483,654 @@ def predict_func(uargs):
         )
 
     return
+
+
+def fit_corr_time_func(uargs):
+    '''
+    Wrapper for cli call to fit_corr_time
+    '''
+    config = inps.FitCorrTimeConfig.from_file(uargs.input_file)
+
+    # Make output directory and file
+    os.makedirs(config.project_name, exist_ok=True)
+
+    tau_R_mode, tau_R_guess = config.fit_corr_time_tau_R[0].lower(
+    ), config.fit_corr_time_tau_R[1]
+    tau_R_bounds = config.fit_corr_time_tau_R[2] if len(
+        config.fit_corr_time_tau_R) > 2 else None
+
+    tau_E_mode, tau_E_guess = config.fit_corr_time_tau_E[0].lower(
+    ), config.fit_corr_time_tau_E[1]
+    tau_E_bounds = config.fit_corr_time_tau_E[2] if len(
+        config.fit_corr_time_tau_E) > 2 else None
+
+    if tau_R_mode == "fix" and tau_E_mode == "fit":
+        fix_param = "tau_r"
+    elif tau_R_mode == "fit" and tau_E_mode == "fix":
+        fix_param = "tau_e"
+    elif tau_R_mode == "fit" and tau_E_mode == "fit":
+        fix_param = None  # Fit both
+    elif tau_R_mode == "fix" and tau_E_mode == "fix":
+        ut.red_exit(
+            "Error: Both tau_R and tau_E cannot be fixed. At least one must be set to 'fit'.")
+    else:
+        ut.red_exit("Error: Use syntax 'tau_C: [fit/fix, guess, [upper-bound, lower-bound]]', with bounds optional (tau_C refers to tau_R or tau_E).")  # noqa
+
+    if getattr(config, "fit_corr_time_tau_R", None) is not None and getattr(config, "relaxation_model", None) is not None:
+
+        experiments = main.Experiment.from_file(config.experiment_files)
+
+        # Filter signals to only those with valid R1 values
+        # Only include signals for specified elements (e.g., 'C')
+
+        elements = config.nuclei_include if isinstance(
+            config.nuclei_include, list) else [config.nuclei_include]
+
+        exp_blocks = []
+        for experiment in experiments:
+            labels_this = []
+            r1_this = []
+            for signal in experiment.signals:
+                if (
+                    signal.r1 is not None
+                    and np.isfinite(signal.r1)
+                    and any(signal.assignment.startswith(e) for e in elements)
+                ):
+                    labels_this.append(signal.assignment)
+                    r1_this.append(signal.r1)
+            if len(labels_this) > 0:
+                exp_blocks.append((experiment, np.array(
+                    labels_this), np.array(r1_this)))
+
+        if not exp_blocks:
+            ut.red_exit("No valid experimental R1 values found for fitting.")
+            return
+
+        chem_labels = np.concatenate([blk[1] for blk in exp_blocks])
+        exp_r1 = np.concatenate([blk[2] for blk in exp_blocks])
+        xdata = np.arange(len(exp_r1))
+
+        # Load hyperfine data and create molecule object
+        if config.hyperfine_method == 'dft':
+            qc_hyperfine_data = rdrs.QCA.guess_from_file(config.hyperfine_file)
+            qc_hyperfine_data.save_to_csv(
+                os.path.join(config.project_name, 'dft_hyperfines.csv'),
+                verbose=True,
+                delimiter=CSV_DELIMITER,
+                comment=f'# Data taken from file {config.hyperfine_file}'
+            )
+            base_molecule = main.Molecule.from_QCA(
+                qc_hyperfine_data, converter='MHz_to_Ang-3',
+                elements=config.nuclei_include
+            )
+        elif config.hyperfine_method == 'pdip':
+            if os.path.splitext(config.hyperfine_file)[1] == '.xyz':
+                labels, coords = xyzp.load_xyz(config.hyperfine_file)
+            elif os.path.splitext(config.hyperfine_file)[1] in ['.log', '.out']:
+                QCS = rdrs.QCStructure.guess_from_file(config.hyperfine_file)
+                labels = QCS.labels
+                coords = QCS.coords
+            else:
+                ut.cprint(
+                    f'Specified hyperfine file format {os.path.splitext(uargs.structure_file)[1]} unsupported', 'red')
+                sys.exit(1)
+            base_molecule = main.Molecule.from_labels_coords(
+                labels, coords, elements=config.nuclei_include
+            )
+            base_molecule.calc_pdip(config.hyperfine_pdip_centres)
+        elif config.hyperfine_method == 'csv':
+            base_molecule = main.Molecule.from_csv(
+                config.hyperfine_file, elements=config.nuclei_include
+            )
+
+        # Add chemical labels if provided
+        if len(config.chem_labels_file):
+            base_molecule.add_chem_labels_from_file(config.chem_labels_file)
+            base_molecule.save_chemcraft_xyz(
+                file_name=os.path.join(
+                    config.project_name, 'chemcraft_structure.xyz')
+            )
+        base_molecule.save_xyz(
+            file_name=os.path.join(config.project_name, 'structure.xyz'),
+            comment=f'Structure from {config.hyperfine_file}'
+        )
+        label_to_chem_label = {
+            nuc.label: nuc.chem_label for nuc in base_molecule.nuclei}
+
+        # Prepare relaxation model inputs
+        nuclei_coords = {nuc.label: nuc.coord for nuc in base_molecule.nuclei}
+        electron_coords = config.relaxation_electron_coords
+
+        # Dictionaries for relaxation calculations
+        qc_hyperfine_data = rdrs.QCA.guess_from_file(config.hyperfine_file)
+        A_iso_dict_MHz = qc_hyperfine_data.a_iso
+        A_iso_dict = {
+            nuc.label: A_iso_dict_MHz[nuc.label] * 1e6 for nuc in base_molecule.nuclei}
+        gamma_I_dict = {label: ut.NUCLEAR_GAMMAS[ut.st.remove_numbers(
+            label)] * 2 * np.pi * 1e6 for label in nuclei_coords}
+
+        multiplicity = rdrs.read_gaussian_log_spin(config.hyperfine_file)
+        spin = (multiplicity - 1) / 2
+
+        # --- Model function for curve_fit ---
+        if fix_param == "tau_r":
+            tau_R = float(tau_R_guess)
+            initial_guess = [float(tau_E_guess)]
+
+            def r1_model(_, tau_E):
+                tau_c1 = 1.0 / ((1.0 / tau_R) + (1.0 / tau_E))
+                tau_c2 = tau_c1
+
+                theory_all = []
+
+                for experiment, labels_this, r1_this in exp_blocks:
+                    B0 = experiment.magnetic_field
+                    temp = experiment.temperature
+                    omega_I_dict = {
+                        label: - gamma_I_dict[label] * B0 for label in nuclei_coords
+                    }
+                    omega_S = - ut.EGAMMA * B0 * 2 * np.pi * 1e6
+
+                # Calculate relaxation rates for current tau_R, tau_E
+                    if config.relaxation_model == "sbm":
+                        sbm_dipolar_r1_rates = ut.sbm_r1_dipolar(
+                            list(nuclei_coords.keys()),
+                            nuclei_coords,
+                            electron_coords,
+                            gamma_I_dict,
+                            omega_I_dict,
+                            omega_S,
+                            tau_c1,
+                            tau_c2,
+                            spin
+                        )
+                        sbm_contact_r1_rates = ut.sbm_r1_contact(
+                            list(nuclei_coords.keys()),
+                            A_iso_dict,
+                            omega_I_dict,
+                            omega_S,
+                            tau_E,
+                            spin
+                        )
+                        rates_r1 = {
+                            label: sbm_dipolar_r1_rates[label] + sbm_contact_r1_rates[label] for label in nuclei_coords}
+                    elif config.relaxation_model == "curie":
+                        curie_r1_rates = ut.gueron_r1_curie(
+                            list(nuclei_coords.keys()),
+                            nuclei_coords,
+                            electron_coords,
+                            omega_I_dict,
+                            temp,
+                            tau_R,
+                            spin
+                        )
+                        rates_r1 = {label: curie_r1_rates[label]
+                                    for label in nuclei_coords}
+                    elif config.relaxation_model in ["sbm curie", "curie sbm"]:
+                        sbm_dipolar_r1_rates = ut.sbm_r1_dipolar(
+                            list(nuclei_coords.keys()),
+                            nuclei_coords,
+                            electron_coords,
+                            gamma_I_dict,
+                            omega_I_dict,
+                            omega_S,
+                            tau_c1,
+                            tau_c2,
+                            spin
+                        )
+                        sbm_contact_r1_rates = ut.sbm_r1_contact(
+                            list(nuclei_coords.keys()),
+                            A_iso_dict,
+                            omega_I_dict,
+                            omega_S,
+                            tau_E,
+                            spin
+                        )
+                        curie_r1_rates = ut.gueron_r1_curie(
+                            list(nuclei_coords.keys()),
+                            nuclei_coords,
+                            electron_coords,
+                            omega_I_dict,
+                            temp,
+                            tau_R,
+                            spin
+                        )
+                        rates_r1 = {
+                            label: sbm_dipolar_r1_rates[label] + sbm_contact_r1_rates[label] + curie_r1_rates[label] for label in nuclei_coords}
+                    else:
+                        raise ValueError("Unknown relaxation model")
+
+                    # Group rates by chemical label
+                    r1_by_chem_label = defaultdict(list)
+                    for nuc in base_molecule.nuclei:
+                        if nuc.label in rates_r1:
+                            r1_by_chem_label[nuc.chem_label].append(
+                                rates_r1[nuc.label])
+
+                    # Calculate average R1 rates for each chemical label
+                    avg_r1_by_chem_label = {chem_label: np.mean(
+                        rate_list) for chem_label, rate_list in r1_by_chem_label.items()}
+
+                    for label in labels_this:
+                        chem_label = label_to_chem_label.get(label, label)
+                        theory_all.append(
+                            avg_r1_by_chem_label.get(chem_label, np.nan))
+
+                return np.array(theory_all)
+
+            print("xdata:", xdata)
+            print("exp_r1:", exp_r1)
+            print("initial_guess:", initial_guess)
+            print("chem_labels:", chem_labels)
+
+            # --- Run the fit ---
+            if tau_E_bounds:
+                popt, pcov = curve_fit(
+                    r1_model,
+                    xdata,
+                    exp_r1,
+                    p0=initial_guess,
+                    bounds=tau_E_bounds
+                )
+            elif tau_E_bounds is None:
+                popt, pcov = curve_fit(
+                    r1_model,
+                    xdata,
+                    exp_r1,
+                    p0=initial_guess
+                )
+
+            tau_E_fit = popt[0]
+            theory_r1 = r1_model(xdata, tau_E_fit)
+            if tau_E_fit <= 0:
+                ut.red_exit(
+                    f"Error: Fitted tau_E is negative: {tau_E_fit:.3e} s.", "black_yellowbg")
+            else:
+                ut.cprint(f"Fitted tau_E: {tau_E_fit:.3e} s", "cyan")
+
+        elif fix_param == "tau_e":
+            tau_E = float(tau_E_guess)
+            initial_guess = [float(tau_R_guess)]
+
+            def r1_model(_, tau_R):
+                tau_c1 = 1 / ((1 / tau_R) + (1 / tau_E))
+                tau_c2 = tau_c1
+
+                theory_all = []
+
+                for experiment, labels_this, r1_this in exp_blocks:
+                    B0 = experiment.magnetic_field
+                    temp = experiment.temperature
+                    omega_I_dict = {
+                        label: - gamma_I_dict[label] * B0 for label in nuclei_coords
+                    }
+                    omega_S = - ut.EGAMMA * B0 * 2 * np.pi * 1e6
+
+                # Calculate relaxation rates for current tau_R, tau_E
+                    if config.relaxation_model == "sbm":
+                        sbm_dipolar_r1_rates = ut.sbm_r1_dipolar(
+                            list(nuclei_coords.keys()),
+                            nuclei_coords,
+                            electron_coords,
+                            gamma_I_dict,
+                            omega_I_dict,
+                            omega_S,
+                            tau_c1,
+                            tau_c2,
+                            spin
+                        )
+                        sbm_contact_r1_rates = ut.sbm_r1_contact(
+                            list(nuclei_coords.keys()),
+                            A_iso_dict,
+                            omega_I_dict,
+                            omega_S,
+                            tau_E,
+                            spin
+                        )
+                        rates_r1 = {
+                            label: sbm_dipolar_r1_rates[label] + sbm_contact_r1_rates[label] for label in nuclei_coords}
+                    elif config.relaxation_model == "curie":
+                        curie_r1_rates = ut.gueron_r1_curie(
+                            list(nuclei_coords.keys()),
+                            nuclei_coords,
+                            electron_coords,
+                            omega_I_dict,
+                            temp,
+                            tau_R,
+                            spin
+                        )
+                        rates_r1 = {label: curie_r1_rates[label]
+                                    for label in nuclei_coords}
+                    elif config.relaxation_model in ["sbm curie", "curie sbm"]:
+                        sbm_dipolar_r1_rates = ut.sbm_r1_dipolar(
+                            list(nuclei_coords.keys()),
+                            nuclei_coords,
+                            electron_coords,
+                            gamma_I_dict,
+                            omega_I_dict,
+                            omega_S,
+                            tau_c1,
+                            tau_c2,
+                            spin
+                        )
+                        sbm_contact_r1_rates = ut.sbm_r1_contact(
+                            list(nuclei_coords.keys()),
+                            A_iso_dict,
+                            omega_I_dict,
+                            omega_S,
+                            tau_E,
+                            spin
+                        )
+                        curie_r1_rates = ut.gueron_r1_curie(
+                            list(nuclei_coords.keys()),
+                            nuclei_coords,
+                            electron_coords,
+                            omega_I_dict,
+                            temp,
+                            tau_R,
+                            spin
+                        )
+                        rates_r1 = {
+                            label: sbm_dipolar_r1_rates[label] + sbm_contact_r1_rates[label] + curie_r1_rates[label] for label in nuclei_coords}
+                    else:
+                        raise ValueError("Unknown relaxation model")
+
+                    # Group rates by chemical label
+                    r1_by_chem_label = defaultdict(list)
+                    for nuc in base_molecule.nuclei:
+                        if nuc.label in rates_r1:
+                            r1_by_chem_label[nuc.chem_label].append(
+                                rates_r1[nuc.label])
+
+                    # Calculate average R1 rates for each chemical label
+                    avg_r1_by_chem_label = {chem_label: np.mean(
+                        rate_list) for chem_label, rate_list in r1_by_chem_label.items()}
+
+                    for label in labels_this:
+                        chem_label = label_to_chem_label.get(label, label)
+                        theory_all.append(
+                            avg_r1_by_chem_label.get(chem_label, np.nan))
+
+                    # Return predicted R1 rates for the indices in chem_labels
+                    # indices = np.round(chem_label_indices).astype(int)
+                    # return np.array([avg_r1_by_chem_label.get(chem_labels[i], np.nan) for i in indices])
+
+                print("xdata:", xdata)
+                print("exp_r1:", exp_r1)
+                print("initial_guess:", initial_guess)
+                print("chem_labels:", chem_labels)
+
+        # --- Run the fit ---
+            if tau_R_bounds:
+                popt, pcov = curve_fit(
+                    r1_model,
+                    xdata,
+                    exp_r1,
+                    p0=initial_guess,
+                    bounds=tau_R_bounds
+                )
+            elif tau_R_bounds is None:
+                popt, pcov = curve_fit(
+                    r1_model,
+                    xdata,
+                    exp_r1,
+                    p0=initial_guess
+                )
+
+            tau_R_fit = popt[0]
+            theory_r1 = r1_model(xdata, tau_R_fit)
+            if tau_R_fit <= 0:
+                ut.red_exit(
+                    f"Error: Fitted tau_R is negative: {tau_R_fit:.3e} s.", "black_yellowbg")
+            else:
+                ut.cprint(f"Fitted tau_R: {tau_R_fit:.3e} s", "cyan")
+
+        elif not fix_param or fix_param in ['none', '']:
+            # Fit both tau_R and tau_E
+            initial_guess = [float(tau_R_guess), float(tau_E_guess)]
+            bounds = None
+            if tau_R_bounds and tau_E_bounds:
+                bounds = ([tau_R_bounds[0], tau_E_bounds[0]],
+                          [tau_R_bounds[1], tau_E_bounds[1]])
+
+            def r1_model(_, tau_R, tau_E):
+                """
+                Global model: for given tau_R, tau_E, loop over all experiments,
+                compute R1 for that experiment (its own B0, T), and append.
+                The first argument '_' is xdata, but we don't use it.
+                """
+                tau_c1 = 1.0 / ((1.0 / tau_R) + (1.0 / tau_E))
+                tau_c2 = tau_c1
+
+                theory_all = []
+
+                for experiment, labels_this, r1_this in exp_blocks:
+                    B0 = experiment.magnetic_field
+                    Temp = experiment.temperature
+
+                    # Dictionaries for relaxation calculations
+                    omega_I_dict = {
+                        label: - gamma_I_dict[label] * B0 for label in nuclei_coords}
+                    omega_S = - ut.EGAMMA * B0 * 2 * np.pi * 1e6
+
+                    if config.relaxation_model == "sbm":
+                        sbm_dipolar_r1_rates = ut.sbm_r1_dipolar(
+                            list(nuclei_coords.keys()),
+                            nuclei_coords,
+                            electron_coords,
+                            gamma_I_dict,
+                            omega_I_dict,
+                            omega_S,
+                            tau_c1,
+                            tau_c2,
+                            spin
+                        )
+                        sbm_contact_r1_rates = ut.sbm_r1_contact(
+                            list(nuclei_coords.keys()),
+                            A_iso_dict,
+                            omega_I_dict,
+                            omega_S,
+                            tau_E,
+                            spin
+                        )
+                        rates_r1 = {
+                            lab: sbm_dipolar_r1_rates[lab] +
+                            sbm_contact_r1_rates[lab]
+                            for lab in nuclei_coords
+                        }
+
+                    elif config.relaxation_model == "curie":
+                        curie_r1_rates = ut.gueron_r1_curie(
+                            list(nuclei_coords.keys()),
+                            nuclei_coords,
+                            electron_coords,
+                            omega_I_dict,
+                            Temp,
+                            tau_R,
+                            spin
+                        )
+                        rates_r1 = {lab: curie_r1_rates[lab]
+                                    for lab in nuclei_coords}
+
+                    elif config.relaxation_model in ["sbm curie", "curie sbm"]:
+                        sbm_dipolar_r1_rates = ut.sbm_r1_dipolar(
+                            list(nuclei_coords.keys()),
+                            nuclei_coords,
+                            electron_coords,
+                            gamma_I_dict,
+                            omega_I_dict,
+                            omega_S,
+                            tau_c1,
+                            tau_c2,
+                            spin
+                        )
+                        sbm_contact_r1_rates = ut.sbm_r1_contact(
+                            list(nuclei_coords.keys()),
+                            A_iso_dict,
+                            omega_I_dict,
+                            omega_S,
+                            tau_E,
+                            spin
+                        )
+                        curie_r1_rates = ut.gueron_r1_curie(
+                            list(nuclei_coords.keys()),
+                            nuclei_coords,
+                            electron_coords,
+                            omega_I_dict,
+                            Temp,
+                            tau_R,
+                            spin
+                        )
+                        rates_r1 = {
+                            lab: sbm_dipolar_r1_rates[lab] +
+                            sbm_contact_r1_rates[lab] + curie_r1_rates[lab]
+                            for lab in nuclei_coords
+                        }
+                    else:
+                        raise ValueError("Unknown relaxation model")
+
+                    # Group rates by chemical label
+                    r1_by_chem_label = defaultdict(list)
+                    for nuc in base_molecule.nuclei:
+                        if nuc.label in rates_r1:
+                            r1_by_chem_label[nuc.chem_label].append(
+                                rates_r1[nuc.label])
+
+                    # Calculate average R1 rates for each chemical label
+                    avg_r1_by_chem_label = {
+                        chem_label: np.mean(
+                            rate_list) for chem_label, rate_list in r1_by_chem_label.items()
+                    }
+
+                    for label in labels_this:
+                        chem_label = label_to_chem_label.get(label, label)
+                        theory_all.append(
+                            avg_r1_by_chem_label.get(chem_label, np.nan))
+
+                return np.array(theory_all)
+
+                # Return predicted R1 rates for the indices in chem_labels
+                # indices = np.round(chem_label_indices).astype(int)
+                # return np.array([avg_r1_by_chem_label.get(chem_labels[i], np.nan) for i in indices])
+
+        # --- Run the fit ---
+            if bounds:
+                popt, pcov = curve_fit(
+                    r1_model,
+                    xdata,
+                    exp_r1,
+                    p0=initial_guess,
+                    bounds=bounds
+                )
+            else:
+                popt, pcov = curve_fit(
+                    r1_model,
+                    xdata,
+                    exp_r1,
+                    p0=initial_guess
+                )
+
+            tau_R_fit, tau_E_fit = popt
+            theory_r1 = r1_model(xdata, tau_R_fit, tau_E_fit)
+            if tau_R_fit <= 0 and tau_E_fit > 0:
+                ut.red_exit(
+                    f"Error: tau_R is negative: {tau_R_fit:.3e} s.", "black_yellowbg")
+            elif tau_E_fit <= 0 and tau_R_fit > 0:
+                ut.red_exit(
+                    f"Error: tau_E is negative: {tau_E_fit:.3e} s.", "black_yellowbg")
+            elif tau_R_fit <= 0 and tau_E_fit <= 0:
+                ut.red_exit(
+                    f"Error: Both tau_R and tau_E are negative: tau_R = {tau_R_fit:.3e} s, tau_E = {tau_E_fit:.3e} s.", "black_yellowbg")
+            else:
+                ut.cprint(f"Fitted tau_R: {tau_R_fit:.3e} s", "cyan")
+                ut.cprint(f"Fitted tau_E: {tau_E_fit:.3e} s", "cyan")
+
+        else:
+            ut.red_exit(
+                "Error: correlation times must be 'tau_r' or 'tau_e'.")
+
+        rsquared = 1 - (np.sum((exp_r1 - theory_r1) ** 2) /
+                        np.sum((exp_r1 - np.mean(exp_r1)) ** 2))
+
+        print("Covariance matrix:\n", pcov)
+
+        # Plot experimental vs theoretical R1
+        plt.figure(figsize=(6, 6))
+        plt.scatter(theory_r1, exp_r1, marker='x', color='blue')
+
+        for x, y, label in zip(theory_r1, exp_r1, chem_labels):
+            plt.text(x, y, label, fontsize=12)
+
+        # Add x = y reference line
+        min_val = min(np.min(theory_r1), np.min(exp_r1))
+        max_val = max(np.max(theory_r1), np.max(exp_r1))
+        plt.plot([min_val, max_val], [min_val, max_val],
+                 'k--', lw=1, label='x = y')
+
+        plt.xlabel('Fitted $R_1$ (s$^{-1}$)', fontsize=14)
+        plt.ylabel('Experimental $R_1$ (s$^{-1}$)', fontsize=14)
+        plt.title('Experimental vs Fitted $R_1$', fontsize=16)
+
+        # Print R² above the plot
+        plt.text(
+            0.01, 0.96, f"$r^2$ = {rsquared:.3f}",
+            fontsize=12,
+            ha='left',
+            va='top',
+            transform=plt.gca().transAxes
+        )
+
+        # Print fitted value just below R², automated by fix_param
+        if fix_param.lower() == "tau_r":
+            plt.text(
+                0.01, 0.91, f"Fitted $\\tau_{{\\mathrm{{E}}}}$: {tau_E_fit:.3e} s",
+                fontsize=12,
+                ha='left',
+                va='top',
+                transform=plt.gca().transAxes
+            )
+        elif fix_param.lower() == "tau_e":
+            plt.text(
+                0.01, 0.91, f"Fitted $\\tau_{{\\mathrm{{R}}}}$: {tau_R_fit:.3e} s",
+                fontsize=12,
+                ha='left',
+                va='top',
+                transform=plt.gca().transAxes
+            )
+        elif not fix_param or fix_param in ['none', '']:
+            plt.text(
+                0.01, 0.91, f"Fitted $\\tau_{{\\mathrm{{R}}}}$: {tau_R_fit:.3e} s\nFitted $\\tau_{{\\mathrm{{E}}}}$: {tau_E_fit:.3e} s",  # noqa
+                fontsize=12,
+                ha='left',
+                va='top',
+                transform=plt.gca().transAxes
+            )
+
+        plt.tight_layout()
+        plt.savefig(os.path.join(
+            config.project_name, 'experimental_vs_fitted_R1.png'))
+        plt.show()
+
+        plt.figure(figsize=(8, 5))
+        # circles for experiment
+        plt.plot(chem_labels, exp_r1, 'o', label='Experimental R1')
+        # squares for theory
+        plt.plot(chem_labels, theory_r1, 's', label='Fitted Theory R1')
+        plt.plot(chem_labels, theory_r1, 'x', color='red',
+                 label='Theory X')  # X marker for theory
+
+        plt.xlabel('Chemical Label')
+        plt.ylabel('R1 (s$^{-1}$)')
+        plt.title('Experimental vs Fitted R1')
+        plt.legend()
+        plt.xticks(rotation=45)
+        plt.tight_layout()
+        plt.savefig(os.path.join(config.project_name, 'r1_fit_comparison.png'))
+        plt.show()
+
+    else:
+        ut.red_exit(
+            "fit_corr_time and relaxation_model must be specified in the input file.")
 
 
 def plot_shift_tdep_func(uargs):
@@ -1553,7 +2202,7 @@ def read_args(arg_list=None):
         'output_file',
         type=str,
         help=(
-            'Quantum Chemistry output file containing chemical shift information' # noqa
+            'Quantum Chemistry output file containing chemical shift information'  # noqa
         )
     )
 
@@ -1563,7 +2212,7 @@ def read_args(arg_list=None):
         default='',
         type=str,
         help=(
-            'Quantum Chemistry output file containing reference chemical shift information' # noqa
+            'Quantum Chemistry output file containing reference chemical shift information'  # noqa
         )
     )
 
@@ -1622,7 +2271,7 @@ def read_args(arg_list=None):
         type=str,
         default='save',
         help=(
-            'Plot Experimental and Calculated Chemical shifts against each other \n' # noqa
+            'Plot Experimental and Calculated Chemical shifts against each other \n'  # noqa
             ' - \'on\' shows and saves the plots\n'
             ' - \'show\' shows the plots\n'
             ' - \'save\' saves the plots\n'
@@ -1670,7 +2319,7 @@ def read_args(arg_list=None):
         type=str,
         default='save',
         help=(
-            'Plot Isotropic, Axial, and Rhombic susceptibility as a function of temperature \n' # noqa
+            'Plot Isotropic, Axial, and Rhombic susceptibility as a function of temperature \n'  # noqa
             ' - \'on\' shows and saves the plots\n'
             ' - \'show\' shows the plots\n'
             ' - \'save\' saves the plots\n'
@@ -1928,6 +2577,18 @@ def read_args(arg_list=None):
         help=(
             'simpnmr experiment.csv files'
         )
+    )
+
+    fit_corr_time = subparsers.add_parser(
+        'fit_corr_time',
+        description='Fit correlation times using experimental R1 data'
+    )
+    fit_corr_time.set_defaults(func=fit_corr_time_func)
+
+    fit_corr_time.add_argument(
+        'input_file',
+        type=str,
+        help='Input file for fit_corr_time -- see documentation for format'
     )
 
     # Read sub-parser and parse arguments
