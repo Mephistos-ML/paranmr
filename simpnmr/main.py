@@ -191,7 +191,7 @@ class Experiment():
         try:
             value = float(value)
         except TypeError:
-            raise TypeError('magnetic field must be floatable')
+            raise TypeError('magnetic_field must be floatable')
         self._magnetic_field = value
         return
 
@@ -290,7 +290,7 @@ class Experiment():
             _temperature, _magnetic_field, _isotope = ut.read_exp_metadata(
                 file_name)
             _data['temperature'] = _temperature
-            _data['magnetic field'] = _magnetic_field
+            _data['magnetic_field'] = _magnetic_field
             _data['isotope'] = _isotope
             final.append(_data)
 
@@ -327,7 +327,7 @@ class Experiment():
         experiments = [
             cls(
                 _e['temperature'][0],
-                _e['magnetic field'][0],
+                _e['magnetic_field'][0],
                 _e['isotope'][0],
                 [
                     Signal(
@@ -386,7 +386,7 @@ class Experiment():
             )
         )
         _comment += f'#temperature = {self.temperature:.3f}\n'
-        _comment += f'#magnetic field = {self.magnetic_field:.3f}\n'
+        _comment += f'#magnetic_field = {self.magnetic_field:.3f}\n'
         _comment += f'#isotope = {self.isotope}\n'
 
         _comment += comment + '\n'

@@ -259,3 +259,99 @@ def save_relaxation_decomposition(
         )
 
     return
+
+
+def save_corr_time_fit_data(
+        xdata: np.ndarray,
+        exp_r1: np.ndarray,
+        chem_labels: np.ndarray,
+        file_name: str,
+        initial_guess: np.ndarray | list[float] | None = None,
+        fitted_tau_r: float | None = None,
+        fitted_tau_e: float | None = None,
+        covariance: np.ndarray | None = None,
+        delimiter: str = ',',
+        comment: str = '',
+        verbose: bool = True
+) -> None:
+    '''
+    Saves correlation‑time fit data (SBM model) to a CSV file.
+
+    xdata: np.ndarray
+        Independent variable used in the fit (e.g. index or distance).
+    exp_r1: np.ndarray
+        Experimental R1 values (s^-1) corresponding to xdata.
+    chem_labels: np.ndarray
+        Chemical labels corresponding to each data point.
+    file_name: str
+        Path to file to save to.
+    initial_guess: array-like, optional
+        Initial guess parameters used in the fit.
+    fitted_tau_r: float, optional
+        Fitted tau_R value (s).
+    fitted_tau_e: float, optional
+        Fitted tau_E value (s).
+    covariance: np.ndarray, optional
+        Covariance matrix returned by the fit.
+    delimiter: str, default ','
+        Delimiter used in csv file.
+    comment: str, ''
+        Additional comment line added to file - must begin with #.
+    verbose: bool, default True
+        If True, print filename to screen.
+    '''
+
+    # Tabular data per data point
+    out: dict[str, list] = {
+        'xdata': list(xdata),
+        'chem_label': list(chem_labels),
+        'R1_exp (s^-1)': list(exp_r1),
+    }
+
+    df = pd.DataFrame(data=out)
+
+    # Header comment with version, timestamp and fit diagnostics
+    _comment = (
+        f'#This file was generated with SimpNMR v{__version__}'
+        ' at {}\n'.format(
+            datetime.datetime.now().strftime('%H:%M:%S %d-%m-%Y ')
+        )
+    )
+
+    if len(comment):
+        if comment[0] != '#':
+            comment = f'#{comment}'
+        _comment += f'{comment}\n'
+
+    # Append diagnostic information that is currently printed to the terminal
+    if initial_guess is not None:
+        _comment += f'#initial_guess: {np.array(initial_guess).tolist()}\n'
+
+    if fitted_tau_r is not None:
+        _comment += f'#fitted_tau_R (s): {fitted_tau_r:.5e}\n'
+
+    if fitted_tau_e is not None:
+        _comment += f'#fitted_tau_E (s): {fitted_tau_e:.5e}\n'
+
+    if covariance is not None:
+        cov_array = np.array(covariance)
+        _comment += f'#covariance_shape: {cov_array.shape}\n'
+        _comment += f'#covariance_flat: {cov_array.flatten().tolist()}\n'
+
+    with open(file_name, 'w') as _f:
+        _f.write(_comment)
+        df.to_csv(
+            _f,
+            sep=delimiter,
+            header=True,
+            float_format='%.5e',
+            index=None
+        )
+
+    if verbose:
+        ut.cprint(
+            f'\n Correlation‑time fit data written to \n {file_name}\n',
+            'cyan'
+        )
+
+    return

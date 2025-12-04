@@ -154,7 +154,9 @@ class FitSuscConfig(Config):
             'file',
             'average',
             'pdip_centres',
-            'spin'
+            'spin',
+            'orbit',
+            'total_momentum_J'
         ],
         'experiment': [
             'files'
@@ -237,6 +239,8 @@ class FitSuscConfig(Config):
         self._spin_S = None
         self._spin_multiplicity = None
         self._spin_file = ''
+        self._orbit = None
+        self._total_momentum_J = None
 
         for key in kwargs:
             setattr(self, key, kwargs[key])
@@ -580,6 +584,51 @@ class FitSuscConfig(Config):
         except Exception:
             raise ValueError(f'Cannot convert hyperfine: spin={value} to float')
         
+    @property
+    def orbit(self) -> float | None:
+        return self._orbit
+    
+    @orbit.setter
+    def orbit(self, value: float | None):
+        self._orbit = value
+    
+    @property
+    def hyperfine_orbit(self) -> float | None:
+        return self._orbit
+    
+    @hyperfine_orbit.setter
+    def hyperfine_orbit(self, value: float | None):
+        if value is None:
+            self._orbit = None
+            return
+        try:
+            self._orbit = float(value)
+        except Exception:
+            raise ValueError(f'Cannot convert hyperfine: orbit={value} to float')
+
+    @property
+    def total_momentum_J(self) -> float | None:
+        return self._total_momentum_J
+    
+    @total_momentum_J.setter
+    def total_momentum_J(self, value: float | None):
+        self._total_momentum_J = value
+
+    @property
+    def hyperfine_total_momentum_J(self) -> float | None:
+        return self._total_momentum_J
+
+    @hyperfine_total_momentum_J.setter
+    def hyperfine_total_momentum_J(self, value: float | None):
+        if value is None:
+            self._total_momentum_J = None
+            return
+        try:
+            self._total_momentum_J = float(value)
+        except Exception:
+            raise ValueError(f'Cannot convert hyperfine: total momentum J={value} to float')
+
+
     @classmethod
     def from_file(cls, file_name) -> 'FitSuscConfig':
         '''
@@ -640,7 +689,9 @@ class PredictConfig(FitSuscConfig):
             'file',
             'average',
             'pdip_centres',
-            'spin'
+            'spin',
+            'orbit',
+            'total_momentum_J'
         ],
         'experiment': [
             'files',
@@ -779,11 +830,11 @@ class PredictConfig(FitSuscConfig):
             try:
                 if float(value) < 0:
                     raise ValueError(
-                        f'Magnetic field must be zero or positive')
+                        f'magnetic_field must be zero or positive')
                 self._relaxation_magnetic_field_tesla = float(value)
             except:
                 raise ValueError(
-                    f'Cannot convert magnetic field value {value} to float')
+                    f'Cannot convert magnetic_field value {value} to float')
         return None
 
     @property

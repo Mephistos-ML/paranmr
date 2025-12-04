@@ -1671,24 +1671,28 @@ def read_orca_g_tensor(file_name: str, section: str) -> np.ndarray | None:
 
     g_tensor = None
 
-    with open(file_name, "r") as f:
-        for line in f:
-            # Find the correct QDPT section
-            if f"QDPT WITH {section.upper()}" in line:
-                # Go down to the G-matrix header
-                for line in f:
-                    if "ELECTRONIC G-MATRIX FROM EFFECTIVE HAMILTONIAN" in line:
-                        break
-                # Find "g-matrix:"
-                for line in f:
-                    if "g-matrix:" in line:
-                        # Next three lines are the rows of the tensor
-                        row_1 = [float(val) for val in next(f).split()]
-                        row_2 = [float(val) for val in next(f).split()]
-                        row_3 = [float(val) for val in next(f).split()]
-                        g_tensor = np.array([row_1, row_2, row_3])
-                        break
-                break
+    try:
+        with open(file_name, "r") as f:
+            for line in f:
+                # Find the correct QDPT section
+                if f"QDPT WITH {section.upper()}" in line:
+                    # Go down to the G-matrix header
+                    for line in f:
+                        if "ELECTRONIC G-MATRIX FROM EFFECTIVE HAMILTONIAN" in line:
+                            break
+                    # Find "g-matrix:"
+                    for line in f:
+                        if "g-matrix:" in line:
+                            # Next three lines are the rows of the tensor
+                            row_1 = [float(val) for val in next(f).split()]
+                            row_2 = [float(val) for val in next(f).split()]
+                            row_3 = [float(val) for val in next(f).split()]
+                            g_tensor = np.array([row_1, row_2, row_3])
+                            break
+                    break
+    except Exception as e:
+         # Soft failure — let caller handle missing tensor
+        ut.cprint(f'Warning: failed to parse ORCA g-tensor: {e}', 'cyan')
 
     return g_tensor
 
