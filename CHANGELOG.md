@@ -2,6 +2,30 @@
 
 <!-- version list -->
 
+## v1.2.0 (2025-12-04)
+
+### Bug Fixes
+
+- Relaxation predictions printed
+  ([`e761b87`](https://gitlab.com/suturina-group/simpnmr/-/commit/e761b87b7e2acbb1b3127dc8db46ea3991b0a9af))
+
+### Chores
+
+- Delete reduntand files
+  ([`083dc93`](https://gitlab.com/suturina-group/simpnmr/-/commit/083dc9367b6d67f405aa60d8509a37922c1b2410))
+
+### Features
+
+- Correlation time fitting at multiple fields or temperatures
+  ([`71daba5`](https://gitlab.com/suturina-group/simpnmr/-/commit/71daba583c8a9b28bff2935916fb258635d83ba2))
+
+- Implement additional relaxation mechanism WIP
+  ([`d206671`](https://gitlab.com/suturina-group/simpnmr/-/commit/d2066715873e73b43518a16e67c30fec15d50c30))
+
+- Implement additional relaxation mechanism WIP
+  ([`328029c`](https://gitlab.com/suturina-group/simpnmr/-/commit/328029c5183fbf1daa746a559cb3bb2784324626))
+
+
 ## v1.1.1 (2025-11-28)
 
 ### Bug Fixes
