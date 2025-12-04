@@ -1,4 +1,4 @@
-#This file was generated with SimpNMR v0.0.1 on 11:23:13 27-11-2025 
+#This file was generated with SimpNMR v0.0.1 on 15:27:28 04-12-2025 
 # Data taken from file /Users/jamiewhipham/Desktop/SIMPNMR/simpnmr/examples/tBuPNPFeH/DATA/Q_CHEM/FeH_opt_Cs_HFC_TPSSH_def2TZVP.out
 atom_label, Aiso (MHz), Adip_xx (MHz), Adip_xy (MHz), Adip_xz (MHz), Adip_yy (MHz), Adip_yz (MHz), Adip_zz (MHz)
 Fe1, 47.53634, 1.50239, 0.00000, -0.48146, -27.68000, 0.00000, 26.17811

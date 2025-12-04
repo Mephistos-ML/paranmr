@@ -6,7 +6,7 @@ hyperfine:
  file: ../DATA/Q_CHEM/FeH_opt_Cs_HFC_TPSSH_def2TZVP.out 
 
 experiment:
- files: ../DATA/EXPT/FeH_exp_297.17_4T.csv 
+ files: [/Users/jamiewhipham/Desktop/SIMPNMR/simpnmr/examples/tBuPNPFeH/DATA/EXPT/FIELD/FeH*.csv] 
 
 chem_labels:
  file: ../DATA/LABELS/atom_labels.csv
