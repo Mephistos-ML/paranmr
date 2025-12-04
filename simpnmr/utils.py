@@ -449,94 +449,181 @@ def isotope_format(isotope_string: str) -> str:
 
     return r'$^\mathregular{{{}}} \mathregular{{{}}}$'.format(nums, lets)
 
+def calc_g_eff(spin: float, orbit: float, total_momentum_J: float | None):
+    """Compute an effective electron g-factor.
 
-def get_spin_only_susceptibility(uargs, temperature):
-    config = inps.PredictConfig.from_file(uargs.input_file)
+    For spin-only systems (transition metals, organic radicals) where no
+    total J is defined, this returns the free-electron g value GE.
 
-    if config.spin_S is not None:
-        spin = config.spin_S
-    else:
-        spin = rdrs.QCSpin.guess_from_file(config.hyperfine_file).S
+    For lanthanides (or any system with well-defined L, S, J), this returns
+    the Landé g_J factor computed from the supplied spin (S), orbital
+    angular momentum (L = orbit) and total angular momentum J.
 
-    T = temperature
+    Parameters
+    ----------
+    spin : float
+        Spin quantum number S.
+    orbit : float
+        Orbital angular momentum quantum number L.
+    total_momentum_J : float | None
+        Total angular momentum quantum number J. If None or zero, the
+        function falls back to GE.
 
-    # Calculate spin-only magnetic susceptibility
-    chi_only_iso = (MU0 * MUB**2 * GE**2 * spin * (spin + 1)) / (3 * KB * T) * (10 ** 32)  # Si [10^-32 m^3]
-
-    # Convert from Si to A^3
-    chi_only_iso = chi_only_iso * 10**-2
-
-    return chi_only_iso
-
-def get_true_iso_susceptibility(uargs, temperature):
+    Returns
+    -------
+    float
+        Effective g-factor (GE or g_J, depending on total_momentum_J).
     """
-    Returns the "true" isotropic susceptibility χ_true,iso, corrected for the
-    anisotropic g-tensor.
 
-    χ_true,iso = (g_e / 3) * (χ_x / g_x + χ_y / g_y + χ_z / g_z)
+    # Spin-only case: no total J provided or explicitly zero
+    if total_momentum_J is None or total_momentum_J == 0.0:
+        return GE
+
+    # Landé g_J expression using S, L and J
+    J = float(total_momentum_J)
+    # return 1.5 + (spin * (spin + 1) - orbit * (orbit + 1)) / (2.0 * J * (J + 1)) # -> see 6:47 EQ.
+    return 1.5 + (spin * (spin + 1) - orbit * (orbit + 1)) / (2.0 * J * (J + 1))
+
+
+def choose_S_eff(spin: float, total_momentum_J: float | None):
+    """Return the effective angular momentum quantum number S_eff.
+
+    In the relaxation and Curie expressions used here we want a single
+    "effective" quantum number that controls the size of the magnetic
+    moment:
+
+    * For spin-only centres (transition metals, organic radicals), this is
+      just the spin quantum number S.
+    * For lanthanides (or other systems with well-defined J), we use the
+      total angular momentum J instead.
+
+    Parameters
+    ----------
+    spin : float
+        Spin quantum number S.
+    total_momentum_J : float | None
+        Total angular momentum J. If None, spin is returned.
+
+    Returns
+    -------
+    float
+        S for spin-only systems, or J for lanthanides.
     """
-    config = inps.PredictConfig.from_file(uargs.input_file)
+
+    return spin if total_momentum_J is None else total_momentum_J
+    
+def get_spin_only_susceptibility(
+    spin: float,
+    orbit: float,
+    total_momentum_J: float | None,
+    temperature: float
+) -> float:
+    """Compute spin-only isotropic molar susceptibility in Å^3.
+
+    This uses the Curie law with an effective g-factor and effective
+    angular momentum quantum number S_eff (S for transition metals,
+    J for lanthanides) at the supplied temperature. The susceptibility
+    is first computed in SI units (m^3 mol^-1) and then converted to
+    Å^3, which is the internal unit used in the rest of the code.
+
+    Parameters
+    ----------
+    spin : float
+        Spin quantum number S of the paramagnetic centre.
+    orbit : float
+        Orbital angular momentum quantum number L.
+    total_momentum_J : float | None
+        Total angular momentum quantum number J. If None, a pure
+        spin-only description is assumed.
+    temperature : float
+        Temperature in Kelvin at which the spin-only susceptibility is
+        evaluated.
+
+    Returns
+    -------
+    float
+        Spin-only isotropic molar susceptibility in Å^3.
+    """
+
+    # Landé g-factor uses S, L, J
+    g_eff = calc_g_eff(spin, orbit, total_momentum_J)
+
+    # Effective moment quantum number for Curie law:
+    # S for transition metals, J for lanthanides
+    S_eff = choose_S_eff(spin, total_momentum_J)
 
     T = float(temperature)
 
-    section = config.susceptibility_format.split("orca_")[1]
-
-    g_tensor = rdrs.read_orca_g_tensor(
-        config.susceptibility_file,
-        section=section
+    # Chi (SI, m^3 mol^-1)
+    chi_only_iso_SI = (
+        MU0 * MUB**2 * g_eff**2 * S_eff * (S_eff + 1)
+        / (3 * KB * T)
     )
 
-    chi_tensors = rdrs.read_orca_susceptibility(
-        config.susceptibility_file,
-        section=section
+    # Convert m^3 to Å^3: 1 Å^3 = 1e-30 m^3
+    chi_only_iso = chi_only_iso_SI * 1e30
+
+    return chi_only_iso
+
+
+def get_true_iso_susceptibility(
+    spin: float,
+    orbit: float,
+    g_tensor: NDArray,
+    chi_tensors: dict[float, NDArray],
+    total_momentum_J: float | None,
+    temperature: float,
+) -> float:
+    """Return the "true" isotropic susceptibility χ_true,iso in Å^3.
+
+    This applies a correction for the anisotropic g-tensor using ORCA
+    output. The susceptibility tensor is read from the ORCA file and
+    combined with the g-tensor to give an effective isotropic value:
+
+        χ_true,iso ≈ (g_eff / 3) * Σ_i χ_i / g_i,
+
+    where χ_i and g_i are principal components of the susceptibility and
+    g-tensors, respectively. The final value is returned in Å^3 per mole.
+
+    Parameters
+    ----------
+    spin : float
+        Spin quantum number S of the paramagnetic centre.
+    orbit : float
+        Orbital angular momentum quantum number L.
+    total_momentum_J : float | None
+        Total angular momentum quantum number J. If None, a spin-only
+        description for g_eff is used.
+    temperature : float
+        Temperature in Kelvin at which the susceptibility tensor is
+        evaluated.
+
+    Returns
+    -------
+    float
+        "True" isotropic susceptibility χ_true,iso in Å^3 per mole.
+    """
+
+    T = float(temperature)
+
+    # Lookup susceptibility tensor at temperature T, divide by T if file contains chi*T
+    chi_tensors = chi_tensors[T] / T
+
+    # Use Landé g_J (or GE) to get an effective g-factor
+    g_eff = calc_g_eff(spin, orbit, total_momentum_J)
+
+    # Trace-based expression with g correction (cm^3 mol^-1)
+    chi_true_iso = g_eff / 3.0 * np.trace(
+        chi_tensors * np.linalg.inv(g_tensor.T)
     )
 
-    if T in chi_tensors:
-        chi_tensor = chi_tensors[T] / T
+    # Convert from cm^3 mol^-1 to Å^3 per mole
+    chi_true_iso = chi_true_iso * (
+        1 / (1e-24 * constants.Avogadro / (4 * np.pi))
+    )
 
-    chi_true_iso = GE / 3.0 * np.trace(chi_tensor * np.linalg.inv(g_tensor.T)) # cm3 mol-1
-
-    # Convert cm^3 mol^-1 to A^3
-    chi_true_iso = chi_true_iso * (1 / (1e-24 * constants.Avogadro / (4 * np.pi))) # A3
-    
     return chi_true_iso
 
-def sbm_r1_dipolar(
-    nuclei_labels,
-    nuclei_coords,
-    electron_coords,
-    gamma_I_dict,
-    omega_I_dict,
-    omega_S,
-    tau_c1,
-    tau_c2,
-    spin
-):
-    def J(omega, tau):
-        return tau / (1 + (omega * tau) ** 2)
-
-    rates = {}
-    for label in nuclei_labels:
-        r = np.linalg.norm(nuclei_coords[label] - electron_coords) * 1e-10
-        gamma_I = gamma_I_dict[label]
-        omega_I = omega_I_dict[label]
-        prefactor = (
-            (1 / 10)
-            * (1 / r**6)
-            * (MU0 / (4 * np.pi))**2
-            * (gamma_I * GE * MUB)**2
-            * spin * (spin + 1)
-        )
-        spectral_density = (
-            3 * J(omega_I, tau_c1)
-            + 6 * J(omega_I + omega_S, tau_c2)
-            + J(omega_I - omega_S, tau_c2)
-        )
-        rate = prefactor * spectral_density
-        rates[label] = rate
-
-    return rates
-
 
 def sbm_r1_dipolar(
     nuclei_labels,
@@ -547,12 +634,62 @@ def sbm_r1_dipolar(
     omega_S,
     tau_c1,
     tau_c2,
-    spin
+    spin,
+    orbit,
+    total_momentum_J
 ):
+    """Compute SBM R1 dipolar relaxation rates for each nucleus.
+
+    Implements the Solomon-Bloembergen-Morgan (SBM) expression for the
+    nuclear longitudinal relaxation rate R1 arising from electron-nucleus
+    dipolar interactions. The expression is evaluated for each nucleus
+    in the system using its distance to the paramagnetic centre and the
+    appropriate spectral density terms.
+
+    Parameters
+    ----------
+    nuclei_labels : list[str]
+        Labels of the nuclei for which rates are computed.
+    nuclei_coords : dict[str, np.ndarray]
+        Cartesian coordinates (in Å) of each nucleus.
+    electron_coords : np.ndarray
+        Cartesian coordinates (in Å) of the effective electron spin
+        centre.
+    gamma_I_dict : dict[str, float]
+        Nuclear gyromagnetic ratios (rad s^-1 T^-1) for each label.
+    omega_I_dict : dict[str, float]
+        Nuclear Larmor angular frequencies (rad s^-1) for each label.
+    omega_S : float
+        Electron Larmor angular frequency (rad s^-1).
+    tau_c1 : float
+        Correlation time for the electron-nuclear dipolar interaction
+        (usually rotational correlation time) in seconds.
+    tau_c2 : float
+        Correlation time entering the cross terms (often tau_c1 or
+        an effective electronic correlation time) in seconds.
+    spin : float
+        Spin quantum number S of the paramagnetic centre.
+    orbit : float
+        Orbital angular momentum quantum number L.
+    total_momentum_J : float | None
+        Total angular momentum quantum number J, if defined.
+
+    Returns
+    -------
+    dict[str, float]
+        Mapping from nucleus label to R1 dipolar relaxation rate (s^-1).
+    """
+
     def J(omega, tau):
         return tau / (1 + (omega * tau) ** 2)
 
+    # Effective g-factor and angular momentum entering the prefactor
+    g_eff = calc_g_eff(spin, orbit, total_momentum_J)
+    S_eff = choose_S_eff(spin, total_momentum_J)
+
     rates = {}
+
+    # Loop over nuclei and assemble individual R1 rates
     for label in nuclei_labels:
         r = np.linalg.norm(nuclei_coords[label] - electron_coords) * 1e-10
         gamma_I = gamma_I_dict[label]
@@ -561,8 +698,8 @@ def sbm_r1_dipolar(
             (1 / 10)
             * (1 / r**6)
             * (MU0 / (4 * np.pi))**2
-            * (gamma_I * GE * MUB)**2
-            * spin * (spin + 1)
+            * (gamma_I * g_eff * MUB)**2
+            * S_eff * (S_eff + 1)
         )
         spectral_density = (
             3 * J(omega_I, tau_c1)
@@ -576,20 +713,69 @@ def sbm_r1_dipolar(
 
 
 def sbm_r2_dipolar(
-    nuclei_labels,
-    nuclei_coords,
-    electron_coords,
-    gamma_I_dict,
-    omega_I_dict,
-    omega_S,
-    tau_c1,
-    tau_c2,
-    spin
+        nuclei_labels,
+        nuclei_coords,
+        electron_coords,
+        gamma_I_dict,
+        omega_I_dict,
+        omega_S,
+        tau_c1,
+        tau_c2,
+        spin,
+        orbit,
+        total_momentum_J
 ):
+    """Compute SBM R2 dipolar relaxation rates for each nucleus.
+
+    Implements the Solomon-Bloembergen-Morgan (SBM) expression for the
+    nuclear transverse relaxation rate R2 arising from electron-nucleus
+    dipolar interactions. The expression includes both zero- and
+    non-zero-frequency spectral density terms.
+
+    Parameters
+    ----------
+    nuclei_labels : list[str]
+        Labels of the nuclei for which rates are computed.
+    nuclei_coords : dict[str, np.ndarray]
+        Cartesian coordinates (in Å) of each nucleus.
+    electron_coords : np.ndarray
+        Cartesian coordinates (in Å) of the effective electron spin
+        centre.
+    gamma_I_dict : dict[str, float]
+        Nuclear gyromagnetic ratios (rad s^-1 T^-1) for each label.
+    omega_I_dict : dict[str, float]
+        Nuclear Larmor angular frequencies (rad s^-1) for each label.
+    omega_S : float
+        Electron Larmor angular frequency (rad s^-1).
+    tau_c1 : float
+        Correlation time for the electron-nuclear dipolar interaction
+        (usually rotational correlation time) in seconds.
+    tau_c2 : float
+        Correlation time entering the cross terms (often tau_c1 or an
+        effective electronic correlation time) in seconds.
+    spin : float
+        Spin quantum number S of the paramagnetic centre.
+    orbit : float
+        Orbital angular momentum quantum number L.
+    total_momentum_J : float | None
+        Total angular momentum quantum number J, if defined.
+
+    Returns
+    -------
+    dict[str, float]
+        Mapping from nucleus label to R2 dipolar relaxation rate (s^-1).
+    """
+
     def J(omega, tau):
         return tau / (1 + (omega * tau) ** 2)
 
+    # Effective g-factor and angular momentum entering the prefactor
+    g_eff = calc_g_eff(spin, orbit, total_momentum_J)
+    S_eff = choose_S_eff(spin, total_momentum_J)
+
     rates = {}
+
+    # Loop over nuclei and assemble individual R2 rates
     for label in nuclei_labels:
         r = np.linalg.norm(nuclei_coords[label] - electron_coords) * 1e-10
         gamma_I = gamma_I_dict[label]
@@ -598,8 +784,8 @@ def sbm_r2_dipolar(
             (1 / 15)
             * (1 / r**6)
             * (MU0 / (4 * np.pi))**2
-            * (gamma_I * GE * MUB)**2
-            * spin * (spin + 1)
+            * (gamma_I * g_eff * MUB)**2
+            * S_eff * (S_eff + 1)
         )
         spectral_density = (
             4 * J(0, tau_c1)
@@ -620,20 +806,56 @@ def sbm_r1_contact(
     omega_I_dict,
     omega_S,
     tau_e2,
-    spin
+    spin,
+    total_momentum_J
 ):
+    """Compute SBM R1 contact relaxation rates for each nucleus.
+
+    Implements the Solomon-Bloembergen-Morgan (SBM) expression for the
+    nuclear longitudinal relaxation rate R1 arising from isotropic
+    Fermi-contact hyperfine coupling to the electron spin.
+
+    Parameters
+    ----------
+    nuclei_labels : list[str]
+        Labels of the nuclei for which rates are computed.
+    Aiso_dict : dict[str, float]
+        Isotropic hyperfine coupling constants A_iso (in angular
+        frequency units) for each nucleus.
+    omega_I_dict : dict[str, float]
+        Nuclear Larmor angular frequencies (rad s^-1) for each label.
+    omega_S : float
+        Electron Larmor angular frequency (rad s^-1).
+    tau_e2 : float
+        Electronic correlation time entering the spectral density in
+        seconds.
+    spin : float
+        Spin quantum number S of the paramagnetic centre.
+    total_momentum_J : float | None
+        Total angular momentum quantum number J, if defined.
+
+    Returns
+    -------
+    dict[str, float]
+        Mapping from nucleus label to R1 contact relaxation rate (s^-1).
+    """
+
     def J(omega, tau):
         return tau / (1 + (omega * tau) ** 2)
 
+    # Effective angular momentum quantum number for the contact term
+    S_eff = choose_S_eff(spin, total_momentum_J)
+
     rates = {}
 
+    # Loop over nuclei and assemble individual R1 contact rates
     for label in nuclei_labels:
         Aiso = Aiso_dict[label]
         omega_I = omega_I_dict[label]
         prefactor = (
             (2 / 3)
             * Aiso**2
-            * spin * (spin + 1)
+            * S_eff * (S_eff + 1)
         )
         spectral_density = (
             J(omega_I - omega_S, tau_e2)
@@ -644,26 +866,65 @@ def sbm_r1_contact(
 
 
 def sbm_r2_contact(
-    nuclei_labels,
-    Aiso_dict,
-    omega_I_dict,
-    omega_S,
-    tau_e1,
-    tau_e2,
-    spin
+        nuclei_labels,
+        Aiso_dict,
+        omega_I_dict,
+        omega_S,
+        tau_e1,
+        tau_e2,
+        spin,
+        total_momentum_J
 ):
+    """Compute SBM R2 contact relaxation rates for each nucleus.
+
+    Implements the Solomon-Bloembergen-Morgan (SBM) expression for the
+    nuclear transverse relaxation rate R2 arising from isotropic
+    Fermi-contact hyperfine coupling to the electron spin.
+
+    Parameters
+    ----------
+    nuclei_labels : list[str]
+        Labels of the nuclei for which rates are computed.
+    Aiso_dict : dict[str, float]
+        Isotropic hyperfine coupling constants A_iso (in angular
+        frequency units) for each nucleus.
+    omega_I_dict : dict[str, float]
+        Nuclear Larmor angular frequencies (rad s^-1) for each label.
+    omega_S : float
+        Electron Larmor angular frequency (rad s^-1).
+    tau_e1 : float
+        Electronic correlation time entering the zero-frequency term,
+        in seconds.
+    tau_e2 : float
+        Electronic correlation time entering the finite-frequency term,
+        in seconds.
+    spin : float
+        Spin quantum number S of the paramagnetic centre.
+    total_momentum_J : float | None
+        Total angular momentum quantum number J, if defined.
+
+    Returns
+    -------
+    dict[str, float]
+        Mapping from nucleus label to R2 contact relaxation rate (s^-1).
+    """
+
     def J(omega, tau):
         return tau / (1 + (omega * tau) ** 2)
 
+    # Effective angular momentum quantum number for the contact term
+    S_eff = choose_S_eff(spin, total_momentum_J)
+
     rates = {}
 
+    # Loop over nuclei and assemble individual R2 contact rates
     for label in nuclei_labels:
         Aiso = Aiso_dict[label]
         omega_I = omega_I_dict[label]
         prefactor = (
             (1 / 3)
             * Aiso**2
-            * spin * (spin + 1)
+            * S_eff * (S_eff + 1)
         )
         spectral_density = (
             J(0, tau_e1)
@@ -681,14 +942,55 @@ def gueron_r1_curie(
     omega_I_dict,
     T,
     tau_R,
-    spin
+    spin,
+    orbit,
+    total_momentum_J
 ):
+    """Compute Guéron R1 Curie relaxation rates for each nucleus.
+
+    Implements the Guéron expression for nuclear longitudinal
+    relaxation (R1) due to the Curie (static) dipolar interaction with
+    an anisotropic electron magnetic susceptibility tensor. The formula
+    is evaluated in the point-dipole approximation.
+
+    Parameters
+    ----------
+    nuclei_labels : list[str]
+        Labels of the nuclei for which rates are computed.
+    nuclei_coords : dict[str, np.ndarray]
+        Cartesian coordinates (in Å) of each nucleus.
+    electron_coords : np.ndarray
+        Cartesian coordinates (in Å) of the effective electron spin
+        centre.
+    omega_I_dict : dict[str, float]
+        Nuclear Larmor angular frequencies (rad s^-1) for each label.
+    T : float
+        Temperature in Kelvin.
+    tau_R : float
+        Rotational correlation time in seconds.
+    spin : float
+        Spin quantum number S of the paramagnetic centre.
+    orbit : float
+        Orbital angular momentum quantum number L.
+    total_momentum_J : float | None
+        Total angular momentum quantum number J, if defined.
+
+    Returns
+    -------
+    dict[str, float]
+        Mapping from nucleus label to R1 Curie relaxation rate (s^-1).
+    """
 
     def J(omega, tau):
         return tau / (1 + (omega * tau) ** 2)
 
+    # Effective g-factor and angular momentum entering the Curie term
+    g_eff = calc_g_eff(spin, orbit, total_momentum_J)
+    S_eff = choose_S_eff(spin, total_momentum_J)
+
     rates = {}
 
+    # Loop over nuclei and assemble individual R1 Curie rates
     for label in nuclei_labels:
         r = np.linalg.norm(nuclei_coords[label] - electron_coords) * 1e-10
         omega_I = omega_I_dict[label]
@@ -697,15 +999,14 @@ def gueron_r1_curie(
             * (1 / r**6)
             * (MU0 / (4 * np.pi))**2
             * (omega_I / (3 * consts.k * T))**2
-            * (GE * MUB)**4
-            * (spin * (spin + 1))**2
+            * (g_eff * MUB)**4
+            * (S_eff * (S_eff + 1))**2
         )
         spectral_density = (3 * J(omega_I, tau_R))
         rate = prefactor * spectral_density
         rates[label] = rate
 
     return rates
-
 
 
 def gueron_r2_curie(
@@ -715,14 +1016,55 @@ def gueron_r2_curie(
         omega_I_dict,
         T,
         tau_R,
-        spin
+        spin,
+        orbit,
+        total_momentum_J
 ):
+    """Compute Guéron R2 Curie relaxation rates for each nucleus.
+
+    Implements the Guéron expression for nuclear transverse relaxation
+    (R2) due to the Curie (static) dipolar interaction with an
+    anisotropic electron magnetic susceptibility tensor, in the
+    point-dipole approximation.
+
+    Parameters
+    ----------
+    nuclei_labels : list[str]
+        Labels of the nuclei for which rates are computed.
+    nuclei_coords : dict[str, np.ndarray]
+        Cartesian coordinates (in Å) of each nucleus.
+    electron_coords : np.ndarray
+        Cartesian coordinates (in Å) of the effective electron spin
+        centre.
+    omega_I_dict : dict[str, float]
+        Nuclear Larmor angular frequencies (rad s^-1) for each label.
+    T : float
+        Temperature in Kelvin.
+    tau_R : float
+        Rotational correlation time in seconds.
+    spin : float
+        Spin quantum number S of the paramagnetic centre.
+    orbit : float
+        Orbital angular momentum quantum number L.
+    total_momentum_J : float | None
+        Total angular momentum quantum number J, if defined.
+
+    Returns
+    -------
+    dict[str, float]
+        Mapping from nucleus label to R2 Curie relaxation rate (s^-1).
+    """
 
     def J(omega, tau):
         return tau / (1 + (omega * tau) ** 2)
 
+    # Effective g-factor and angular momentum entering the Curie term
+    g_eff = calc_g_eff(spin, orbit, total_momentum_J)
+    S_eff = choose_S_eff(spin, total_momentum_J)
+
     rates = {}
 
+    # Loop over nuclei and assemble individual R2 Curie rates
     for label in nuclei_labels:
         r = np.linalg.norm(nuclei_coords[label] - electron_coords) * 1e-10
         omega_I = omega_I_dict[label]
@@ -731,8 +1073,8 @@ def gueron_r2_curie(
             * (1 / r**6)
             * (MU0 / (4 * np.pi))**2
             * (omega_I / (3 * consts.k * T))**2
-            * (GE * MUB)**4
-            * (spin * (spin + 1))**2
+            * (g_eff * MUB)**4
+            * (S_eff * (S_eff + 1))**2
         )
         spectral_density = (4 * J(0, tau_R) + 3 * J(omega_I, tau_R))
         rate = prefactor * spectral_density

@@ -1,12 +1,12 @@
 """
 Module for rotation, alignment, and chi-frame transformations in PCS-related
-coordinate mapping between NEVPT2 and DFT geometries. The module loads input
-settings from a YAML configuration, reads susceptibility and hyperfine data,
-and exposes `get_rotation_and_transformation` as its main public API.
+coordinate mapping between NEVPT2 and DFT geometries. The public API works
+from an already-parsed PredictConfig, uses it to read susceptibility and
+hyperfine data, and exposes `get_rotation_and_transformation` as its main
+entry point.
 """
 import re
 import os
-import glob
 import datetime
 import numpy as np
 import numpy.linalg as la
@@ -14,44 +14,60 @@ import xyz_py as xyzp
 
 from . import readers as rdrs
 from . import utils as ut
-from .inputs import PredictConfig
+from . import inputs as inps
 from .__version__ import __version__
 
-def access_input_data():
-    default_ymls = glob.glob(os.path.join(os.getcwd(), "*.yml"))
+def access_input_data(cfg: inps.PredictConfig):
+    """
+    Load and extract all PCS‑related input data using an already‑parsed PredictConfig.
 
-    if not default_ymls:
-        raise FileNotFoundError("No .yml file found in current directory")
+    Parameters
+    ----------
+    cfg : PredictConfig
+        Parsed YAML configuration object containing file paths and susceptibility settings.
 
-    INPUT_YML = os.environ.get("SIMPNMR_INPUT", default_ymls[0])
-
-    cfg = PredictConfig.from_file(INPUT_YML)
-    susc_path = cfg.susceptibility_file
-    hfc_path = cfg.hyperfine_file
+    Returns
+    -------
+    tuple
+        chiT : numpy.ndarray (3, 3)
+            Susceptibility tensor for the target temperature.
+        temperature : list[float]
+            Temperature values provided in the YAML configuration.
+        nevpt2_labels : list[str]
+            Atomic labels extracted from the NEVPT2 coordinate file.
+        nevpt2_coords : numpy.ndarray (N, 3)
+            NEVPT2 atomic Cartesian coordinates.
+        dft_coords : numpy.ndarray (N, 3)
+            DFT atomic Cartesian coordinates extracted from the hyperfine file.
+    """
 
     # Temperatures come from YAML; we treat it as a single-element list for now
     temperature = cfg.susceptibility_temperatures
 
     # NEVPT2 coordinates
-    nevpt2_labels, nevpt2_coords = rdrs.read_orca5_output_xyz(susc_path)
+    nevpt2_labels, nevpt2_coords = rdrs.read_orca5_output_xyz(cfg.susceptibility_file)
 
     # DFT coordinates
-    qca = rdrs.QCA.guess_from_file(hfc_path)
-    nevpt2_labels = qca.labels
+    qca = rdrs.QCA.guess_from_file(cfg.hyperfine_file)
     dft_coords = qca.coords
 
     # Susceptibility tensor
-    chi_dict = rdrs.read_orca_susceptibility(susc_path, section="nevpt2")
+    chi_dict = rdrs.read_orca_susceptibility(cfg.susceptibility_file, section="nevpt2")
     chiT = chi_dict[temperature[0]]
 
-    return chiT, temperature, nevpt2_labels,nevpt2_coords, dft_coords
+    return chiT, temperature, nevpt2_labels, nevpt2_coords, dft_coords
 
 
-def get_rotation_and_transformation():
+def get_rotation_and_transformation(cfg: inps.PredictConfig):
     """
     Compute and return both the rotation matrix (R) aligning NEVPT2 and DFT
     coordinate sets, and the final transformation matrix (trans_mat) using
     the susceptibility tensor.
+
+    Parameters
+    ----------
+    cfg : PredictConfig
+        Parsed YAML configuration containing susceptibility and geometry inputs.
 
     Returns
     -------
@@ -62,7 +78,7 @@ def get_rotation_and_transformation():
             Transformation matrix used for PCS-related coordinate mapping.
     """
 
-    chiT, temperature, _, nevpt2_coords, dft_coords = access_input_data()
+    chiT, temperature, _, nevpt2_coords, dft_coords = access_input_data(cfg)
 
     if np.allclose(nevpt2_coords, dft_coords, rtol=1e-6, atol=1e-8):
         return np.eye(3), np.eye(3)
@@ -70,7 +86,10 @@ def get_rotation_and_transformation():
         pass
 
     if len(nevpt2_coords) != len(dft_coords):
-        raise ValueError
+        raise ValueError(
+            "NEVPT2 and DFT coordinate sets have different lengths; cannot determine "
+            "a meaningful rotational alignment."
+        )
 
     # Compute rotation aligning NEVPT2 → DFT
     rot_mat, rmsd = xyzp.find_rotation(nevpt2_coords, dft_coords)
@@ -93,9 +112,26 @@ def get_rotation_and_transformation():
 
     return rot_mat, trans_mat
 
-def rotate_coords_to_chi_frame(file_path):
+def rotate_coords_to_chi_frame(file_path, cfg: inps.PredictConfig):
+    """
+    Rotate NEVPT2 coordinates into the susceptibility (chi) principal‑axis frame
+    and write the resulting structure to an XYZ file.
 
-    chiT, _, nevpt2_labels, nevpt2_coords, _ = access_input_data()
+    Parameters
+    ----------
+    file_path : str
+        Directory in which the output chi‑frame XYZ file should be saved.
+    cfg : PredictConfig
+        Parsed YAML configuration containing susceptibility and geometry inputs.
+
+    Returns
+    -------
+    list of tuple
+        A list of (label, coordinate) pairs representing the rotated structure,
+        suitable for downstream processing.
+    """
+
+    chiT, _, nevpt2_labels, nevpt2_coords, _ = access_input_data(cfg)
 
     # Subtract isotropic component (trace)
     chiT_traceless = chiT - np.eye(3) * (np.trace(chiT) / 3.0)
@@ -163,4 +199,5 @@ def rotate_coords_to_chi_frame(file_path):
 
     # Return list of (label, coord) tuples for possible downstream use
     coords_chi_frame_out = list(zip(clean_labels, nevpt2_coords_chi_frame))
+    
     return coords_chi_frame_out
