@@ -1,19 +1,19 @@
 Authors
 =======
 
-The ``SimpNMR`` package has been developed by the following contributors:
+The ``SimpNMR`` package is developed by the following contributors:
 
-- Dr. Elizaveta Suturina — principal investigator, Suturina Group, University of Bath.  
-- Dr. Jon Kragskow — original author, developed the initial version of the package as a member of the Suturina Group at the University of Bath.  
-- Ernest Borysenko — current maintainer and lead developer, PhD Student at the University of Bath, Suturina Group.  
+- Ernest Borysenko — current maintainer and lead developer, PhD student at the University of Bath, Suturina Group.
+- Dr. Jon Kragskow — original author, developed the initial version of the package as a member of the Suturina Group at the University of Bath.
 - Dr. James Whipham — contributor, implemented relaxation mechanisms as a member of the Suturina Group at the University of Bath.
+- Dr. Elizaveta Suturina — principal investigator, Suturina Group, University of Bath.
 
 Citation
 --------
 
-To acknowledge ``SimpNMR`` in your work, please the ``simpnmr`` version number, and cite the following publication
+To acknowledge ``SimpNMR`` in your work, please include the ``simpnmr`` version number and cite the following publication.
 
-The version number can be obtained using the terminal command
+The version number can be obtained using the following terminal command:
 
 .. code-block::
 
