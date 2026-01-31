@@ -3,20 +3,20 @@
 FAQ
 ---
 
-This page contains some frequently asked questions. Please consult this page before raising a GitLab issue!
+This page contains some frequently asked questions. Please consult this page before raising a GitLab issue.
 
-Errors:
-^^^^^^^^^^
+Errors
+^^^^^^
 
 1. ``'simpnmr' is not recognized as an internal or external command, operable program or batch file.``
 
-    You are trying to run ``simpnmr`` in a terminal where Python (and SimpNMR) is not available.
+    You are trying to run ``simpnmr`` in a terminal where Python (and therefore SimpNMR) is not available.
     First check that Python is installed and works in this terminal (for example, by running ``python --version``),
     then reinstall or activate SimpNMR in that environment before running ``simpnmr`` again.
 
 2. ``ModuleNotFoundError: No module named 'simpnmr'.``
 
-    Python cannot find the SimpNMR package in the environment you are using.
+    Python cannot find the SimpNMR package in the current environment.
     Activate the environment where you want to use SimpNMR (for example with ``conda activate ...`` or ``source venv/bin/activate``)
     and (re)install it:
     
@@ -26,12 +26,12 @@ Errors:
 
 3. ``no matches found: *yml``
 
-    Your shell does not see any files matching ``*yml`` in the current working directory.
+    Your shell cannot find any files matching ``*yml`` in the current working directory.
     Check that you are in the folder that contains your YAML configuration file(s) before running the command.
 
 4. ``Missing file error: [Errno 2] No such file or directory``
 
-    SimpNMR cannot find one or more of the files you asked it to use.
+    SimpNMR cannot find one or more of the files specified.
     Double-check the paths to all required input files (see ``simpnmr -h`` for a summary of the expected inputs and options).
 
 5. ``yaml.scanner.ScannerError`` or ``yaml.parser.ParserError``
@@ -44,15 +44,4 @@ Errors:
 
     SimpNMR does not have permission to read or write one of the files or folders you selected.
     Make sure you have write access to the output directory and read access to all input files,
-    or choose a different location for the simulation outputs.
-
-I want to:
-^^^^^^^^^^^^
-
-1. Change the plot font family/size or plot file extension
-
-    Read the instructions :ref:`here <env_var>`. 
-
-2. Use an alternative delimiter in csv output files
-
-    Read the instructions :ref:`here <csv_files>`. 
+    or choose a different location for the outputs.
