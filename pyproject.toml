@@ -1,3 +1,5 @@
+# Project build, packaging, and tooling configuration.
+
 [build-system]
 requires = ["setuptools>=61", "wheel"]
 build-backend = "setuptools.build_meta"
@@ -12,3 +14,15 @@ commit_message = "chore(release): {version}"
 
 [tool.semantic_release.remote]
 type = "gitlab"
+
+[tool.ruff]
+line-length = 88
+
+[tool.ruff.lint]
+select = ["E", "F", "I"]
+
+[tool.pytest.ini_options]
+addopts = "-m 'not integration'"
+markers = [
+    "integration: slow integration tests using example datasets",
+]
