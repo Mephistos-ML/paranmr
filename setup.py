@@ -1,3 +1,5 @@
+"""Package installation and distribution configuration."""
+
 import setuptools
 
 # Read version from simpnmr/__version__.py
@@ -25,22 +27,23 @@ setuptools.setup(
         "scipy",
         "sympy",
         "matplotlib",
-        "xyz_py>=5.13.0",
         "pandas",
         "pathos",
         "pyyaml",
         "pyyaml-include",
         "adjustText",
-        "extto>=0.3.0",
     ],
+    extras_require={
+        "dev": [
+            "pytest>=8.0",
+        ]
+    },
     entry_points={
         "console_scripts": [
-            "simpnmr = simpnmr.cli:interface",
-            "plot_A_funcs = simpnmr.scripts.batch_hf_plot:main",
-            "plot_chi_funcs = simpnmr.scripts.batch_susc_plot:main",
-            "chi_plot = simpnmr.scripts.chi_plot:main",
-            "get_susc = simpnmr.scripts.get_susc:main",
-            "xyz_to_chemlabel = simpnmr.scripts.chemcraft_xyz_to_chemlabels:main",
+            "simpnmr = simpnmr.cli.cli:interface",
+            "plot_A_funcs = simpnmr.tools.batch_hf_plot:main",
+            "plot_chi_funcs = simpnmr.tools.batch_susc_plot:main",
+            "xyz_to_chemlabel = simpnmr.tools.coords_tools.chemcraft_xyz:main",
         ]
     },
 )
