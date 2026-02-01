@@ -5,4 +5,4 @@
 
 # DO NOT EDIT THIS NUMBER!
 # IT IS AUTOMATICALLY CHANGED BY python-semantic-release
-__version__ = "1.2.2"
+__version__ = "1.3.0"
