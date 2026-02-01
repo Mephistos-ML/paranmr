@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Suturina Group
+
 """Load diamagnetic shifts from CSV or QC output.
 
 Reads external data and returns plain mappings for application-level workflows.

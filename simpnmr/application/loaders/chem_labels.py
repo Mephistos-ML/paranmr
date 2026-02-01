@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Suturina Group
+
 """Load chemical label mappings from CSV.
 
 Reads external data and returns plain mappings for downstream use.
