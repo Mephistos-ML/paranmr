@@ -2,6 +2,19 @@
 
 <!-- version list -->
 
+## v1.3.0 (2026-02-01)
+
+### Documentation
+
+- Switch root_doc back to index
+  ([`f86a926`](https://gitlab.com/suturina-group/simpnmr/-/commit/f86a926b9c0acc1c9a4688216ee0e7827376afbd))
+
+### Features
+
+- Architectural refactor of application and IO layers
+  ([`5291fea`](https://gitlab.com/suturina-group/simpnmr/-/commit/5291fea3abfcac2951cae9ce14050d4500e869fc))
+
+
 ## v1.2.2 (2025-12-04)
 
 ### Bug Fixes
