@@ -72,8 +72,8 @@ Fermi-contact shift
 
 The Fermi-contact shift is often described as the contribution arising from the spin density at the nucleus.
 
-FC with spin-only magnetic susceptibility
------------------------------------------
+1. FC with spin-only magnetic susceptibility
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 In the simplest model, the Fermi-contact shift is proportional to the reduced Fermi-contact hyperfine interaction at the nucleus of interest and the spin-only magnetic susceptibility.
 
@@ -92,8 +92,8 @@ where the spin-only magnetic susceptibility in SI units is
 where :math:`\mu_0` is the vacuum permeability, :math:`\mu_B` is the Bohr magneton, :math:`\mathrm{g}_{\mathrm{e}}` is the free-electron g-factor,
 :math:`S` is the total spin, :math:`k` is the Boltzmann constant and :math:`T` is the temperature.
 
-Accounting for g-tensor anisotropy 
-----------------------------------
+2. Accounting for g-tensor anisotropy 
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 In order to account for the effect of g-tensor anisotropy on the FC shift, both the magnetic susceptibility tensor
 and the g-tensor must be calculated at the same level of theory (e.g. SOC-NEVPT2).
@@ -104,8 +104,8 @@ and the g-tensor must be calculated at the same level of theory (e.g. SOC-NEVPT2
     \delta^{F C}=\frac{\mathrm{g}_{\mathrm{e}}}{3} \operatorname{tr}\left(\frac{\boldsymbol{\chi}}{\mathbf{g}^{\mathrm{T}}}\right) A^{FC}  
 
 
-Relativistic hyperfine from DFT
--------------------------------
+3. Relativistic hyperfine from DFT
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 If the relativistic hyperfine contribution :math:`\mathbf{A}^{\text {orb }}` and the g-tensor are calculated using a DFT method in ORCA, an additional contribution to the shift,
 which does not depend on the spin-only HFC :math:`A^{FC}` but on the isotropic magnetic susceptibility tensor can be evaluated. 
@@ -120,5 +120,5 @@ As with other terms arising from relativistic contributions to the hyperfine ten
 .. _PRE:
 
 Paramagnetic relaxation enhancement
-===================================
+-----------------------------------
 

@@ -6,7 +6,7 @@ Installation
 Setting up Python
 -----------------
 
-If you are experienced with Python and installing packages, proceed to the :ref:`next section <pip_install>`.
+If you are experienced with Python and installing packages, proceed to the next section.
 
 If you are new to python, we recommend using `Anaconda <https://www.anaconda.com/download>`_ - see the
 `Anaconda guide <https://docs.anaconda.com/free/anaconda/install/>`_ for more information. Anaconda may be available
@@ -36,7 +36,7 @@ To test that the installation was successful, run the following command:
 
     simpnmr -h
 
-You should see the help text for ``simpnmr``. You are now ready to start using ``SimpNMR``. Head to the :ref:`usage` pages for more information.
+You should see the help text for ``simpnmr``. You are now ready to start using ``SimpNMR``. Head to the :doc:`workflows` pages for more information.
 
 .. _updating:
 

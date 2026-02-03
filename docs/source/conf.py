@@ -1,32 +1,33 @@
-# Configuration file for the Sphinx documentation builder.
-#
-# This file only contains a selection of the most common options. For a full
-# list see the documentation:
-# https://www.sphinx-doc.org/en/master/usage/configuration.html
+"""Sphinx configuration file for the SimpNMR documentation.
+
+This file defines documentation structure, extensions, theme configuration,
+and output formatting for HTML and LaTeX builds.
+
+For the full list of available options, see:
+https://www.sphinx-doc.org/en/master/usage/configuration.html
+"""
 
 # -- Path setup --------------------------------------------------------------
-
-# If extensions (or modules to document with autodoc) are in another directory,
-# add these directories to sys.path here. If the directory is relative to the
-# documentation root, use os.path.abspath to make it absolute, like shown here.
-#
+# Extend sys.path so Sphinx can import the simpnmr package and its submodules.
 import datetime
 import os
 import sys
 
+from simpnmr.__version__ import __version__
+
 sys.path.insert(0, os.path.abspath(".."))
 sys.path.insert(0, os.path.abspath("../../"))
 
-# -- Project information -----------------------------------------------------
-
+# -- Project metadata -------------------------------------------------------
 project = "simpnmr"
 copyright = "{:d}".format(datetime.date.today().year)
 
+# Title displayed in the HTML documentation header and browser tab.
+html_title = f"SimpNMR v{__version__}"
 # -- General configuration ---------------------------------------------------
 
-# Add any Sphinx extension module names here, as strings. They can be
-# extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
-# ones.
+# Sphinx extensions enabled for this documentation build.
+# Only extensions that are actively used should be listed here.
 extensions = [
     "sphinx.ext.autodoc",
     "sphinx.ext.coverage",
@@ -35,46 +36,78 @@ extensions = [
     "sphinxcontrib.bibtex",
     "sphinx_copybutton",
     "sphinxemoji.sphinxemoji",
+    "sphinx_design",
 ]
+# Bibliography configuration (used for citations in the documentation).
 bibtex_bibfiles = ["refs.bib"]
 bibtex_reference_style = "super"
 
 napoleon_numpy_docstring = True
 
-# Add any paths that contain templates here, relative to this directory.
+# Custom Jinja2 templates for HTML output.
 templates_path = ["_templates"]
 
-# List of patterns, relative to source directory, that match files and
-# directories to ignore when looking for source files.
-# This pattern also affects html_static_path and html_extra_path.
+# Files and directories to ignore during the documentation build.
 exclude_patterns = []
 
 
-# -- Options for HTML output -------------------------------------------------
+# -- HTML output configuration ---------------------------------------------
+# PyData Sphinx Theme is used for a clean, modern documentation layout.
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
-#
-html_theme = "sphinx_rtd_theme"
-# html_logo = '../../images/simpnmr.png'
-# html_favicon = '../../images/simpnmr.ico'
+html_theme = "pydata_sphinx_theme"
 
-# Add any paths that contain custom static files (such as style sheets) here,
-# relative to this directory. They are copied after the builtin static files,
-# so a file named "default.css" will overwrite the builtin "default.css".
+# Theme-specific options controlling navigation behaviour and header links.
+# Disable the primary (left) sidebar entirely.
+# Keep the secondary (right) sidebar mini-map.
+html_theme_options = {
+    "navigation_depth": 2,
+    "show_nav_level": 1,
+    "secondary_sidebar_items": ["page-toc"],
+    "logo": {
+        "text": "SimpNMR",
+    },
+    "icon_links": [
+        {
+            "name": "GitLab",
+            "url": "https://gitlab.com/suturina-group/simpnmr",
+            "icon": "fa-brands fa-gitlab",
+        },
+        {
+            "name": "PyPI",
+            "url": "https://pypi.org/project/simpnmr/",
+            "icon": "fa-brands fa-python",
+        },
+    ],
+}
+html_logo = "_static/simpnmr-logo.png"
+html_favicon = "_static/simpnmr-favicon.ico"
+
+# Paths containing custom static assets (CSS, images, JavaScript).
 html_static_path = ["_static"]
 
+# Additional CSS files applied after the theme's default styles.
+html_css_files = ["style.css"]
+
+# Default options for autodoc-generated API documentation.
 autodoc_default_options = {
     "member-order": "bysource",
 }
 
-# Experimental latex build!
-# must sudo apt install
-# xindy
-# fonts-freefont-ttf
-# texlive-xetex
-# latexmk
-# texlive-latex-extra
+# -- LaTeX / PDF output configuration --------------------------------------
+# Settings below control experimental PDF builds via LaTeX.
+# These options are not required for HTML documentation builds.
+#
+# Linux system dependencies required for building the PDF documentation
+# (example for Ubuntu/Debian-based systems):
+#
+#   sudo apt install \
+#     xindy \
+#     fonts-freefont-ttf \
+#     texlive-xetex \
+#     latexmk \
+#     texlive-latex-extra
 latex_engine = "xelatex"
 
 latex_elements = {

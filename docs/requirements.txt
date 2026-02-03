@@ -3,3 +3,5 @@ sphinx-rtd-theme
 sphinxcontrib-bibtex
 sphinx-copybutton
 sphinxemoji
+sphinx-design
+pydata-sphinx-theme
