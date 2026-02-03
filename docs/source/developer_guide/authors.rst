@@ -11,7 +11,10 @@ The ``SimpNMR`` package is developed by the following contributors:
 Citation
 --------
 
-To acknowledge ``SimpNMR`` in your work, please include the ``simpnmr`` version number and cite the following publication.
+
+To acknowledge ``SimpNMR`` in your work, please include the ``simpnmr`` version number and cite the associated publication.
+
+The primary reference for ``SimpNMR`` is currently **in preparation** and will be added here once available.
 
 The version number can be obtained using the following terminal command:
 

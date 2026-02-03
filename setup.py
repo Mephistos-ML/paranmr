@@ -36,6 +36,7 @@ setuptools.setup(
     extras_require={
         "dev": [
             "pytest>=8.0",
+            "ruff>=0.1.0",
         ]
     },
     entry_points={
