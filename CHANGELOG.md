@@ -2,6 +2,22 @@
 
 <!-- version list -->
 
+## v1.3.1 (2026-02-05)
+
+### Bug Fixes
+
+- **csv**: Fix delimiter handling for raw experiment CSV
+  ([`3d4c129`](https://gitlab.com/suturina-group/simpnmr/-/commit/3d4c129efbec704c70ad6859c2b2ab6e664e9453))
+
+### Chores
+
+- **docs**: Minor clarifications and wording improvements
+  ([`c975f57`](https://gitlab.com/suturina-group/simpnmr/-/commit/c975f576a955aa903a1a79fbc800dd16c1d25c6f))
+
+- **packaging**: Add missing __init__.py files to package directories
+  ([`d139e0a`](https://gitlab.com/suturina-group/simpnmr/-/commit/d139e0a5867982ca8316201ff43bb15ecf040411))
+
+
 ## v1.3.0 (2026-02-01)
 
 ### Documentation
