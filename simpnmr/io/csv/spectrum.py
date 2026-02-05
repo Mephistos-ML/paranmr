@@ -8,7 +8,7 @@ Provides helpers to parse two-column shift–intensity spectra into numeric arra
 
 import csv
 
-import pandas as pd
+from simpnmr.io.csv.utils import read_csv_safe
 
 
 def read_spectrum(file_name: str):
@@ -21,17 +21,16 @@ def read_spectrum(file_name: str):
         file_name: Path to the CSV file.
     """
 
-    # Read spectrum supporting both comma and any whitespace as separators
-    df = pd.read_csv(
+    # Strict contract: comma-separated, two columns (ppm, intensity). CSV syntax
+    # validation (e.g., trailing comma / extra delimiters) is handled by read_csv_safe.
+    df = read_csv_safe(
         file_name,
-        sep=r"\s+",  # tabs/spaces
+        sep=",",
         header=None,
-        comment="#",
-        engine="python",
         quoting=csv.QUOTE_NONE,  # treat quotes as normal characters
         converters={
-            0: lambda s: float(s.strip("\"'")),
-            1: lambda s: float(s.strip("\"'")),
+            0: lambda s: float(s.strip().strip("\"'")),
+            1: lambda s: float(s.strip().strip("\"'")),
         },
     )
 
