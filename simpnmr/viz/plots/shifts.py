@@ -16,14 +16,14 @@ import matplotlib.ticker as ticker
 import numpy as np
 import scipy.constants as constants
 
-from simpnmr.core.constants import periodic_table
-from simpnmr.core.domain.experiment import Experiment
-from simpnmr.core.domain.molecule import Molecule
-from simpnmr.core.fitting import fit_models
+from simpnmr.core.const import ptable
+from simpnmr.core.domain.exp import Experiment
+from simpnmr.core.domain.mol import Molecule
+from simpnmr.core.fitting import models
 from simpnmr.viz.layout.export import render_figure
 from simpnmr.viz.layout.violin import set_violin_colours
-from simpnmr.viz.style.palette import SAFE_COLOURS
-from simpnmr.viz.utils.format import isotope_format
+from simpnmr.viz.style.theme import PlotSpec
+from simpnmr.viz.utils.fmt import isotope_format
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +31,8 @@ logger = logging.getLogger(__name__)
 def plot_fitted_shifts(
     molecule: Molecule,
     experiment: Experiment,
-    susc_model: fit_models.SusceptibilityModel,
+    susc_model: models.SusceptibilityModel,
+    spec: PlotSpec,
     average: bool = True,
     save: bool = True,
     show: bool = True,
@@ -85,9 +86,7 @@ def plot_fitted_shifts(
 
     # Element specific markers with consistent order
     _unique_elements = [
-        ele
-        for ele in periodic_table.elements
-        if ele in [nuc.label_nn for nuc in unique_nuclei]
+        ele for ele in ptable.elements if ele in [nuc.label_nn for nuc in unique_nuclei]
     ]
     _markers = {
         ele: mrkr for (ele, mrkr) in zip(_unique_elements, ["x", "o", "v", "s", "*"])
@@ -102,10 +101,20 @@ def plot_fitted_shifts(
             markers[nuc.chem_math_label] = markers.pop(nuc.chem_label)
             exp[nuc.chem_math_label] = exp.pop(nuc.chem_label)
 
-    fig, ax = plt.subplots(1, 1, figsize=(6.5, 7), num=window_title)
+    fig, ax = plt.subplots(1, 1, figsize=(5.6, 6.4), num=window_title)
+    glyphs = spec.glyphs
+    palette = spec.palette
+    scale = spec.skin_axes(ax)
 
     for (label, calc), expt in zip(calc_shifts.items(), exp.values()):
-        ax.plot(calc, expt, lw=0, marker=markers[label], color="k")
+        ax.plot(
+            calc,
+            expt,
+            lw=0,
+            marker=markers[label],
+            color=palette.primary,
+            markersize=glyphs.ms,
+        )
         if average:
             ax.text(calc, expt, label)
         else:
@@ -115,7 +124,7 @@ def plot_fitted_shifts(
     ax.set_xlabel("Theoretical Shift (ppm)")
     ax.set_ylabel("Experimental Shift (ppm)")
 
-    ax.plot([0, 1], [0, 1], transform=ax.transAxes, color="k", lw=0.75)
+    ax.plot([0, 1], [0, 1], transform=ax.transAxes, color=palette.primary, lw=0.75)
 
     x_lim = ax.get_xlim()
     y_lim = ax.get_ylim()
@@ -192,7 +201,13 @@ def plot_fitted_shifts(
     expression += rf"  $\beta$ = {molecule.susc.beta:.2f}"
     expression += rf"  $\gamma$ = {molecule.susc.gamma:.2f}"
 
-    ax.text(0.0, 1.02, s=expression, fontsize=11, transform=ax.transAxes)
+    ax.text(
+        0.0,
+        1.02,
+        s=expression,
+        fontsize=scale.annotation,
+        transform=ax.transAxes,
+    )
 
     fig.tight_layout()
 
@@ -216,6 +231,7 @@ def plot_fitted_shifts(
 def plot_shift_spread(
     molecule: Molecule,
     experiment: Experiment | None = None,
+    spec: PlotSpec | None = None,
     terms: list[str] = ["pc", "fc", "d"],
     order="ascending",
     save: bool = True,
@@ -245,7 +261,12 @@ def plot_shift_spread(
     """
 
     # Make plot
-    fig, ax = plt.subplots(1, 1, num=window_title, figsize=(8, 5.5))
+    fig, ax = plt.subplots(1, 1, num=window_title, figsize=(6.8, 4.6))
+    glyphs = spec.glyphs if spec is not None else None
+    if spec is not None:
+        scale = spec.skin_axes(ax)
+        palette = spec.palette
+        shift_colours = spec.shift_colours
 
     unique_chemlabels = {nuc.chem_math_label for nuc in molecule.nuclei}
 
@@ -303,7 +324,7 @@ def plot_shift_spread(
         vert=True,
         showmeans=True,
     )
-    set_violin_colours(_violin, "black")
+    set_violin_colours(_violin, shift_colours.total)
     legend_markers = [
         mpatches.Patch(color=_violin["bodies"][0].get_facecolor().flatten())
     ]
@@ -315,13 +336,22 @@ def plot_shift_spread(
             (xvals + width * widthscaler),
             [exps[o] for o in _order],
             label="Exp.",
-            color="k",
+            color=palette.primary,
             lw=0,
             marker="o",
-            markersize=7,
+            markerfacecolor="none",
+            markeredgecolor=palette.primary,
+            markersize=(glyphs.ms if glyphs is not None else 7),
         )
         legend_markers = [
-            lines.Line2D([0], [0], color="k", lw=0, marker="o", markerfacecolor="None")
+            lines.Line2D(
+                [0],
+                [0],
+                color=palette.primary,
+                lw=0,
+                marker="o",
+                markerfacecolor="None",
+            )
         ] + legend_markers
         legend_labels = ["Exp."] + legend_labels
 
@@ -340,7 +370,7 @@ def plot_shift_spread(
             showmeans=True,
         )
         widthscaler += 1
-        set_violin_colours(_violin, "blue")
+        set_violin_colours(_violin, shift_colours.fc)
         legend_markers.append(
             mpatches.Patch(color=_violin["bodies"][0].get_facecolor().flatten()),
         )
@@ -359,7 +389,7 @@ def plot_shift_spread(
             showmeans=True,
         )
         widthscaler += 1
-        set_violin_colours(_violin, "red")
+        set_violin_colours(_violin, shift_colours.pc)
         legend_markers.append(
             mpatches.Patch(color=_violin["bodies"][0].get_facecolor().flatten()),
         )
@@ -378,7 +408,7 @@ def plot_shift_spread(
             showmeans=True,
         )
         widthscaler += 1
-        set_violin_colours(_violin, "green")
+        set_violin_colours(_violin, shift_colours.dia)
 
         legend_markers.append(
             mpatches.Patch(color=_violin["bodies"][0].get_facecolor().flatten()),
@@ -386,7 +416,13 @@ def plot_shift_spread(
         legend_labels.append("Dia")
 
     # Add zero line to y axis
-    ax.hlines(0.0, 1, len(unique_chemlabels) + 1, color="k", lw=0.5)
+    ax.hlines(
+        0.0,
+        1,
+        len(unique_chemlabels) + 1,
+        color=palette.primary,
+        lw=(glyphs.line_lw if glyphs is not None else 0.5),
+    )
     # Add grey gridlinesand ticks on x axis
     ax.grid(axis="x", ls="--", which="minor")
     ax.xaxis.set_minor_locator(ticker.MultipleLocator(1))
@@ -394,8 +430,7 @@ def plot_shift_spread(
     # Shift label, specify isotope/nucleus if only one type plotted
     if np.unique([nuc.isotope for nuc in molecule.nuclei]).size == 1:
         ax.set_ylabel(
-            r"{} $\delta$ (ppm)".format(isotope_format(molecule.nuclei[0].isotope)),
-            fontsize="18",
+            r"{} $\delta$ (ppm)".format(isotope_format(molecule.nuclei[0].isotope))
         )
     else:
         ax.set_ylabel(r"$\delta$ (ppm)")
@@ -405,7 +440,8 @@ def plot_shift_spread(
 
     ax.xaxis.set_minor_locator(ticker.MultipleLocator(1))
     ax.set_xticks(xvals[::1] + 0.5)
-    ax.set_xticklabels(_order, rotation=45, fontsize="18")
+    ax.set_xticklabels(_order, rotation=45)
+    ax.tick_params(axis="x", labelsize=scale.axis_label)
 
     ax.grid(axis="x", ls="--", which="minor")
     ax.set_xlim(0.5, len(_order) + 1.5)
@@ -413,22 +449,7 @@ def plot_shift_spread(
 
     # Manually create custom legend
     # Violin plots dont support label kwarg
-    legend = ax.legend(
-        legend_markers,
-        legend_labels,
-        loc="best",
-        frameon=True,  # Enable the legend border
-        fancybox=True,  # Rounded corners for the legend box (optional)
-        framealpha=1.0,  # Fully opaque background
-        fontsize="12",  # Adjust the font size if needed
-    )
-    legend.get_frame().set_facecolor(
-        "white"
-    )  # Set the background color of the legend to white
-    legend.get_frame().set_edgecolor(
-        "black"
-    )  # Set the border color of the legend to black
-    legend.get_frame().set_linewidth(1.2)  # Set the border thickness (optional)
+    ax.legend(legend_markers, legend_labels, loc="best")
 
     fig.tight_layout()
     fig.subplots_adjust(right=0.950)
@@ -448,6 +469,7 @@ def plot_shift_spread(
 def plot_shift_contrib(
     molecule: Molecule,
     experiment: Experiment | None,
+    spec: PlotSpec | None = None,
     terms: list[str] = ["pc", "fc", "d"],
     order="ascending",
     save: bool = True,
@@ -516,7 +538,12 @@ def plot_shift_contrib(
     width = 1 / (len(terms) + 1)
 
     # Make plot
-    fig, ax = plt.subplots(1, 1, num=window_title, figsize=(8, 5.5))
+    fig, ax = plt.subplots(1, 1, num=window_title, figsize=(6.8, 4.6))
+    glyphs = spec.glyphs if spec is not None else None
+    if spec is not None:
+        scale = spec.skin_axes(ax)
+        palette = spec.palette
+        shift_colours = spec.shift_colours
 
     # Chemical math label to list of nuclei labels
     cl_to_al = {
@@ -558,10 +585,10 @@ def plot_shift_contrib(
         (xvals + 0.5),
         [total[o] for o in order],
         label="Total",
-        color="k",
+        color=shift_colours.total,
         lw=0,
         marker="x",
-        markersize=7,
+        markersize=(glyphs.ms if glyphs is not None else 7),
     )
 
     # Fermi contact part
@@ -575,7 +602,7 @@ def plot_shift_contrib(
             [fc[o] for o in order],
             width,
             label="Fermi",
-            color="b",
+            color=shift_colours.fc,
         )
         widthscaler += 1
 
@@ -590,7 +617,7 @@ def plot_shift_contrib(
             [pc[o] for o in order],
             width,
             label="Pseudo",
-            color="r",
+            color=shift_colours.pc,
         )
         widthscaler += 1
 
@@ -605,7 +632,7 @@ def plot_shift_contrib(
             [dia[o] for o in order],
             width,
             label="Dia.",
-            color="g",
+            color=shift_colours.dia,
         )
         widthscaler += 1
 
@@ -614,21 +641,26 @@ def plot_shift_contrib(
             (xvals + 0.5),
             [exps[o] for o in order],
             label="Exp.",
-            color="k",
+            color=palette.primary,
             lw=0,
             marker="o",
             fillstyle="none",
-            markersize=7,
+            markersize=(glyphs.ms if glyphs is not None else 7),
         )
 
-    ax.hlines(0.0, 0, len(total.values()), color="k", lw=0.5)
+    ax.hlines(
+        0.0,
+        0,
+        len(total.values()),
+        color=palette.primary,
+        lw=(glyphs.line_lw if glyphs is not None else 0.5),
+    )
     ax.grid(axis="x", ls="--", which="minor")
     ax.xaxis.set_minor_locator(ticker.MultipleLocator(1))
 
     if np.unique([nuc.isotope for nuc in molecule.nuclei]).size == 1:
         ax.set_ylabel(
-            r"{} $\delta$ (ppm)".format(isotope_format(molecule.nuclei[0].isotope)),
-            fontsize="18",
+            r"{} $\delta$ (ppm)".format(isotope_format(molecule.nuclei[0].isotope))
         )
     else:
         ax.set_ylabel(r"$\delta$ (ppm)")
@@ -636,27 +668,15 @@ def plot_shift_contrib(
     ax.set_xlim([-0.5, xvals[-1] + 1.5])
 
     ax.set_xticks(xvals + 0.5)
-    ax.set_xticklabels(order, rotation=45, fontsize="18")
+    ax.set_xticklabels(order, rotation=45)
+    ax.tick_params(axis="x", labelsize=scale.axis_label)
 
     ax.yaxis.set_major_locator(ticker.AutoLocator())
     ax.yaxis.set_minor_locator(ticker.AutoMinorLocator())
 
     ax.xaxis.set_tick_params("major", length=0)
 
-    legend = ax.legend(
-        loc="best",
-        frameon=True,  # Enable the legend border
-        fancybox=True,  # Rounded corners for the legend box (optional)
-        framealpha=1.0,  # Set legend background opacity (1.0 = fully opaque)
-        fontsize="12",  # Adjust the font size if needed
-    )
-    legend.get_frame().set_facecolor(
-        "white"
-    )  # Set the background color of the legend to white
-    legend.get_frame().set_edgecolor(
-        "black"
-    )  # Set the border color of the legend to black
-    legend.get_frame().set_linewidth(1.2)  # Set the border thickness
+    ax.legend(loc="best")
 
     fig.tight_layout()
     fig.subplots_adjust(right=0.950)
@@ -676,6 +696,7 @@ def plot_shift_contrib(
 
 def plot_shift_tdep(
     experiments: list[Experiment],
+    spec: PlotSpec | None = None,
     tdep: str = "",
     save: bool = True,
     show: bool = True,
@@ -702,31 +723,48 @@ def plot_shift_tdep(
         A tuple ``(fig, ax)``.
     """
 
-    labelfontsize = 13
-
     # Plot both together and save limits
-    fig, ax = plt.subplots(1, 1, figsize=(5.5, 3.5))
+    fig, ax = plt.subplots(1, 1, figsize=(6.8, 4.6), num=window_title)
+
+    glyphs = spec.glyphs if spec is not None else None
+    if spec is not None:
+        spec.skin_axes(ax)
+        palette = spec.palette
+        colour_cycle = (
+            palette.secondary,
+            palette.highlight,
+            palette.primary,
+            palette.primary,
+        )
+    else:
+        colour_cycle = ("blue", "red", "green", "black")
 
     # Group signals of each experiment by assignment label
     labels = {signal.assignment for experiment in experiments for signal in experiment}
 
-    colours = {label: SAFE_COLOURS[it] for it, label in enumerate(labels)}
+    colour_cycle_len = len(colour_cycle)
+    colours = {
+        label: colour_cycle[it % colour_cycle_len]
+        for it, label in enumerate(sorted(labels))
+    }
 
     for experiment in experiments:
         for signal in experiment.signals:
             ax.plot(
                 experiment.temperature,
                 signal.shift * experiment.temperature,
+                lw=0,
                 marker="x",
+                markersize=(glyphs.ms if glyphs is not None else 7),
                 label=signal.assignment,
                 color=colours[signal.assignment],
             )
 
     ax.spines[["right", "top"]].set_visible(False)
 
-    ax.set_xlabel(r"$T$ $\mathregular{(K)}$", fontsize=labelfontsize)
+    ax.set_xlabel(r"$T$ $\mathregular{(K)}$")
 
-    ax.set_ylabel(r"$\delta_\mathregular{^1H}T$ (ppm K)", fontsize=labelfontsize)
+    ax.set_ylabel(r"$\delta_\mathregular{^1H}T$ (ppm K)")
 
     ax.xaxis.set_minor_locator(ticker.AutoMinorLocator())
     ax.yaxis.set_minor_locator(ticker.AutoMinorLocator())
@@ -743,4 +781,4 @@ def plot_shift_tdep(
     if save and verbose:
         logger.info("Shift vs Temperature plots saved to %s", f"{save_name}.pdf")
 
-    return
+    return fig, (ax,)
