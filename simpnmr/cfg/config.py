@@ -51,14 +51,25 @@ class Config(ABC):
             A configuration object of type `cls`.
 
         Raises:
+            yaml.YAMLError: If the input YAML file has invalid syntax or structure.
             KeyError: If a required keyword or subkeyword is missing.
-            FileNotFoundError: If the input file cannot be opened.
+            Exception: Propagates any other unexpected I/O or parsing errors.
         """
 
         yaml.add_constructor("!inc", yaml_include.Constructor(base_dir="."))
 
-        f = open(file_name, "r")
-        parsed = yaml.full_load(f)
+        try:
+            with open(file_name, "r") as f:
+                parsed = yaml.full_load(f)
+
+        except yaml.YAMLError as e:
+            raise yaml.YAMLError(
+                f"Invalid YAML structure in input file '{file_name}'."
+            ) from e
+
+        except Exception as e:
+            raise e
+
         if "master" in parsed:
             for key, value in parsed["master"].items():
                 parsed[key] = value
@@ -145,7 +156,7 @@ class FitSuscConfig(Config):
             "orbit",
             "total_momentum_J",
         ],
-        "experiment": ["files"],
+        "experiment": ["files", "spectrum_files", "exp_reference"],
         "assignment": ["method", "groups"],
         "nuclei": ["include", "include_groups"],
         "susc_fit": ["type", "variables", "average_shifts"],
@@ -189,6 +200,7 @@ class FitSuscConfig(Config):
         self._project_name = ""
         self._experiment_files = []
         self._experiment_spectrum_files = []
+        self._experiment_exp_reference = None
         self._diamagnetic_file = ""
         self._diamagnetic_method = ""
         self._diamagnetic_ref_method = ""
@@ -218,6 +230,26 @@ class FitSuscConfig(Config):
         self._resolve_nuclei_include_groups()
 
         pass
+
+    @property
+    def experiment_exp_reference(self) -> float | None:
+        """Experimental reference position in ppm."""
+        return self._experiment_exp_reference
+
+    @experiment_exp_reference.setter
+    def experiment_exp_reference(self, value: float | None):
+        if value is None or value == "":
+            self._experiment_exp_reference = None
+            return None
+        if isinstance(value, (list, tuple)):
+            value = value[0]
+        try:
+            self._experiment_exp_reference = float(value)
+        except Exception:
+            raise ValueError(
+                f"Cannot convert experiment:exp_reference={value} to float (ppm)"
+            )
+        return None
 
     @property
     def nuclei_include_groups(self) -> list | str:
@@ -397,7 +429,7 @@ class FitSuscConfig(Config):
 
     @assignment_method.setter
     def assignment_method(self, value: str):
-        if value not in ["fixed", "permute"]:
+        if value not in ["fixed", "permute", "hungarian"]:
             raise ValueError(f"Unknown assignment:method {value}")
         self._assignment_method = value
         return None
@@ -902,6 +934,15 @@ class FitSuscConfig(Config):
                 "Therefore 'susc_vt:ab_initio_file' variable can not be used"
             )
 
+        # exp_reference requires spectrum_files
+        if getattr(
+            config, "experiment_exp_reference", None
+        ) is not None and not getattr(config, "experiment_spectrum_files", []):
+            raise ValueError(
+                "Invalid experiment configuration: 'experiment:exp_reference' was "
+                "provided but no 'experiment:spectrum_files' were specified."
+            )
+
         if config.assignment_method == "permute":
             if not len(config.assignment_groups):
                 logger.warning("Missing permutation groups in input")
@@ -932,7 +973,7 @@ class PredictConfig(FitSuscConfig):
             "orbit",
             "total_momentum_J",
         ],
-        "experiment": ["files", "spectrum_files"],
+        "experiment": ["files", "spectrum_files", "exp_reference"],
         "nuclei": ["include"],
         "project": ["name"],
         "chem_labels": ["file"],

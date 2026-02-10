@@ -74,18 +74,14 @@ def get_rotation_and_transformation(cfg: inps.PredictConfig):
 
     Returns:
         tuple[np.ndarray, np.ndarray]:
-            - R (np.ndarray): Rotation matrix with shape (3, 3) that aligns the
-              NEVPT2 geometry to the DFT geometry.
-            - trans_mat (np.ndarray): Transformation matrix with shape (3, 3) used
-              for PCS-related coordinate mapping.
+            - rot_mat (np.ndarray): Rotation matrix with shape (3, 3) that maps
+              DFT-frame coordinates/components into the NEVPT2 (susceptibility) frame.
+            - trans_mat (np.ndarray): Transformation matrix with shape (3, 3) that maps
+              DFT-frame coordinates/components into the susceptibility principal-axis
+              (chi) frame.
     """
 
     chiT, temperature, _, nevpt2_coords, dft_coords = access_input_data(cfg)
-
-    if np.allclose(nevpt2_coords, dft_coords, rtol=1e-6, atol=1e-8):
-        return np.eye(3), np.eye(3)
-    else:
-        pass
 
     if len(nevpt2_coords) != len(dft_coords):
         raise ValueError(
@@ -93,23 +89,36 @@ def get_rotation_and_transformation(cfg: inps.PredictConfig):
             "a meaningful rotational alignment."
         )
 
-    # Compute rotation aligning NEVPT2 → DFT
-    rot_mat, rmsd = xyz_fmt.find_rotation(nevpt2_coords, dft_coords)
+    # Compute rotation aligning DFT → NEVPT2 (susceptibility frame).
+    # `find_rotation(coords_1, coords_2)` returns R
+    # such that coords_2 rotated onto coords_1.
+    if np.allclose(nevpt2_coords, dft_coords, rtol=1e-6, atol=1e-8):
+        rot_mat = np.eye(3)
+        rmsd = 0.0
+    else:
+        rot_mat, rmsd = xyz_fmt.find_rotation(nevpt2_coords, dft_coords)
 
-    # Temperature-normalised tensor
+    # Temperature-normalised tensor (scaling does not change eigenvectors)
     chi = chiT / temperature[0]
 
-    # Eigen-decomposition
-    evals, evecs = la.eigh(chi)
+    # Use a single chi-frame convention everywhere:
+    # 1) remove isotropic (trace) component
+    # 2) diagonalise
+    # 3) sort axes by |eigenvalue| (same convention as rotate_coords_to_chi_frame)
+    chi_traceless = chi - np.eye(3) * (np.trace(chi) / 3.0)
+    evals, evecs = la.eigh(chi_traceless)
+    idx = np.argsort(np.abs(evals))
+    evecs = evecs[:, idx]
 
-    # Transformation matrix
+    # Transformation matrix mapping DFT → chi frame
     trans_mat = evecs.T @ rot_mat
 
-    logger.warning(
-        "Distinct Susceptibility and DFT geometries detected; \n"
-        "Applied rotational alignment (RMSD = %.2f).",
-        rmsd,
-    )
+    if rmsd > 0.0:
+        logger.warning(
+            "Distinct Susceptibility and DFT geometries detected; "
+            "applied rotational alignment (RMSD = %.2f).",
+            rmsd,
+        )
 
     # TODO Need to add an additional functional to check if HFC coords are in chi frame
     # because it leads to the wrong prediction
@@ -145,22 +154,9 @@ def rotate_coords_to_chi_frame(file_path, cfg: inps.PredictConfig):
 
     idx = np.argsort(np.abs(eigvals_traceless))
 
-    # Rotate eigenvectors so principal axis aligns with global Z
-    eigvecs_sorted = eigvecs_traceless[:, idx]
-    u = eigvecs_sorted[:, 2]
-    z_axis = np.array([0.0, 0.0, 1.0])
-    cross = np.cross(u, z_axis)
-    if np.linalg.norm(cross) < 1e-8:
-        R = np.eye(3)
-
-    else:
-        a = cross / np.linalg.norm(cross)
-        theta = np.arccos(np.dot(u, z_axis))
-        A = np.array([[0.0, -a[2], a[1]], [a[2], 0.0, -a[0]], [-a[1], a[0], 0.0]])
-
-        R = np.eye(3) + np.sin(theta) * A + (1.0 - np.cos(theta)) * (A @ A)
-
-    eigenvecs_sort_traceless = R @ eigvecs_sorted
+    # Single chi-frame convention (must match get_rotation_and_transformation):
+    # sort eigenvectors by |eigenvalue|, no additional arbitrary global-axis alignment.
+    eigenvecs_sort_traceless = eigvecs_traceless[:, idx]
 
     # Center NEVPT2 coordinates
     nevpt2_coords_center = nevpt2_coords.mean(axis=0, keepdims=True)

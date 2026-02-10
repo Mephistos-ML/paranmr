@@ -10,6 +10,8 @@ import argparse
 import logging
 import os
 
+import yaml
+
 from simpnmr import __version__
 from simpnmr.app.params.options import RuntimeSettings
 from simpnmr.app.params.settings import apply_runtime_settings
@@ -226,9 +228,9 @@ def read_args(arg_list=None):
         ),
     )
     parser.add_argument(
-        "--show",
+        "--hide",
         action="store_true",
-        help=("Display plots interactively (default: do not show; always saves)."),
+        help=("Do not display plots interactively (default: show; always saves)."),
     )
 
     parser.add_argument(
@@ -619,7 +621,7 @@ def interface(argv=None):
 
     runtime = apply_runtime_settings(
         plot_profile=args.plot_profile,
-        show_plots=args.show,
+        show_plots=not args.hide,
         # accessibility=args.accessibility, TODO
     )
 
@@ -629,6 +631,10 @@ def interface(argv=None):
         raise SystemExit(args.func(args, runtime))
 
     except QCError as err:
+        logger.error("%s", err)
+        raise SystemExit(1) from None
+
+    except yaml.YAMLError as err:
         logger.error("%s", err)
         raise SystemExit(1) from None
 

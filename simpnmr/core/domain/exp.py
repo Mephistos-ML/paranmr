@@ -98,6 +98,8 @@ class Experiment:
         signals: List of assigned signals.
         spectrum: Optional experimental spectrum as an ``(N, 2)`` array where the
             first column is ppm and the second column is intensity.
+        exp_reference: Optional experimental reference position in ppm used for
+            spectrum normalization/overlay.
 
     Attributes:
         temperature: Experiment temperature in Kelvin.
@@ -105,6 +107,7 @@ class Experiment:
         magnetic_field: Spectrometer magnetic field in Tesla.
         isotope: Isotope label.
         spectrum: Experimental spectrum as an ``(N, 2)`` array or ``None``.
+        exp_reference: Experimental reference position in ppm or ``None``.
     """
 
     def __init__(
@@ -114,11 +117,13 @@ class Experiment:
         isotope: str,
         signals: list[Signal],
         spectrum: ArrayLike = None,
+        exp_reference: Optional[float] = None,
     ) -> None:
         self._signals = signals
         self.temperature = temperature
         self.magnetic_field = magnetic_field
         self.isotope = isotope.title()
+        self.exp_reference = exp_reference
 
         if spectrum is not None:
             self.spectrum = spectrum
@@ -143,6 +148,22 @@ class Experiment:
 
     def __iter__(self):
         return iter(self.signals)
+
+    @property
+    def exp_reference(self) -> Optional[float]:
+        """Experimental reference position in ppm."""
+        return self._exp_reference
+
+    @exp_reference.setter
+    def exp_reference(self, value: Optional[float]):
+        if value is None or value == "":
+            self._exp_reference = None
+            return
+        try:
+            self._exp_reference = float(value)
+        except (TypeError, ValueError) as exc:
+            raise TypeError("exp_reference must be floatable (ppm)") from exc
+        return
 
     @property
     def spectrum(self):

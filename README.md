@@ -1,15 +1,58 @@
 # SimpNMR
 
-## Documentation and Installation
+<img src="docs/source/_static/simpnmg-full-logo.png" width="300">
 
-To get started, head to the online documentation for `SimpNMR` [here](https://suturina-group.gitlab.io/simpnmr/).
+[![Docs](https://img.shields.io/badge/docs-simpnmr.org-blue)](https://simpnmr.org/)
+[![PyPI](https://img.shields.io/pypi/v/simpnmr.svg)](https://pypi.org/project/simpnmr/)
+[![License](https://img.shields.io/badge/license-GPL--3.0--or--later-green)](https://gitlab.com/suturina-group/simpnmr/-/blob/main/LICENSE)
 
-## Developers
+**SimpNMR** is an open-source Python toolkit for prediction, fitting, and analysis
+of paramagnetic NMR spectra based on experimental data and ab initio calculations.
 
-Install in editable mode by running
+## Features
 
+- Prediction of paramagnetic NMR shifts and spectra
+- Susceptibility tensor fitting from experimental measurements
+- Integration with quantum chemistry outputs (ORCA, Gaussian, Molcas)
+
+## Installation
+
+```bash
+pip install simpnmr
+simpnmr --help
 ```
-pip install -e .
+
+## Quick example
+
+```bash
+simpnmr predict input.yml
 ```
 
-in the repository HEAD.
+## Documentation
+
+👉 https://simpnmr.org
+
+## Project status
+
+Active development. Public APIs and configuration schemas are considered stable;
+breaking changes are coordinated with maintainers and documented in the changelog.
+
+## Support
+
+Please use GitLab Issues for bug reports and feature requests.
+
+## Contributing
+
+Development guidelines, architecture, and release policies are documented in the
+Developer Guide:
+
+👉 https://simpnmr.org/developer_guide/
+
+## Citation
+
+If you use SimpNMR in academic work, please cite the software and the specific
+version used. A DOI record will be added in the future.
+
+## License
+
+GPL-3.0-or-later. See [LICENSE](LICENSE).
