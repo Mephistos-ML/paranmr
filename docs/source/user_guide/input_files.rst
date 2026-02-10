@@ -187,6 +187,9 @@ Used in fitting workflows that require experimental shift data.
         # Experimental spectrum files [Optional]
         spectrum_files: spectrum_*.csv
 
+        # Experimental spectrum reference in ppm [Optional]
+        exp_reference: 0.56
+
 
 .. note::
 
@@ -195,6 +198,15 @@ Used in fitting workflows that require experimental shift data.
    Spectrum files are auxiliary inputs and may only be used when corresponding
    experimental peak files are also provided. Supplying spectrum files without
    experimental peak data is not supported.
+
+An experimental spectrum reference (``exp_reference``) may be provided to define
+an absolute chemical shift reference (in ppm) for experimental spectrum files.
+
+If ``exp_reference`` is specified, ``spectrum_files`` must also be provided.
+Supplying ``exp_reference`` without experimental spectrum data is not supported
+and will result in a configuration error.
+
+If omitted or set to ``null``, no experimental spectrum referencing is applied.
 
 Diamagnetic Shifts
 ^^^^^^^^^^^^^^^^^^^^^

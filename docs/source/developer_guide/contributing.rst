@@ -13,12 +13,21 @@ Source Code
 1. All commits must conform to the `Angular/Conventional Commits style <https://www.conventionalcommits.org/en/v1.0.0-beta.4/>`_,
    using an imperative, present-tense subject line (for example: ``feat: add new fitting routine``).
    Commit scopes are encouraged and should reflect the affected subsystem (for example: ``feat(application): add new fitting routine`` or ``fix(io): handle malformed CSV input``).
+
+   These commit messages are not just a style requirement: SimpNMR uses an automated semantic release workflow in CI.
+   Commit types and optional breaking-change markers determine the version bump (major/minor/patch) and are used to
+   generate release notes / changelog entries.
+
+   Do not manually edit version numbers or release metadata unless explicitly instructed by the maintainers.
+
 2. All code must comply with the rules enforced by the project linter (**Ruff**). Code that fails linting should not be committed.
 3. Follow the line length and formatting rules defined in ``pyproject.toml`` (current maximum line length: **88 characters**).
 4. Use **Google-style docstrings** and type hints for all public functions, methods, classes, and modules.
    Internal helper functions may omit docstrings if their intent is obvious.
 5. Update the documentation to reflect your changes (for example, CLI usage pages or relevant user/developer guide sections).
 6. If your changes add or modify dependencies, update the project configuration (``setup.py`` or ``pyproject.toml``) with explicit version constraints.
+
+.. _local-development-setup:
 
 Local development setup
 -----------------------
@@ -48,15 +57,18 @@ Documentation
 Our documentation is written in `Sphinx <https://www.sphinx-doc.org/en/master/>`_ and uses
 the PyData Sphinx theme. The source code for the docs is available at ``simpnmr/docs/source``.
 
-To build the documentation **locally**, navigate to the ``docs`` directory from the repository root and install the Python dependencies with:
+To build the documentation locally, ensure the project is installed with developer
+dependencies (see :ref:`local development setup <local-development-setup>`), then
+run the Sphinx build command from the ``docs`` directory.
+
+To build the documentation locally, run:
 
 .. code-block:: bash
 
-    pip install -r requirements.txt
+    sphinx-build -b html source build/html
 
-You will also need to install ``make`` using your preferred system package manager.
-
-To build the documentation, run:
+Alternatively, if ``make`` is available on your system, you may use the provided
+Makefile wrapper:
 
 .. code-block:: bash
 
@@ -67,5 +79,3 @@ The compiled HTML pages will be available at ``simpnmr/docs/build/html``.
 Please ensure the documentation builds successfully prior to committing/merging.
 
 Do not commit compiled pages to the repository.
-
-To publish the documentation online, create a GitLab pipeline with the keyword ``force`` set to the value ``docs`` so that the documentation job is triggered.

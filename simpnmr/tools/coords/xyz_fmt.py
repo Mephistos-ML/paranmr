@@ -337,47 +337,46 @@ def _check_xyz_headers(f_name: str):
     return
 
 
+# TODO: rewrite find_rotation func to include a possible xyz permutation,
+# as well as the change of sign
 def find_rotation(coords_1: ArrayLike, coords_2: ArrayLike) -> tuple[NDArray, float]:
-    """Compute the optimal rotation aligning `coords_2` onto `coords_1`.
-
-    Uses an SVD-based Kabsch alignment and returns the rotation matrix and RMSD.
+    """Compute the optimal rotation aligning `coords_2` onto `coords_1` (Kabsch).
 
     Args:
-        coords_1: Reference coordinates with shape (n_atoms, 3).
+        coords_1: Reference coordinates, shape (n_atoms, 3).
         coords_2: Coordinates to rotate, shape (n_atoms, 3).
 
     Returns:
-        A tuple of:
-            - R: (3, 3) rotation matrix.
-            - rmsd: RMSD after alignment.
+        - R: (3, 3) rotation matrix mapping coords_2 -> coords_1.
+        - rmsd: RMSD after alignment (with centering).
     """
-
-    # Calculate B matrix
-    coords_1 = np.asarray(coords_1)
-    coords_2 = np.asarray(coords_2)
+    coords_1 = np.asarray(coords_1, dtype=float)
+    coords_2 = np.asarray(coords_2, dtype=float)
 
     assert coords_1.shape == coords_2.shape, (
         f"Coordinate shapes must match, got {coords_1.shape} and {coords_2.shape}"
     )
 
-    # Cross-covariance matrix for Kabsch alignment.
-    B = coords_1.T @ coords_2
+    # Center both point clouds
+    c1 = coords_1.mean(axis=0, keepdims=True)
+    c2 = coords_2.mean(axis=0, keepdims=True)
+    X = coords_1 - c1
+    Y = coords_2 - c2
 
-    # Calculate SVD of B matrix
+    # Cross-covariance
+    B = X.T @ Y
+
+    # SVD
     U, _, Vt = la.svd(B)
 
-    # Calculate M matrix
-    M = np.diag([1, 1, la.det(U) * la.det(Vt)])
-
-    # Calculate rotation matrix
+    # Ensure proper rotation (no reflection)
+    M = np.diag([1.0, 1.0, la.det(U) * la.det(Vt)])
     R = U @ M @ Vt
 
-    # Apply rotation matrix to coords_2
-    coords_2_rotated = (R @ coords_2.T).T
+    # Rotate coords_2 onto coords_1 (apply to centered coords, then re-add reference)
+    coords_2_rotated = (R @ Y.T).T + c1
 
-    # Calculate rmsd
     rmsd = _calculate_rmsd(coords_1, coords_2_rotated)
-
     return R, rmsd
 
 

@@ -57,6 +57,14 @@ def plot_pred_spectrum(
         A tuple ``(fig, ax)``.
     """
 
+    # Add extra 10% padding for better visibility
+    extras = [0.1 * abs(shift_range[0]), 0.1 * abs(shift_range[1])]
+
+    shift_range = [
+        shift_range[0] + np.negative(np.max(extras)),
+        shift_range[1] + np.positive(np.max(extras)),
+    ]
+
     # Construct common ppm axis for the spectrum (x-axis)
     x_grid = np.linspace(np.min(shift_range), np.max(shift_range), 100000)
 
@@ -73,7 +81,7 @@ def plot_pred_spectrum(
     glyphs = spec.glyphs
     palette = spec.palette
 
-    # Make plot
+    # Make plot§
     fig, ax = plt.subplots(1, 1, num=window_title, figsize=(6.8, 4.6))
     spec.skin_axes(ax)
 
@@ -95,73 +103,33 @@ def plot_pred_spectrum(
     # Grid y value closest to peak position
     closest_y = [y_intensity[find_index_of_nearest(x_grid, sh)] for sh in sorted_shifts]
 
-    # Marker at shift peak position
     ax.plot(
         sorted_shifts,
         closest_y,
         lw=0,
-        marker="x",
-        color=palette.primary,
-        markersize=glyphs.ms,
+        marker="o",
+        linestyle="None",
+        markersize=glyphs.ms - 4,
+        markerfacecolor=palette.highlight,
+        markeredgecolor=palette.highlight,
+        markeredgewidth=max(0.9, 0.6 * glyphs.line_lw),
+        zorder=5,
     )
 
-    # Draw text-label barrier 10% above the highest peak
-    label_barrier = 1.1 * np.max(y_intensity)
-    ax.hlines(
-        label_barrier,
-        np.min(shift_range),
-        np.max(shift_range),
-        linestyle="-",
-        color=palette.primary,
-        linewidth=max(0.8, 0.5 * glyphs.line_lw),
-        alpha=0.7,
+    _annotate_peaks_with_barrier(
+        ax,
+        x_grid=x_grid,
+        y_intensity=y_intensity,
+        peak_x=sorted_shifts,
+        labels=sorted_labels,
+        shift_range=shift_range,
+        spec=spec,
+        palette=palette,
+        glyphs=glyphs,
+        reverse_axis=True,
+        connector_alpha=0.6,
+        label_fontsize=str(spec.typography.title),
     )
-
-    # Calculate initial distance matrix
-    adj_label_xvals = copy.copy(sorted_shifts)
-    distance = np.subtract.outer(adj_label_xvals, adj_label_xvals)
-    np.fill_diagonal(distance, np.inf)
-
-    # Define minimum acceptable distance between text-labels
-    label_mindist = 0.03 * (np.max(shift_range) - np.min(shift_range))
-
-    # Shift points until distance matrix has no values less than minimum dist
-    while len(np.where(abs(distance) < label_mindist)[0]):
-        [xlocs, ylocs] = np.where(abs(distance) < label_mindist)
-        for x, y in zip(xlocs, ylocs):
-            if y > x:
-                adj_label_xvals[x] -= label_mindist / 2
-                adj_label_xvals[y] += label_mindist / 2
-
-        distance = np.subtract.outer(adj_label_xvals, adj_label_xvals)
-        np.fill_diagonal(distance, np.inf)
-
-    # Peak label y position (15% above max peak)
-    label_y = 1.15 * np.max(y_intensity)
-
-    # Add label and dashed lines
-    for shift, label, label_x in zip(sorted_shifts, sorted_labels, adj_label_xvals):
-        # Add label to plot
-        ax.text(
-            label_x,
-            label_y,
-            label,
-            rotation="vertical",
-            ha="center",
-            va="bottom",
-            fontsize=str(spec.typography.title),
-        )
-
-        # Draw segmented line from peak to label via horizontal line
-        peak_index = find_index_of_nearest(x_grid, shift)
-        ax.plot(
-            [x_grid[peak_index], x_grid[peak_index], label_x],
-            [y_intensity[peak_index], label_barrier, label_y],
-            linestyle="--",
-            color=palette.primary,
-            linewidth=max(0.8, 0.5 * glyphs.line_lw),
-            alpha=0.6,
-        )
 
     ax.set_xlabel(r"{} $\delta$ (ppm)".format(isotope_format(isotope)))
 
@@ -227,8 +195,18 @@ def plot_raw_deconv_pred(
         A tuple ``(fig, ax)``.
     """
 
-    # Determine the number of subplots (include raw spectrum if available)
-    n_subplots = 3 if experiment.spectrum is not None else 2
+    # Always use two subplots: Simulation (top) and Experiment (bottom)
+    n_subplots = 2
+
+    # Use the union of simulation and experimental peak ranges to avoid clipping.
+    exp_min = min(s.shift for s in experiment.signals)
+    exp_max = max(s.shift for s in experiment.signals)
+    range_min = min(shift_range[0], exp_min)
+    range_max = max(shift_range[1], exp_max)
+
+    # Add extra 10% padding for better visibility
+    pad = 0.1 * max(abs(exp_min), abs(exp_max))
+    shift_range = [range_min - pad, range_max + pad]
 
     # Construct common ppm axis for all spectra (x-axis)
     x_grid = np.linspace(np.min(shift_range), np.max(shift_range), 100000)
@@ -294,97 +272,157 @@ def plot_raw_deconv_pred(
         shifts,
         sim_peak_heights,
         lw=0,
-        marker="x",
         color=palette.primary,
         markersize=glyphs.ms,
     )
-
-    # Draw text-label barrier 10% above the highest simulated (predicted) peak
-    label_barrier = 1.1 * np.max(y_sim_intensity)
-
-    ax[0].hlines(
-        label_barrier,
-        np.min(shift_range),
-        np.max(shift_range),
-        linestyle="-",
-        color=palette.primary,
-        linewidth=max(0.8, 0.5 * glyphs.line_lw),
-        alpha=0.7,
+    _annotate_peaks_with_barrier(
+        ax[0],
+        x_grid=x_grid,
+        y_intensity=y_sim_intensity,
+        peak_x=shifts,
+        labels=labels,
+        shift_range=shift_range,
+        spec=spec,
+        palette=palette,
+        glyphs=glyphs,
+        reverse_axis=True,
     )
 
-    # Vertical position for peak text-labels (10% above the label barrier)
-    labels_position_y = 1.05 * label_barrier
-
-    # Define minimum acceptable distance between text-labels
-    label_mindist = 0.03 * (np.max(shift_range) - np.min(shift_range))
-
-    # Calculate initial distance matrix
-    adj_label_xvals = copy.copy(shifts)
-    distance = np.subtract.outer(adj_label_xvals, adj_label_xvals)
-    np.fill_diagonal(distance, np.inf)
-
-    # Shift points until distance matrix has no values less than minimum dist
-    while len(np.where(abs(distance) < label_mindist)[0]):
-        [xlocs, ylocs] = np.where(abs(distance) < label_mindist)
-        for x, y in zip(xlocs, ylocs):
-            if y > x:
-                adj_label_xvals[x] -= label_mindist / 2
-                adj_label_xvals[y] += label_mindist / 2
-
-        distance = np.subtract.outer(adj_label_xvals, adj_label_xvals)
-        np.fill_diagonal(distance, np.inf)
-
-    for peak_x, peak_y, label_x, label in zip(
-        shifts, sim_peak_heights, adj_label_xvals, labels
-    ):
-        # Add label
-        ax[0].text(
-            label_x,
-            labels_position_y,
-            label,
-            fontsize=str(spec.typography.annotation),
-            rotation="vertical",
-            va="bottom",
-            ha="center",
-        )
-
-        # Draw segmented line from peak to label via horizontal barrier
-        ax[0].plot(
-            [peak_x, peak_x, label_x],
-            [peak_y, label_barrier, labels_position_y],
-            linestyle="--",
-            color=palette.primary,
-            linewidth=max(0.8, 0.5 * glyphs.line_lw),
-            alpha=0.4,
-        )
-
-    ax[0].set_title(
+    # Vertical left-side label
+    ax[0].text(
+        -0.0,
+        0.5,
         "Simulation",
-        loc="left",
-        pad=-6,
+        transform=ax[0].transAxes,
+        rotation=90,
+        va="center",
+        ha="right",
+        fontsize=str(spec.typography.annotation),
+        clip_on=False,
     )
 
     # SUBPLOT NUMBER 2 - Deconvoluted (processed experimental) spectrum
-    ax[1].plot(x_grid, y_deconv_intensity, lw=glyphs.line_lw, color=palette.primary)
-    ax[1].set_title(
-        "Paramagnetic Signals",
-        loc="left",
-        pad=-6,
+    ax[1].plot(
+        x_grid,
+        y_deconv_intensity,
+        lw=glyphs.line_lw,
+        color=palette.primary,
+        alpha=0.7,
+    )
+    # Overlay raw experimental spectrum if available.
+    # If `experiment.exp_reference` is provided (ppm), normalize the raw spectrum
+    # so it overlays the deconvoluted spectrum using the strongest deconv peak
+    # within ±1 ppm of the reference.
+    if experiment.spectrum is not None:
+        x_raw = np.asarray(experiment.spectrum[:, 0], dtype=float)
+        y_raw = np.asarray(experiment.spectrum[:, 1], dtype=float)
+
+        exp_ref = getattr(experiment, "exp_reference", None)
+
+        if exp_ref is not None:
+            exp_ref = float(exp_ref)
+
+            tol_ppm = 1.0
+
+            # Reference height from deconvoluted spectrum: max within [ref - 1, ref + 1]
+            m_deconv = (x_grid >= exp_ref - tol_ppm) & (x_grid <= exp_ref + tol_ppm)
+            if np.any(m_deconv):
+                ref_y_deconv = float(np.max(y_deconv_intensity[m_deconv]))
+            else:
+                ref_y_deconv = float(np.max(y_deconv_intensity))
+
+            # Reference height from raw spectrum: max within [ref - 1, ref + 1]
+            m_raw = (x_raw >= exp_ref - tol_ppm) & (x_raw <= exp_ref + tol_ppm)
+            if np.any(m_raw):
+                ref_y_raw = float(np.max(y_raw[m_raw]))
+            else:
+                ref_y_raw = float(np.max(y_raw))
+
+            # Scale raw to match deconvoluted reference height (guard against zeros)
+            if ref_y_raw > 0.0:
+                scale = ref_y_deconv / ref_y_raw
+            else:
+                scale = 1.0
+
+            y_raw = y_raw * scale
+
+            # Clip extreme solvent peaks: after normalization, cap raw intensity
+            # to the global maximum of the deconvoluted spectrum.
+            deconv_max = float(np.max(y_deconv_intensity))
+            y_raw = np.clip(y_raw, a_min=None, a_max=deconv_max)
+
+        ax[1].plot(
+            x_raw,
+            y_raw,
+            lw=glyphs.line_lw,
+            color=palette.highlight,
+            alpha=0.35,
+        )
+
+    # Try to match exp. to the same LaTeX labels used for the simulated spectrum
+    latex_label_map: dict[str, str] = {}
+    for nucleus in molecule.nuclei:
+        if nucleus.isotope != isotope:
+            continue
+
+        # Prefer the plain chemical label if available.
+        plain = getattr(nucleus, "chem_label", None)
+        latex = getattr(nucleus, "chem_math_label", None)
+        if plain and latex:
+            latex_label_map[str(plain)] = str(latex)
+
+    def _map_assignment_to_latex(assignment: str) -> str:
+        """Map an experimental assignment string to LaTeX labels if possible.
+
+        Supports comma-separated assignments (e.g. "H1,H2"). If no mapping is
+        found, the original token is preserved.
+        """
+
+        if assignment is None:
+            return ""
+
+        tokens = [t.strip() for t in str(assignment).split(",")]
+        mapped: list[str] = []
+        for tok in tokens:
+            mapped.append(latex_label_map.get(tok, tok))
+        return ",".join(mapped)
+
+    pm_sorted = sorted(
+        [
+            (signal.shift, _map_assignment_to_latex(signal.assignment))
+            for signal in experiment.signals
+        ],
+        key=lambda x: x[0],
+        reverse=True,
+    )
+    pm_shifts = [sh for sh, _ in pm_sorted]
+    pm_labels = [lab for _, lab in pm_sorted]
+
+    _annotate_peaks_with_barrier(
+        ax[1],
+        x_grid=x_grid,
+        y_intensity=y_deconv_intensity,
+        peak_x=pm_shifts,
+        labels=pm_labels,
+        shift_range=shift_range,
+        spec=spec,
+        palette=palette,
+        glyphs=glyphs,
+        reverse_axis=True,
     )
 
-    # SUBPLOT NUMBER 3 - Raw experimental spectrum if available
-    if n_subplots == 3:
-        ax[2].plot(
-            experiment.spectrum[:, 0],
-            experiment.spectrum[:, 1],
-            lw=glyphs.line_lw,
-            color=palette.primary,
-        )
-        ax[2].set_title(
-            "Full Spectrum",
-            loc="left",
-            pad=-6,
-        )
+    # Vertical left-side label (instead of a top title)
+    ax[1].text(
+        0.0,
+        0.5,
+        "Experiment",
+        transform=ax[1].transAxes,
+        rotation=90,
+        va="center",
+        ha="right",
+        fontsize=str(spec.typography.annotation),
+        clip_on=False,
+    )
 
     # Set x-axis at the bottom of the plot
     ax[-1].xaxis.set_minor_locator(ticker.AutoMinorLocator())
@@ -409,3 +447,128 @@ def plot_raw_deconv_pred(
         logger.info("Spectra saved to %s", f"{save_name}.pdf")
 
     return fig, ax
+
+
+def _annotate_peaks_with_barrier(
+    ax: plt.Axes,
+    *,
+    x_grid: np.ndarray,
+    y_intensity: np.ndarray,
+    peak_x: list[float],
+    labels: list[str],
+    shift_range: ArrayLike,
+    spec: PlotSpec,
+    palette,
+    glyphs,
+    reverse_axis: bool = True,
+    barrier_scale: float = 1.1,
+    labels_above_barrier_scale: float = 1.05,
+    label_mindist_scale: float = 0.03,
+    connector_alpha: float = 0.4,
+    barrier_alpha: float = 0.7,
+    label_fontsize: str | None = None,
+) -> None:
+    """Annotate a spectrum with a horizontal barrier, vertical labels, and connectors.
+
+    The function also resolves label overlaps by shifting label x-positions and
+    enforces a monotonic label ordering to prevent connector crossings.
+
+    Args:
+        ax: Axis to annotate.
+        x_grid: Common x grid for the spectrum.
+        y_intensity: Spectrum intensity values on `x_grid`.
+        peak_x: Peak x-positions (ppm) to annotate.
+        labels: Text labels for each peak.
+        shift_range: Two-element sequence specifying min/max ppm.
+        spec: Plot specification.
+        palette: Plot palette.
+        glyphs: Plot glyph specification.
+        reverse_axis: If True, treat the x-axis as visually
+        reversed (high ppm on the left).
+        barrier_scale: Scale factor for the barrier y-position
+        relative to max intensity.
+        labels_above_barrier_scale: Scale factor for label
+        y-position relative to barrier.
+        label_mindist_scale: Minimum x-separation between
+        labels as a fraction of x-range.
+        connector_alpha: Alpha for connector lines.
+        barrier_alpha: Alpha for the horizontal barrier line.
+    """
+
+    if len(peak_x) == 0:
+        return
+
+    # Sort peaks so labels are placed in a consistent visual order.
+    order = np.argsort(peak_x)
+    if reverse_axis:
+        order = order[::-1]
+
+    peak_x_sorted = [peak_x[i] for i in order]
+    labels_sorted = [labels[i] for i in order]
+
+    # Peak heights at nearest grid points
+    peak_y_sorted = [
+        y_intensity[find_index_of_nearest(x_grid, sh)] for sh in peak_x_sorted
+    ]
+
+    # Horizontal barrier line
+    label_barrier = barrier_scale * float(np.max(y_intensity))
+    ax.hlines(
+        label_barrier,
+        np.min(shift_range),
+        np.max(shift_range),
+        linestyle="-",
+        color=palette.primary,
+        linewidth=max(0.8, 0.5 * glyphs.line_lw),
+        alpha=barrier_alpha,
+    )
+
+    # Vertical position for peak text-labels
+    labels_position_y = labels_above_barrier_scale * label_barrier
+
+    # Minimum acceptable distance between labels
+    label_mindist = label_mindist_scale * (np.max(shift_range) - np.min(shift_range))
+
+    # Initial distance matrix
+    adj_label_xvals = copy.copy(peak_x_sorted)
+    distance = np.subtract.outer(adj_label_xvals, adj_label_xvals)
+    np.fill_diagonal(distance, np.inf)
+
+    # Resolve label overlaps
+    while len(np.where(abs(distance) < label_mindist)[0]):
+        [xlocs, ylocs] = np.where(abs(distance) < label_mindist)
+        for x, y in zip(xlocs, ylocs):
+            if y > x:
+                adj_label_xvals[x] -= label_mindist / 2
+                adj_label_xvals[y] += label_mindist / 2
+
+        distance = np.subtract.outer(adj_label_xvals, adj_label_xvals)
+        np.fill_diagonal(distance, np.inf)
+
+    # Enforce monotonic label-x ordering relative to the peak ordering.
+    # This prevents connector lines from crossing when overlap resolution pushes
+    # labels past each other.
+    adj_label_xvals = sorted(adj_label_xvals, reverse=reverse_axis)
+
+    # Add labels and connector lines
+    for px, py, lx, lab in zip(
+        peak_x_sorted, peak_y_sorted, adj_label_xvals, labels_sorted
+    ):
+        ax.text(
+            lx,
+            labels_position_y,
+            lab,
+            fontsize=label_fontsize or str(spec.typography.annotation),
+            rotation="vertical",
+            va="bottom",
+            ha="center",
+        )
+
+        ax.plot(
+            [px, px, lx],
+            [py, label_barrier, labels_position_y],
+            linestyle="--",
+            color=palette.primary,
+            linewidth=max(0.8, 0.5 * glyphs.line_lw),
+            alpha=connector_alpha,
+        )

@@ -164,9 +164,6 @@ def run_predict(config, options: PredictRunOptions | None = None) -> int:
     else:
         experiments = [None] * len(suscs)
 
-    # Create a molecule object which accompanies each experiment object
-    molecules = [copy.deepcopy(base_molecule) for _ in range(len(experiments))]
-
     # Rotationally average hyperfines of user selected nuclei:
     if len(config.hyperfine_average):
         base_molecule.average_hyperfine(config.hyperfine_average)
@@ -201,6 +198,7 @@ def run_predict(config, options: PredictRunOptions | None = None) -> int:
     if len(config.experiment_spectrum_files):
         for experiment, spectrum in zip(experiments, config.experiment_spectrum_files):
             spectrum_array = read_spectrum(spectrum)
+            experiment.exp_reference = config.experiment_exp_reference
             experiment.spectrum = spectrum_array
 
     _terms = ["pc", "fc", "d"]
@@ -209,6 +207,9 @@ def run_predict(config, options: PredictRunOptions | None = None) -> int:
         _terms.pop(_terms.index("fc"))
     if not config.diamagnetic_file:
         _terms.pop(_terms.index("d"))
+
+    # Create a molecule object which accompanies each experiment object
+    molecules = [copy.deepcopy(base_molecule) for _ in range(len(experiments))]
 
     # Update susceptibility tensor of Molecule using model
     for molecule, susc, experiment in zip(molecules, suscs, experiments):
@@ -260,13 +261,6 @@ def run_predict(config, options: PredictRunOptions | None = None) -> int:
         shift_range = [
             np.min([nuc.shift.avg for nuc in molecule.nuclei]),
             np.max([nuc.shift.avg for nuc in molecule.nuclei]),
-        ]
-
-        extras = [0.1 * abs(shift_range[0]), 0.1 * abs(shift_range[1])]
-
-        shift_range = [
-            shift_range[0] + np.negative(np.max(extras)),
-            shift_range[1] + np.positive(np.max(extras)),
         ]
 
         with spec.context():
