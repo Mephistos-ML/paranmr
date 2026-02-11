@@ -201,6 +201,7 @@ Used in fitting workflows that require experimental shift data.
 
 An experimental spectrum reference (``exp_reference``) may be provided to define
 an absolute chemical shift reference (in ppm) for experimental spectrum files.
+The reference peak is recognised within a tolerance of ±1 ppm.
 
 If ``exp_reference`` is specified, ``spectrum_files`` must also be provided.
 Supplying ``exp_reference`` without experimental spectrum data is not supported

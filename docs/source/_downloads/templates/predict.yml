@@ -1,0 +1,18 @@
+project:
+  name: <insert project name>
+
+hyperfine:
+  method: <insert method>
+  file: <insert filename>
+  spin: <insert spin>
+
+chem_labels:
+  file: <insert filename>
+
+nuclei:
+  include: <insert nucleus>   # e.g. H or C
+
+susceptibility:
+  format: <insert format>
+  file: <insert filename>
+  temperatures: [<insert temperature>]
