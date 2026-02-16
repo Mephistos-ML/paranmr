@@ -25,7 +25,6 @@ def read_spectrum(file_name: str):
     # validation (e.g., trailing comma / extra delimiters) is handled by read_csv_safe.
     df = read_csv_safe(
         file_name,
-        sep=",",
         header=None,
         quoting=csv.QUOTE_NONE,  # treat quotes as normal characters
         converters={

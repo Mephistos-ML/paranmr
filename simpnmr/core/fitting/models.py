@@ -20,6 +20,7 @@ from scipy.optimize._optimize import OptimizeResult
 from simpnmr.core.domain.exp import Experiment
 from simpnmr.core.domain.mol import Molecule, Nucleus
 from simpnmr.core.domain.tensor import Susceptibility
+from simpnmr.core.util.uncertainty import delta_method_sigma
 
 logger = logging.getLogger(__name__)
 
@@ -696,6 +697,67 @@ class SplitFitter(SusceptibilityModel):
 
         return tensor
 
+    def _post_fit(self) -> None:
+        """Adds derived uncertainties for susceptibility invariants.
+
+        Computes 1σ uncertainties for `Susceptibility.axiality` and
+        `Susceptibility.rhombicity` via a finite-difference Jacobian with respect to
+        the split parameters (iso, dxx, dyy, dxy, dxz, dyz) and propagates using the
+        package delta-method helper.
+
+        Notes:
+            - Uses the independence assumption (diagonal covariance) consistent with
+              `delta_method_sigma`.
+            - Fixed parameters are treated as having zero uncertainty.
+        """
+
+        # Build input sigma vector in VARNAMES order; fixed params => sigma = 0.
+        sig_in = []
+        for name in self.VARNAMES:
+            if name in self.fit_vars:
+                sig = self.fit_stdev.get(name)
+                sig_in.append(float(sig) if sig is not None else np.nan)
+            else:
+                sig_in.append(0.0)
+        sig_in = np.asarray(sig_in, dtype=float)
+
+        # Nothing to propagate if all inputs are fixed.
+        if np.all(sig_in == 0.0):
+            return
+
+        base = {k: float(v) for k, v in self.final_var_values.items()}
+
+        def _invariants(params: dict[str, float]) -> NDArray:
+            tensor = SplitFitter.totensor(params)
+            susc = Susceptibility(tensor, self.temperature)
+            return np.asarray(
+                [float(susc.axiality), float(susc.rhombicity)], dtype=float
+            )
+
+        jac = np.zeros((2, len(self.VARNAMES)), dtype=float)
+
+        # Central finite differences for d(axiality, rhombicity)/d(params).
+        for i, name in enumerate(self.VARNAMES):
+            x0 = base[name]
+            step = 1e-6 * max(1.0, abs(x0))
+
+            p_plus = base.copy()
+            p_minus = base.copy()
+            p_plus[name] = x0 + step
+            p_minus[name] = x0 - step
+
+            y_plus = _invariants(p_plus)
+            y_minus = _invariants(p_minus)
+
+            jac[:, i] = (y_plus - y_minus) / (2.0 * step)
+
+        sig_out = delta_method_sigma(jac, sig_in)
+
+        # Store derived uncertainties alongside fitted ones.
+        self.fit_stdev["ax"] = float(sig_out[0])
+        self.fit_stdev["rho"] = float(sig_out[1])
+        return
+
 
 class IsoAxRhoFitter(SusceptibilityModel):
     NAME = "Isotropic, Axial, and Rhombic over Axial Components of Susceptibility"
@@ -715,7 +777,7 @@ class IsoAxRhoFitter(SusceptibilityModel):
     UNITS_MM = {
         "iso": r"Å$^3$",
         "ax": r"Å$^3$",
-        "rho_over_ax": "",  # need to solve the problem with units
+        "rho_over_ax": "",
     }
 
     BOUNDS = {

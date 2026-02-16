@@ -18,15 +18,38 @@ def read_csv_safe(
     **kwargs,
 ) -> pd.DataFrame:
     try:
-        validate_csv_delimiters(file_name)
-        df = pd.read_csv(
-            file_name,
-            skipinitialspace=True,
-            comment="#",
-            engine="python",
-            encoding="utf-8-sig",
-            **kwargs,
-        )
+        # Detect delimiter from first non-comment, non-empty line
+        delimiter_is_comma = False
+        with open(file_name, "r", encoding="utf-8-sig") as fh:
+            for line in fh:
+                stripped = line.strip()
+                if not stripped or stripped.startswith("#"):
+                    continue
+                if "," in stripped:
+                    delimiter_is_comma = True
+                break
+
+        if delimiter_is_comma:
+            # Validate only comma-separated CSV files
+            validate_csv_delimiters(file_name)
+            df = pd.read_csv(
+                file_name,
+                sep=",",
+                skipinitialspace=True,
+                comment="#",
+                encoding="utf-8-sig",
+                **kwargs,
+            )
+        else:
+            # Whitespace-separated file
+            df = pd.read_csv(
+                file_name,
+                sep=r"\s+",
+                engine="python",
+                comment="#",
+                encoding="utf-8-sig",
+                **kwargs,
+            )
 
         # Normalize column names (strip BOM and surrounding whitespace)
         df.columns = [str(c).replace("\ufeff", "").strip() for c in df.columns]

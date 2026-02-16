@@ -325,37 +325,38 @@ def compute_chit_high_t_limit(
 
 def compute_analytic_component(
     chi_component: str,
-    t_max: float,
+    temperature: np.ndarray,
     g_sq: dict[str, float],
     D_J: float,
     E_J: float,
     spin: float,
-) -> float:
+) -> np.ndarray:
     g_sq_iso = float(g_sq["g_sq_iso"])
     g_sq_ax = float(g_sq["g_sq_ax"])
     g_sq_rh = float(g_sq["g_sq_rh"])
 
+    # Accept both scalar and array temperatures.
+    t = np.asarray(temperature, dtype=float)
+
     # Compute Spin coefficient
     f_S = (2 * spin - 1) * (2 * spin + 3)
 
-    # Calculate chi component in reduced (Curie) units (if I am not mistaken)
+    # Calculate chi component in reduced (Curie) units
     if chi_component == "iso":
         analytic = (
-            g_sq_iso - (f_S / (45 * KB * t_max)) * (D_J * g_sq_ax + 3 * E_J * g_sq_rh)
-        ) / t_max
+            g_sq_iso - (f_S / (45 * KB * t)) * (D_J * g_sq_ax + 3 * E_J * g_sq_rh)
+        ) / t
     elif chi_component == "ax":
         analytic = (
             g_sq_ax
-            - (f_S / (30 * KB * t_max))
+            - (f_S / (30 * KB * t))
             * (D_J * (g_sq_ax + 3 * g_sq_iso) - 3 * E_J * g_sq_rh)
-        ) / t_max
-
+        ) / t
     elif chi_component == "rho":
         analytic = (
             g_sq_rh
-            + (f_S / (30 * KB * t_max))
-            * (E_J * (g_sq_ax - 3 * g_sq_iso) + D_J * g_sq_rh)
-        ) / t_max
+            + (f_S / (30 * KB * t)) * (E_J * (g_sq_ax - 3 * g_sq_iso) + D_J * g_sq_rh)
+        ) / t
     else:
         raise ValueError(
             f"Unknown chi_component={chi_component!r}; expected 'iso', 'ax', or 'rho'."

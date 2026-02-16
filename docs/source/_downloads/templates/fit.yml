@@ -1,0 +1,29 @@
+project:
+  name: <insert project name>
+
+hyperfine:
+  method: <insert method>
+  file: <insert filename>
+
+experiment:
+  files: <insert filename>
+
+diamagnetic:
+  method: <insert method>
+  file: <insert filename>
+
+chem_labels:
+  file: <insert filename>
+
+nuclei:
+  include: <insert nucleus> # e.g. H or C
+
+susc_fit:
+  type: <insert fit type>
+  variables:
+    <insert variable 1>: [<fit|fix>, <initial value>]
+    <insert variable 2>: [<fit|fix>, <initial value>]
+  average_shifts: <insert option>
+
+assignment:
+  method: <insert method>

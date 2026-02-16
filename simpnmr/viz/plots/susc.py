@@ -234,8 +234,8 @@ def plot_exp_vs_ab_initio(
     params: dict,
     g_sq: dict[str, float],
     inv_t: np.ndarray,
-    ab_series: dict,
-    analytic_chi_vt: dict[str, float],
+    ab_series: dict[str, np.ndarray],
+    analytic_chi_vt: dict[str, np.ndarray],
     spec: PlotSpec,
     show: bool = True,
     save: bool = True,
@@ -249,8 +249,10 @@ def plot_exp_vs_ab_initio(
             entry must include a precomputed array under key "fit_y" evaluated on
             `inv_t`.
         inv_t: Inverse-temperature grid for the fitted model.
-        ab_series: Ab initio chiT series matched to `inv_t`, with keys: "inv_t",
-            "iso", "ax", "rho".
+        ab_series: Ab initio chiT series on the ab initio grid, with keys: "inv_t",
+            "iso", "ax", "rho". All values are arrays on the ab initio grid.
+        analytic_chi_vt: Analytic VT 2nd order susceptibility,
+        as arrays on the ab initio grid for each component.
     """
     _chiT_label_map = {
         "iso": r"\mathrm{iso}",
@@ -289,21 +291,32 @@ def plot_exp_vs_ab_initio(
             label="pNMR",
         )
 
-        vt_val = analytic_chi_vt.get(component)
+        inv_t_ab = np.asarray(ab_series["inv_t"], dtype=float)
+        vt_arr = np.asarray(analytic_chi_vt[component], dtype=float)
 
-        if vt_val is not None and np.isfinite(float(vt_val)):
-            t_max = float(1.0 / np.nanmin(inv_t))
-            y_vt = np.full_like(inv_t_plot, float(vt_val) * t_max, dtype=float)
+        if vt_arr.shape != inv_t_ab.shape:
+            raise ValueError(
+                "plot_exp_vs_ab_initio: analytic_chi_vt[%r] shape %r does not match "
+                "ab_series['inv_t'] shape %r"
+                % (component, vt_arr.shape, inv_t_ab.shape)
+            )
 
-        # VT 2nd order data
-        ax.plot(
-            inv_t_plot,
-            y_vt,
-            color=spec.palette.reference,
-            linestyle="-",
-            linewidth=spec.glyphs.aux_lw,
-            label="VT 2nd order",
-        )
+        # Convert analytic chi(T) to chiT on the ab initio temperature grid.
+        with np.errstate(divide="ignore", invalid="ignore"):
+            t_ab = 1.0 / inv_t_ab
+        x_vt = inv_t_ab * 1.0e3
+        y_vt = vt_arr * t_ab
+
+        m_vt = np.isfinite(y_vt)
+        if np.any(m_vt):
+            ax.plot(
+                x_vt[m_vt],
+                y_vt[m_vt],
+                color=spec.palette.reference,
+                linestyle="-",
+                linewidth=spec.glyphs.aux_lw,
+                label="VT 2nd order",
+            )
 
         # g^2 series (scalar Y value on the pNMR x-grid)
         gsq_key = comp_to_gsq_key.get(component)

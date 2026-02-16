@@ -13,6 +13,7 @@ import numpy as np
 from sympy import Expr, nsolve, symbols
 
 from simpnmr.core.const.physics import GE, KB, C, H
+from simpnmr.core.util.uncertainty import delta_method_sigma
 
 logger = logging.getLogger(__name__)
 
@@ -293,8 +294,3 @@ def solve_zfs_from_g_slopes(
     E = E_J / (H * C * 100)
 
     return float(D), float(E)
-
-
-def delta_method_sigma(jac: np.ndarray, sig: np.ndarray) -> np.ndarray:
-    """Return 1σ output uncertainties via delta method."""
-    return np.sqrt((jac**2) @ (sig**2))

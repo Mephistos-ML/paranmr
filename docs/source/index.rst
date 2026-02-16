@@ -16,7 +16,7 @@ all input data, model assumptions, and numerical parameters. This design makes
 calculations transparent, reproducible, and suitable for systematic studies.
 
 
-.. grid:: 2
+.. grid:: 3
    :gutter: 3
 
    .. grid-item-card:: Get started
@@ -33,6 +33,13 @@ calculations transparent, reproducible, and suitable for systematic studies.
       Internal architecture, contribution guidelines, and maintenance notes
       for developers and advanced users.
 
+   .. grid-item-card:: Templates
+      :link: templates/index
+      :link-type: doc
+
+      Downloadable YAML templates for common prediction and fitting workflows.
+      Modify the file to run your own calculations with minimal setup.
+
 .. toctree::
    :maxdepth: 1
    :caption: User Guide
@@ -46,3 +53,10 @@ calculations transparent, reproducible, and suitable for systematic studies.
    :hidden:
 
    developer_guide/index
+
+.. toctree::
+   :maxdepth: 1
+   :caption: Templates
+   :hidden:
+
+   templates/index

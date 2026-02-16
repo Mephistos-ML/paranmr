@@ -617,7 +617,7 @@ def interface(argv=None):
     args = read_args(argv)
 
     setup_logging(verbose=args.verbose, quiet=args.quiet, base_dir=os.getcwd())
-    logger.info("Output directory: %s", os.getcwd())
+    logger.info("Working directory: %s", os.getcwd())
 
     runtime = apply_runtime_settings(
         plot_profile=args.plot_profile,
@@ -628,7 +628,9 @@ def interface(argv=None):
     args.runtime = runtime
 
     try:
-        raise SystemExit(args.func(args, runtime))
+        exit_code = args.func(args, runtime)
+        logger.info("Job finished successfully")
+        raise SystemExit(exit_code or 0)
 
     except QCError as err:
         logger.error("%s", err)

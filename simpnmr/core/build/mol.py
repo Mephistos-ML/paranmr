@@ -14,7 +14,6 @@ import numpy as np
 
 from simpnmr.core.conv.freq_to_ang import a_iso_mhz_to_ang, a_tensor_mhz_to_ang
 from simpnmr.core.domain.mol import Molecule
-from simpnmr.tools.coords import xyz_fmt as xyzf
 
 
 def build_molecule_from_qca(
@@ -27,8 +26,9 @@ def build_molecule_from_qca(
 
     Expects `qca` (typically `rdrs.QCA`) to provide:
       - coords: array-like (n_atoms, 3) in Å
-      - a_iso: mapping label_without_index -> float
-      - a_dip: mapping label_without_index -> (3, 3) array-like
+      - labels: list-like (n_atoms,) of indexed per-atom labels (e.g. H1, C2)
+      - a_iso: mapping label -> float (keyed by the same labels as `labels`)
+      - a_dip: mapping label -> (3, 3) array-like (keyed by the same labels as `labels`)
 
     Args:
         qca: Parsed QC hyperfine object.
@@ -49,19 +49,25 @@ def build_molecule_from_qca(
     if not hasattr(qca, "a_dip"):
         raise ValueError("QCA object is missing required attribute: a_dip")
 
-    coords = np.asarray(qca.coords)
+    if not hasattr(qca, "labels"):
+        raise ValueError("QCA object is missing required attribute: labels")
 
-    # QC readers usually key hyperfine tensors by labels without indices (e.g. H, C).
-    # SimpNMR uses indexed labels (e.g. H1, C2), so assign indices deterministically
-    # in the QC order and re-key tensors accordingly.
-    labels_nn = list(qca.a_iso.keys())
-    labels = xyzf.add_label_indices(labels_nn)
+    coords = np.asarray(qca.coords, dtype=float)
+    labels = [str(lab) for lab in qca.labels]
 
-    a_iso: dict[str, float] = {}
-    a_dip: dict[str, np.ndarray] = {}
-    for old_lab, new_lab in zip(labels_nn, labels):
-        a_iso[new_lab] = float(qca.a_iso[old_lab])
-        a_dip[new_lab] = np.asarray(qca.a_dip[old_lab], dtype=float)
+    if len(labels) != coords.shape[0]:
+        raise ValueError(
+            "QCA labels/coords length mismatch: "
+            f"{len(labels)} labels vs {coords.shape[0]} coordinate rows"
+        )
+
+    # Keep the QC geometry labels (indexed, per-atom) to preserve 1:1 mapping to coords.
+    # Hyperfine tensors are expected to be keyed by the same labels; some atoms may be
+    # missing (e.g. Fe/Cl/Si) depending on the QC output and user configuration.
+    a_iso: dict[str, float] = {str(k): float(v) for k, v in qca.a_iso.items()}
+    a_dip: dict[str, np.ndarray] = {
+        str(k): np.asarray(v, dtype=float) for k, v in qca.a_dip.items()
+    }
 
     # Conversion logic copied from Molecule.from_QCA to preserve previous behaviour
     if converter is None:
