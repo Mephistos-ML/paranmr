@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v1.3.3 (2026-02-16)
+
+### Bug Fixes
+
+- **susc**: Correct VT fitting and uncertainty propagation
+  ([`e3ce7d1`](https://gitlab.com/suturina-group/simpnmr/-/commit/e3ce7d170a500ae182deac6a95fda3bd29d00e88))
+
+
 ## v1.3.2 (2026-02-10)
 
 ### Bug Fixes
