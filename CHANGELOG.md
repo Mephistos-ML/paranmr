@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v1.3.4 (2026-02-16)
+
+### Bug Fixes
+
+- Trigger patch release
+  ([`9439c7b`](https://gitlab.com/suturina-group/simpnmr/-/commit/9439c7b7cef89035310ec1dd1b0cfcfee76a25aa))
+
+
 ## v1.3.3 (2026-02-16)
 
 ### Bug Fixes
