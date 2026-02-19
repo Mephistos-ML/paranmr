@@ -14,7 +14,6 @@ import os
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 import numpy as np
-import pandas as pd
 from numpy.typing import ArrayLike
 
 from simpnmr.core.const.gammas import NUCLEAR_GAMMAS
@@ -23,6 +22,7 @@ from simpnmr.core.domain.mol import Molecule
 from simpnmr.core.spectrum.kernels import gaussian, lorentzian
 from simpnmr.core.util.arrays import find_index_of_nearest
 from simpnmr.core.util.strings import remove_numbers
+from simpnmr.io.csv.spec import write_spectrum
 from simpnmr.viz.layout.export import render_figure
 from simpnmr.viz.style.theme import PlotSpec
 from simpnmr.viz.utils.fmt import isotope_format
@@ -128,7 +128,7 @@ def plot_pred_spectrum(
         glyphs=glyphs,
         reverse_axis=True,
         connector_alpha=0.6,
-        label_fontsize=str(spec.typography.title),
+        label_fontsize=str(spec.typography.label),
     )
 
     ax.set_xlabel(r"{} $\delta$ (ppm)".format(isotope_format(isotope)))
@@ -156,12 +156,12 @@ def plot_pred_spectrum(
         logger.info("Predicted spectrum saved to %s", f"{save_name}.pdf")
 
     # Write spectrum (ppm and normalized intensity) to CSV for external visualization
-    df = pd.DataFrame({"shift (ppm)": x_grid, "intensity (a.u.)": y_intensity})
     csv_path = os.path.join(
         os.path.dirname(save_name),
         f"shift_vs_intensity_{molecule.susc.temperature:.2f}_K.csv",
     )
-    df.to_csv(csv_path, index=False)
+
+    write_spectrum(csv_path, x_grid, y_intensity)
 
     return fig, ax
 
@@ -265,7 +265,6 @@ def plot_raw_deconv_pred(
         spec.skin_axes(axis)
 
     # SUBPLOT NUMBER 1 - Simulated spectrum with peak markers and nucleus text-labels
-
     ax[0].set_xlim(np.max(shift_range), np.min(shift_range))
     ax[0].plot(x_grid, y_sim_intensity, lw=glyphs.line_lw, color=palette.primary)
     ax[0].plot(
@@ -286,6 +285,7 @@ def plot_raw_deconv_pred(
         palette=palette,
         glyphs=glyphs,
         reverse_axis=True,
+        label_fontsize=spec.typography.label - 2,
     )
 
     # Vertical left-side label
@@ -409,6 +409,7 @@ def plot_raw_deconv_pred(
         palette=palette,
         glyphs=glyphs,
         reverse_axis=True,
+        label_fontsize=spec.typography.label - 2,
     )
 
     # Vertical left-side label (instead of a top title)
@@ -558,7 +559,7 @@ def _annotate_peaks_with_barrier(
             lx,
             labels_position_y,
             lab,
-            fontsize=label_fontsize or str(spec.typography.annotation),
+            fontsize=label_fontsize or str(spec.typography.label),
             rotation="vertical",
             va="bottom",
             ha="center",
