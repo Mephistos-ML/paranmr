@@ -211,7 +211,7 @@ def _build_molecule_df(molecule):
         "δ_dia (ppm)",
         "δ_fc (ppm)",
         "δ_pc (ppm)",
-        "linewidth (Hz)",
+        "linewidth (ppm)",
     ]
 
     nuclei = molecule.nuclei
@@ -234,7 +234,9 @@ def _build_molecule_df(molecule):
         "δ_dia (ppm)": [nuc.shift.dia for nuc in nuclei],
         "δ_fc (ppm)": [nuc.shift.fc for nuc in nuclei],
         "δ_pc (ppm)": [nuc.shift.pc for nuc in nuclei],
-        "linewidth (Hz)": [1 for _ in nuclei],
+        "linewidth (ppm)": [
+            nuc.shift.lw if hasattr(nuc.shift, "lw") else 1.0 for nuc in nuclei
+        ],
     }
 
     df = pd.DataFrame(data, columns=columns)

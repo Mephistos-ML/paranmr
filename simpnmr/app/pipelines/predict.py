@@ -183,7 +183,7 @@ def run_predict(config, options: PredictRunOptions | None = None) -> int:
     if not getattr(config, "relaxation_model", None):
         (
             logger.warning(
-                "No relaxation model specified — linewidths will be fixed at 1 ppm."
+                "No relaxation model specified — linewidths will be fixed at 1 ppm"
             )
         )
     elif config.relaxation_magnetic_field_tesla is None:
