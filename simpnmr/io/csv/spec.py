@@ -8,7 +8,9 @@ Provides helpers to parse two-column shift–intensity spectra into numeric arra
 
 import csv
 
-from simpnmr.io.csv.csv_util import read_csv_safe
+import pandas as pd
+
+from simpnmr.io.csv.csv_util import read_csv_safe, write_csv_safe
 
 
 def read_spectrum(file_name: str):
@@ -21,8 +23,6 @@ def read_spectrum(file_name: str):
         file_name: Path to the CSV file.
     """
 
-    # Strict contract: comma-separated, two columns (ppm, intensity). CSV syntax
-    # validation (e.g., trailing comma / extra delimiters) is handled by read_csv_safe.
     df = read_csv_safe(
         file_name,
         header=None,
@@ -41,3 +41,30 @@ def read_spectrum(file_name: str):
     spectrum = df.to_numpy(dtype=float)
 
     return spectrum
+
+
+def write_spectrum(
+    file_name: str,
+    shift_ppm,
+    intensity,
+):
+    """Write spectrum data to a CSV file.
+
+    Writes a two-column CSV with header:
+    - shift (ppm)
+    - intensity (a.u.)
+
+    Args:
+        file_name: Output CSV path.
+        shift_ppm: 1D array-like of chemical shifts in ppm.
+        intensity: 1D array-like of intensities (arbitrary units).
+    """
+
+    df = pd.DataFrame(
+        {
+            "shift (ppm)": shift_ppm,
+            "intensity (a.u.)": intensity,
+        }
+    )
+
+    write_csv_safe(df, file_name)
