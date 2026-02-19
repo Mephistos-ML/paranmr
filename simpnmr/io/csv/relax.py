@@ -150,18 +150,18 @@ def save_corr_time_fit_data(
 
     # Append diagnostic information that is currently printed to the terminal
     if initial_guess is not None:
-        comment += f"#initial_guess: {np.array(initial_guess).tolist()}\n"
+        comment += f"initial_guess: {np.array(initial_guess).tolist()}\n"
 
     if fitted_tau_r is not None:
-        comment += f"#fitted_tau_R (s): {fitted_tau_r:.5e}\n"
+        comment += f"fitted_tau_R (s): {fitted_tau_r:.5e}\n"
 
     if fitted_tau_e is not None:
-        comment += f"#fitted_tau_E (s): {fitted_tau_e:.5e}\n"
+        comment += f"fitted_tau_E (s): {fitted_tau_e:.5e}\n"
 
     if covariance is not None:
         cov_array = np.array(covariance)
-        comment += f"#covariance_shape: {cov_array.shape}\n"
-        comment += f"#covariance_flat: {cov_array.flatten().tolist()}\n"
+        comment += f"covariance_shape: {cov_array.shape}\n"
+        comment += f"covariance_flat: {cov_array.flatten().tolist()}\n"
 
     write_csv_safe(df, file_name, comment)
 

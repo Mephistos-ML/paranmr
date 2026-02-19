@@ -277,9 +277,9 @@ def run_fit_susc(config, options: FitSuscRunOptions | None = None) -> int:
                 ),
                 delimiter=delimiter,
                 comment=(
-                    f"# Optimal Assignment\n"
-                    f"# r2 = {opt_r2:f}\n"
-                    f"# T = {experiment.temperature:.2f} K"
+                    f"Optimal Assignment\n"
+                    f"r2 = {opt_r2:f}\n"
+                    f"T = {experiment.temperature:.2f} K"
                 ),
             )
 
