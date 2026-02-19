@@ -22,7 +22,7 @@ line-length = 88
 select = ["E", "F", "I"]
 
 [tool.pytest.ini_options]
-addopts = "-m 'not integration'"
 markers = [
-    "integration: slow integration tests using example datasets",
+    "integration: end-to-end example/CLI integration tests (may be slow)",
+    "smoke: fast smoke tests for CLI/entrypoints",
 ]
