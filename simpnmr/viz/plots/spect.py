@@ -37,7 +37,7 @@ def plot_pred_spectrum(
     spec: PlotSpec,
     save: bool = True,
     show: bool = True,
-    save_name: str = "predicted_spectrum.png",
+    save_name: str = "predicted_spectrum.pdf",
     window_title: str = "Predicted Spectrum",
     verbose: bool = True,
 ) -> tuple[plt.Figure, list[plt.Axes]]:
@@ -174,7 +174,7 @@ def plot_raw_deconv_pred(
     spec: PlotSpec,
     save: bool = True,
     show: bool = True,
-    save_name: str = "pred_and_exp_spectrum.png",
+    save_name: str = "pred_and_exp_spectrum.pdf",
     window_title: str = "Raw, Deconvoluted, and Predicted Spectra",
     verbose: bool = True,
 ) -> tuple[plt.Figure, tuple[plt.Axes]]:

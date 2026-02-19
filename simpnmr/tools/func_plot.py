@@ -62,7 +62,7 @@ def plot_component(
     save: bool = True,
     fig: plt.Figure | None = None,
     ax: plt.Axes | None = None,
-    savename: str = "hyperfines.png",
+    savename: str = "hyperfines.pdf",
     figure_title: str = "Hyperfine coupling constants",
 ):
     """
@@ -133,7 +133,7 @@ def plot_normalisation(
     norms: dict[str, float],
     save=True,
     show=True,
-    savename="normalisation.png",
+    savename="normalisation.pdf",
     figure_title="Normalisation",
 ) -> None:
     """
