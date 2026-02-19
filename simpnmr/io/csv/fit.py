@@ -7,13 +7,12 @@ Provides helpers to serialize fitted slope/intercept parameters and to parse
 flattened regression results from CSV files.
 """
 
-import datetime
 import logging
 
 import numpy as np
 import pandas as pd
 
-from simpnmr.__version__ import __version__
+from simpnmr.io.csv.csv_util import read_csv_safe, write_csv_safe
 
 logger = logging.getLogger(__name__)
 
@@ -72,16 +71,11 @@ def save_slope_intercept(
 
     df = pd.DataFrame(data=out)
 
-    _comment = (
-        f"#This file was generated with SimpNMR v{__version__} at {{}}\n".format(
-            datetime.datetime.now().strftime("%H:%M:%S %d-%m-%Y ")
-        )
-        + "#Data reported in Curie-normalised chiT (dimensionless) Units\n"
-    )
+    comment = [
+        "Data reported in Curie-normalised chiT (dimensionless) Units",
+    ]
 
-    with open(file_name, "w") as _f:
-        _f.write(_comment)
-        df.to_csv(_f, sep=delimiter, header=True, index=None)
+    write_csv_safe(df, file_name, comment)
 
     if verbose:
         logger.info("Temperature dependence data is written to %s", file_name)
@@ -107,7 +101,7 @@ def read_chiT_regression_csv(filename: str) -> dict[str, float]:
     """
 
     # Read CSV, skipping comment lines
-    df = pd.read_csv(filename, comment="#")
+    df = read_csv_safe(filename)
 
     # Sanity check
     required_cols = {"type", "intercept", "slope", "intercept_err", "slope_err"}

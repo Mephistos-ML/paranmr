@@ -6,13 +6,12 @@
 Provides helpers to export relaxation decompositions and correlation-time fit data.
 """
 
-import datetime
 import logging
 
 import numpy as np
 import pandas as pd
 
-from simpnmr.__version__ import __version__
+from simpnmr.io.csv.csv_util import write_csv_safe
 
 logger = logging.getLogger(__name__)
 
@@ -95,18 +94,7 @@ def save_relaxation_decomposition(
 
     df = pd.DataFrame(data=out)
 
-    _comment = f"#This file was generated with SimpNMR v{__version__} at {{}}\n".format(
-        datetime.datetime.now().strftime("%H:%M:%S %d-%m-%Y ")
-    )
-
-    if len(comment):
-        if comment[0] != "#":
-            comment = f"#{comment}"
-        _comment += f"{comment}\n"
-
-    with open(file_name, "w") as _f:
-        _f.write(_comment)
-        df.to_csv(_f, sep=delimiter, header=True, float_format="%.5e", index=None)
+    write_csv_safe(df, file_name, comment)
 
     if verbose:
         logger.info("Relaxation decomposition written to %s", file_name)
@@ -160,34 +148,22 @@ def save_corr_time_fit_data(
 
     df = pd.DataFrame(data=out)
 
-    # Header comment with version, timestamp and fit diagnostics
-    _comment = f"#This file was generated with SimpNMR v{__version__} at {{}}\n".format(
-        datetime.datetime.now().strftime("%H:%M:%S %d-%m-%Y ")
-    )
-
-    if len(comment):
-        if comment[0] != "#":
-            comment = f"#{comment}"
-        _comment += f"{comment}\n"
-
     # Append diagnostic information that is currently printed to the terminal
     if initial_guess is not None:
-        _comment += f"#initial_guess: {np.array(initial_guess).tolist()}\n"
+        comment += f"#initial_guess: {np.array(initial_guess).tolist()}\n"
 
     if fitted_tau_r is not None:
-        _comment += f"#fitted_tau_R (s): {fitted_tau_r:.5e}\n"
+        comment += f"#fitted_tau_R (s): {fitted_tau_r:.5e}\n"
 
     if fitted_tau_e is not None:
-        _comment += f"#fitted_tau_E (s): {fitted_tau_e:.5e}\n"
+        comment += f"#fitted_tau_E (s): {fitted_tau_e:.5e}\n"
 
     if covariance is not None:
         cov_array = np.array(covariance)
-        _comment += f"#covariance_shape: {cov_array.shape}\n"
-        _comment += f"#covariance_flat: {cov_array.flatten().tolist()}\n"
+        comment += f"#covariance_shape: {cov_array.shape}\n"
+        comment += f"#covariance_flat: {cov_array.flatten().tolist()}\n"
 
-    with open(file_name, "w") as _f:
-        _f.write(_comment)
-        df.to_csv(_f, sep=delimiter, header=True, float_format="%.5e", index=None)
+    write_csv_safe(df, file_name, comment)
 
     if verbose:
         logger.info("Correlation time fit data written to %s", file_name)
