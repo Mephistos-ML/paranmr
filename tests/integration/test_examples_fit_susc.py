@@ -15,7 +15,7 @@ import pytest
 @pytest.mark.integration
 def test_examples_fit_susc():
     cwd = Path("examples/fitting/fit_susc")
-    cmd = ["simpnmr", "fit_susc", "input.yml"]
+    cmd = ["simpnmr", "--hide", "fit_susc", "input.yml"]
     result = subprocess.run(cmd, capture_output=True, text=True, cwd=cwd)
 
     assert result.returncode == 0, (

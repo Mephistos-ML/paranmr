@@ -15,7 +15,7 @@ import pytest
 @pytest.mark.integration
 def test_examples_predict():
     cwd = Path("examples/prediction/predict")
-    cmd = ["simpnmr", "predict", "input.yml"]
+    cmd = ["simpnmr", "--hide", "predict", "input.yml"]
     result = subprocess.run(cmd, capture_output=True, text=True, cwd=cwd)
 
     if result.returncode != 0 and "missing" in result.stderr.lower():
