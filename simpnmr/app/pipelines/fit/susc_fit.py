@@ -363,16 +363,16 @@ def run_fit_susc(config, options: FitSuscRunOptions | None = None) -> int:
             )
 
     # Write shift data to file
-    _comment_base = f"# Hyperfines from file {config.hyperfine_file}\n"
+    _comment_base = f"Hyperfines from file {config.hyperfine_file}\n"
     if len(config.diamagnetic_file):
-        _comment_base += f"# Diamagnetic shifts from file {config.diamagnetic_file}\n"
+        _comment_base += f"Diamagnetic shifts from file {config.diamagnetic_file}\n"
     if len(config.diamagnetic_ref_file):
         _comment_base += (
-            f"# Diamagnetic reference from file {config.diamagnetic_ref_file}\n"
+            f"Diamagnetic reference from file {config.diamagnetic_ref_file}\n"
         )
 
     for molecule in molecules:
-        comment = _comment_base + f"# T = {molecule.susc.temperature:.2f} K"
+        comment = _comment_base + f"T = {molecule.susc.temperature:.2f} K"
         save_molecule_to_csv(
             molecule=molecule,
             file_name=os.path.join(

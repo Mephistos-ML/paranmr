@@ -58,7 +58,7 @@ def load_base_molecule_from_hyperfines(config: Any, delimiter: str) -> Molecule:
             file_name=os.path.join(config.project_name, "dft_hyperfines.csv"),
             verbose=True,
             delimiter=delimiter,
-            comment=f"# Data taken from file {config.hyperfine_file}",
+            comment=f"Data taken from file {config.hyperfine_file}",
         )
 
         # Retain only the atoms that are given in the labels file.
