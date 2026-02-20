@@ -13,6 +13,5 @@ nuclei:
   include: C
 
 susceptibility:
-  format: orca_nev
   file: nev.out
   temperatures: [298.00000]

@@ -26,11 +26,10 @@ logger = logging.getLogger(__name__)
 def run_calc_pcs_iso(
     *,
     susc_file: str,
-    susc_format: str,
     temperatures: list[float],
     structure_file: str,
     central_atom: str,
-    options: CalcPcsIsoRunOptions,
+    options: CalcPcsIsoRunOptions | None = None,  # noqa: ARG001
 ) -> int:
     """Run PCS isosurface calculation using an isotropic susceptibility tensor.
 
@@ -39,7 +38,6 @@ def run_calc_pcs_iso(
 
     Args:
         susc_file: Path to the susceptibility tensor file.
-        susc_format: Susceptibility file format identifier (e.g. "orca_*", "csv_*").
         temperatures: Temperatures (K) to compute PCS isosurfaces for.
         structure_file: Path to the structure file (.xyz, .log, .out).
         central_atom: Indexed label of the paramagnetic centre (e.g. "Ni1").
@@ -67,7 +65,7 @@ def run_calc_pcs_iso(
         )
 
     # Load susceptibility tensors
-    suscs = load_susceptibilities(susc_file, susc_format)
+    suscs = load_susceptibilities(susc_file)
 
     matched = [
         s

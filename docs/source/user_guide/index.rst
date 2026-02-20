@@ -9,6 +9,7 @@ User Guide
    installation
    workflows
    input_files
+   standalone_cli
    output_files
    theory
    faq
@@ -33,6 +34,13 @@ User Guide
       :link-type: doc
 
       Detailed description of the YAML configuration format and available input blocks.
+
+   .. grid-item-card:: Standalone CLI Utilities
+      :link: standalone_cli
+      :link-type: doc
+
+      Documentation of stable command-line tools that operate directly on files
+      and do not require YAML pipeline configuration.
 
    .. grid-item-card:: Output Files
       :link: output_files

@@ -12,6 +12,7 @@ import logging
 import os
 import re
 from collections import defaultdict
+from pathlib import Path
 
 import numpy as np
 
@@ -23,6 +24,7 @@ from simpnmr.app.loaders.hfc_load import load_base_molecule_from_hyperfines
 from simpnmr.app.loaders.labels_load import load_chem_labels_from_csv
 from simpnmr.app.loaders.susc_load import load_susceptibilities
 from simpnmr.app.params.options import PredictRunOptions
+from simpnmr.app.policies.susc import resolve_susceptibility_source
 
 # Core / domain
 from simpnmr.core.const.gammas import NUCLEAR_GAMMAS
@@ -86,8 +88,13 @@ def run_predict(config, options: PredictRunOptions | None = None) -> int:
     )
 
     # Load susceptibility information
-    if "orca" in config.susceptibility_format:
-        section = config.susceptibility_format.split("orca_")[1]
+    backend, section = resolve_susceptibility_source(
+        config.susceptibility_file,
+        config.susceptibility_format,
+    )
+
+    if backend == "orca":
+        # Section is resolved by policy (legacy override or autodetect priority).
         g_tensor = rdrs.read_orca_g_tensor(
             config.susceptibility_file,
             section=section,
@@ -169,7 +176,7 @@ def run_predict(config, options: PredictRunOptions | None = None) -> int:
         base_molecule.average_hyperfine(config.hyperfine_average)
 
     # Rotate hyperfine tensors from DFT frame into chi eigenframe (if provided)
-    if "orca" in config.susceptibility_format:
+    if backend == "orca":
         if (
             "dft" in config.hyperfine_method
         ):  # TODO: remove condition and remove config from tf.
@@ -299,7 +306,10 @@ def run_predict(config, options: PredictRunOptions | None = None) -> int:
         molecules,
         os.path.join(config.project_name, "susceptibility_tensor.csv"),
         comment="Data from {} ({})".format(
-            config.susceptibility_file, config.susceptibility_format
+            Path(config.susceptibility_file).name,
+            config.susceptibility_format
+            if config.susceptibility_format is not None
+            else (f"orca_{section}" if backend == "orca" else backend),
         ),
         susc_units=getattr(config, "susc_units", "A3"),
     )

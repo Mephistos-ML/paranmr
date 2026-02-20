@@ -14,6 +14,7 @@ IO + factories according to the provided configuration.
 from __future__ import annotations
 
 import os
+from pathlib import Path
 from typing import Any
 
 from simpnmr.app.loaders.mol_load import load_molecule_from_csv
@@ -58,7 +59,7 @@ def load_base_molecule_from_hyperfines(config: Any, delimiter: str) -> Molecule:
             file_name=os.path.join(config.project_name, "dft_hyperfines.csv"),
             verbose=True,
             delimiter=delimiter,
-            comment=f"Data taken from file {config.hyperfine_file}",
+            comment=f"Data taken from file {Path(config.hyperfine_file).name}",
         )
 
         # Retain only the atoms that are given in the labels file.

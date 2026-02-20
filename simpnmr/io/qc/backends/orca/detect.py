@@ -9,6 +9,9 @@ implemented in `simpnmr.io.qc.readers`.
 
 from __future__ import annotations
 
+import re
+from typing import List
+
 ORCA_SIGNATURE = "* O   R   C   A *"
 ORCA_PROPERTY_SIGNATURE = "!PROPERTIES!"
 
@@ -18,6 +21,8 @@ ORCA_A5_SIGNATURE = (
 ORCA_A6_SIGNATURE = (
     "            '#,     ,#'  ##    ##  '#,     ,#' ,#      #,     #,   #   #,  ,#"
 )
+
+QDPT_WITH_RE = re.compile(r"QDPT WITH\s+(?P<method>[A-Z0-9_+-]+)")
 
 
 def is_orca_output(file_name: str) -> bool:
@@ -76,3 +81,30 @@ def is_orca_a6_output(file_name: str) -> bool:
             if ORCA_A6_SIGNATURE in line:
                 return True
     return False
+
+
+def detect_susc_methods(file_name: str) -> List[str]:
+    """Detect available susceptibility methods in an ORCA output.
+
+    The function performs a lightweight scan of the ORCA text output and
+    collects all QDPT susceptibility blocks (e.g. CASSCF, NEVPT2).
+
+    Args:
+        file_name: Path to the ORCA output file.
+
+    Returns:
+        Sorted list of detected method labels in lowercase (e.g. ["casscf", "nevpt2"]).
+    """
+
+    methods: set[str] = set()
+
+    with open(file_name, "r", errors="ignore") as f:
+        for line in f:
+            if "QDPT WITH" not in line:
+                continue
+            match = QDPT_WITH_RE.search(line)
+            if match is None:
+                continue
+            methods.add(match.group("method").lower())
+
+    return sorted(methods)
