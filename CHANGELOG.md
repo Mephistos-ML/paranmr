@@ -2,6 +2,53 @@
 
 <!-- version list -->
 
+## v1.3.5 (2026-02-20)
+
+### Bug Fixes
+
+- **io**: Remove hardcoded linewidth and use relaxation-derived values when available
+  ([`96b27da`](https://gitlab.com/suturina-group/simpnmr/-/commit/96b27da175af7c98e9ab5bba6345c599d861c095))
+
+### Chores
+
+- **app**: Delegate CSV comment prefix handling to write_csv_safe
+  ([`509ba9d`](https://gitlab.com/suturina-group/simpnmr/-/commit/509ba9d10dc18ae1816452ae5c717935eaafcdc8))
+
+- **app**: Delegate CSV comment prefix handling to write_csv_safe
+  ([`f920b11`](https://gitlab.com/suturina-group/simpnmr/-/commit/f920b113a6ade5b25cc9a219051a5c95d2bd7889))
+
+- **csv**: Introduce write_csv_safe for standardized CSV output
+  ([`a5c6328`](https://gitlab.com/suturina-group/simpnmr/-/commit/a5c6328a4c4d8a895905c76962993f68a1143e26))
+
+- **io**: Unify CSV exports via write_csv_safe for safe encoding
+  ([`5fd6d40`](https://gitlab.com/suturina-group/simpnmr/-/commit/5fd6d404065c6c06708c86460a1d49d9d28aec34))
+
+- **viz**: Add label font size to typography scale
+  ([`afa2763`](https://gitlab.com/suturina-group/simpnmr/-/commit/afa276344f0f0ea318452259721ffbc6b8b701bb))
+
+- **viz**: Increase spectrum label sizes and standardize CSV export via write_csv_safe
+  ([`45e7472`](https://gitlab.com/suturina-group/simpnmr/-/commit/45e747232b9e04eeb2ba90b665b265198b246334))
+
+- **viz**: Update legacy PNG references to PDF across the repository
+  ([`7ef07a7`](https://gitlab.com/suturina-group/simpnmr/-/commit/7ef07a76c8901070427239a0c15ced06f4760be6))
+
+### Refactoring
+
+- **io**: Move write_spectrum helper into csv spec module
+  ([`8dafc78`](https://gitlab.com/suturina-group/simpnmr/-/commit/8dafc7803711f5263a45b429de13ee122c6e946a))
+
+### Testing
+
+- **integration**: Add --hide flag to CLI example tests
+  ([`1c537ec`](https://gitlab.com/suturina-group/simpnmr/-/commit/1c537ec97a1a1baed4d8a28abbf7073aa4daf9e3))
+
+- **pytest**: Remove addopts marker filtering
+  ([`256d640`](https://gitlab.com/suturina-group/simpnmr/-/commit/256d6400531df4c1685f43d6009bb82f665a9275))
+
+- **unit**: Add encoding tests for CSV read/write helpers
+  ([`be92d13`](https://gitlab.com/suturina-group/simpnmr/-/commit/be92d131bd682150abbef05f3e4dd351489d54ed))
+
+
 ## v1.3.4 (2026-02-16)
 
 ### Bug Fixes
