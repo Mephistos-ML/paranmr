@@ -735,7 +735,7 @@ def run_fit_corr_time(config, options: FitCorrTimeRunOptions | None = None) -> i
             )
 
         plt.tight_layout()
-        plt.savefig(os.path.join(config.project_name, "experimental_vs_fitted_R1.png"))
+        plt.savefig(os.path.join(config.project_name, "experimental_vs_fitted_R1.pdf"))
         plt.show()
 
         plt.figure(figsize=(8, 5))
@@ -753,7 +753,7 @@ def run_fit_corr_time(config, options: FitCorrTimeRunOptions | None = None) -> i
         plt.legend()
         plt.xticks(rotation=45)
         plt.tight_layout()
-        plt.savefig(os.path.join(config.project_name, "r1_fit_comparison.png"))
+        plt.savefig(os.path.join(config.project_name, "r1_fit_comparison.pdf"))
         plt.show()
 
     else:

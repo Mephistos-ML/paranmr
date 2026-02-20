@@ -40,6 +40,7 @@ class TypographyScale:
     legend: int
     title: int
     annotation: int
+    label: int
 
 
 SCALES: dict[PlotProfile, TypographyScale] = {
@@ -51,6 +52,7 @@ SCALES: dict[PlotProfile, TypographyScale] = {
         legend=9,
         title=12,
         annotation=9,
+        label=14,
     ),
     # For wide figures, posters, and slides.
     "poster": TypographyScale(
@@ -60,6 +62,7 @@ SCALES: dict[PlotProfile, TypographyScale] = {
         legend=10,
         title=13,
         annotation=10,
+        label=15,
     ),
 }
 

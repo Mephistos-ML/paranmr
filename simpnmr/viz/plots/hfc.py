@@ -210,7 +210,7 @@ def plot_hyperfine_spread(
     spec: PlotSpec | None = None,
     save: bool = False,
     show: bool = True,
-    save_name: str = "hyperfines.png",
+    save_name: str = "hyperfines.pdf",
     window_title: str = "Hyperfine Components",
     verbose: bool = True,
 ) -> tuple[plt.Figure, list[plt.Axes]]:

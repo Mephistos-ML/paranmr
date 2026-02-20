@@ -2,12 +2,11 @@
 
 from __future__ import annotations
 
-import datetime
 import logging
 
 import pandas as pd
 
-from simpnmr.__version__ import __version__
+from simpnmr.io.csv.csv_util import write_csv_safe
 
 logger = logging.getLogger(__name__)
 
@@ -71,19 +70,7 @@ def write_sh_results_csv(
 
     df = pd.DataFrame([out])
 
-    _comment = (
-        f"# This file was generated with SimpNMR v{__version__} "
-        f"at {datetime.datetime.now():%H:%M:%S %d-%m-%Y}\n"
-    )
-
-    if len(comment):
-        if comment[0] != "#":
-            comment = f"#{comment}"
-        _comment += f"{comment}\n"
-
-    with open(file_name, "w") as _f:
-        _f.write(_comment)
-        df.to_csv(_f, sep=delimiter, header=True, float_format="%.6f", index=None)
+    write_csv_safe(df, file_name, comment)
 
     if verbose:
         logger.info("Spin Hamiltonian results written to %s", file_name)

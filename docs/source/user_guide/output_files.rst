@@ -29,13 +29,13 @@ For susceptibility fitting workflows (``fit_susc``), the names of all generated 
 
    Generated as a Gaussian cube file for visualisation of PCS fields in real space.
 
-5. ``susceptibility_components_chi.png``  
+5. ``susceptibility_components_chi.pdf``  
    Temperature dependence of the magnetic susceptibility components.
 
    Shows :math:`\chi` versus :math:`T`.  
    Generated when more than one temperature is specified and ``--isoaxrho_plots on`` or ``--save`` is enabled.
 
-6. ``susceptibility_components_chiT.png``  
+6. ``susceptibility_components_chiT.pdf``  
    Temperature-scaled susceptibility components.
 
    Shows :math:`\chi T` versus :math:`T`.  

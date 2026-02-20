@@ -78,7 +78,7 @@ def plot_component(
     save: bool = True,
     fig: plt.Figure = None,
     ax: plt.Axes = None,
-    savename: str = "hyperfines.png",
+    savename: str = "hyperfines.pdf",
     figure_title: str = "Hyperfine coupling constants",
 ):
     """
@@ -151,7 +151,7 @@ def plot_normalisation(
     chemlabels: dict[str, float],
     save=True,
     show=True,
-    savename="normalisation.png",
+    savename="normalisation.pdf",
     figure_title="Normalisation",
 ):
     """
@@ -265,7 +265,7 @@ def main():
         all_isos,
         r"$A_\mathregular{iso} \mathregular{(MHz)}$",
         figure_title=uargs.window_append,
-        savename="isotropic.png",
+        savename="isotropic.pdf",
     )
 
     # Isotropic parts relative to largest value for that functional
@@ -321,12 +321,12 @@ def main():
         all_ax,
         r"$A_\mathregular{ax} \mathregular{(MHz)}$",
         figure_title=uargs.window_append,
-        savename="axial.png",
+        savename="axial.pdf",
     )
 
     plot_component(
         all_rho,
         r"$A_\mathregular{rho} \mathregular{(MHz)}$",
         figure_title=uargs.window_append,
-        savename="rhombic.png",
+        savename="rhombic.pdf",
     )

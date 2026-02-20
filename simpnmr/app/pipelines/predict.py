@@ -183,7 +183,7 @@ def run_predict(config, options: PredictRunOptions | None = None) -> int:
     if not getattr(config, "relaxation_model", None):
         (
             logger.warning(
-                "No relaxation model specified — linewidths will be fixed at 1 ppm."
+                "No relaxation model specified — linewidths will be fixed at 1 ppm"
             )
         )
     elif config.relaxation_magnetic_field_tesla is None:
@@ -298,7 +298,7 @@ def run_predict(config, options: PredictRunOptions | None = None) -> int:
     save_susc(
         molecules,
         os.path.join(config.project_name, "susceptibility_tensor.csv"),
-        comment="#Data from {} ({})".format(
+        comment="Data from {} ({})".format(
             config.susceptibility_file, config.susceptibility_format
         ),
         susc_units=getattr(config, "susc_units", "A3"),
@@ -313,7 +313,7 @@ def run_predict(config, options: PredictRunOptions | None = None) -> int:
                 f"hyperfines_and_shifts_{molecule.susc.temperature:.2f}_K.csv",
             ),
             delimiter=delimiter,
-            comment=f"# T = {molecule.susc.temperature:.2f} K",
+            comment=f"T = {molecule.susc.temperature:.2f} K",
             verbose=True,
         )
 

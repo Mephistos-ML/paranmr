@@ -15,7 +15,7 @@ from typing import Iterable, List
 import pandas as pd
 
 from simpnmr.core.domain.exp import Experiment, Signal
-from simpnmr.io.csv.csv_util import read_csv_safe
+from simpnmr.io.csv.csv_util import read_csv_safe, write_csv_safe
 from simpnmr.io.text.parse import find_first_group
 
 logger = logging.getLogger(__name__)
@@ -189,11 +189,7 @@ def write_experiment_to_csv(
     """
     df = _build_experiment_signals_df(experiment)
 
-    with open(file_name, "w", encoding="utf-8") as fh:
-        if comment:
-            fh.write(f"# {comment}\n")
-
-        df.to_csv(fh, sep=delimiter, index=False)
+    write_csv_safe(df, file_name, comment)
 
     if verbose:
         logger.info("Experiment written to %s", file_name)

@@ -9,14 +9,12 @@ optional chemical labels, and hyperfine tensors.
 
 from __future__ import annotations
 
-import datetime
 import logging
 
 import numpy as np
 import pandas as pd
 
-from simpnmr.__version__ import __version__
-from simpnmr.io.csv.csv_util import read_csv_safe
+from simpnmr.io.csv.csv_util import read_csv_safe, write_csv_safe
 
 logger = logging.getLogger(__name__)
 
@@ -184,18 +182,7 @@ def save_molecule_to_csv(
 
     df = _build_molecule_df(molecule)
 
-    _comment = (
-        f"# This file was generated with SimpNMR v{__version__} at {{}}\n".format(
-            datetime.datetime.now().strftime("%H:%M:%S %d-%m-%Y ")
-        )
-    )
-
-    _comment += comment + "\n"
-
-    with open(file_name, "w") as _f:
-        _f.write(_comment)
-
-        df.to_csv(_f, sep=delimiter, header=True, float_format="%.5f", index=None)
+    write_csv_safe(df, file_name, comment)
 
     if verbose:
         logger.info("Molecule data written to %s", file_name)
@@ -224,7 +211,7 @@ def _build_molecule_df(molecule):
         "δ_dia (ppm)",
         "δ_fc (ppm)",
         "δ_pc (ppm)",
-        "linewidth (Hz)",
+        "linewidth (ppm)",
     ]
 
     nuclei = molecule.nuclei
@@ -247,7 +234,9 @@ def _build_molecule_df(molecule):
         "δ_dia (ppm)": [nuc.shift.dia for nuc in nuclei],
         "δ_fc (ppm)": [nuc.shift.fc for nuc in nuclei],
         "δ_pc (ppm)": [nuc.shift.pc for nuc in nuclei],
-        "linewidth (Hz)": [1 for _ in nuclei],
+        "linewidth (ppm)": [
+            nuc.shift.lw if hasattr(nuc.shift, "lw") else 1.0 for nuc in nuclei
+        ],
     }
 
     df = pd.DataFrame(data, columns=columns)

@@ -14,6 +14,7 @@ import numpy as np
 import pandas as pd
 
 from simpnmr.__version__ import __version__
+from simpnmr.io.csv.csv_util import write_csv_safe
 
 logger = logging.getLogger(__name__)
 
@@ -88,7 +89,6 @@ def save_hyperfines_to_csv(
     file_name: str = "dft_hyperfines.csv",
     verbose: bool = True,
     comment: str = "",
-    delimiter: str = ",",
 ) -> None:
     """Save hyperfine data for all nuclei to a CSV file.
 
@@ -101,17 +101,7 @@ def save_hyperfines_to_csv(
 
     df = _build_hyperfines_df(hyperfines)
 
-    _comment = f"#This file was generated with SimpNMR v{__version__} at {{}}\n".format(
-        datetime.datetime.now().strftime("%H:%M:%S %d-%m-%Y ")
-    )
-
-    if comment:
-        _comment += comment + "\n"
-
-    with open(file_name, "w") as _f:
-        _f.write(_comment)
-
-        df.to_csv(_f, sep=delimiter, header=True, float_format="%.5f", index=None)
+    write_csv_safe(df, file_name, comment)
 
     if verbose:
         logger.info("Hyperfine data written to %s", file_name)

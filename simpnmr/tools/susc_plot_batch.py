@@ -52,7 +52,7 @@ def plot_component(
     save: bool = True,
     fig: plt.Figure = None,
     ax: plt.Axes = None,
-    savename: str = "hyperfines.png",
+    savename: str = "hyperfines.pdf",
     figure_title: str = "Hyperfine coupling constants",
 ):
     """
