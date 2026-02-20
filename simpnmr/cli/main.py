@@ -91,7 +91,6 @@ def calc_pcs_iso_cli(uargs: argparse.Namespace, runtime: RuntimeSettings) -> int
 
     return run_calc_pcs_iso(
         susc_file=uargs.susc_file,
-        susc_format=uargs.susc_format,
         temperatures=uargs.temperatures,
         structure_file=uargs.structure_file,
         central_atom=uargs.central_atom,
@@ -533,12 +532,6 @@ def read_args(arg_list=None):
     calc_pcs_iso.set_defaults(func=calc_pcs_iso_cli)
 
     calc_pcs_iso.add_argument("susc_file", help="File containing susceptibility data")
-
-    calc_pcs_iso.add_argument(
-        "susc_format",
-        help="Susceptibility file format",
-        choices=["csv", "orca_nev", "orca_cas", "molcas"],
-    )
 
     calc_pcs_iso.add_argument(
         "temperatures",

@@ -323,7 +323,7 @@ Used in workflows involving pNMR prediction.
         # Susceptibility tensor source file [Required]
         file: chi/orca.out # file containing magnetic susceptibility data
 
-        # File format identifier [Required]
+        # File format identifier [Optional]
         format: orca_nev # NEVPT2-derived susceptibility data from ORCA output
                 orca_cas # CASSCF-derived susceptibility data from ORCA output
                 csv # User-supplied susceptibility tensor data in CSV format
@@ -336,6 +336,12 @@ Used in workflows involving pNMR prediction.
    Susceptibility data are selected based on exact matching of the specified
    temperatures. Temperatures are compared numerically and must match the values
    provided in the input configuration.
+
+.. note::
+
+   The ``format`` field is optional. If omitted, the susceptibility backend and
+   (for ORCA outputs) the most advanced available method are selected
+   automatically from the input file (e.g. NEVPT2 preferred over CASSCF).
 
 Fitting-only blocks
 ----------------------

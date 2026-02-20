@@ -959,7 +959,7 @@ class PredictConfig(FitSuscConfig):
         "nuclei": [
             "include",
         ],
-        "susceptibility": ["file", "format", "temperatures"],
+        "susceptibility": ["file", "temperatures"],
         "project": ["name"],
     }
 
@@ -996,7 +996,7 @@ class PredictConfig(FitSuscConfig):
 
     def __init__(self, **kwargs):
         self._susceptibility_file = ""
-        self._susceptibility_format = ""
+        self._susceptibility_format = None
         self._susceptibility_temperatures = []
         self._relaxation_model = ""
         self._relaxation_electron_coords = None
@@ -1018,15 +1018,18 @@ class PredictConfig(FitSuscConfig):
         return None
 
     @property
-    def susceptibility_format(self) -> str:
+    def susceptibility_format(self) -> str | None:
         return self._susceptibility_format
 
     @susceptibility_format.setter
-    def susceptibility_format(self, value: str):
-        if value not in ["csv", "txt", "orca_nev", "orca_cas", "molcas"]:
+    def susceptibility_format(self, value: str | None):
+        if value is None or value == "":
+            self._susceptibility_format = None
+            return None
+        fmt = value.strip()
+        if fmt not in ["csv", "txt", "orca_nev", "orca_cas", "molcas"]:
             raise ValueError(f"Unknown susceptibility_format: {value}")
-        else:
-            self._susceptibility_format = value
+        self._susceptibility_format = fmt
         return None
 
     @property

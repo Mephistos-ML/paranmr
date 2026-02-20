@@ -30,7 +30,7 @@ High-level layering
 At a conceptual level, the codebase is organised into the following layers:
 
 1. **CLI layer** (``simpnmr.cli``)
-2. **Application layer** (``simpnmr.app``)
+2. **Application layer** (``simpnmr.app``: pipelines, loaders, policies)
 3. **Domain / core layer** (``simpnmr.core``)
 4. **IO layer** (``simpnmr.io``)
 5. **Visualisation layer** (``simpnmr.viz``)
@@ -101,6 +101,7 @@ Key responsibilities:
 - constructing domain objects from inputs
 - executing prediction or fitting workflows
 - coordinating output generation
+- centralising workflow and routing decisions that constitute application policy (e.g. backend selection, method prioritisation)
 
 Submodules:
 
@@ -109,7 +110,7 @@ Submodules:
   (e.g. CSV, quantum chemistry outputs) based on configuration options and
   delegate file parsing to ``simpnmr.io`` and object construction to
   ``simpnmr.core.build``.
-
+- ``policies``: application-level decision logic that defines *how* workflows resolve ambiguities or defaults (e.g. backend routing, method prioritisation, legacy overrides). Policies act as a single source of truth for such decisions and are consumed by loaders and pipelines.
 - ``pipelines``: end-to-end workflow orchestration (e.g. prediction, fitting).
   Pipelines wire together loaders, core computations, output writers, and
   visualisation.
@@ -153,8 +154,7 @@ It includes parsers for:
 - XYZ structures
 - plain text tensor formats
 
-The IO layer may not implement scientific logic; it only translates external
-representations into internal domain objects and vice versa.
+The IO layer may not implement scientific logic or application policy; it only translates external representations into internal domain objects and vice versa.
 
 
 Visualisation layer (``simpnmr.viz``)
@@ -209,6 +209,8 @@ to the appropriate layer.
 
 Conventions and constraints
 ---------------------------
+
+- Application policy (e.g. default selection rules, priority ordering, legacy overrides) must live in ``simpnmr.app.policies`` and must not be duplicated across loaders or pipelines.
 
 - Domain logic must not depend on IO or CLI modules.
 
