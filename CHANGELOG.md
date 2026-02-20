@@ -2,6 +2,45 @@
 
 <!-- version list -->
 
+## v1.4.0 (2026-02-20)
+
+### Documentation
+
+- **architecture**: Document application-level policy layer
+  ([`dc18e3d`](https://gitlab.com/suturina-group/simpnmr/-/commit/dc18e3dfa1c2e00e394d55758db3bc84f5482c8a))
+
+- **user**: Add standalone CLI utilities to user guide index
+  ([`dc18e3d`](https://gitlab.com/suturina-group/simpnmr/-/commit/dc18e3dfa1c2e00e394d55758db3bc84f5482c8a))
+
+- **user**: Mark susceptibility format as optional with automatic method selection
+  ([`dc18e3d`](https://gitlab.com/suturina-group/simpnmr/-/commit/dc18e3dfa1c2e00e394d55758db3bc84f5482c8a))
+
+### Features
+
+- **policies**: Add susceptibility policy for backend and ORCA method resolution
+  ([`dc18e3d`](https://gitlab.com/suturina-group/simpnmr/-/commit/dc18e3dfa1c2e00e394d55758db3bc84f5482c8a))
+
+### Refactoring
+
+- **config**: Make susceptibility format optional and legacy-compatible
+  ([`dc18e3d`](https://gitlab.com/suturina-group/simpnmr/-/commit/dc18e3dfa1c2e00e394d55758db3bc84f5482c8a))
+
+- **csv**: Avoid absolute paths in exported CSV comments
+  ([`dc18e3d`](https://gitlab.com/suturina-group/simpnmr/-/commit/dc18e3dfa1c2e00e394d55758db3bc84f5482c8a))
+
+- **loaders**: Delegate susceptibility backend and ORCA section resolution to policy
+  ([`dc18e3d`](https://gitlab.com/suturina-group/simpnmr/-/commit/dc18e3dfa1c2e00e394d55758db3bc84f5482c8a))
+
+- **pcs_iso**: Make susceptibility method autodetected
+  ([`dc18e3d`](https://gitlab.com/suturina-group/simpnmr/-/commit/dc18e3dfa1c2e00e394d55758db3bc84f5482c8a))
+
+- **predict**: Use susceptibility policy for ORCA routing
+  ([`dc18e3d`](https://gitlab.com/suturina-group/simpnmr/-/commit/dc18e3dfa1c2e00e394d55758db3bc84f5482c8a))
+
+- **susceptibility**: Autodetect backend and ORCA method via policy layer
+  ([`dc18e3d`](https://gitlab.com/suturina-group/simpnmr/-/commit/dc18e3dfa1c2e00e394d55758db3bc84f5482c8a))
+
+
 ## v1.3.5 (2026-02-20)
 
 ### Bug Fixes
