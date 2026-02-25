@@ -244,7 +244,7 @@ class Nucleus:
 
 
 class ElectronicState:
-    """Electronic/magnetic state of the system.
+    """Electronic/magnetic state of the system (spin Hamiltonian metadata).
 
     Stores global quantum numbers and magnetic-model metadata.
     """
@@ -255,11 +255,13 @@ class ElectronicState:
         orbit_L: float | None = None,
         total_J: float | None = None,
         model: str | None = None,
+        g_tensor: ArrayLike | None = None,
     ) -> None:
         self.spin_S = spin_S
         self.orbit_L = orbit_L
         self.total_J = total_J
         self.model = model
+        self.g_tensor = g_tensor
 
         if self.model is not None and self.model not in {
             "spin_only",
@@ -271,6 +273,22 @@ class ElectronicState:
                 "'orbital', or 'total_J'"
             )
 
+        return
+
+    @property
+    def g_tensor(self) -> NDArray | None:
+        return self._g_tensor
+
+    @g_tensor.setter
+    def g_tensor(self, value: ArrayLike | None) -> None:
+        if value is None:
+            self._g_tensor = None
+            return
+
+        arr = np.asarray(value, dtype=float)
+        if arr.shape != (3, 3):
+            raise ValueError("ElectronicState.g_tensor must be a (3, 3) matrix")
+        self._g_tensor = arr
         return
 
 
