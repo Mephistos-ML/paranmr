@@ -606,13 +606,13 @@ class QCA(ABC):
         return
 
     @staticmethod
-    def guess_from_file(file_name: str, orbital_contribution: str = "auto") -> "QCA":
+    def guess_from_file(file_name: str, orbital_contribution: str = "off") -> "QCA":
         """Guess a compatible hyperfine reader and parse the file.
 
         Args:
             file_name: Path to the file to examine.
-            orbital_contribution: ORCA6-only mode controlling inclusion of
-            A(ORB) contributions ('auto', 'on', 'off').
+            orbital_contribution: ORCA6-only mode controlling
+            inclusion of A(ORB) contributions ('on', 'off').
 
         Returns:
             QCA: Parsed hyperfine (A-tensor) object.
@@ -846,18 +846,18 @@ class Orca6OutputA(QCA):
 
     @classmethod
     def _read(cls, file_name: str):
-        return cls.read_with_options(file_name, orbital_contribution="auto")
+        return cls.read_with_options(file_name, orbital_contribution="off")
 
     @classmethod
     def read_with_options(
-        cls, file_name: str, orbital_contribution: str = "auto"
+        cls, file_name: str, orbital_contribution: str = "off"
     ) -> "Orca6OutputA":
         """Read ORCA6 hyperfine tensors with optional orbital contribution mode.
 
         Args:
             file_name: Path to the ORCA6 output file.
-            orbital_contribution: Mode controlling inclusion of A(ORB) contributions
-                ('auto', 'on', 'off').
+            orbital_contribution: Mode controlling inclusion of A(ORB)
+            contributions ('on', 'off').
 
         Returns:
             Orca6OutputA: Parsed ORCA6 hyperfine tensor container.

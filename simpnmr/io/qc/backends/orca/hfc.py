@@ -123,7 +123,7 @@ def read_orca5_output_a_tensors(
 
 def read_orca6_output_a_tensors(  # TODO: Remove auto, this should not exist at this level
     file_name: str,
-    orbital_contribution: str = "auto",
+    orbital_contribution: str = "off",
 ) -> tuple[dict[str, float], dict[str, npt.NDArray]]:
     """Extract hyperfine (A) tensors from an ORCA 6 output file.
 
@@ -131,7 +131,7 @@ def read_orca6_output_a_tensors(  # TODO: Remove auto, this should not exist at 
         file_name: Path to the ORCA output file.
         orbital_contribution: Controls whether the ORCA A(ORB) principal values
             are included when reconstructing the full A tensor.
-            Accepted values are 'auto', 'on', and 'off'.
+            Accepted values are 'on' and 'off'.
 
     Returns:
         A tuple `(a_iso, a_dtensor)` where:
@@ -203,9 +203,7 @@ def read_orca6_output_a_tensors(  # TODO: Remove auto, this should not exist at 
 
                     r_mat = np.array(r_rows)
 
-                    if orbital_contribution == "on" or (
-                        orbital_contribution == "auto" and a_orb is not None
-                    ):
+                    if orbital_contribution == "on":
                         a_principal_total = a_principal_fc_sd + np.array(a_orb)
                     else:
                         a_principal_total = a_principal_fc_sd
@@ -220,7 +218,7 @@ def read_orca6_output_a_tensors(  # TODO: Remove auto, this should not exist at 
                     a_dtensor[label] = full - np.eye(3) * a_iso[label]
 
                 # Summary log for hyperfine contributions used in this calculation
-                if orbital_contribution == "on" or orbital_contribution == "auto":
+                if orbital_contribution == "on":
                     logger.info("Hyperfine contributions used: A(FC), A(SD), A(ORB)")
                 else:
                     logger.info("Hyperfine contributions used: A(FC), A(SD)")
