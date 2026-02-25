@@ -22,6 +22,8 @@ ORCA_A6_SIGNATURE = (
     "            '#,     ,#'  ##    ##  '#,     ,#' ,#      #,     #,   #   #,  ,#"
 )
 
+A_ORB_SIGNATURE = "A(ORB)"
+
 QDPT_WITH_RE = re.compile(r"QDPT WITH\s+(?P<method>[A-Z0-9_+-]+)")
 
 
@@ -79,6 +81,15 @@ def is_orca_a6_output(file_name: str) -> bool:
     with open(file_name, "r") as f:
         for line in f:
             if ORCA_A6_SIGNATURE in line:
+                return True
+    return False
+
+
+def detect_hfc_has_orb(file_name: str) -> bool:
+    """Detect whether an ORCA output contains an orbital (A(ORB)) hyperfine term."""
+    with open(file_name, "r", errors="ignore") as f:
+        for line in f:
+            if A_ORB_SIGNATURE in line:
                 return True
     return False
 
