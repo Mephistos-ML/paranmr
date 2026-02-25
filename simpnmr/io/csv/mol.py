@@ -35,14 +35,22 @@ def read_molecule_csv(file_name: str) -> dict:
     data = read_csv_safe(file_name)
 
     required_cols = ["atom_label ()", "x (Å)", "y (Å)", "z (Å)"]
-    split_hyperfine_cols = [
-        "Aiso (ppm Å^-3)",
+    legacy_split_hyperfine_cols = [
         "Adip_xx (ppm Å^-3)",
         "Adip_xy (ppm Å^-3)",
         "Adip_xz (ppm Å^-3)",
         "Adip_yy (ppm Å^-3)",
         "Adip_yz (ppm Å^-3)",
         "Adip_zz (ppm Å^-3)",
+    ]
+    split_hyperfine_cols = [
+        "dAiso (ppm Å^-3)",
+        "dAdip_xx (ppm Å^-3)",
+        "dAdip_xy (ppm Å^-3)",
+        "dAdip_xz (ppm Å^-3)",
+        "dAdip_yy (ppm Å^-3)",
+        "dAdip_yz (ppm Å^-3)",
+        "dAdip_zz (ppm Å^-3)",
     ]
     full_hyperfine_cols = [
         "A_xx (ppm Å^-3)",
@@ -80,11 +88,20 @@ def read_molecule_csv(file_name: str) -> dict:
         raise ValueError(f"Missing header(s) {missing} in {file_name}")
 
     # Detect hyperfine encoding (split vs full) exactly like before
-    has_split = all(col in data.columns for col in split_hyperfine_cols)
+    has_new_split = all(col in data.columns for col in split_hyperfine_cols)
+    has_legacy_split = all(col in data.columns for col in legacy_split_hyperfine_cols)
     has_full = all(col in data.columns for col in full_hyperfine_cols)
 
-    if has_split:
+    use_legacy = False
+    if has_new_split:
         split = True
+    elif has_legacy_split:
+        split = True
+        use_legacy = True
+        logger.warning(
+            "Legacy hyperfine columns 'Adip_*' detected. Please migrate to 'dA_*'; "
+            "support for 'Adip_*' will be removed in a future release."
+        )
     elif has_full:
         split = False
     else:
@@ -97,30 +114,56 @@ def read_molecule_csv(file_name: str) -> dict:
     coords = np.array([data["x (Å)"], data["y (Å)"], data["z (Å)"]]).T
 
     if split:
-        tensors = [
-            np.array(
-                [
+        if use_legacy:
+            tensors = [
+                np.array(
                     [
-                        row["Adip_xx (ppm Å^-3)"],
-                        row["Adip_xy (ppm Å^-3)"],
-                        row["Adip_xz (ppm Å^-3)"],
+                        [
+                            row["Adip_xx (ppm Å^-3)"],
+                            row["Adip_xy (ppm Å^-3)"],
+                            row["Adip_xz (ppm Å^-3)"],
+                        ],
+                        [
+                            row["Adip_xy (ppm Å^-3)"],
+                            row["Adip_yy (ppm Å^-3)"],
+                            row["Adip_yz (ppm Å^-3)"],
+                        ],
+                        [
+                            row["Adip_xz (ppm Å^-3)"],
+                            row["Adip_yz (ppm Å^-3)"],
+                            row["Adip_zz (ppm Å^-3)"],
+                        ],
                     ],
+                    dtype=float,
+                )
+                + np.eye(3) * float(row["Aiso (ppm Å^-3)"])
+                for _, row in data.iterrows()
+            ]
+        else:
+            tensors = [
+                np.array(
                     [
-                        row["Adip_xy (ppm Å^-3)"],
-                        row["Adip_yy (ppm Å^-3)"],
-                        row["Adip_yz (ppm Å^-3)"],
+                        [
+                            row["dAdip_xx (ppm Å^-3)"],
+                            row["dAdip_xy (ppm Å^-3)"],
+                            row["dAdip_xz (ppm Å^-3)"],
+                        ],
+                        [
+                            row["dAdip_xy (ppm Å^-3)"],
+                            row["dAdip_yy (ppm Å^-3)"],
+                            row["dAdip_yz (ppm Å^-3)"],
+                        ],
+                        [
+                            row["dAdip_xz (ppm Å^-3)"],
+                            row["dAdip_yz (ppm Å^-3)"],
+                            row["dAdip_zz (ppm Å^-3)"],
+                        ],
                     ],
-                    [
-                        row["Adip_xz (ppm Å^-3)"],
-                        row["Adip_yz (ppm Å^-3)"],
-                        row["Adip_zz (ppm Å^-3)"],
-                    ],
-                ],
-                dtype=float,
-            )
-            + np.eye(3) * float(row["Aiso (ppm Å^-3)"])
-            for _, row in data.iterrows()
-        ]
+                    dtype=float,
+                )
+                + np.eye(3) * float(row["dAiso (ppm Å^-3)"])
+                for _, row in data.iterrows()
+            ]
     else:
         tensors = [
             np.array(
