@@ -30,7 +30,7 @@ def save_to_csv(
 
     Args:
         hyperfine_data: Hyperfine container (e.g., QC A-tensor reader result) exposing
-            `a_iso`, `a_dip`, and `a_units`.
+            `a_iso`, `a_dtensor`, and `a_units`.
         file_name: Output CSV file name.
         verbose: If True, prints the output file name.
         comment: Optional additional comment line (including comment marker).
@@ -44,7 +44,7 @@ def save_to_csv(
                 label, iso, *tensor[0, :], *tensor[1, 1:], tensor[2, 2]
             )
             for iso, (label, tensor) in zip(
-                hyperfine_data.a_iso.values(), hyperfine_data.a_dip.items()
+                hyperfine_data.a_iso.values(), hyperfine_data.a_dtensor.items()
             )
         ]
     )
@@ -60,12 +60,12 @@ def save_to_csv(
     header = (
         f"atom_label, "
         f"Aiso ({hyperfine_data.a_units}), "
-        f"Adip_xx ({hyperfine_data.a_units}), "
-        f"Adip_xy ({hyperfine_data.a_units}), "
-        f"Adip_xz ({hyperfine_data.a_units}), "
-        f"Adip_yy ({hyperfine_data.a_units}), "
-        f"Adip_yz ({hyperfine_data.a_units}), "
-        f"Adip_zz ({hyperfine_data.a_units})"
+        f"dA_xx ({hyperfine_data.a_units}), "
+        f"dA_xy ({hyperfine_data.a_units}), "
+        f"dA_xz ({hyperfine_data.a_units}), "
+        f"dA_yy ({hyperfine_data.a_units}), "
+        f"dA_yz ({hyperfine_data.a_units}), "
+        f"dA_zz ({hyperfine_data.a_units})"
     )
 
     # Save to file
@@ -116,12 +116,12 @@ def _build_hyperfines_df(molecule):
         "atom_label ()",
         "chem_label ()",
         "Aiso (ppm Å^-3)",
-        "Adip_xx (ppm Å^-3)",
-        "Adip_xy (ppm Å^-3)",
-        "Adip_xz (ppm Å^-3)",
-        "Adip_yy (ppm Å^-3)",
-        "Adip_yz (ppm Å^-3)",
-        "Adip_zz (ppm Å^-3)",
+        "dA_xx (ppm Å^-3)",
+        "dA_xy (ppm Å^-3)",
+        "dA_xz (ppm Å^-3)",
+        "dA_yy (ppm Å^-3)",
+        "dA_yz (ppm Å^-3)",
+        "dA_zz (ppm Å^-3)",
     ]
 
     nuclei = molecule.nuclei
@@ -130,12 +130,12 @@ def _build_hyperfines_df(molecule):
         "atom_label ()": [nuc.label for nuc in nuclei],
         "chem_label ()": [nuc.chem_label for nuc in nuclei],
         "Aiso (ppm Å^-3)": [nuc.A.iso for nuc in nuclei],
-        "Adip_xx (ppm Å^-3)": [nuc.A.dip[0, 0] for nuc in nuclei],
-        "Adip_xy (ppm Å^-3)": [nuc.A.dip[0, 1] for nuc in nuclei],
-        "Adip_xz (ppm Å^-3)": [nuc.A.dip[0, 2] for nuc in nuclei],
-        "Adip_yy (ppm Å^-3)": [nuc.A.dip[1, 1] for nuc in nuclei],
-        "Adip_yz (ppm Å^-3)": [nuc.A.dip[1, 2] for nuc in nuclei],
-        "Adip_zz (ppm Å^-3)": [nuc.A.dip[2, 2] for nuc in nuclei],
+        "dA_xx (ppm Å^-3)": [nuc.A.dtensor[0, 0] for nuc in nuclei],
+        "dA_xy (ppm Å^-3)": [nuc.A.dtensor[0, 1] for nuc in nuclei],
+        "dA_xz (ppm Å^-3)": [nuc.A.dtensor[0, 2] for nuc in nuclei],
+        "dA_yy (ppm Å^-3)": [nuc.A.dtensor[1, 1] for nuc in nuclei],
+        "dA_yz (ppm Å^-3)": [nuc.A.dtensor[1, 2] for nuc in nuclei],
+        "dA_zz (ppm Å^-3)": [nuc.A.dtensor[2, 2] for nuc in nuclei],
     }
 
     df = pd.DataFrame(data, columns=columns)
