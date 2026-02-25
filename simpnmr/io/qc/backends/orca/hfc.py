@@ -3,7 +3,7 @@
 
 """Parse hyperfine coupling data from ORCA outputs.
 
-Provides helpers to extract isotropic and anisotropic hyperfine tensors from
+Provides helpers to extract isotropic and deviatoric (traceless) hyperfine tensors from
 ORCA quantum-chemistry calculation files.
 """
 
@@ -26,13 +26,13 @@ def read_orca5_property_a_tensors(
         file_name: Path to the ORCA property file.
 
     Returns:
-        A tuple `(a_iso, a_dip)` where:
+        A tuple `(a_iso, a_dtensor)` where:
             * `a_iso` maps atom labels to isotropic couplings in MHz.
-            * `a_dip` maps atom labels to 3x3 traceless dipolar tensors in MHz.
+            * `a_dtensor` maps atom labels to 3x3 deviatoric (traceless) tensors in MHz.
     """
 
-    a_dip = {}
     a_iso = {}
+    a_dtensor = {}
 
     with open(file_name, "r") as f:
         for line in f:
@@ -52,15 +52,15 @@ def read_orca5_property_a_tensors(
                     row_2 = [float(val) for val in line.split()[1:]]
                     line = next(f)
                     row_3 = [float(val) for val in line.split()[1:]]
-                    a_dip[label] = np.array([row_1, row_2, row_3])
+                    a_dtensor[label] = np.array([row_1, row_2, row_3])
                     for _ in range(9):
                         line = next(f)
                     # Isotropic value
                     a_iso[label] = float(line.split()[-1])
-                    a_dip[label] -= np.eye(3) * a_iso[label]
+                    a_dtensor[label] -= np.eye(3) * a_iso[label]
                     line = next(f)
 
-    return a_iso, a_dip
+    return a_iso, a_dtensor
 
 
 def read_orca5_output_a_tensors(
@@ -72,9 +72,9 @@ def read_orca5_output_a_tensors(
         file_name: Path to the ORCA output file.
 
     Returns:
-        A tuple `(a_iso, a_dip)` where:
+        A tuple `(a_iso, a_dtensor)` where:
             * `a_iso` maps atom labels to isotropic couplings in MHz.
-            * `a_dip` maps atom labels to 3x3 traceless dipolar tensors in MHz.
+            * `a_dtensor` maps atom labels to 3x3 deviatoric (traceless) tensors in MHz.
     """
 
     # Find how many nuclei have been calculated
@@ -84,7 +84,7 @@ def read_orca5_output_a_tensors(
                 n_calcd = int(line.split()[-1])
 
     a_iso = {}
-    a_dip = {}
+    a_dtensor = {}
 
     # Read hyperfine data
     with open(file_name, "r") as f:
@@ -116,12 +116,12 @@ def read_orca5_output_a_tensors(
 
                     full = np.array([row_1, row_2, row_3])
 
-                    a_dip[label] = full - np.eye(3) * a_iso[label]
+                    a_dtensor[label] = full - np.eye(3) * a_iso[label]
 
-    return a_iso, a_dip
+    return a_iso, a_dtensor
 
 
-def read_orca6_output_a_tensors(
+def read_orca6_output_a_tensors(  # TODO: Remove auto, this should not exist at this level
     file_name: str,
     orbital_contribution: str = "auto",
 ) -> tuple[dict[str, float], dict[str, npt.NDArray]]:
@@ -134,9 +134,9 @@ def read_orca6_output_a_tensors(
             Accepted values are 'auto', 'on', and 'off'.
 
     Returns:
-        A tuple `(a_iso, a_dip)` where:
+        A tuple `(a_iso, a_dtensor)` where:
             * `a_iso` maps atom labels to isotropic couplings in MHz.
-            * `a_dip` maps atom labels to 3x3 traceless dipolar tensors in MHz.
+            * `a_dtensor` maps atom labels to 3x3 deviatoric (traceless) tensors in MHz.
     """
 
     # Find how many nuclei have been calculated
@@ -146,7 +146,7 @@ def read_orca6_output_a_tensors(
                 n_calcd = int(line.split()[5][1:])
 
     a_iso = {}
-    a_dip = {}
+    a_dtensor = {}
 
     # Read hyperfine data
     with open(file_name, "r") as f:
@@ -215,11 +215,11 @@ def read_orca6_output_a_tensors(
                     full = r_mat @ a_pas @ r_mat.T
 
                     a_iso[label] = 1 / 3 * np.trace(full)
-                    a_dip[label] = full - np.eye(3) * a_iso[label]
+                    a_dtensor[label] = full - np.eye(3) * a_iso[label]
 
                 if orbital_contribution == "on" or orbital_contribution == "auto":
                     logger.info("Hyperfine contributions used: A(FC), A(SD), A(ORB)")
                 else:
                     logger.info("Hyperfine contributions used: A(FC), A(SD)")
 
-    return a_iso, a_dip
+    return a_iso, a_dtensor
