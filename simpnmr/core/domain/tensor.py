@@ -20,14 +20,14 @@ class Hyperfine:
     Attributes:
         tensor: Hyperfine tensor as a ``(3, 3)`` NumPy array (``ppm Å^-3``).
         iso: Isotropic hyperfine coupling (``ppm Å^-3``).
-        dip: Dipolar hyperfine tensor (``ppm Å^-3``).
+        dtensor: Deviatoric (traceless) hyperfine tensor ``tensor - iso * I`` (``ppm Å^-3``).
         eigvals: Eigenvalues of the total hyperfine tensor.
         eigvecs: Eigenvectors corresponding to ``eigvals``.
     """
 
     def __init__(self, tensor: NDArray = np.zeros([3, 3])) -> None:
         self._iso = None
-        self._dip = None
+        self._dtensor = None
         self._eigvals = None
         self._eigvecs = None
         self.tensor = copy.deepcopy(tensor)
@@ -48,8 +48,8 @@ class Hyperfine:
 
         # Recalculate isotropic hyperfine
         self.calc_iso()
-        # and dipolar hyperfine
-        self.calc_dip()
+        # and deviatoric (traceless) hyperfine
+        self.calc_dtensor()
 
         # and reset eigenvalues and eigenvectors to None
         self._eigvals = None
@@ -84,29 +84,29 @@ class Hyperfine:
         return np.trace(tensor) / 3.0
 
     @property
-    def dip(self) -> NDArray:
-        """Dipolar hyperfine tensor as a ``(3, 3)`` array."""
-        return self._dip
+    def dtensor(self) -> NDArray:
+        """Deviatoric (traceless) hyperfine tensor as a ``(3, 3)`` array."""
+        return self._dtensor
 
-    @dip.setter
-    def dip(self, tensor: NDArray):
-        self._dip = tensor
+    @dtensor.setter
+    def dtensor(self, tensor: NDArray):
+        self._dtensor = tensor
         return
 
-    def calc_dip(self):
-        """Computes and stores the dipolar component from `self.tensor`."""
-        self.dip = self._calc_dip(self.tensor)
+    def calc_dtensor(self):
+        """Computes and stores the deviatoric component from `self.tensor`."""
+        self.dtensor = self._calc_dtensor(self.tensor)
         return
 
     @staticmethod
-    def _calc_dip(tensor: NDArray) -> NDArray:
-        """Computes the dipolar part of a hyperfine tensor.
+    def _calc_dtensor(tensor: NDArray) -> NDArray:
+        """Computes the deviatoric (traceless) part of a hyperfine tensor.
 
         Args:
             tensor: Hyperfine tensor as a ``(3, 3)`` array.
 
         Returns:
-            The dipolar tensor ``tensor - I * trace(tensor)/3``.
+            The deviatoric tensor ``tensor - I * trace(tensor)/3``.
         """
         return tensor - np.eye(3) * Hyperfine._calc_iso(tensor)
 
@@ -633,7 +633,7 @@ class Shift:
         Returns:
             The pseudocontact shift (PCS).
         """
-        shift = 1.0 / 3.0 * np.trace(chi.dtensor @ A.dip)
+        shift = 1.0 / 3.0 * np.trace(chi.dtensor @ A.dtensor)
         return shift
 
     @staticmethod
