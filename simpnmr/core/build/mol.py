@@ -28,7 +28,7 @@ def build_molecule_from_qca(
       - coords: array-like (n_atoms, 3) in Å
       - labels: list-like (n_atoms,) of indexed per-atom labels (e.g. H1, C2)
       - a_iso: mapping label -> float (keyed by the same labels as `labels`)
-      - a_dip: mapping label -> (3, 3) array-like (keyed by the same labels as `labels`)
+      - a_dtensor: mapping label -> (3, 3) array-like deviatoric (traceless) tensors (keyed by the same labels as `labels`)
 
     Args:
         qca: Parsed QC hyperfine object.
@@ -46,8 +46,8 @@ def build_molecule_from_qca(
         raise ValueError("QCA object is missing required attribute: coords")
     if not hasattr(qca, "a_iso"):
         raise ValueError("QCA object is missing required attribute: a_iso")
-    if not hasattr(qca, "a_dip"):
-        raise ValueError("QCA object is missing required attribute: a_dip")
+    if not hasattr(qca, "a_dtensor"):
+        raise ValueError("QCA object is missing required attribute: a_dtensor")
 
     if not hasattr(qca, "labels"):
         raise ValueError("QCA object is missing required attribute: labels")
@@ -65,8 +65,8 @@ def build_molecule_from_qca(
     # Hyperfine tensors are expected to be keyed by the same labels; some atoms may be
     # missing (e.g. Fe/Cl/Si) depending on the QC output and user configuration.
     a_iso: dict[str, float] = {str(k): float(v) for k, v in qca.a_iso.items()}
-    a_dip: dict[str, np.ndarray] = {
-        str(k): np.asarray(v, dtype=float) for k, v in qca.a_dip.items()
+    a_dtensor: dict[str, np.ndarray] = {
+        str(k): np.asarray(v, dtype=float) for k, v in qca.a_dtensor.items()
     }
 
     # Conversion logic copied from Molecule.from_QCA to preserve previous behaviour
@@ -75,8 +75,8 @@ def build_molecule_from_qca(
     elif converter == "MHz_to_Ang-3":
         # Convert isotropic hyperfine values
         a_iso = a_iso_mhz_to_ang(a_iso)
-        # Convert dipolar hyperfine tensors
-        a_dip = a_tensor_mhz_to_ang(a_dip)
+        # Convert deviatoric (traceless) hyperfine tensors
+        a_dtensor = a_tensor_mhz_to_ang(a_dtensor)
 
     else:
         raise ValueError(f"Unknown converter: {converter}")
@@ -85,7 +85,7 @@ def build_molecule_from_qca(
         labels=labels,
         coords=coords,
         a_iso=a_iso,
-        a_dip=a_dip,
+        a_dtensor=a_dtensor,
         elements=elements,
     )
 
@@ -154,9 +154,9 @@ def build_molecule_from_csv(
     chem_labels = payload.get("chem_labels")  # list[str] | None
     chem_math_labels = payload.get("chem_math_labels")  # list[str] | None
 
-    # --- Hyperfine: tensors -> (a_iso, a_dip) ---
+    # --- Hyperfine: tensors -> (a_iso, a_dtensor) ---
     a_iso = None
-    a_dip = None
+    a_dtensor = None
     if tensors is not None:
         if isinstance(tensors, dict):
             tensor_by_label = {k: np.asarray(v, float) for k, v in tensors.items()}
@@ -166,7 +166,7 @@ def build_molecule_from_csv(
             }
 
         a_iso = {}
-        a_dip = {}
+        a_dtensor = {}
         for lab in labels:
             if lab not in tensor_by_label:
                 raise KeyError(f"Missing hyperfine tensor for label: {lab}")
@@ -179,7 +179,7 @@ def build_molecule_from_csv(
 
             iso = float(np.trace(A) / 3.0)
             a_iso[lab] = iso
-            a_dip[lab] = A - np.eye(3) * iso
+            a_dtensor[lab] = A - np.eye(3) * iso
 
     # --- Chem labels ---
     al_to_cl = None
@@ -200,12 +200,12 @@ def build_molecule_from_csv(
             al_to_cml = {lab: str(cml) for lab, cml in zip(labels, chem_math_labels)}
 
     # --- Build molecule ---
-    if a_iso is not None and a_dip is not None:
+    if a_iso is not None and a_dtensor is not None:
         molecule = Molecule.from_hyperfine_data(
             labels=labels,
             coords=coords,
             a_iso=a_iso,
-            a_dip=a_dip,
+            a_dtensor=a_dtensor,
             elements=elements,
         )
     else:
