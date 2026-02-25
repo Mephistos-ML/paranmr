@@ -121,7 +121,7 @@ def read_orca5_output_a_tensors(
     return a_iso, a_dtensor
 
 
-def read_orca6_output_a_tensors(  # TODO: Remove auto, this should not exist at this level
+def read_orca6_output_a_tensors(
     file_name: str,
     orbital_contribution: str = "off",
 ) -> tuple[dict[str, float], dict[str, npt.NDArray]]:
@@ -204,6 +204,11 @@ def read_orca6_output_a_tensors(  # TODO: Remove auto, this should not exist at 
                     r_mat = np.array(r_rows)
 
                     if orbital_contribution == "on":
+                        if a_orb is None:
+                            raise ValueError(
+                                "A(ORB) contribution was requested, "
+                                "but no A(ORB) block was found in the ORCA output."
+                            )
                         a_principal_total = a_principal_fc_sd + np.array(a_orb)
                     else:
                         a_principal_total = a_principal_fc_sd
