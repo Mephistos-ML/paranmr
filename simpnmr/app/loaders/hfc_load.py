@@ -25,6 +25,7 @@ from simpnmr.core.build.mol import (
 from simpnmr.core.domain.mol import Molecule
 from simpnmr.io.csv.hfc import save_to_csv as save_hfc_csv
 from simpnmr.io.qc import gateway as rdrs
+from simpnmr.io.qc.backends.orca.detect import detect_hfc_has_orb
 from simpnmr.tools.coords import xyz_fmt as xyzf
 
 
@@ -51,7 +52,24 @@ def load_base_molecule_from_hyperfines(config: Any, delimiter: str) -> Molecule:
 
     # DFT/QC-derived hyperfine data.
     if method == "dft":
-        qc_hyperfine_data = rdrs.QCA.guess_from_file(config.hyperfine_file)
+        requested_orbital_contribution = config.hyperfine_orbital_contribution
+        has_orb = detect_hfc_has_orb(config.hyperfine_file)
+
+        if requested_orbital_contribution == "on" and not has_orb:
+            raise ValueError(
+                "Requested orbital hyperfine contribution, but no A(ORB) term "
+                "was found in the input file."
+            )
+
+        if requested_orbital_contribution == "auto":
+            effective_orbital_contribution = "on" if has_orb else "off"
+        else:
+            effective_orbital_contribution = requested_orbital_contribution
+
+        qc_hyperfine_data = rdrs.QCA.guess_from_file(
+            config.hyperfine_file,
+            orbital_contribution=effective_orbital_contribution,
+        )
 
         # Write raw calculation data to an output file for traceability.
         save_hfc_csv(
