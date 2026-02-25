@@ -44,13 +44,13 @@ def read_molecule_csv(file_name: str) -> dict:
         "Adip_zz (ppm Å^-3)",
     ]
     split_hyperfine_cols = [
-        "dAiso (ppm Å^-3)",
-        "dAdip_xx (ppm Å^-3)",
-        "dAdip_xy (ppm Å^-3)",
-        "dAdip_xz (ppm Å^-3)",
-        "dAdip_yy (ppm Å^-3)",
-        "dAdip_yz (ppm Å^-3)",
-        "dAdip_zz (ppm Å^-3)",
+        "Aiso (ppm Å^-3)",
+        "dA_xx (ppm Å^-3)",
+        "dA_xy (ppm Å^-3)",
+        "dA_xz (ppm Å^-3)",
+        "dA_yy (ppm Å^-3)",
+        "dA_yz (ppm Å^-3)",
+        "dA_zz (ppm Å^-3)",
     ]
     full_hyperfine_cols = [
         "A_xx (ppm Å^-3)",
@@ -144,24 +144,24 @@ def read_molecule_csv(file_name: str) -> dict:
                 np.array(
                     [
                         [
-                            row["dAdip_xx (ppm Å^-3)"],
-                            row["dAdip_xy (ppm Å^-3)"],
-                            row["dAdip_xz (ppm Å^-3)"],
+                            row["dA_xx (ppm Å^-3)"],
+                            row["dA_xy (ppm Å^-3)"],
+                            row["dA_xz (ppm Å^-3)"],
                         ],
                         [
-                            row["dAdip_xy (ppm Å^-3)"],
-                            row["dAdip_yy (ppm Å^-3)"],
-                            row["dAdip_yz (ppm Å^-3)"],
+                            row["dA_xy (ppm Å^-3)"],
+                            row["dA_yy (ppm Å^-3)"],
+                            row["dA_yz (ppm Å^-3)"],
                         ],
                         [
-                            row["dAdip_xz (ppm Å^-3)"],
-                            row["dAdip_yz (ppm Å^-3)"],
-                            row["dAdip_zz (ppm Å^-3)"],
+                            row["dA_xz (ppm Å^-3)"],
+                            row["dA_yz (ppm Å^-3)"],
+                            row["dA_zz (ppm Å^-3)"],
                         ],
                     ],
                     dtype=float,
                 )
-                + np.eye(3) * float(row["dAiso (ppm Å^-3)"])
+                + np.eye(3) * float(row["Aiso (ppm Å^-3)"])
                 for _, row in data.iterrows()
             ]
     else:
@@ -243,12 +243,12 @@ def _build_molecule_df(molecule):
         "y (Å)",
         "z (Å)",
         "Aiso (ppm Å^-3)",
-        "Adip_xx (ppm Å^-3)",
-        "Adip_xy (ppm Å^-3)",
-        "Adip_xz (ppm Å^-3)",
-        "Adip_yy (ppm Å^-3)",
-        "Adip_yz (ppm Å^-3)",
-        "Adip_zz (ppm Å^-3)",
+        "dA_xx (ppm Å^-3)",
+        "dA_xy (ppm Å^-3)",
+        "dA_xz (ppm Å^-3)",
+        "dA_yy (ppm Å^-3)",
+        "dA_yz (ppm Å^-3)",
+        "dA_zz (ppm Å^-3)",
         "δ_total_avg (ppm)",
         "δ_total (ppm)",
         "δ_dia (ppm)",
@@ -266,12 +266,12 @@ def _build_molecule_df(molecule):
         "y (Å)": [nuc.coord[1] for nuc in nuclei],
         "z (Å)": [nuc.coord[2] for nuc in nuclei],
         "Aiso (ppm Å^-3)": [nuc.A.iso for nuc in nuclei],
-        "Adip_xx (ppm Å^-3)": [nuc.A.dip[0, 0] for nuc in nuclei],
-        "Adip_xy (ppm Å^-3)": [nuc.A.dip[0, 1] for nuc in nuclei],
-        "Adip_xz (ppm Å^-3)": [nuc.A.dip[0, 2] for nuc in nuclei],
-        "Adip_yy (ppm Å^-3)": [nuc.A.dip[1, 1] for nuc in nuclei],
-        "Adip_yz (ppm Å^-3)": [nuc.A.dip[1, 2] for nuc in nuclei],
-        "Adip_zz (ppm Å^-3)": [nuc.A.dip[2, 2] for nuc in nuclei],
+        "dA_xx (ppm Å^-3)": [nuc.A.dtensor[0, 0] for nuc in nuclei],
+        "dA_xy (ppm Å^-3)": [nuc.A.dtensor[0, 1] for nuc in nuclei],
+        "dA_xz (ppm Å^-3)": [nuc.A.dtensor[0, 2] for nuc in nuclei],
+        "dA_yy (ppm Å^-3)": [nuc.A.dtensor[1, 1] for nuc in nuclei],
+        "dA_yz (ppm Å^-3)": [nuc.A.dtensor[1, 2] for nuc in nuclei],
+        "dA_zz (ppm Å^-3)": [nuc.A.dtensor[2, 2] for nuc in nuclei],
         "δ_total_avg (ppm)": [nuc.shift.avg for nuc in nuclei],
         "δ_total (ppm)": [nuc.shift.total for nuc in nuclei],
         "δ_dia (ppm)": [nuc.shift.dia for nuc in nuclei],
