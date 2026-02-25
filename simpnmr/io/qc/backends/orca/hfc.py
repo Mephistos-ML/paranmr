@@ -149,17 +149,46 @@ def read_orca6_output_a_tensors(
                         line = next(f)
                     tmp = line.split()[1]
                     label = "{}{}".format(remove_numbers(tmp), remove_letters(tmp))
-                    for _ in range(8):
+                    # Reconstruct the full tensor from principal components and
+                    # orientation
+                    a_fc: list[float] | None = None
+                    a_sd: list[float] | None = None
+                    r_rows: list[list[float]] = []
+
+                    # Advance until we have both FC and SD principal values.
+                    while a_fc is None or a_sd is None:
+                        line = next(f)
+                        stripped = line.strip()
+                        if stripped.startswith("A(FC)"):
+                            parts = stripped.split()
+                            a_fc = [float(parts[1]), float(parts[2]), float(parts[3])]
+                        elif stripped.startswith("A(SD)"):
+                            parts = stripped.split()
+                            a_sd = [float(parts[1]), float(parts[2]), float(parts[3])]
+
+                    if a_fc is None or a_sd is None:
+                        raise ValueError(
+                            f"Could not find A(FC)/A(SD) block for nucleus {label}"
+                        )
+
+                    # Advance until we reach the Orientation block, then read X/Y/Z.
+                    while "Orientation:" not in line:
                         line = next(f)
 
-                    # Raw matrix in MHz
-                    row_1 = [float(val) for val in line.split()]
-                    line = next(f)
-                    row_2 = [float(val) for val in line.split()]
-                    line = next(f)
-                    row_3 = [float(val) for val in line.split()]
+                    for _axis in ("X", "Y", "Z"):
+                        line = next(f)
+                        parts = line.split()
+                        if not parts or parts[0] != _axis:
+                            raise ValueError(
+                                f"Unexpected Orientation format for nucleus {label}"
+                            )
+                        r_rows.append(
+                            [float(parts[1]), float(parts[2]), float(parts[3])]
+                        )
 
-                    full = np.array([row_1, row_2, row_3])
+                    r_mat = np.array(r_rows)
+                    a_pas = np.diag(np.array(a_fc) + np.array(a_sd))
+                    full = r_mat @ a_pas @ r_mat.T
 
                     a_iso[label] = 1 / 3 * np.trace(full)
                     a_dip[label] = full - np.eye(3) * a_iso[label]
