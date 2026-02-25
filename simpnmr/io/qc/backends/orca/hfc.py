@@ -119,11 +119,15 @@ def read_orca5_output_a_tensors(
 
 def read_orca6_output_a_tensors(
     file_name: str,
+    orbital_contribution: str = "auto",
 ) -> tuple[dict[str, float], dict[str, npt.NDArray]]:
     """Extract hyperfine (A) tensors from an ORCA 6 output file.
 
     Args:
         file_name: Path to the ORCA output file.
+        orbital_contribution: Controls whether the ORCA A(ORB) principal values
+            are included when reconstructing the full A tensor.
+            Accepted values are 'auto', 'on', and 'off'.
 
     Returns:
         A tuple `(a_iso, a_dip)` where:
@@ -153,10 +157,12 @@ def read_orca6_output_a_tensors(
                     # orientation
                     a_fc: list[float] | None = None
                     a_sd: list[float] | None = None
+                    a_orb: list[float] | None = None
                     r_rows: list[list[float]] = []
 
-                    # Advance until we have both FC and SD principal values.
-                    while a_fc is None or a_sd is None:
+                    # Advance until we reach the Orientation block, collecting
+                    # principal values on the way.
+                    while "Orientation:" not in line:
                         line = next(f)
                         stripped = line.strip()
                         if stripped.startswith("A(FC)"):
@@ -165,15 +171,15 @@ def read_orca6_output_a_tensors(
                         elif stripped.startswith("A(SD)"):
                             parts = stripped.split()
                             a_sd = [float(parts[1]), float(parts[2]), float(parts[3])]
+                        elif stripped.startswith("A(ORB)"):
+                            parts = stripped.split()
+                            a_orb = [float(parts[1]), float(parts[2]), float(parts[3])]
 
                     if a_fc is None or a_sd is None:
                         raise ValueError(
-                            f"Could not find A(FC)/A(SD) block for nucleus {label}"
+                            "Could not find A(FC)/A(SD) principal values "
+                            f"for nucleus {label}"
                         )
-
-                    # Advance until we reach the Orientation block, then read X/Y/Z.
-                    while "Orientation:" not in line:
-                        line = next(f)
 
                     for _axis in ("X", "Y", "Z"):
                         line = next(f)
@@ -187,7 +193,13 @@ def read_orca6_output_a_tensors(
                         )
 
                     r_mat = np.array(r_rows)
-                    a_pas = np.diag(np.array(a_fc) + np.array(a_sd))
+                    a_principal = np.array(a_fc) + np.array(a_sd)
+                    if orbital_contribution == "on" or (
+                        orbital_contribution == "auto" and a_orb is not None
+                    ):
+                        a_principal = a_principal + np.array(a_orb)
+                    a_pas = np.diag(a_principal)
+
                     full = r_mat @ a_pas @ r_mat.T
 
                     a_iso[label] = 1 / 3 * np.trace(full)
