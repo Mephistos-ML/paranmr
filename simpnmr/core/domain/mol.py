@@ -636,6 +636,11 @@ class Molecule:
     def calculate_shifts(self, shift_terms="full"):
         """Compute paramagnetic chemical shift components for all nuclei.
 
+        This method acts as orchestration/policy for shift calculations:
+        it selects the hyperfine tensor representation used for pNMR shift
+        evaluation (raw vs effective relativistic tensor) and delegates the
+        numerical contractions to `Shift` methods.
+
         Args:
             shift_terms: Shift terms to calculate. Supported values are
                 ``"full"``, ``"pc"``, and ``"fc"``. ``"full"`` expands to
@@ -648,20 +653,34 @@ class Molecule:
         if isinstance(shift_terms, str):
             shift_terms = [shift_terms]
 
-        # Swap full for actual terms
+        # Swap full for actual terms.
         shift_terms = [
             nst for st in shift_terms for nst in (st if st != "full" else ["pc", "fc"])
         ]
 
-        if "pc" in shift_terms:
-            for nuc in self.nuclei:
-                nuc.shift.pc = Shift.calc_pcs(nuc.A, self.susc)
-        if "fc" in shift_terms:
-            for nuc in self.nuclei:
-                nuc.shift.fc = Shift.calc_fcs(nuc.A, self.susc)
-
         if "fc" not in shift_terms and "pc" not in shift_terms:
             raise ValueError("Unknown shift specified")
+
+        hyperfine_orb = self.metadata.get("hyperfine", {}).get(
+            "orbital_contribution", "unavailable"
+        )
+
+        if hyperfine_orb == "available" and self.electronic.g_tensor is None:
+            raise ValueError(
+                "ElectronicState.g_tensor is required for PCS calculation when "
+                "orbital hyperfine contributions are available"
+            )
+
+        for nuc in self.nuclei:
+            nuc.shift.pc = Shift.calc_pcs(
+                nuc.A,
+                self.susc,
+                g_tensor=self.electronic.g_tensor,
+                hyperfine_orbital_contribution=hyperfine_orb,
+            )
+
+            if "fc" in shift_terms:
+                nuc.shift.fc = Shift.calc_fcs(nuc.A, self.susc)
 
         return
 

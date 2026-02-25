@@ -18,6 +18,7 @@ from pathlib import Path
 from typing import Any
 
 from simpnmr.app.loaders.mol_load import load_molecule_from_csv
+from simpnmr.app.policies.hfc import normalise_orbital_contribution
 from simpnmr.core.build.mol import (
     build_molecule_from_qca,
     build_molecule_with_pdip,
@@ -52,7 +53,9 @@ def load_base_molecule_from_hyperfines(config: Any, delimiter: str) -> Molecule:
 
     # DFT/QC-derived hyperfine data.
     if method == "dft":
-        requested_orbital_contribution = config.hyperfine_orbital_contribution
+        requested_orbital_contribution = normalise_orbital_contribution(
+            config.hyperfine_orbital_contribution
+        )
         has_orb = detect_hfc_has_orb(config.hyperfine_file)
 
         if requested_orbital_contribution == "on" and not has_orb:
@@ -65,6 +68,12 @@ def load_base_molecule_from_hyperfines(config: Any, delimiter: str) -> Molecule:
             effective_orbital_contribution = "on" if has_orb else "off"
         else:
             effective_orbital_contribution = requested_orbital_contribution
+
+        # Record final, domain-level hyperfine model choice
+        # Only the effective availability is stored (no request/detection history)
+        hyperfine_orbital_availability = (
+            "available" if effective_orbital_contribution == "on" else "unavailable"
+        )
 
         qc_hyperfine_data = rdrs.QCA.guess_from_file(
             config.hyperfine_file,
@@ -85,6 +94,10 @@ def load_base_molecule_from_hyperfines(config: Any, delimiter: str) -> Molecule:
             qc_hyperfine_data,
             converter="MHz_to_Ang-3",
             elements=config.nuclei_include,
+        )
+
+        base_molecule.metadata.setdefault("hyperfine", {})["orbital_contribution"] = (
+            hyperfine_orbital_availability
         )
 
     # Point dipole approximation.
@@ -111,11 +124,22 @@ def load_base_molecule_from_hyperfines(config: Any, delimiter: str) -> Molecule:
             centres=config.hyperfine_pdip_centres,
         )
 
+        base_molecule.metadata.setdefault("hyperfine", {})["orbital_contribution"] = (
+            "unavailable"
+        )
+
     # CSV-provided hyperfines.
     elif method == "csv":
         base_molecule = load_molecule_from_csv(
             config.hyperfine_file,
             elements=config.nuclei_include,
+        )
+
+        # TODO(policy): For CSV hyperfines, orbital contribution handling must be
+        # driven strictly by explicit yaml configuration. CSV provides only the final
+        # tensor without provenance, so automatic detection is not meaningful here.
+        base_molecule.metadata.setdefault("hyperfine", {})["orbital_contribution"] = (
+            "unavailable"
         )
 
     else:

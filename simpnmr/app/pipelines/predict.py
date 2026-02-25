@@ -102,6 +102,9 @@ def run_predict(config, options: PredictRunOptions | None = None) -> int:
     else:
         g_tensor = None
 
+    # Inject g-tensor into the domain electronic state.
+    base_molecule.electronic.g_tensor = g_tensor
+
     suscs = load_susceptibilities(
         config.susceptibility_file,
         config.susceptibility_format,

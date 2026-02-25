@@ -215,11 +215,13 @@ def read_orca6_output_a_tensors(
 
                     a_pas = np.diag(a_principal_total)
 
-                    # Note: the principal values include isotropic components; the
-                    # deviatoric (traceless) tensor is derived from the full tensor.
+                    # Note: keep the isotropic part defined by FC+SD only
+                    # Orbital contributions (when enabled) are added only to the
+                    # reconstructed full tensor used for anisotropic/deviatoric part.
                     full = r_mat @ a_pas @ r_mat.T
 
-                    a_iso[label] = 1 / 3 * np.trace(full)
+                    a_iso_fc_sd = float(np.mean(a_principal_fc_sd))
+                    a_iso[label] = a_iso_fc_sd
                     a_dtensor[label] = full - np.eye(3) * a_iso[label]
 
                 # Summary log for hyperfine contributions used in this calculation

@@ -9,6 +9,8 @@ import numpy as np
 import numpy.linalg as la
 from numpy.typing import ArrayLike, NDArray
 
+from simpnmr.core.const.physics import GE
+
 
 class Hyperfine:
     """Hyperfine coupling tensor for a single nucleus.
@@ -47,7 +49,7 @@ class Hyperfine:
         self._tensor = intensor
 
         # Recalculate isotropic hyperfine
-        self.calc_iso()
+        # self.calc_iso()
         # and deviatoric (traceless) hyperfine
         self.calc_dtensor()
 
@@ -623,26 +625,64 @@ class Shift:
         return
 
     @staticmethod
-    def calc_pcs(A: Hyperfine, chi: "Susceptibility") -> float:
+    def calc_pcs(
+        A: Hyperfine,
+        chi: "Susceptibility",
+        g_tensor: NDArray | None = None,
+        hyperfine_orbital_contribution: str = "unavailable",
+    ) -> float:
         """Compute the pseudocontact shift contribution.
 
         Args:
             A: Hyperfine coupling tensor.
             chi: Magnetic susceptibility tensor.
+            g_tensor: Electronic g-tensor as a ``(3, 3)`` matrix. Required when
+                orbital hyperfine terms are used.
+            hyperfine_orbital_contribution: Whether orbital hyperfine terms were
+                used when constructing `A` (``"available"`` or ``"unavailable"``).
 
         Returns:
             The pseudocontact shift (PCS).
+
+        Raises:
+            ValueError: If orbital hyperfine terms are indicated as available but
+                `g_tensor` is not provided.
         """
-        shift = 1.0 / 3.0 * np.trace(chi.dtensor @ A.dtensor)
+        # Treat relativistic corrections for HFC if available
+        if hyperfine_orbital_contribution == "available":
+            if g_tensor is None:
+                raise ValueError(
+                    "g_tensor is required to compute PCS when "
+                    "orbital hyperfine terms are used."
+                )
+            print("it works")
+            a_eff = GE * la.inv(np.asarray(g_tensor, dtype=float).T) @ A.dtensor.T
+
+        else:
+            print("it doesnt work")
+            a_eff = A.dtensor
+
+        shift = 1.0 / 3.0 * np.trace(chi.dtensor @ a_eff)
         return shift
 
     @staticmethod
     def calc_fcs(A: Hyperfine, chi: "Susceptibility") -> float:
         """Computes the Fermi contact contribution to the chemical shift."""
         shift = chi.iso * A.iso
+        print(A.iso)
         return shift
 
     @staticmethod
-    def calc_hfs(A: Hyperfine, chi: "Susceptibility") -> float:
+    def calc_hfs(
+        A: Hyperfine,
+        chi: "Susceptibility",
+        g_tensor: NDArray | None = None,
+        hyperfine_orbital_contribution: str = "unavailable",
+    ) -> float:
         """Computes the total hyperfine shift (Fermi contact + PCS)."""
-        return Shift.calc_fcs(A, chi) + Shift.calc_pcs(A, chi)
+        return Shift.calc_fcs(A, chi) + Shift.calc_pcs(
+            A,
+            chi,
+            g_tensor=g_tensor,
+            hyperfine_orbital_contribution=hyperfine_orbital_contribution,
+        )
