@@ -164,6 +164,7 @@ def read_orca6_output_a_tensors(  # TODO: Remove auto, this should not exist at 
                     a_orb: list[float] | None = None
                     r_rows: list[list[float]] = []
 
+                    # Collect principal values reported by ORCA (PAS)
                     # Advance until we reach the Orientation block, collecting
                     # principal values on the way.
                     while "Orientation:" not in line:
@@ -185,6 +186,10 @@ def read_orca6_output_a_tensors(  # TODO: Remove auto, this should not exist at 
                             f"for nucleus {label}"
                         )
 
+                    # FC + SD define the non-orbital hyperfine principal values
+                    a_principal_fc_sd = np.array(a_fc) + np.array(a_sd)
+
+                    # Rotation matrix from PAS to the laboratory frame
                     for _axis in ("X", "Y", "Z"):
                         line = next(f)
                         parts = line.split()
@@ -197,26 +202,24 @@ def read_orca6_output_a_tensors(  # TODO: Remove auto, this should not exist at 
                         )
 
                     r_mat = np.array(r_rows)
-                    a_principal = np.array(a_fc) + np.array(a_sd)
-                    use_orb = False
+
                     if orbital_contribution == "on" or (
                         orbital_contribution == "auto" and a_orb is not None
                     ):
-                        a_principal = a_principal + np.array(a_orb)
-                        use_orb = True
+                        a_principal_total = a_principal_fc_sd + np.array(a_orb)
+                    else:
+                        a_principal_total = a_principal_fc_sd
 
-                    logger.debug(
-                        "Hyperfine A(ORB) contribution %s for nucleus %s",
-                        "applied" if use_orb else "not applied",
-                        label,
-                    )
-                    a_pas = np.diag(a_principal)
+                    a_pas = np.diag(a_principal_total)
 
+                    # Note: the principal values include isotropic components; the
+                    # deviatoric (traceless) tensor is derived from the full tensor.
                     full = r_mat @ a_pas @ r_mat.T
 
                     a_iso[label] = 1 / 3 * np.trace(full)
                     a_dtensor[label] = full - np.eye(3) * a_iso[label]
 
+                # Summary log for hyperfine contributions used in this calculation
                 if orbital_contribution == "on" or orbital_contribution == "auto":
                     logger.info("Hyperfine contributions used: A(FC), A(SD), A(ORB)")
                 else:
