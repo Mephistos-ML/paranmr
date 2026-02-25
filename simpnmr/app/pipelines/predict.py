@@ -180,11 +180,16 @@ def run_predict(config, options: PredictRunOptions | None = None) -> int:
         if (
             "dft" in config.hyperfine_method
         ):  # TODO: remove condition and remove config from tf.
-            rot_mat, trans_mat = tfm.get_rotation_and_transformation(config)
+            rot_mat, _ = tfm.get_rotation_and_transformation(
+                config,
+                dft_coords=base_molecule.coords,
+            )
             base_molecule.rotate_hyperfines(rot_mat)
 
             # Rotate HFC coords frame into chi eigenframe and save the transformed coords
-            tfm.rotate_coords_to_chi_frame(config.project_name, config)
+            tfm.rotate_coords_to_chi_frame(
+                config.project_name, config, dft_coords=base_molecule.coords
+            )
 
     # Calculate linewidths using user-specified relaxation model (optional)
     if not getattr(config, "relaxation_model", None):
