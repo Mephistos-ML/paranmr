@@ -155,6 +155,7 @@ class FitSuscConfig(Config):
             "spin",
             "orbit",
             "total_momentum_J",
+            "orbital_contribution",
         ],
         "experiment": ["files", "spectrum_files", "exp_reference"],
         "assignment": ["method", "groups"],
@@ -218,6 +219,7 @@ class FitSuscConfig(Config):
         self._spin_file = ""
         self._orbit = None
         self._total_momentum_J = None
+        self._hyperfine_orbital_contribution = "auto"
         self._susc_vt_method = None
         self._susc_vt_tip_type = None
         self._susc_vt_variables = None
@@ -230,6 +232,36 @@ class FitSuscConfig(Config):
         self._resolve_nuclei_include_groups()
 
         pass
+
+    @property
+    def hyperfine_orbital_contribution(self) -> str:
+        """Controls whether ORCA A(ORB) contributions are included in A-tensors.
+
+        Allowed values:
+            - 'auto': include A(ORB) only if present in the QC output.
+            - 'on': require and include A(ORB); raise if not present.
+            - 'off': ignore A(ORB) even if present.
+        """
+        return self._hyperfine_orbital_contribution
+
+    @hyperfine_orbital_contribution.setter
+    def hyperfine_orbital_contribution(self, value: str):
+        if isinstance(value, (list, tuple)):
+            value = value[0] if value else "auto"
+        if value is None or value == "":
+            value = "auto"
+        if not isinstance(value, str):
+            raise ValueError("hyperfine:orbital_contribution must be a string")
+
+        mode = value.strip().lower()
+        allowed = {"auto", "on", "off"}
+        if mode not in allowed:
+            raise ValueError(
+                "Unknown hyperfine:orbital_contribution "
+                f"{value!r}. Allowed values are: 'auto', 'on', 'off'."
+            )
+
+        self._hyperfine_orbital_contribution = mode
 
     @property
     def experiment_exp_reference(self) -> float | None:
@@ -972,6 +1004,7 @@ class PredictConfig(FitSuscConfig):
             "spin",
             "orbit",
             "total_momentum_J",
+            "orbital_contribution",
         ],
         "experiment": ["files", "spectrum_files", "exp_reference"],
         "nuclei": ["include"],
@@ -1393,7 +1426,13 @@ class PlotHFCConfig(FitSuscConfig):
     }
 
     KEYWORDS = {
-        "hyperfine": ["method", "file", "average", "pdip_centres"],
+        "hyperfine": [
+            "method",
+            "file",
+            "average",
+            "pdip_centres",
+            "orbital_contribution",
+        ],
         "nuclei": ["include", "include_groups"],
         "project": ["name"],
         "chem_labels": ["file"],
