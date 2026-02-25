@@ -583,7 +583,7 @@ class OrcaSpin(QCSpin):
 class QCA(ABC):
     """Abstract base class for hyperfine (A-tensor) readers."""
 
-    def __init__(self, file_name, labels, coords, a_iso, a_dip, a_units):
+    def __init__(self, file_name, labels, coords, a_iso, a_dtensor, a_units):
         """Initialize a hyperfine (A-tensor) container.
 
         Args:
@@ -591,7 +591,7 @@ class QCA(ABC):
             labels: Atom labels (with indices).
             coords: Atomic coordinates as an (n_atoms, 3) array.
             a_iso: Isotropic hyperfine couplings by label.
-            a_dip: Dipolar (traceless) hyperfine tensors by label.
+            a_dtensor: Deviatoric (traceless) hyperfine tensors by label.
             a_units: Units for hyperfine values.
         """
 
@@ -600,7 +600,7 @@ class QCA(ABC):
         self.coords = coords
         self.n_atoms = len(labels)
         self.a_iso = a_iso
-        self.a_dip = a_dip
+        self.a_dtensor = a_dtensor
         self.a_units = a_units
 
         return
@@ -676,9 +676,9 @@ class QCA(ABC):
         for label, val in self.a_iso.items():
             string += "{:5} {: .6f}\n".format(label, val)
 
-        string += subtitle("Anisotropic (dipolar) A Tensor ({})".format(self.a_units))
+        string += subtitle("Anisotropic (traceless) A Tensor ({})".format(self.a_units))
 
-        for label, tensor in self.a_dip.items():
+        for label, tensor in self.a_dtensor.items():
             string += "\n      {: .6f} {: .6f} {: .6f}\n".format(*tensor[0])
             string += "{:5} {: .6f} {: .6f} {: .6f}\n".format(label, *tensor[1])
             string += "      {: .6f} {: .6f} {: .6f}\n".format(*tensor[2])
@@ -706,12 +706,12 @@ class QCA(ABC):
     "Isotropic Hyperfine coupling values"
     a_iso: dict[str, float]
 
-    """Anisotropic (dipolar) Hyperfine coupling tensors (traceless)
+    """Anisotropic (traceless) Hyperfine coupling tensors (deviatoric)
     keys are string label with index number, values are (3x3) arrays"""
-    a_dip: dict[str, npt.NDArray]
+    a_dtensor: dict[str, npt.NDArray]
 
     """
-    Units of A_iso and A_dip
+    Units of A_iso and dA (dtensor)
     """
     a_units: str
 
@@ -736,7 +736,7 @@ class QCA(ABC):
             "labels",
             "coords",
             "a_iso",
-            "a_dip",
+            "a_dtensor",
             "a_units",
         ]
 
@@ -784,7 +784,7 @@ class GaussianLogA(QCA):
         # Read raw data
         labels, coords = read_gaussian_log_xyz(file_name)
         labels = np.array(xyzf.add_label_indices(labels))
-        a_iso_raw, a_dip_raw = read_gaussian_log_a_tensors(file_name)
+        a_iso_raw, a_dtensor_raw = read_gaussian_log_a_tensors(file_name)
 
         mult = read_gaussian_log_spin(file_name)
         n_unpaired = mult - 1
@@ -794,13 +794,14 @@ class GaussianLogA(QCA):
 
         # Convert to dict
         # and normalise by number of unpaired electrons
-        a_dip = {
-            label: tensor * 1.0 / n_unpaired for label, tensor in zip(labels, a_dip_raw)
+        a_dtensor = {
+            label: tensor * 1.0 / n_unpaired
+            for label, tensor in zip(labels, a_dtensor_raw)
         }
 
         a_units = "MHz"
 
-        return cls(file_name, labels, coords, a_iso, a_dip, a_units)
+        return cls(file_name, labels, coords, a_iso, a_dtensor, a_units)
 
 
 class Orca5OutputA(QCA):
@@ -819,7 +820,7 @@ class Orca5OutputA(QCA):
         old_labels = np.array(
             xyzf.add_label_indices(old_labels, style="sequential", start_index=0)
         )
-        a_iso, a_dip = read_orca5_output_a_tensors(file_name)
+        a_iso, a_dtensor = read_orca5_output_a_tensors(file_name)
 
         new_labels = np.array(
             xyzf.add_label_indices(xyzf.remove_label_indices(old_labels))
@@ -827,11 +828,11 @@ class Orca5OutputA(QCA):
         converter = {old: new for old, new in zip(old_labels, new_labels)}
 
         a_iso = {converter[label]: value for label, value in a_iso.items()}
-        a_dip = {converter[label]: tensor for label, tensor in a_dip.items()}
+        a_dtensor = {converter[label]: tensor for label, tensor in a_dtensor.items()}
 
         a_units = "MHz"
 
-        return cls(file_name, new_labels, coords, a_iso, a_dip, a_units)
+        return cls(file_name, new_labels, coords, a_iso, a_dtensor, a_units)
 
 
 class Orca6OutputA(QCA):
@@ -867,7 +868,7 @@ class Orca6OutputA(QCA):
         old_labels = np.array(
             xyzf.add_label_indices(old_labels, style="sequential", start_index=0)
         )
-        a_iso, a_dip = read_orca6_output_a_tensors(
+        a_iso, a_dtensor = read_orca6_output_a_tensors(
             file_name, orbital_contribution=orbital_contribution
         )
 
@@ -877,11 +878,11 @@ class Orca6OutputA(QCA):
         converter = {old: new for old, new in zip(old_labels, new_labels)}
 
         a_iso = {converter[label]: value for label, value in a_iso.items()}
-        a_dip = {converter[label]: tensor for label, tensor in a_dip.items()}
+        a_dtensor = {converter[label]: tensor for label, tensor in a_dtensor.items()}
 
         a_units = "MHz"
 
-        return cls(file_name, new_labels, coords, a_iso, a_dip, a_units)
+        return cls(file_name, new_labels, coords, a_iso, a_dtensor, a_units)
 
 
 class Orca5PropertyA(QCA):
@@ -897,7 +898,7 @@ class Orca5PropertyA(QCA):
     def _read(cls, file_name: str):
         # Read raw data
         old_labels, coords = read_orca5_property_xyz(file_name)
-        a_iso, a_dip = read_orca5_property_a_tensors(file_name)
+        a_iso, a_dtensor = read_orca5_property_a_tensors(file_name)
 
         # Convert orca labelling 1-> natoms for all atoms
         # to 1-n_atoms per element
@@ -907,8 +908,8 @@ class Orca5PropertyA(QCA):
         converter = {old: new for old, new in zip(old_labels, new_labels)}
 
         a_iso = {converter[label]: value for label, value in a_iso.items()}
-        a_dip = {converter[label]: tensor for label, tensor in a_dip.items()}
+        a_dtensor = {converter[label]: tensor for label, tensor in a_dtensor.items()}
 
         a_units = "MHz"
 
-        return cls(file_name, new_labels, coords, a_iso, a_dip, a_units)
+        return cls(file_name, new_labels, coords, a_iso, a_dtensor, a_units)
