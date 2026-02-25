@@ -208,15 +208,18 @@ class Nucleus:
 
     @classmethod
     def from_a_values(
-        cls, a_isos: dict[str, float], a_dips: dict[str, NDArray], coords: NDArray
+        cls,
+        a_isos: dict[str, float],
+        a_dtensors: dict[str, NDArray],
+        coords: NDArray,
     ) -> list["Nucleus"]:
-        """Build nuclei from isotropic and dipolar hyperfine data.
+        """Build nuclei from isotropic and deviatoric (traceless) hyperfine data.
 
         Args:
             a_isos: Mapping from atom label to isotropic hyperfine coupling
                 (ppm Å^-3).
-            a_dips: Mapping from atom label to dipolar hyperfine tensor as a
-                3x3 array (ppm Å^-3).
+            a_dtensors: Mapping from atom label to deviatoric (traceless)
+            hyperfine tensor as a 3x3 array (ppm Å^-3).
             coords: Coordinates for each nucleus. The ordering must match the
                 ordering of the dictionaries.
 
@@ -225,8 +228,8 @@ class Nucleus:
         """
 
         tensors = {
-            label: Hyperfine(a_dips[label] + np.eye(3) * a_isos[label])
-            for label in a_dips
+            label: Hyperfine(a_dtensors[label] + np.eye(3) * a_isos[label])
+            for label in a_dtensors
         }
 
         nuclei = [
@@ -286,6 +289,9 @@ class Molecule:
         nuclei: NMR-active nuclei.
         susc: Magnetic susceptibility tensor for the molecule.
         electronic: Electronic state metadata (spin/orbit/J model selection).
+        metadata: Dictionary for domain-level metadata and model provenance.
+            Stores final, effective modelling decisions that affect downstream
+            physics (e.g. availability of orbital hyperfine contributions).
     """
 
     def __init__(
@@ -302,6 +308,9 @@ class Molecule:
 
         # List of quantum number objects
         self.electronic = ElectronicState()
+
+        # Domain-level metadata
+        self.metadata: dict[str, dict[str, object]] = {}
 
     @property
     def n_atoms(self):
@@ -322,7 +331,7 @@ class Molecule:
 
             string += f"{label} {nuc.A.iso: .6f}\n"
 
-        string += subtitle("Anisotropic (dipolar) A Tensor (ppm Å^-3)")
+        string += subtitle("Anisotropic (traceless) A Tensor (ppm Å^-3)")
 
         for nuc in self.nuclei:
             if not len(nuc.chem_label):
@@ -331,11 +340,11 @@ class Molecule:
                 label = f"{nuc.chem_label} ({nuc.label})"
 
             string += "\n{:} {: .6f} {: .6f} {: .6f}\n".format(
-                " " * len(label), *nuc.A.dip[0]
+                " " * len(label), *nuc.A.dtensor[0]
             )
-            string += "{:} {: .6f} {: .6f} {: .6f}\n".format(label, *nuc.A.dip[1])
+            string += "{:} {: .6f} {: .6f} {: .6f}\n".format(label, *nuc.A.dtensor[1])
             string += "{:} {: .6f} {: .6f} {: .6f}\n".format(
-                " " * len(label), *nuc.A.dip[2]
+                " " * len(label), *nuc.A.dtensor[2]
             )
 
         return string
@@ -401,7 +410,7 @@ class Molecule:
         labels: list[str],
         coords: ArrayLike,
         a_iso: dict[str, float],
-        a_dip: dict[str, NDArray],
+        a_dtensor: dict[str, NDArray],
         elements: list[str] | str = "all",
     ) -> "Molecule":
         """Create a `Molecule` from already-parsed hyperfine data.
@@ -415,7 +424,8 @@ class Molecule:
                 e.g. ["H1", "C2", ...].
             coords: Atomic coordinates as an (n_atoms, 3) array-like in Å.
             a_iso: Mapping atom_label -> isotropic hyperfine coupling.
-            a_dip: Mapping atom_label -> dipolar hyperfine tensor (3x3).
+            a_dtensor: Mapping atom_label -> deviatoric (traceless)
+            hyperfine tensor (3x3).
             elements: Elements/labels to include. Use "all" to include all atoms,
                 "all_H" to include all H, etc., or explicit labels like "H7".
 
@@ -446,7 +456,7 @@ class Molecule:
 
         # Filter hyperfine dicts by selection.
         a_iso_sel = {k: v for k, v in a_iso.items() if k in elements_to_include}
-        a_dip_sel = {k: v for k, v in a_dip.items() if k in elements_to_include}
+        a_dtensor_sel = {k: v for k, v in a_dtensor.items() if k in elements_to_include}
 
         # Filter coords by selection, preserving the original label ordering.
         coords_sel = [
@@ -455,7 +465,7 @@ class Molecule:
             if lab in elements_to_include
         ]
 
-        nuclei = Nucleus.from_a_values(a_iso_sel, a_dip_sel, coords_sel)
+        nuclei = Nucleus.from_a_values(a_iso_sel, a_dtensor_sel, coords_sel)
         if not nuclei:
             raise ValueError("No Nuclei selected!")
 
