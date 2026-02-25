@@ -606,11 +606,13 @@ class QCA(ABC):
         return
 
     @staticmethod
-    def guess_from_file(file_name: str) -> "QCA":
+    def guess_from_file(file_name: str, orbital_contribution: str = "auto") -> "QCA":
         """Guess a compatible hyperfine reader and parse the file.
 
         Args:
             file_name: Path to the file to examine.
+            orbital_contribution: ORCA6-only mode controlling inclusion of
+            A(ORB) contributions ('auto', 'on', 'off').
 
         Returns:
             QCA: Parsed hyperfine (A-tensor) object.
@@ -629,7 +631,9 @@ class QCA(ABC):
 
             # ORCA OUTPUT: distinguish 5 vs 6 using legacy banner markers.
             if is_orca_a6_output(file_name):
-                return Orca6OutputA.read(file_name)
+                return Orca6OutputA.read_with_options(
+                    file_name, orbital_contribution=orbital_contribution
+                )
 
             if is_orca_a5_output(file_name):
                 return Orca5OutputA.read(file_name)
@@ -841,12 +845,31 @@ class Orca6OutputA(QCA):
 
     @classmethod
     def _read(cls, file_name: str):
+        return cls.read_with_options(file_name, orbital_contribution="auto")
+
+    @classmethod
+    def read_with_options(
+        cls, file_name: str, orbital_contribution: str = "auto"
+    ) -> "Orca6OutputA":
+        """Read ORCA6 hyperfine tensors with optional orbital contribution mode.
+
+        Args:
+            file_name: Path to the ORCA6 output file.
+            orbital_contribution: Mode controlling inclusion of A(ORB) contributions
+                ('auto', 'on', 'off').
+
+        Returns:
+            Orca6OutputA: Parsed ORCA6 hyperfine tensor container.
+        """
+
         # Read raw data
         old_labels, coords = read_orca5_output_xyz(file_name)
         old_labels = np.array(
             xyzf.add_label_indices(old_labels, style="sequential", start_index=0)
         )
-        a_iso, a_dip = read_orca6_output_a_tensors(file_name)
+        a_iso, a_dip = read_orca6_output_a_tensors(
+            file_name, orbital_contribution=orbital_contribution
+        )
 
         new_labels = np.array(
             xyzf.add_label_indices(xyzf.remove_label_indices(old_labels))
