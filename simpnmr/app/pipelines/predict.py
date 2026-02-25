@@ -375,6 +375,9 @@ def _apply_relaxation_linewidths(config, base_molecule: Molecule):
         # In point-dipole (pdip) model, contact hyperfine A_iso = 0 for all nuclei.
         A_iso_dict = {label: 0.0 for label in nuclei_coords}
     else:
+        # TODO: remove direct QC read from relaxation pipeline;
+        #       A_iso should be taken from base_molecule hyperfine data
+        #       to avoid repeated IO and ensure consistency with ORB handling.
         qc_hyperfine_data = rdrs.QCA.guess_from_file(config.hyperfine_file)
         A_iso_dict_MHz = qc_hyperfine_data.a_iso  # MHz
         A_iso_dict = {

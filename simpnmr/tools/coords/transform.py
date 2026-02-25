@@ -23,7 +23,7 @@ from ...io.qc import gateway as rdrs
 logger = logging.getLogger(__name__)
 
 
-def access_input_data(cfg, dft_coords: np.ndarray | None = None):
+def access_input_data(cfg, dft_coords):
     """
     Load and extract all PCS-related input data using an already parsed
     PredictConfig instance.
@@ -51,10 +51,6 @@ def access_input_data(cfg, dft_coords: np.ndarray | None = None):
 
     # NEVPT2 coordinates
     nevpt2_labels, nevpt2_coords = rdrs.read_orca5_output_xyz(cfg.susceptibility_file)
-
-    # DFT coordinates
-    if dft_coords is None:
-        _, dft_coords = rdrs.read_orca5_output_xyz(cfg.hyperfine_file)
 
     # Susceptibility tensor
     chi_dict = rdrs.read_orca_susceptibility(cfg.susceptibility_file, section="nevpt2")
