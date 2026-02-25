@@ -15,16 +15,17 @@ from simpnmr.io.qc.errors import MissingSectionError
 
 
 def read_gaussian_log_a_tensors(file_name: str) -> tuple[npt.NDArray, npt.NDArray]:
-    """Extract isotropic and dipolar hyperfine (A) tensors from a Gaussian log.
+    """Extract isotropic and deviatoric (traceless)
+    hyperfine (A) tensors from a Gaussian log.
 
     Args:
         file_name: Path to the Gaussian log file.
 
     Returns:
-        A tuple `(a_iso, a_dip)` where:
+        A tuple `(a_iso, a_dtensor)` where:
             * `a_iso` is an array of shape `(n_atoms,)` with isotropic values in MHz.
-            * `a_dip` is an array of shape `(n_atoms, 3, 3)` with dipolar
-            tensors in MHz.
+            * `a_dtensor` is an array of shape `(n_atoms, 3, 3)` with deviatoric
+            (traceless) tensors in MHz.
     """
 
     # Read number of atoms
@@ -46,7 +47,7 @@ def read_gaussian_log_a_tensors(file_name: str) -> tuple[npt.NDArray, npt.NDArra
                     line = next(f)
                     a_iso[it] = float(line.split()[3])  # MHz
 
-    a_dip = np.zeros([n_atoms, 3, 3])
+    a_dtensor = np.zeros([n_atoms, 3, 3])
     # Read traceless tensor as eigenvalues and eigenvectors
     track = 0
     with open(file_name, "r") as f:
@@ -73,14 +74,14 @@ def read_gaussian_log_a_tensors(file_name: str) -> tuple[npt.NDArray, npt.NDArra
                     vecs = np.array([vecs_1, vecs_2, vecs_3]).T
 
                     # Transform back to coordinate frame in MHz
-                    a_dip[it, :, :] = vecs @ np.diag(vals) @ la.inv(vecs)
+                    a_dtensor[it, :, :] = vecs @ np.diag(vals) @ la.inv(vecs)
                     line = next(f)
 
     if track != 2:
         raise MissingSectionError(
             message=(
-                "Dipolar hyperfine tensor block not found in Gaussian log "
-                "(expected the second 'Anisotropic Spin Dipole Couplings' section)"
+                "Anisotropic (traceless) hyperfine tensor block "
+                "not found in Gaussian log "
             ),
             path=file_name,
             backend="gaussian",
@@ -88,4 +89,4 @@ def read_gaussian_log_a_tensors(file_name: str) -> tuple[npt.NDArray, npt.NDArra
             section="Anisotropic Spin Dipole Couplings",
         )
 
-    return a_iso, a_dip
+    return a_iso, a_dtensor
