@@ -7,10 +7,14 @@ Provides helpers to extract isotropic and anisotropic hyperfine tensors from
 ORCA quantum-chemistry calculation files.
 """
 
+import logging
+
 import numpy as np
 import numpy.typing as npt
 
 from simpnmr.core.util.strings import remove_letters, remove_numbers
+
+logger = logging.getLogger(__name__)
 
 
 def read_orca5_property_a_tensors(
@@ -194,15 +198,28 @@ def read_orca6_output_a_tensors(
 
                     r_mat = np.array(r_rows)
                     a_principal = np.array(a_fc) + np.array(a_sd)
+                    use_orb = False
                     if orbital_contribution == "on" or (
                         orbital_contribution == "auto" and a_orb is not None
                     ):
                         a_principal = a_principal + np.array(a_orb)
+                        use_orb = True
+
+                    logger.debug(
+                        "Hyperfine A(ORB) contribution %s for nucleus %s",
+                        "applied" if use_orb else "not applied",
+                        label,
+                    )
                     a_pas = np.diag(a_principal)
 
                     full = r_mat @ a_pas @ r_mat.T
 
                     a_iso[label] = 1 / 3 * np.trace(full)
                     a_dip[label] = full - np.eye(3) * a_iso[label]
+
+                if orbital_contribution == "on" or orbital_contribution == "auto":
+                    logger.info("Hyperfine contributions used: A(FC), A(SD), A(ORB)")
+                else:
+                    logger.info("Hyperfine contributions used: A(FC), A(SD)")
 
     return a_iso, a_dip
