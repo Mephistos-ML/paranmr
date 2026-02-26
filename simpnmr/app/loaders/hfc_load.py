@@ -13,9 +13,12 @@ IO + factories according to the provided configuration.
 
 from __future__ import annotations
 
+import logging
 import os
 from pathlib import Path  # noqa
 from typing import Any
+
+from numpy.typing import NDArray
 
 from simpnmr.app.loaders.mol_load import load_molecule_from_csv
 from simpnmr.app.policies.hfc import (
@@ -32,8 +35,14 @@ from simpnmr.io.qc import gateway as rdrs
 from simpnmr.io.qc.backends.orca.detect import detect_hfc_has_orb
 from simpnmr.tools.coords import xyz_fmt as xyzf
 
+logger = logging.getLogger(__name__)
 
-def load_base_molecule_from_hyperfines(config: Any, delimiter: str) -> Molecule:
+
+def load_base_molecule_from_hyperfines(
+    config: Any,
+    delimiter: str,
+    g_tensor: NDArray | None = None,  # TODO: remove
+) -> Molecule:
     """Load or construct the base Molecule including hyperfine information.
 
     Args:
@@ -74,6 +83,11 @@ def load_base_molecule_from_hyperfines(config: Any, delimiter: str) -> Molecule:
         else:
             effective_orbital_contribution = requested_orbital_contribution
 
+        if effective_orbital_contribution is OrbitalContribution.ON:
+            logger.info("Hyperfine contributions used: A(FC), A(SD), A(ORB)")
+        else:
+            logger.info("Hyperfine contributions used: A(FC), A(SD)")
+
         # Record final, domain-level hyperfine model choice
         hyperfine_orbital_availability = (
             "available"
@@ -100,6 +114,7 @@ def load_base_molecule_from_hyperfines(config: Any, delimiter: str) -> Molecule:
             converter="MHz_to_Ang-3",
             elements=config.nuclei_include,
             orbital_contribution=effective_orbital_contribution.value,
+            g_tensor=g_tensor,  # TODO: remove
         )
 
         base_molecule.metadata.setdefault("hyperfine", {})["orbital_contribution"] = (
