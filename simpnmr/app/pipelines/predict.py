@@ -22,6 +22,7 @@ from simpnmr.app.loaders.elstate_load import load_electronic_state
 from simpnmr.app.loaders.exp_load import load_experiments
 from simpnmr.app.loaders.hfc_load import load_base_molecule_from_hyperfines
 from simpnmr.app.loaders.labels_load import load_chem_labels_from_csv
+from simpnmr.app.loaders.sh_load import load_g_tensor
 from simpnmr.app.loaders.susc_load import load_susceptibilities
 from simpnmr.app.params.options import PredictRunOptions
 from simpnmr.app.policies.susc import resolve_susceptibility_source
@@ -62,6 +63,10 @@ def run_predict(config, options: PredictRunOptions | None = None) -> int:
         Exit code: 0 on success.
     """
 
+    # TODO(policy): introduce a unified InputSpec policy (file backend/format/section)
+    #               to resolve HFC/SH/Susceptibility readers in one place and avoid
+    #               duplicated format detection across pipelines and loaders.
+
     # Make output directory and file
     os.makedirs(config.project_name, exist_ok=True)
 
@@ -73,9 +78,13 @@ def run_predict(config, options: PredictRunOptions | None = None) -> int:
     # Build the resolved plotting contract for this run.
     spec = apply_profile(options.runtime.plot_profile)
 
+    # Load g-tensor early (Spin-Hamiltonian parameter) according to policy.
+    g_tensor = load_g_tensor(config)
+
     # Load hyperfines / construct base molecule
+    # TODO: remove g_tensor
     base_molecule = load_base_molecule_from_hyperfines(
-        config=config, delimiter=delimiter
+        config=config, delimiter=delimiter, g_tensor=g_tensor
     )
 
     # Load electronic state
@@ -87,23 +96,14 @@ def run_predict(config, options: PredictRunOptions | None = None) -> int:
         hyperfine_method=config.hyperfine_method if config.spin_S is None else None,
     )
 
-    # Load susceptibility information
+    # Attach spin-Hamiltonian parameters to the domain.
+    base_molecule.sh.g_tensor = g_tensor
+
+    # Resolve susceptibility source for downstream operations (rotations, output annotations).
     backend, section = resolve_susceptibility_source(
         config.susceptibility_file,
         config.susceptibility_format,
     )
-
-    if backend == "orca":
-        # Section is resolved by policy (legacy override or autodetect priority).
-        g_tensor = rdrs.read_orca_g_tensor(
-            config.susceptibility_file,
-            section=section,
-        )
-    else:
-        g_tensor = None
-
-    # Inject g-tensor into the domain electronic state.
-    base_molecule.electronic.g_tensor = g_tensor
 
     suscs = load_susceptibilities(
         config.susceptibility_file,
