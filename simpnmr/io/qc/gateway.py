@@ -829,24 +829,16 @@ class Orca5OutputA(QCA):
         old_labels = np.array(
             xyzf.add_label_indices(old_labels, style="sequential", start_index=0)
         )
-        a_iso, a_dtensor = read_orca5_output_a_tensors(file_name)
+        a_fc, a_sd, a_orb = read_orca5_output_a_tensors(file_name)
 
         new_labels = np.array(
             xyzf.add_label_indices(xyzf.remove_label_indices(old_labels))
         )
         converter = {old: new for old, new in zip(old_labels, new_labels)}
 
-        # Legacy ORCA5 parser provides isotropic + traceless total hyperfine tensor.
-        # Map this into the new component contract using A(SD) as the total available
-        # tensor and leaving A(FC)/A(ORB) unavailable as zero/None placeholders.
-        a_total = {
-            converter[label]: tensor + np.eye(3) * float(a_iso[label])
-            for label, tensor in a_dtensor.items()
-        }
-        a_fc = {new_label: np.zeros((3, 3), dtype=float) for new_label in new_labels}
-        a_sd = {new_label: a_total[new_label] for new_label in new_labels}
-        a_orb = {new_label: None for new_label in new_labels}
-
+        a_fc = {converter[label]: value for label, value in a_fc.items()}
+        a_sd = {converter[label]: value for label, value in a_sd.items()}
+        a_orb = {converter[label]: value for label, value in a_orb.items()}
         a_units = "MHz"
 
         return cls(file_name, new_labels, coords, a_fc, a_sd, a_orb, a_units)
@@ -909,7 +901,7 @@ class Orca5PropertyA(QCA):
     def _read(cls, file_name: str):
         # Read raw data
         old_labels, coords = read_orca5_property_xyz(file_name)
-        a_iso, a_dtensor = read_orca5_property_a_tensors(file_name)
+        a_fc, a_sd, a_orb = read_orca5_property_a_tensors(file_name)
 
         # Convert orca labelling 1-> natoms for all atoms
         # to 1-n_atoms per element
@@ -918,17 +910,9 @@ class Orca5PropertyA(QCA):
         )
         converter = {old: new for old, new in zip(old_labels, new_labels)}
 
-        # Legacy ORCA PROPERTY parser provides isotropic + traceless total hyperfine tensor.
-        # Map this into the new component contract using A(SD) as the total available
-        # tensor and leaving A(FC)/A(ORB) unavailable as zero/None placeholders.
-        a_total = {
-            converter[label]: tensor + np.eye(3) * float(a_iso[label])
-            for label, tensor in a_dtensor.items()
-        }
-        a_fc = {new_label: np.zeros((3, 3), dtype=float) for new_label in new_labels}
-        a_sd = {new_label: a_total[new_label] for new_label in new_labels}
-        a_orb = {new_label: None for new_label in new_labels}
-
+        a_fc = {converter[label]: value for label, value in a_fc.items()}
+        a_sd = {converter[label]: value for label, value in a_sd.items()}
+        a_orb = {converter[label]: value for label, value in a_orb.items()}
         a_units = "MHz"
 
         return cls(file_name, new_labels, coords, a_fc, a_sd, a_orb, a_units)
