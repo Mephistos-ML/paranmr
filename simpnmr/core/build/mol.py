@@ -41,7 +41,8 @@ def build_molecule_from_qca(
     This builder derives effective hyperfine quantities for the domain:
       - a_iso_eff: isotropic hyperfine coupling derived from A(FC)+A(SD)
       - a_dtensor_eff: deviatoric tensor derived from (A(FC)+A(SD)+A(ORB) if available)
-      - a_tensor_full: full physical hyperfine tensor derived from A(FC)+A(SD)+A(ORB) when available
+      - a_tensor_full: full physical hyperfine tensor derived
+      from A(FC)+A(SD)+A(ORB) when available
     Component tensors are not forwarded to the domain.
 
     Args:
