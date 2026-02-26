@@ -581,17 +581,18 @@ class OrcaSpin(QCSpin):
 
 
 class QCA(ABC):
-    """Abstract base class for hyperfine (A-tensor) readers."""
+    """Abstract base class for component-based hyperfine (A-tensor) readers."""
 
-    def __init__(self, file_name, labels, coords, a_iso, a_dtensor, a_units):
-        """Initialize a hyperfine (A-tensor) container.
+    def __init__(self, file_name, labels, coords, a_fc, a_sd, a_orb, a_units):
+        """Initialize a component-based hyperfine (A-tensor) container.
 
         Args:
             file_name: Source file name.
             labels: Atom labels (with indices).
             coords: Atomic coordinates as an (n_atoms, 3) array.
-            a_iso: Isotropic hyperfine couplings by label.
-            a_dtensor: Deviatoric (traceless) hyperfine tensors by label.
+            a_fc: Fermi-contact hyperfine tensors by label (3x3).
+            a_sd: Spin-dipolar hyperfine tensors by label (3x3).
+            a_orb: Orbital hyperfine tensors by label (3x3) or None when unavailable.
             a_units: Units for hyperfine values.
         """
 
@@ -599,23 +600,22 @@ class QCA(ABC):
         self.labels = labels
         self.coords = coords
         self.n_atoms = len(labels)
-        self.a_iso = a_iso
-        self.a_dtensor = a_dtensor
+        self.a_fc = a_fc
+        self.a_sd = a_sd
+        self.a_orb = a_orb
         self.a_units = a_units
 
         return
 
     @staticmethod
-    def guess_from_file(file_name: str, orbital_contribution: str = "off") -> "QCA":
+    def guess_from_file(file_name: str) -> "QCA":
         """Guess a compatible hyperfine reader and parse the file.
 
         Args:
             file_name: Path to the file to examine.
-            orbital_contribution: ORCA6-only mode controlling
-            inclusion of A(ORB) contributions ('on', 'off').
 
         Returns:
-            QCA: Parsed hyperfine (A-tensor) object.
+            QCA: Parsed component-based hyperfine object.
 
         Raises:
             UnsupportedFileError: If no supported reader matches the file content.
@@ -629,11 +629,9 @@ class QCA(ABC):
             if is_orca_property(file_name):
                 return Orca5PropertyA.read(file_name)
 
-            # ORCA OUTPUT: distinguish 5 vs 6 using legacy banner markers.
+            # ORCA OUTPUT
             if is_orca_a6_output(file_name):
-                return Orca6OutputA.read_with_options(
-                    file_name, orbital_contribution=orbital_contribution
-                )
+                return Orca6OutputA.read(file_name)
 
             if is_orca_a5_output(file_name):
                 return Orca5OutputA.read(file_name)
@@ -671,14 +669,23 @@ class QCA(ABC):
         for label, coord in zip(self.labels, self.coords):
             string += "{:5}  {: 10.6f}  {: 10.6f}  {: 10.6f}\n".format(label, *coord)
 
-        string += subtitle("Isotropic A values ({})".format(self.a_units))
+        string += subtitle("A(FC) Tensor ({})".format(self.a_units))
+        for label, tensor in self.a_fc.items():
+            string += "\n      {: .6f} {: .6f} {: .6f}\n".format(*tensor[0])
+            string += "{:5} {: .6f} {: .6f} {: .6f}\n".format(label, *tensor[1])
+            string += "      {: .6f} {: .6f} {: .6f}\n".format(*tensor[2])
 
-        for label, val in self.a_iso.items():
-            string += "{:5} {: .6f}\n".format(label, val)
+        string += subtitle("A(SD) Tensor ({})".format(self.a_units))
+        for label, tensor in self.a_sd.items():
+            string += "\n      {: .6f} {: .6f} {: .6f}\n".format(*tensor[0])
+            string += "{:5} {: .6f} {: .6f} {: .6f}\n".format(label, *tensor[1])
+            string += "      {: .6f} {: .6f} {: .6f}\n".format(*tensor[2])
 
-        string += subtitle("Anisotropic (traceless) A Tensor ({})".format(self.a_units))
-
-        for label, tensor in self.a_dtensor.items():
+        string += subtitle("A(ORB) Tensor ({})".format(self.a_units))
+        for label, tensor in self.a_orb.items():
+            if tensor is None:
+                string += "{:5} None\n".format(label)
+                continue
             string += "\n      {: .6f} {: .6f} {: .6f}\n".format(*tensor[0])
             string += "{:5} {: .6f} {: .6f} {: .6f}\n".format(label, *tensor[1])
             string += "      {: .6f} {: .6f} {: .6f}\n".format(*tensor[2])
@@ -703,16 +710,16 @@ class QCA(ABC):
     "Atomic coordinates (3xn_atoms)"
     coords: npt.NDArray
 
-    "Isotropic Hyperfine coupling values"
-    a_iso: dict[str, float]
+    "Fermi-contact hyperfine tensors (3x3) by atom label"
+    a_fc: dict[str, npt.NDArray]
 
-    """Anisotropic (traceless) Hyperfine coupling tensors (deviatoric)
-    keys are string label with index number, values are (3x3) arrays"""
-    a_dtensor: dict[str, npt.NDArray]
+    "Spin-dipolar hyperfine tensors (3x3) by atom label"
+    a_sd: dict[str, npt.NDArray]
 
-    """
-    Units of A_iso and dA (dtensor)
-    """
+    "Orbital hyperfine tensors (3x3) by atom label, or None when unavailable"
+    a_orb: dict[str, npt.NDArray | None]
+
+    "Units of component hyperfine tensors"
     a_units: str
 
     @classmethod
@@ -735,8 +742,9 @@ class QCA(ABC):
             "n_atoms",
             "labels",
             "coords",
-            "a_iso",
-            "a_dtensor",
+            "a_fc",
+            "a_sd",
+            "a_orb",
             "a_units",
         ]
 
@@ -765,7 +773,7 @@ class QCA(ABC):
             file_name: Path to the QC output file.
 
         Returns:
-            QCA: Parsed hyperfine (A-tensor) instance.
+            QCA: Parsed component-based hyperfine instance.
         """
         raise NotImplementedError
 
@@ -789,19 +797,20 @@ class GaussianLogA(QCA):
         mult = read_gaussian_log_spin(file_name)
         n_unpaired = mult - 1
 
-        # Convert to dict
-        a_iso = {label: val for label, val in zip(labels, a_iso_raw)}
-
-        # Convert to dict
-        # and normalise by number of unpaired electrons
-        a_dtensor = {
-            label: tensor * 1.0 / n_unpaired
-            for label, tensor in zip(labels, a_dtensor_raw)
+        # Legacy Gaussian parser provides isotropic + traceless total hyperfine tensor.
+        # Map this into the new component contract using A(SD) as the total available
+        # tensor and leaving A(FC)/A(ORB) unavailable as zero/None placeholders.
+        zero = np.zeros((3, 3), dtype=float)
+        a_fc = {label: zero.copy() for label in labels}
+        a_sd = {
+            label: (tensor * 1.0 / n_unpaired) + np.eye(3) * float(a_iso)
+            for label, a_iso, tensor in zip(labels, a_iso_raw, a_dtensor_raw)
         }
+        a_orb = {label: None for label in labels}
 
         a_units = "MHz"
 
-        return cls(file_name, labels, coords, a_iso, a_dtensor, a_units)
+        return cls(file_name, labels, coords, a_fc, a_sd, a_orb, a_units)
 
 
 class Orca5OutputA(QCA):
@@ -827,12 +836,20 @@ class Orca5OutputA(QCA):
         )
         converter = {old: new for old, new in zip(old_labels, new_labels)}
 
-        a_iso = {converter[label]: value for label, value in a_iso.items()}
-        a_dtensor = {converter[label]: tensor for label, tensor in a_dtensor.items()}
+        # Legacy ORCA5 parser provides isotropic + traceless total hyperfine tensor.
+        # Map this into the new component contract using A(SD) as the total available
+        # tensor and leaving A(FC)/A(ORB) unavailable as zero/None placeholders.
+        a_total = {
+            converter[label]: tensor + np.eye(3) * float(a_iso[label])
+            for label, tensor in a_dtensor.items()
+        }
+        a_fc = {new_label: np.zeros((3, 3), dtype=float) for new_label in new_labels}
+        a_sd = {new_label: a_total[new_label] for new_label in new_labels}
+        a_orb = {new_label: None for new_label in new_labels}
 
         a_units = "MHz"
 
-        return cls(file_name, new_labels, coords, a_iso, a_dtensor, a_units)
+        return cls(file_name, new_labels, coords, a_fc, a_sd, a_orb, a_units)
 
 
 class Orca6OutputA(QCA):
@@ -846,21 +863,17 @@ class Orca6OutputA(QCA):
 
     @classmethod
     def _read(cls, file_name: str):
-        return cls.read_with_options(file_name, orbital_contribution="off")
+        return cls.read_with_options(file_name)
 
     @classmethod
-    def read_with_options(
-        cls, file_name: str, orbital_contribution: str = "off"
-    ) -> "Orca6OutputA":
-        """Read ORCA6 hyperfine tensors with optional orbital contribution mode.
+    def read_with_options(cls, file_name: str) -> "Orca6OutputA":
+        """Read ORCA6 component hyperfine tensors (A(FC), A(SD), A(ORB)).
 
         Args:
             file_name: Path to the ORCA6 output file.
-            orbital_contribution: Mode controlling inclusion of A(ORB)
-            contributions ('on', 'off').
 
         Returns:
-            Orca6OutputA: Parsed ORCA6 hyperfine tensor container.
+            Orca6OutputA: Parsed ORCA6 component hyperfine tensor container.
         """
 
         # Read raw data
@@ -868,21 +881,19 @@ class Orca6OutputA(QCA):
         old_labels = np.array(
             xyzf.add_label_indices(old_labels, style="sequential", start_index=0)
         )
-        a_iso, a_dtensor = read_orca6_output_a_tensors(
-            file_name, orbital_contribution=orbital_contribution
-        )
+        a_fc, a_sd, a_orb = read_orca6_output_a_tensors(file_name)
 
         new_labels = np.array(
             xyzf.add_label_indices(xyzf.remove_label_indices(old_labels))
         )
         converter = {old: new for old, new in zip(old_labels, new_labels)}
 
-        a_iso = {converter[label]: value for label, value in a_iso.items()}
-        a_dtensor = {converter[label]: tensor for label, tensor in a_dtensor.items()}
-
+        a_fc = {converter[label]: value for label, value in a_fc.items()}
+        a_sd = {converter[label]: value for label, value in a_sd.items()}
+        a_orb = {converter[label]: value for label, value in a_orb.items()}
         a_units = "MHz"
 
-        return cls(file_name, new_labels, coords, a_iso, a_dtensor, a_units)
+        return cls(file_name, new_labels, coords, a_fc, a_sd, a_orb, a_units)
 
 
 class Orca5PropertyA(QCA):
@@ -907,9 +918,17 @@ class Orca5PropertyA(QCA):
         )
         converter = {old: new for old, new in zip(old_labels, new_labels)}
 
-        a_iso = {converter[label]: value for label, value in a_iso.items()}
-        a_dtensor = {converter[label]: tensor for label, tensor in a_dtensor.items()}
+        # Legacy ORCA PROPERTY parser provides isotropic + traceless total hyperfine tensor.
+        # Map this into the new component contract using A(SD) as the total available
+        # tensor and leaving A(FC)/A(ORB) unavailable as zero/None placeholders.
+        a_total = {
+            converter[label]: tensor + np.eye(3) * float(a_iso[label])
+            for label, tensor in a_dtensor.items()
+        }
+        a_fc = {new_label: np.zeros((3, 3), dtype=float) for new_label in new_labels}
+        a_sd = {new_label: a_total[new_label] for new_label in new_labels}
+        a_orb = {new_label: None for new_label in new_labels}
 
         a_units = "MHz"
 
-        return cls(file_name, new_labels, coords, a_iso, a_dtensor, a_units)
+        return cls(file_name, new_labels, coords, a_fc, a_sd, a_orb, a_units)
