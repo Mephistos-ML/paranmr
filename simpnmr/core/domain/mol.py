@@ -357,7 +357,8 @@ class Molecule:
         nuclei: NMR-active nuclei.
         susc: Magnetic susceptibility tensor for the molecule.
         electronic: Electronic state metadata (spin/orbit/J model selection).
-        sh: Spin-Hamiltonian parameters (e.g. g-tensor, ZFS), shared across the molecule.
+        sh: Spin-Hamiltonian parameters (e.g. g-tensor, ZFS),
+        shared across the molecule.
         metadata: Dictionary for domain-level metadata and model provenance.
             Stores final, effective modelling decisions that affect downstream
             physics (e.g. availability of orbital hyperfine contributions).
