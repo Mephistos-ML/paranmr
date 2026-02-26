@@ -39,37 +39,6 @@ def a_tensor_mhz_to_ang(a_tensors: dict[str, NDArray]) -> dict[str, NDArray]:
     return a_tensors_ang
 
 
-def a_iso_mhz_to_ang(a_iso: dict[str, float]) -> dict[str, float]:
-    """Convert isotropic hyperfine A values from MHz to ppm Å^-3.
-
-    Uses the nuclear gyromagnetic ratio for each nucleus (from NUCLEAR_GAMMAS).
-
-    Args:
-        a_iso: Mapping from atom label (with global index, e.g. "H34")
-            to isotropic hyperfine value in MHz.
-
-    Returns:
-        Mapping from atom label to isotropic hyperfine value in ppm Å^-3.
-        Labels whose element has no gamma defined (gamma=0) are omitted.
-    """
-    a_iso_ang: dict[str, float] = {}
-
-    for key, val in a_iso.items():
-        elem = remove_numbers(key)
-
-        if elem not in NUCLEAR_GAMMAS:
-            continue
-
-        gamma = NUCLEAR_GAMMAS[elem]
-        if not gamma:
-            continue
-
-        # _mhz_to_angstrom returns ndarray or float → force float
-        a_iso_ang[key] = float(_mhz_to_angstrom(val, gamma))
-
-    return a_iso_ang
-
-
 def _mhz_to_angstrom(val_mhz: NDArray | float, nuclear_gamma: float) -> NDArray | float:
     """Converts a hyperfine coupling value from MHz to ``ppm Å^-3``.
 
