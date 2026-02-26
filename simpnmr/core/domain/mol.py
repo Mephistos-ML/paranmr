@@ -267,13 +267,11 @@ class ElectronicState:
         orbit_L: float | None = None,
         total_J: float | None = None,
         model: str | None = None,
-        g_tensor: ArrayLike | None = None,
     ) -> None:
         self.spin_S = spin_S
         self.orbit_L = orbit_L
         self.total_J = total_J
         self.model = model
-        self.g_tensor = g_tensor
 
         if self.model is not None and self.model not in {
             "spin_only",
@@ -287,6 +285,30 @@ class ElectronicState:
 
         return
 
+
+class SpinHamiltonian:
+    """Spin-Hamiltonian parameters used across pNMR models.
+
+    This container is intended to hold magnetic-model tensors/parameters that are
+    shared across the molecule (e.g., g-tensor, ZFS parameters). It is independent
+    from `ElectronicState`, which stores quantum-number metadata.
+
+    Attributes:
+        g_tensor: 3x3 g-tensor matrix, if available.
+        D_tensor: Optional 3x3 zero-field splitting (ZFS) D tensor.
+        E: Optional scalar E parameter (alternative ZFS representation).
+    """
+
+    def __init__(
+        self,
+        g_tensor: ArrayLike | None = None,
+        D_tensor: ArrayLike | None = None,
+        E: float | None = None,
+    ) -> None:
+        self.g_tensor = g_tensor
+        self.D_tensor = D_tensor
+        self.E = E
+
     @property
     def g_tensor(self) -> NDArray | None:
         return self._g_tensor
@@ -299,8 +321,24 @@ class ElectronicState:
 
         arr = np.asarray(value, dtype=float)
         if arr.shape != (3, 3):
-            raise ValueError("ElectronicState.g_tensor must be a (3, 3) matrix")
+            raise ValueError("SpinHamiltonian.g_tensor must be a (3, 3) matrix")
         self._g_tensor = arr
+        return
+
+    @property
+    def D_tensor(self) -> NDArray | None:
+        return self._D_tensor
+
+    @D_tensor.setter
+    def D_tensor(self, value: ArrayLike | None) -> None:
+        if value is None:
+            self._D_tensor = None
+            return
+
+        arr = np.asarray(value, dtype=float)
+        if arr.shape != (3, 3):
+            raise ValueError("SpinHamiltonian.D_tensor must be a (3, 3) matrix")
+        self._D_tensor = arr
         return
 
 
@@ -319,6 +357,7 @@ class Molecule:
         nuclei: NMR-active nuclei.
         susc: Magnetic susceptibility tensor for the molecule.
         electronic: Electronic state metadata (spin/orbit/J model selection).
+        sh: Spin-Hamiltonian parameters (e.g. g-tensor, ZFS), shared across the molecule.
         metadata: Dictionary for domain-level metadata and model provenance.
             Stores final, effective modelling decisions that affect downstream
             physics (e.g. availability of orbital hyperfine contributions).
@@ -336,8 +375,9 @@ class Molecule:
         # Susceptibility object
         self.susc = copy.deepcopy(Susceptibility())
 
-        # List of quantum number objects
+        # Electronic state and spin Hamiltonian as separate attributes
         self.electronic = ElectronicState()
+        self.sh = SpinHamiltonian()
 
         # Domain-level metadata
         self.metadata: dict[str, dict[str, object]] = {}
