@@ -56,7 +56,7 @@ def plot_hyperfine(
     for component in components:
         if component == "iso":
             for nuc in nuclei:
-                hf_components[component][nuc.label] = nuc.A.iso
+                hf_components[component][nuc.label] = nuc.A.iso_eff
                 complabels[component] = r"$A_\mathregular{iso}$"
         elif component == "ax":
             for nuc in nuclei:
@@ -83,7 +83,9 @@ def plot_hyperfine(
                 complabels[component] = rf"$A_{{\mathregular{{{component}}}}}$"
         else:
             for nuc in nuclei:
-                hf_components[component][nuc.label] = nuc.A.tensor[comp2ind(component)]
+                hf_components[component][nuc.label] = nuc.A.dtensor_eff[
+                    comp2ind(component)
+                ]
                 complabels[component] = rf"$A_\mathregular{{{component}}}$"
 
     fig, ax = plt.subplots(1, 1, num=window_title)
@@ -268,7 +270,7 @@ def plot_hyperfine_spread(
         else:
             for nuc in nuclei:
                 a_comps[component][nuc.chem_math_label].append(
-                    nuc.A.tensor[comp2ind(component)]
+                    nuc.A.dtensor_eff[comp2ind(component)]
                 )
                 legend_labels[component] = rf"$A_\mathregular{{{component}}}$"
 
