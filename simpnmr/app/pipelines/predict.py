@@ -30,6 +30,7 @@ from simpnmr.app.policies.susc import resolve_susceptibility_source
 # Core / domain
 from simpnmr.core.const.gammas import NUCLEAR_GAMMAS
 from simpnmr.core.const.physics import EGAMMA
+from simpnmr.core.conv.ang_to_freq import angstrom_to_mhz
 from simpnmr.core.domain.mol import Molecule
 from simpnmr.core.relaxation import gueron, sbm
 from simpnmr.core.util.strings import remove_numbers
@@ -39,7 +40,6 @@ from simpnmr.io.csv import relax
 from simpnmr.io.csv.mol import save_molecule_to_csv
 from simpnmr.io.csv.spec import read_spectrum
 from simpnmr.io.csv.susc import save_susc
-from simpnmr.io.qc import gateway as rdrs
 from simpnmr.io.xyz import xyz_write
 
 # Tools
@@ -378,16 +378,21 @@ def _apply_relaxation_linewidths(config, base_molecule: Molecule):
         # In point-dipole (pdip) model, contact hyperfine A_iso = 0 for all nuclei.
         A_iso_dict = {label: 0.0 for label in nuclei_coords}
     else:
-        # TODO: remove direct QC read from relaxation pipeline;
-        #       A_iso should be taken from base_molecule hyperfine data
-        #       to avoid repeated IO and ensure consistency with ORB handling.
-        qc_hyperfine_data = rdrs.QCA.guess_from_file(config.hyperfine_file)
-        A_iso_dict_MHz = qc_hyperfine_data.a_iso  # MHz
-        A_iso_dict = {
-            nuc.label: A_iso_dict_MHz[nuc.label] * 1e6
+        # Convert domain A_iso (ppm Å^-3) back to MHz for relaxation formulas.
+        # Note: conversion depends on the nuclear gyromagnetic ratio for each nucleus.
+        A_iso_dict_MHz = {
+            nuc.label: float(
+                angstrom_to_mhz(
+                    nuc.A.iso_eff,
+                    nuclear_gamma=NUCLEAR_GAMMAS[remove_numbers(nuc.label)],
+                )
+            )
             for nuc in base_molecule.nuclei
             if nuc.label in nuclei_coords
         }
+
+        # Convert MHz -> Hz for relaxation routines.
+        A_iso_dict = {label: val_mhz * 1e6 for label, val_mhz in A_iso_dict_MHz.items()}
 
     gamma_I_dict = {
         label: NUCLEAR_GAMMAS[remove_numbers(label)] * 2 * np.pi * 1e6
