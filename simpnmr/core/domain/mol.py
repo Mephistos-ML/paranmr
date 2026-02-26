@@ -209,28 +209,40 @@ class Nucleus:
     @classmethod
     def from_a_values(
         cls,
-        a_isos: dict[str, float],
-        a_dtensors: dict[str, NDArray],
+        a_isos_eff: dict[str, float],
+        a_dtensors_eff: dict[str, NDArray],
         coords: NDArray,
+        a_tensors_full: dict[str, NDArray] | None = None,
     ) -> list["Nucleus"]:
-        """Build nuclei from isotropic and deviatoric (traceless) hyperfine data.
+        """Build nuclei from effective isotropic and
+        deviatoric (traceless) hyperfine data.
 
         Args:
-            a_isos: Mapping from atom label to isotropic hyperfine coupling
+            a_isos_eff: Mapping from atom label to effective
+            isotropic hyperfine coupling
                 (ppm Å^-3).
-            a_dtensors: Mapping from atom label to deviatoric (traceless)
-            hyperfine tensor as a 3x3 array (ppm Å^-3).
+            a_dtensors_eff: Mapping from atom label to effective deviatoric (traceless)
+                hyperfine tensor as a 3x3 array (ppm Å^-3).
             coords: Coordinates for each nucleus. The ordering must match the
                 ordering of the dictionaries.
+            a_tensors_full: Optional mapping atom_label -> full physical
+            hyperfine tensor (3x3).
 
         Returns:
             A list of `Nucleus` instances.
         """
 
-        tensors = {
-            label: Hyperfine(a_dtensors[label] + np.eye(3) * a_isos[label])
-            for label in a_dtensors
-        }
+        tensors: dict[str, Hyperfine] = {}
+        for label in a_dtensors_eff:
+            tensor_full = None
+            if a_tensors_full is not None:
+                tensor_full = a_tensors_full.get(label)
+
+            tensors[label] = Hyperfine(
+                iso_eff=a_isos_eff[label],
+                dtensor_eff=a_dtensors_eff[label],
+                tensor_full=tensor_full,
+            )
 
         nuclei = [
             cls(key, coord, value)
@@ -347,7 +359,7 @@ class Molecule:
             else:
                 label = f"{nuc.chem_label} ({nuc.label})"
 
-            string += f"{label} {nuc.A.iso: .6f}\n"
+            string += f"{label} {nuc.A.iso_eff: .6f}\n"
 
         string += subtitle("Anisotropic (traceless) A Tensor (ppm Å^-3)")
 
@@ -358,11 +370,13 @@ class Molecule:
                 label = f"{nuc.chem_label} ({nuc.label})"
 
             string += "\n{:} {: .6f} {: .6f} {: .6f}\n".format(
-                " " * len(label), *nuc.A.dtensor[0]
+                " " * len(label), *nuc.A.dtensor_eff[0]
             )
-            string += "{:} {: .6f} {: .6f} {: .6f}\n".format(label, *nuc.A.dtensor[1])
             string += "{:} {: .6f} {: .6f} {: .6f}\n".format(
-                " " * len(label), *nuc.A.dtensor[2]
+                label, *nuc.A.dtensor_eff[1]
+            )
+            string += "{:} {: .6f} {: .6f} {: .6f}\n".format(
+                " " * len(label), *nuc.A.dtensor_eff[2]
             )
 
         return string
@@ -427,11 +441,12 @@ class Molecule:
         *,
         labels: list[str],
         coords: ArrayLike,
-        a_iso: dict[str, float],
-        a_dtensor: dict[str, NDArray],
+        a_iso_eff: dict[str, float],
+        a_dtensor_eff: dict[str, NDArray],
+        a_tensor_full: dict[str, NDArray] | None = None,
         elements: list[str] | str = "all",
     ) -> "Molecule":
-        """Create a `Molecule` from already-parsed hyperfine data.
+        """Create a `Molecule` from already-parsed effective hyperfine data.
 
         This is a pure domain constructor: no file I/O, no QC parsing, no unit
         conversion. Callers must provide labels/coords and hyperfine tensors in
@@ -441,9 +456,11 @@ class Molecule:
             labels: Atomic labels (with indices) in the same ordering as `coords`,
                 e.g. ["H1", "C2", ...].
             coords: Atomic coordinates as an (n_atoms, 3) array-like in Å.
-            a_iso: Mapping atom_label -> isotropic hyperfine coupling.
-            a_dtensor: Mapping atom_label -> deviatoric (traceless)
-            hyperfine tensor (3x3).
+            a_iso_eff: Mapping atom_label -> effective isotropic hyperfine coupling.
+            a_dtensor_eff: Mapping atom_label -> effective deviatoric (traceless)
+                hyperfine tensor (3x3).
+            a_tensor_full: Optional mapping atom_label -> full
+            physical hyperfine tensor (3x3).
             elements: Elements/labels to include. Use "all" to include all atoms,
                 "all_H" to include all H, etc., or explicit labels like "H7".
 
@@ -473,8 +490,17 @@ class Molecule:
                 elements_to_include.append(ele)
 
         # Filter hyperfine dicts by selection.
-        a_iso_sel = {k: v for k, v in a_iso.items() if k in elements_to_include}
-        a_dtensor_sel = {k: v for k, v in a_dtensor.items() if k in elements_to_include}
+        a_iso_eff_sel = {k: v for k, v in a_iso_eff.items() if k in elements_to_include}
+        a_dtensor_eff_sel = {
+            k: v for k, v in a_dtensor_eff.items() if k in elements_to_include
+        }
+
+        # Filter full tensors by selection, if provided.
+        a_tensor_full_sel = None
+        if a_tensor_full is not None:
+            a_tensor_full_sel = {
+                k: v for k, v in a_tensor_full.items() if k in elements_to_include
+            }
 
         # Filter coords by selection, preserving the original label ordering.
         coords_sel = [
@@ -483,7 +509,12 @@ class Molecule:
             if lab in elements_to_include
         ]
 
-        nuclei = Nucleus.from_a_values(a_iso_sel, a_dtensor_sel, coords_sel)
+        nuclei = Nucleus.from_a_values(
+            a_isos_eff=a_iso_eff_sel,
+            a_dtensors_eff=a_dtensor_eff_sel,
+            coords=coords_sel,
+            a_tensors_full=a_tensor_full_sel,
+        )
         if not nuclei:
             raise ValueError("No Nuclei selected!")
 
@@ -565,13 +596,21 @@ class Molecule:
 
         # Average hyperfines and diamagnetic shifts
         for ents in av_chemlabels:
-            avg_atens = np.mean(
-                [nuc.A.tensor for nuc in self.nuclei if nuc.chem_label in ents],
-                axis=0,
-            )
-            for nuc in self.nuclei:
-                if nuc.chem_label in ents:
-                    nuc.A.tensor = avg_atens
+            group = [nuc for nuc in self.nuclei if nuc.chem_label in ents]
+
+            avg_iso = float(np.mean([nuc.A.iso_eff for nuc in group]))
+            avg_dt = np.mean([nuc.A.dtensor_eff for nuc in group], axis=0)
+
+            have_full = all(nuc.A.tensor_full is not None for nuc in group)
+            avg_full = None
+            if have_full:
+                avg_full = np.mean([nuc.A.tensor_full for nuc in group], axis=0)
+
+            for nuc in group:
+                nuc.A.iso_eff = avg_iso
+                nuc.A.dtensor_eff = avg_dt
+                if have_full:
+                    nuc.A.tensor_full = avg_full
 
         return
 
@@ -596,7 +635,9 @@ class Molecule:
             raise ValueError("rot_mat must be a (3x3) rotation matrix")
 
         for nuc in self.nuclei:
-            nuc.A.tensor = rot_mat @ nuc.A.tensor @ rot_mat.T
+            nuc.A.dtensor_eff = rot_mat @ nuc.A.dtensor_eff @ rot_mat.T
+            if nuc.A.tensor_full is not None:
+                nuc.A.tensor_full = rot_mat @ nuc.A.tensor_full @ rot_mat.T
 
         return
 
@@ -630,7 +671,9 @@ class Molecule:
                     continue
                 val = Hyperfine.calc_pdip(nuc.coord, self.coords[it[0]])
                 val *= 1e6 / len(centre_labels)
-                nuc.A.tensor += val
+                nuc.A.dtensor_eff = nuc.A.dtensor_eff + val
+                if nuc.A.tensor_full is not None:
+                    nuc.A.tensor_full = nuc.A.tensor_full + val
         return
 
     def calculate_shifts(self, shift_terms="full"):
@@ -661,24 +704,8 @@ class Molecule:
         if "fc" not in shift_terms and "pc" not in shift_terms:
             raise ValueError("Unknown shift specified")
 
-        hyperfine_orb = self.metadata.get("hyperfine", {}).get(
-            "orbital_contribution", "unavailable"
-        )
-
-        if hyperfine_orb == "available" and self.electronic.g_tensor is None:
-            raise ValueError(
-                "ElectronicState.g_tensor is required for PCS calculation when "
-                "orbital hyperfine contributions are available"
-            )
-
         for nuc in self.nuclei:
-            nuc.shift.pc = Shift.calc_pcs(
-                nuc.A,
-                self.susc,
-                g_tensor=self.electronic.g_tensor,
-                hyperfine_orbital_contribution=hyperfine_orb,
-            )
-
+            nuc.shift.pc = Shift.calc_pcs(nuc.A, self.susc)
             if "fc" in shift_terms:
                 nuc.shift.fc = Shift.calc_fcs(nuc.A, self.susc)
 
