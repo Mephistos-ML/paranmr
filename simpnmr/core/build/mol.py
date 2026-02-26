@@ -8,12 +8,17 @@ Provides helpers to build Molecule instances from QC-derived data or CSV payload
 
 from __future__ import annotations
 
+import logging
 from typing import Any
 
 import numpy as np
+from numpy.typing import NDArray
 
 from simpnmr.core.conv.freq_to_ang import a_tensor_mhz_to_ang
 from simpnmr.core.domain.mol import Molecule
+from simpnmr.core.domain.tensor import calc_hfc_dtensor_eff_rel
+
+logger = logging.getLogger(__name__)
 
 
 def build_molecule_from_qca(
@@ -22,6 +27,7 @@ def build_molecule_from_qca(
     elements: list[str] | str = "all",
     converter: str | None = "MHz_to_Ang-3",
     orbital_contribution: str = "off",
+    g_tensor: NDArray | None = None,  # TODO: remove
 ) -> Molecule:
     """Build a `Molecule` from a parsed QC hyperfine object.
 
@@ -35,13 +41,15 @@ def build_molecule_from_qca(
     This builder derives effective hyperfine quantities for the domain:
       - a_iso_eff: isotropic hyperfine coupling derived from A(FC)+A(SD)
       - a_dtensor_eff: deviatoric tensor derived from (A(FC)+A(SD)+A(ORB) if available)
+      - a_tensor_full: full physical hyperfine tensor derived from A(FC)+A(SD)+A(ORB) when available
     Component tensors are not forwarded to the domain.
 
     Args:
         qca: Parsed QC hyperfine object.
         elements: Elements/labels to include.
-        converter: Optional converter string matching the behaviour of
-            `Molecule.from_QCA(..., converter=...)`. Defaults to "MHz_to_Ang-3".
+        converter: Optional converter string controlling unit conversion. When
+            set to "MHz_to_Ang-3", component tensors are converted before
+            deriving effective quantities. Defaults to "MHz_to_Ang-3".
         orbital_contribution: Whether to include `A(ORB)` in the effective tensor.
             Supported values are "off" and "on".
 
@@ -86,6 +94,19 @@ def build_molecule_from_qca(
         for k, v in qca.a_orb.items()
     }
 
+    # Apply unit conversion
+    if converter is None:
+        pass
+    elif converter == "MHz_to_Ang-3":
+        a_fc = a_tensor_mhz_to_ang(a_fc)
+        a_sd = a_tensor_mhz_to_ang(a_sd)
+
+        a_orb_present = {k: v for k, v in a_orb.items() if v is not None}
+        a_orb_present = a_tensor_mhz_to_ang(a_orb_present)
+        a_orb = {k: a_orb_present.get(k) for k in a_orb}
+    else:
+        raise ValueError(f"Unknown converter: {converter}")
+
     if orbital_contribution not in {"off", "on"}:
         raise ValueError(
             f"orbital_contribution must be 'off' or 'on', got {orbital_contribution!r}"
@@ -105,6 +126,20 @@ def build_molecule_from_qca(
             raise ValueError(f"A(SD) tensor for {label} must be (3,3), got {sd.shape}")
 
         a_fc_sd[label] = fc + sd
+
+    # Full physical tensor: sum of available contributions (FC + SD + ORB if present).
+    a_tensor_full: dict[str, np.ndarray] = {}
+    for label, fc_sd_tensor in a_fc_sd.items():
+        total = np.asarray(fc_sd_tensor, dtype=float)
+        orb = a_orb.get(label)
+        if orb is not None:
+            orb_arr = np.asarray(orb, dtype=float)
+            if orb_arr.shape != (3, 3):
+                raise ValueError(
+                    f"A(ORB) tensor for {label} must be (3,3), got {orb_arr.shape}"
+                )
+            total = total + orb_arr
+        a_tensor_full[label] = total
 
     a_iso_eff: dict[str, float] = {}
     for label, fc_sd_tensor in a_fc_sd.items():
@@ -129,24 +164,39 @@ def build_molecule_from_qca(
         a_full_for_pcs[label] = total
 
     a_dtensor_eff: dict[str, np.ndarray] = {}
+
+    # TODO: uncomment after deleting the manual g_tensor import from app and load
+    # g_tensor = getattr(qca, "g_tensor", None)
+
+    used_g_corr = False
+
     for label, tensor in a_full_for_pcs.items():
         iso_full = float(np.trace(tensor) / 3.0)
-        a_dtensor_eff[label] = tensor - np.eye(3) * iso_full
+        dt = tensor - np.eye(3) * iso_full
 
-    # Convert all tensors to the requested domain units.
-    if converter is None:
-        pass
-    elif converter == "MHz_to_Ang-3":
-        a_iso_eff = {k: float(v) for k, v in a_iso_eff.items()}
-        a_dtensor_eff = a_tensor_mhz_to_ang(a_dtensor_eff)
-    else:
-        raise ValueError(f"Unknown converter: {converter}")
+        # If a g-tensor is available on the QC payload, apply the relativistic scaling
+        # for the PCS-effective deviatoric hyperfine operator.
+        if orbital_contribution == "on":
+            if g_tensor is None:
+                raise ValueError(
+                    "Orbital hyperfine contribution requested, but g-tensor is missing "
+                    "and required for correct relativistic PCS scaling."
+                )
+            else:
+                dt = calc_hfc_dtensor_eff_rel(dt, g_tensor)
+                used_g_corr = True
+
+        a_dtensor_eff[label] = dt
+
+    if used_g_corr:
+        logger.info("Using g-tensor–corrected deviatoric (traceless) HFC tensor")
 
     return Molecule.from_hyperfine_data(
         labels=labels,
         coords=coords,
-        a_iso=a_iso_eff,
-        a_dtensor=a_dtensor_eff,
+        a_iso_eff=a_iso_eff,
+        a_dtensor_eff=a_dtensor_eff,
+        a_tensor_full=a_tensor_full,
         elements=elements,
     )
 
@@ -215,9 +265,11 @@ def build_molecule_from_csv(
     chem_labels = payload.get("chem_labels")  # list[str] | None
     chem_math_labels = payload.get("chem_math_labels")  # list[str] | None
 
-    # --- Hyperfine: tensors -> (a_iso, a_dtensor) ---
-    a_iso = None
-    a_dtensor = None
+    # --- Hyperfine: tensors -> (a_iso_eff, a_dtensor_eff) ---
+    a_iso_eff = None
+    a_dtensor_eff = None
+    a_tensor_full = None
+
     if tensors is not None:
         if isinstance(tensors, dict):
             tensor_by_label = {k: np.asarray(v, float) for k, v in tensors.items()}
@@ -226,8 +278,10 @@ def build_molecule_from_csv(
                 lab: np.asarray(t, float) for lab, t in zip(labels, tensors)
             }
 
-        a_iso = {}
-        a_dtensor = {}
+        a_iso_eff = {}
+        a_dtensor_eff = {}
+        a_tensor_full = {}
+
         for lab in labels:
             if lab not in tensor_by_label:
                 raise KeyError(f"Missing hyperfine tensor for label: {lab}")
@@ -239,8 +293,9 @@ def build_molecule_from_csv(
                 )
 
             iso = float(np.trace(A) / 3.0)
-            a_iso[lab] = iso
-            a_dtensor[lab] = A - np.eye(3) * iso
+            a_iso_eff[lab] = iso
+            a_dtensor_eff[lab] = A - np.eye(3) * iso
+            a_tensor_full[lab] = A
 
     # --- Chem labels ---
     al_to_cl = None
@@ -261,12 +316,13 @@ def build_molecule_from_csv(
             al_to_cml = {lab: str(cml) for lab, cml in zip(labels, chem_math_labels)}
 
     # --- Build molecule ---
-    if a_iso is not None and a_dtensor is not None:
+    if a_iso_eff is not None and a_dtensor_eff is not None:
         molecule = Molecule.from_hyperfine_data(
             labels=labels,
             coords=coords,
-            a_iso=a_iso,
-            a_dtensor=a_dtensor,
+            a_iso_eff=a_iso_eff,
+            a_dtensor_eff=a_dtensor_eff,
+            a_tensor_full=a_tensor_full,
             elements=elements,
         )
     else:
