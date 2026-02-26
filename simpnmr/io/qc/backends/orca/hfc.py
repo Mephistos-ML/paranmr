@@ -65,60 +65,95 @@ def read_orca5_property_a_tensors(
 
 def read_orca5_output_a_tensors(
     file_name: str,
-) -> tuple[dict[str, float], dict[str, npt.NDArray]]:
+) -> tuple[
+    dict[str, npt.NDArray[np.float64]],
+    dict[str, npt.NDArray[np.float64]],
+    dict[str, npt.NDArray[np.float64] | None],
+]:
     """Extract hyperfine (A) tensors from an ORCA 5 output file.
 
     Args:
         file_name: Path to the ORCA output file.
 
     Returns:
-        A tuple `(a_iso, a_dtensor)` where:
-            * `a_iso` maps atom labels to isotropic couplings in MHz.
-            * `a_dtensor` maps atom labels to 3x3 deviatoric (traceless) tensors in MHz.
+        A tuple `(a_fc, a_sd, a_orb)` where:
+            * `a_fc` maps atom labels to full A(FC) tensors in MHz (shape `(3, 3)`).
+            * `a_sd` maps atom labels to full A(SD) tensors in MHz (shape `(3, 3)`).
+            * `a_orb` maps atom labels to full A(ORB) tensors in MHz (shape `(3, 3)`)
+              when present, otherwise `None`.
     """
 
-    # Find how many nuclei have been calculated
-    with open(file_name, "r") as f:
-        for line in f:
-            if "Number of nuclei for epr/nmr" in line:
-                n_calcd = int(line.split()[-1])
+    a_fc_tensors: dict[str, npt.NDArray[np.float64]] = {}
+    a_sd_tensors: dict[str, npt.NDArray[np.float64]] = {}
+    a_orb_tensors: dict[str, npt.NDArray[np.float64] | None] = {}
 
-    a_iso = {}
-    a_dtensor = {}
-
-    # Read hyperfine data
     with open(file_name, "r") as f:
         for line in f:
             if "ELECTRIC AND MAGNETIC HYPERFINE STRUCTURE" in line:
+                break
+        else:
+            raise ValueError(
+                "Could not find 'ELECTRIC AND MAGNETIC HYPERFINE STRUCTURE' section "
+                f"in: {file_name}"
+            )
+
+        for line in f:
+            if "Nucleus" not in line or ":" not in line:
+                continue
+
+            tmp = line.split()[1]
+            label = "{}{}".format(remove_numbers(tmp), remove_letters(tmp))
+
+            a_fc: list[float] | None = None
+            a_sd: list[float] | None = None
+            a_orb: list[float] | None = None
+            r_rows: list[list[float]] = []
+
+            while "Orientation:" not in line:
                 line = next(f)
+                stripped = line.strip()
+
+                if stripped.startswith("A(FC)"):
+                    parts = stripped.split()
+                    a_fc = [float(parts[1]), float(parts[2]), float(parts[3])]
+                elif stripped.startswith("A(SD)"):
+                    parts = stripped.split()
+                    a_sd = [float(parts[1]), float(parts[2]), float(parts[3])]
+                elif stripped.startswith("A(ORB)"):
+                    parts = stripped.split()
+                    a_orb = [float(parts[1]), float(parts[2]), float(parts[3])]
+
+            if a_fc is None or a_sd is None:
+                raise ValueError(
+                    "Could not find A(FC)/A(SD) principal values "
+                    f"for nucleus {label} in: {file_name}"
+                )
+
+            for _axis in ("X", "Y", "Z"):
                 line = next(f)
-                line = next(f)
-                for it in range(n_calcd):
-                    line = next(f)
-                    tmp = line.split()[1]
-                    label = "{}{}".format(remove_numbers(tmp), remove_letters(tmp))
-                    for _ in range(5):
-                        line = next(f)
+                parts = line.split()
+                if not parts or parts[0] != _axis:
+                    raise ValueError(
+                        "Unexpected Orientation format for "
+                        "nucleus {label} in: {file_name}"
+                    )
+                r_rows.append([float(parts[1]), float(parts[2]), float(parts[3])])
 
-                    # Raw matrix in MHz
-                    row_1 = [float(val) for val in line.split()]
-                    line = next(f)
-                    row_2 = [float(val) for val in line.split()]
-                    line = next(f)
-                    row_3 = [float(val) for val in line.split()]
+            r_mat = np.array(r_rows, dtype=float)
 
-                    for _ in range(5):
-                        line = next(f)
-                    a_iso[label] = float(line.split()[-1])
+            fc_pas = np.diag(np.array(a_fc, dtype=float))
+            sd_pas = np.diag(np.array(a_sd, dtype=float))
 
-                    for _ in range(9):
-                        line = next(f)
+            a_fc_tensors[label] = r_mat @ fc_pas @ r_mat.T
+            a_sd_tensors[label] = r_mat @ sd_pas @ r_mat.T
 
-                    full = np.array([row_1, row_2, row_3])
+            if a_orb is None:
+                a_orb_tensors[label] = None
+            else:
+                orb_pas = np.diag(np.array(a_orb, dtype=float))
+                a_orb_tensors[label] = r_mat @ orb_pas @ r_mat.T
 
-                    a_dtensor[label] = full - np.eye(3) * a_iso[label]
-
-    return a_iso, a_dtensor
+    return a_fc_tensors, a_sd_tensors, a_orb_tensors
 
 
 def read_orca6_output_a_tensors(
