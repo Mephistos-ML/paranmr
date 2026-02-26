@@ -123,20 +123,22 @@ def read_orca5_output_a_tensors(
 
 def read_orca6_output_a_tensors(
     file_name: str,
-    orbital_contribution: str = "off",
-) -> tuple[dict[str, float], dict[str, npt.NDArray]]:
+) -> tuple[
+    dict[str, npt.NDArray[np.float64]],
+    dict[str, npt.NDArray[np.float64]],
+    dict[str, npt.NDArray[np.float64] | None],
+]:
     """Extract hyperfine (A) tensors from an ORCA 6 output file.
 
     Args:
         file_name: Path to the ORCA output file.
-        orbital_contribution: Controls whether the ORCA A(ORB) principal values
-            are included when reconstructing the full A tensor.
-            Accepted values are 'on' and 'off'.
 
     Returns:
-        A tuple `(a_iso, a_dtensor)` where:
-            * `a_iso` maps atom labels to isotropic couplings in MHz.
-            * `a_dtensor` maps atom labels to 3x3 deviatoric (traceless) tensors in MHz.
+        A tuple `(a_fc, a_sd, a_orb)` where:
+            * `a_fc` maps atom labels to full A(FC) tensors in MHz (shape `(3, 3)`).
+            * `a_sd` maps atom labels to full A(SD) tensors in MHz (shape `(3, 3)`).
+            * `a_orb` maps atom labels to full A(ORB) tensors in MHz (shape `(3, 3)`)
+              when present, otherwise `None`.
     """
 
     # Find how many nuclei have been calculated
@@ -145,8 +147,9 @@ def read_orca6_output_a_tensors(
             if "ELECTRIC AND MAGNETIC HYPERFINE STRUCTURE" in line:
                 n_calcd = int(line.split()[5][1:])
 
-    a_iso = {}
-    a_dtensor = {}
+    a_fc_tensors: dict[str, npt.NDArray[np.float64]] = {}
+    a_sd_tensors: dict[str, npt.NDArray[np.float64]] = {}
+    a_orb_tensors: dict[str, npt.NDArray[np.float64] | None] = {}
 
     # Read hyperfine data
     with open(file_name, "r") as f:
@@ -157,8 +160,7 @@ def read_orca6_output_a_tensors(
                         line = next(f)
                     tmp = line.split()[1]
                     label = "{}{}".format(remove_numbers(tmp), remove_letters(tmp))
-                    # Reconstruct the full tensor from principal components and
-                    # orientation
+                    # Parse principal hyperfine components and orientation.
                     a_fc: list[float] | None = None
                     a_sd: list[float] | None = None
                     a_orb: list[float] | None = None
@@ -186,10 +188,6 @@ def read_orca6_output_a_tensors(
                             f"for nucleus {label}"
                         )
 
-                    # FC + SD define the non-orbital hyperfine principal values
-                    a_principal_fc_sd = np.array(a_fc) + np.array(a_sd)
-
-                    # Rotation matrix from PAS to the laboratory frame
                     for _axis in ("X", "Y", "Z"):
                         line = next(f)
                         parts = line.split()
@@ -201,33 +199,18 @@ def read_orca6_output_a_tensors(
                             [float(parts[1]), float(parts[2]), float(parts[3])]
                         )
 
-                    r_mat = np.array(r_rows)
+                    r_mat = np.array(r_rows, dtype=float)
 
-                    if orbital_contribution == "on":
-                        if a_orb is None:
-                            raise ValueError(
-                                "A(ORB) contribution was requested, "
-                                "but no A(ORB) block was found in the ORCA output."
-                            )
-                        a_principal_total = a_principal_fc_sd + np.array(a_orb)
+                    fc_pas = np.diag(np.array(a_fc, dtype=float))
+                    sd_pas = np.diag(np.array(a_sd, dtype=float))
+
+                    a_fc_tensors[label] = r_mat @ fc_pas @ r_mat.T
+                    a_sd_tensors[label] = r_mat @ sd_pas @ r_mat.T
+
+                    if a_orb is None:
+                        a_orb_tensors[label] = None
                     else:
-                        a_principal_total = a_principal_fc_sd
+                        orb_pas = np.diag(np.array(a_orb, dtype=float))
+                        a_orb_tensors[label] = r_mat @ orb_pas @ r_mat.T
 
-                    a_pas = np.diag(a_principal_total)
-
-                    # Note: keep the isotropic part defined by FC+SD only
-                    # Orbital contributions (when enabled) are added only to the
-                    # reconstructed full tensor used for anisotropic/deviatoric part.
-                    full = r_mat @ a_pas @ r_mat.T
-
-                    a_iso_fc_sd = float(np.mean(a_principal_fc_sd))
-                    a_iso[label] = a_iso_fc_sd
-                    a_dtensor[label] = full - np.eye(3) * a_iso[label]
-
-                # Summary log for hyperfine contributions used in this calculation
-                if orbital_contribution == "on":
-                    logger.info("Hyperfine contributions used: A(FC), A(SD), A(ORB)")
-                else:
-                    logger.info("Hyperfine contributions used: A(FC), A(SD)")
-
-    return a_iso, a_dtensor
+    return a_fc_tensors, a_sd_tensors, a_orb_tensors
