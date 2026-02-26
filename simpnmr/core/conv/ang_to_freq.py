@@ -1,10 +1,9 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (C) 2026 Suturina Group
 
-"""Convert hyperfine couplings from MHz to ppm Å⁻³.
+"""Convert hyperfine couplings from ppm Å^-3 to MHz.
 
-Provides helpers to convert isotropic and tensor hyperfine values using
-nuclear gyromagnetic ratios.
+Provides helpers to convert hyperfine values using nuclear gyromagnetic ratios.
 """
 
 import numpy as np
