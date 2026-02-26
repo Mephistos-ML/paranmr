@@ -44,6 +44,15 @@ def read_molecule_csv(file_name: str) -> dict:
         "Adip_zz (ppm Å^-3)",
     ]
     split_hyperfine_cols = [
+        "Aiso_eff (ppm Å^-3)",
+        "dA_xx (ppm Å^-3)",
+        "dA_xy (ppm Å^-3)",
+        "dA_xz (ppm Å^-3)",
+        "dA_yy (ppm Å^-3)",
+        "dA_yz (ppm Å^-3)",
+        "dA_zz (ppm Å^-3)",
+    ]
+    split_hyperfine_cols_alt_iso = [
         "Aiso (ppm Å^-3)",
         "dA_xx (ppm Å^-3)",
         "dA_xy (ppm Å^-3)",
@@ -89,12 +98,21 @@ def read_molecule_csv(file_name: str) -> dict:
 
     # Detect hyperfine encoding (split vs full) exactly like before
     has_new_split = all(col in data.columns for col in split_hyperfine_cols)
+    has_new_split_alt_iso = all(
+        col in data.columns for col in split_hyperfine_cols_alt_iso
+    )
     has_legacy_split = all(col in data.columns for col in legacy_split_hyperfine_cols)
     has_full = all(col in data.columns for col in full_hyperfine_cols)
 
     use_legacy = False
     if has_new_split:
         split = True
+    elif not has_new_split and has_new_split_alt_iso:
+        split = True
+        logger.warning(
+            "Legacy hyperfine column 'Aiso' detected. Please rename to 'Aiso_eff'; "
+            "support for 'Aiso' will be removed in a future release."
+        )
     elif has_legacy_split:
         split = True
         use_legacy = True
@@ -114,6 +132,11 @@ def read_molecule_csv(file_name: str) -> dict:
     coords = np.array([data["x (Å)"], data["y (Å)"], data["z (Å)"]]).T
 
     if split:
+        aiso_key = (
+            "Aiso_eff (ppm Å^-3)"
+            if "Aiso_eff (ppm Å^-3)" in data.columns
+            else "Aiso (ppm Å^-3)"
+        )
         if use_legacy:
             tensors = [
                 np.array(
@@ -136,7 +159,7 @@ def read_molecule_csv(file_name: str) -> dict:
                     ],
                     dtype=float,
                 )
-                + np.eye(3) * float(row["Aiso (ppm Å^-3)"])
+                + np.eye(3) * float(row[aiso_key])
                 for _, row in data.iterrows()
             ]
         else:
@@ -161,7 +184,7 @@ def read_molecule_csv(file_name: str) -> dict:
                     ],
                     dtype=float,
                 )
-                + np.eye(3) * float(row["Aiso (ppm Å^-3)"])
+                + np.eye(3) * float(row[aiso_key])
                 for _, row in data.iterrows()
             ]
     else:
@@ -242,7 +265,7 @@ def _build_molecule_df(molecule):
         "x (Å)",
         "y (Å)",
         "z (Å)",
-        "Aiso (ppm Å^-3)",
+        "Aiso_eff (ppm Å^-3)",
         "dA_xx (ppm Å^-3)",
         "dA_xy (ppm Å^-3)",
         "dA_xz (ppm Å^-3)",
@@ -265,13 +288,13 @@ def _build_molecule_df(molecule):
         "x (Å)": [nuc.coord[0] for nuc in nuclei],
         "y (Å)": [nuc.coord[1] for nuc in nuclei],
         "z (Å)": [nuc.coord[2] for nuc in nuclei],
-        "Aiso (ppm Å^-3)": [nuc.A.iso for nuc in nuclei],
-        "dA_xx (ppm Å^-3)": [nuc.A.dtensor[0, 0] for nuc in nuclei],
-        "dA_xy (ppm Å^-3)": [nuc.A.dtensor[0, 1] for nuc in nuclei],
-        "dA_xz (ppm Å^-3)": [nuc.A.dtensor[0, 2] for nuc in nuclei],
-        "dA_yy (ppm Å^-3)": [nuc.A.dtensor[1, 1] for nuc in nuclei],
-        "dA_yz (ppm Å^-3)": [nuc.A.dtensor[1, 2] for nuc in nuclei],
-        "dA_zz (ppm Å^-3)": [nuc.A.dtensor[2, 2] for nuc in nuclei],
+        "Aiso_eff (ppm Å^-3)": [nuc.A.iso_eff for nuc in nuclei],
+        "dA_xx (ppm Å^-3)": [nuc.A.dtensor_eff[0, 0] for nuc in nuclei],
+        "dA_xy (ppm Å^-3)": [nuc.A.dtensor_eff[0, 1] for nuc in nuclei],
+        "dA_xz (ppm Å^-3)": [nuc.A.dtensor_eff[0, 2] for nuc in nuclei],
+        "dA_yy (ppm Å^-3)": [nuc.A.dtensor_eff[1, 1] for nuc in nuclei],
+        "dA_yz (ppm Å^-3)": [nuc.A.dtensor_eff[1, 2] for nuc in nuclei],
+        "dA_zz (ppm Å^-3)": [nuc.A.dtensor_eff[2, 2] for nuc in nuclei],
         "δ_total_avg (ppm)": [nuc.shift.avg for nuc in nuclei],
         "δ_total (ppm)": [nuc.shift.total for nuc in nuclei],
         "δ_dia (ppm)": [nuc.shift.dia for nuc in nuclei],
