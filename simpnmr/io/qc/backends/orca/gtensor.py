@@ -63,3 +63,24 @@ def read_g_tensor_ab_initio(file_name: str, section: str) -> np.ndarray | None:
         ) from e
 
     return g_tensor
+
+
+def read_g_tensor_dft(file_name: str) -> np.ndarray | None:
+    """Extract a DFT-derived electronic g-tensor from an ORCA output file.
+
+    This is currently a placeholder for a future parser dedicated to the
+    DFT-level g-tensor reported by ORCA. It is intentionally kept separate
+    from read_g_tensor_ab_initio because the DFT-derived tensor may have a
+    different physical meaning and must not be conflated with the ab initio
+    spin-Hamiltonian g-tensor.
+
+    Args:
+        file_name: Path to the ORCA output file.
+
+    Returns:
+        A 3x3 DFT-derived g-tensor as a NumPy array if found, otherwise None.
+
+    Raises:
+        NotImplementedError: Always, until DFT g-tensor parsing is implemented.
+    """
+    raise NotImplementedError("DFT g-tensor parsing is not implemented yet.")
