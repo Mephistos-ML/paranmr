@@ -55,3 +55,43 @@ def load_g_tensor_ab_initio(config: Any) -> NDArray[np.floating] | None:
 
     logger.info("g-tensor loaded from ORCA susceptibility output.")
     return g_tensor
+
+
+def load_g_tensor_dft(config: Any) -> NDArray[np.floating] | None:
+    """Load the DFT-derived g-tensor according to susceptibility policy.
+
+    This loader is intentionally narrow: it only resolves and reads the
+    DFT-derived g-tensor from the configured susceptibility source. The
+    calling pipeline is responsible for attaching it to the domain, e.g.
+    `molecule.sh.g_tensor_dft = g_tensor`.
+
+    The `DFT-derived` qualifier is important here: this tensor should remain
+    distinct from the ab initio spin-Hamiltonian g-tensor, because these
+    tensors may have different physical meanings and must not be conflated.
+
+    Args:
+        config: Runtime config with at least:
+            - susceptibility_file
+            - susceptibility_format
+
+    Returns:
+        DFT-derived g-tensor as a (3, 3) ndarray, or None if not available
+        for the backend.
+    """
+    backend, _ = resolve_susceptibility_source(
+        config.susceptibility_file,
+        config.susceptibility_format,
+    )
+
+    if backend != "orca":
+        logger.info("DFT g-tensor not loaded: susceptibility backend is %s.", backend)
+        return None
+
+    g_tensor = rdrs.read_g_tensor_dft(config.susceptibility_file)
+
+    g_tensor = np.asarray(g_tensor, dtype=float)
+    if g_tensor.shape != (3, 3):
+        raise ValueError("Invalid DFT g-tensor: expected a (3, 3) matrix.")
+
+    logger.info("DFT g-tensor loaded from ORCA susceptibility output.")
+    return g_tensor
