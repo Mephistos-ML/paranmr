@@ -21,6 +21,7 @@ from simpnmr.core.domain.tensor import calc_hfc_dtensor_eff_rel
 logger = logging.getLogger(__name__)
 
 
+# TODO: remove SD from iso eff (SD is traceless so no provides no contribution)
 def build_molecule_from_qca(
     qca: Any,
     *,
