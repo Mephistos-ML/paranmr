@@ -12,15 +12,21 @@ import numpy as np
 from simpnmr.io.qc.errors import ParseError
 
 
-def read_orca_g_tensor(file_name: str, section: str) -> np.ndarray | None:
-    """Extract the electronic g-tensor from an ORCA output file.
+def read_g_tensor_ab_initio(file_name: str, section: str) -> np.ndarray | None:
+    """Extract an ab initio electronic g-tensor from an ORCA output file.
+
+    This reader parses the spin-Hamiltonian g-tensor from an ORCA QDPT block.
+    The `ab initio` qualifier is intentional: this tensor represents the
+    electronic-structure-derived g-tensor and should remain distinct from any
+    other g-tensor variants used elsewhere in the workflow, such as DFT-derived
+    tensors with different physical meaning.
 
     Args:
         file_name: Path to the ORCA output file.
         section: Label of the QDPT section to read (e.g., "casscf" or "nevpt2").
 
     Returns:
-        A 3x3 g-tensor as a NumPy array if found, otherwise None.
+        A 3x3 ab initio g-tensor as a NumPy array if found, otherwise None.
     """
 
     g_tensor = None

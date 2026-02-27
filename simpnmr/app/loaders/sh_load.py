@@ -44,7 +44,7 @@ def load_g_tensor_ab_initio(config: Any) -> NDArray[np.floating] | None:
         logger.info("g-tensor not loaded: susceptibility backend is %s.", backend)
         return None
 
-    g_tensor = rdrs.read_orca_g_tensor(
+    g_tensor = rdrs.read_g_tensor_ab_initio(
         config.susceptibility_file,
         section=section,
     )

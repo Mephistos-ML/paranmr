@@ -46,7 +46,7 @@ from simpnmr.io.qc.backends.orca.geom import (  # noqa
     read_orca5_output_xyz,
     read_orca5_property_xyz,
 )
-from simpnmr.io.qc.backends.orca.gtensor import read_orca_g_tensor  # noqa
+from simpnmr.io.qc.backends.orca.gtensor import read_g_tensor_ab_initio  # noqa
 from simpnmr.io.qc.backends.orca.ham import read_eff_hamiltonian_tensor  # noqa
 from simpnmr.io.qc.backends.orca.hfc import (  # noqa
     read_orca5_output_a_tensors,
