@@ -66,9 +66,9 @@ def read_orca5_property_a_tensors(
 def read_orca5_output_a_tensors(
     file_name: str,
 ) -> tuple[
-    dict[str, npt.NDArray[np.float64]],
-    dict[str, npt.NDArray[np.float64]],
-    dict[str, npt.NDArray[np.float64] | None],
+    dict[str, npt.NDArray],
+    dict[str, npt.NDArray],
+    dict[str, npt.NDArray | None],
 ]:
     """Extract hyperfine (A) tensors from an ORCA 5 output file.
 
@@ -83,9 +83,9 @@ def read_orca5_output_a_tensors(
               when present, otherwise `None`.
     """
 
-    a_fc_tensors: dict[str, npt.NDArray[np.float64]] = {}
-    a_sd_tensors: dict[str, npt.NDArray[np.float64]] = {}
-    a_orb_tensors: dict[str, npt.NDArray[np.float64] | None] = {}
+    a_fc_tensors: dict[str, npt.NDArray] = {}
+    a_sd_tensors: dict[str, npt.NDArray] = {}
+    a_orb_tensors: dict[str, npt.NDArray | None] = {}
 
     with open(file_name, "r") as f:
         for line in f:
@@ -159,9 +159,9 @@ def read_orca5_output_a_tensors(
 def read_orca6_output_a_tensors(
     file_name: str,
 ) -> tuple[
-    dict[str, npt.NDArray[np.float64]],
-    dict[str, npt.NDArray[np.float64]],
-    dict[str, npt.NDArray[np.float64] | None],
+    dict[str, npt.NDArray],
+    dict[str, npt.NDArray],
+    dict[str, npt.NDArray | None],
 ]:
     """Extract hyperfine (A) tensors from an ORCA 6 output file.
 
@@ -182,9 +182,9 @@ def read_orca6_output_a_tensors(
             if "ELECTRIC AND MAGNETIC HYPERFINE STRUCTURE" in line:
                 n_calcd = int(line.split()[5][1:])
 
-    a_fc_tensors: dict[str, npt.NDArray[np.float64]] = {}
-    a_sd_tensors: dict[str, npt.NDArray[np.float64]] = {}
-    a_orb_tensors: dict[str, npt.NDArray[np.float64] | None] = {}
+    a_fc_tensors: dict[str, npt.NDArray] = {}
+    a_sd_tensors: dict[str, npt.NDArray] = {}
+    a_orb_tensors: dict[str, npt.NDArray | None] = {}
 
     # Read hyperfine data
     with open(file_name, "r") as f:
