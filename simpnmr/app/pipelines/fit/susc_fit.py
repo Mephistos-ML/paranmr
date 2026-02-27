@@ -17,8 +17,9 @@ from pathos import multiprocessing as mp
 from simpnmr.app.loaders.dia_load import load_diamagnetic_shifts
 from simpnmr.app.loaders.elstate_load import load_electronic_state
 from simpnmr.app.loaders.exp_load import load_experiments, save_experiment
-from simpnmr.app.loaders.hfc_load import load_base_molecule_from_hyperfines
+from simpnmr.app.loaders.hfc_load import load_hyperfines
 from simpnmr.app.loaders.labels_load import load_chem_labels_from_csv
+from simpnmr.app.loaders.mol_load import load_base_molecule
 from simpnmr.app.params.options import FitSuscRunOptions
 from simpnmr.app.pipelines.fit.assign import generate_assignment_permutations
 from simpnmr.app.pipelines.fit.vt_fit import fit_vt
@@ -73,9 +74,13 @@ def run_fit_susc(config, options: FitSuscRunOptions | None = None) -> int:
     # Make output directory and file
     os.makedirs(config.project_name, exist_ok=True)
 
-    # Load hyperfines / construct base molecule
-    base_molecule = load_base_molecule_from_hyperfines(
-        config=config, delimiter=delimiter
+    # Load Molecule
+    base_molecule = load_base_molecule(config)
+
+    # Load Hyperfines
+    base_molecule = load_hyperfines(
+        molecule=base_molecule,
+        config=config,
     )
 
     # Load electronic state
