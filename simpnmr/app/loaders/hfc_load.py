@@ -114,7 +114,6 @@ def load_base_molecule_from_hyperfines(
             converter="MHz_to_Ang-3",
             elements=config.nuclei_include,
             orbital_contribution=effective_orbital_contribution.value,
-            g_tensor=g_tensor,  # TODO: remove
         )
 
         base_molecule.metadata.setdefault("hyperfine", {})["orbital_contribution"] = (

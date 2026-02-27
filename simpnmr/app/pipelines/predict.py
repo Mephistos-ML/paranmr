@@ -22,7 +22,7 @@ from simpnmr.app.loaders.elstate_load import load_electronic_state
 from simpnmr.app.loaders.exp_load import load_experiments
 from simpnmr.app.loaders.hfc_load import load_base_molecule_from_hyperfines
 from simpnmr.app.loaders.labels_load import load_chem_labels_from_csv
-from simpnmr.app.loaders.sh_load import load_g_tensor
+from simpnmr.app.loaders.sh_load import load_g_tensor_ab_initio
 from simpnmr.app.loaders.susc_load import load_susceptibilities
 from simpnmr.app.params.options import PredictRunOptions
 from simpnmr.app.policies.susc import resolve_susceptibility_source
@@ -79,7 +79,7 @@ def run_predict(config, options: PredictRunOptions | None = None) -> int:
     spec = apply_profile(options.runtime.plot_profile)
 
     # Load g-tensor early (Spin-Hamiltonian parameter) according to policy.
-    g_tensor = load_g_tensor(config)
+    g_tensor = load_g_tensor_ab_initio(config)
 
     # Load hyperfines / construct base molecule
     # TODO: remove g_tensor
