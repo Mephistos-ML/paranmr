@@ -13,8 +13,9 @@ from dataclasses import replace
 import matplotlib.pyplot as plt
 import numpy as np
 
-from simpnmr.app.loaders.hfc_load import load_base_molecule_from_hyperfines
+from simpnmr.app.loaders.hfc_load import load_hyperfines
 from simpnmr.app.loaders.labels_load import load_chem_labels_from_csv
+from simpnmr.app.loaders.mol_load import load_base_molecule
 from simpnmr.app.params.options import PlotHFCIsoAxRunOptions
 from simpnmr.cfg import config as cfg
 from simpnmr.viz.plots.hfc import plot_hyperfine_iso_vs_ax
@@ -43,9 +44,14 @@ def run_plot_hfc_iso_ax(
             symb = symbols[i % len(symbols)]
 
             local_cfg = replace(config, hyperfine_file=hf_file)
-            base_molecule = load_base_molecule_from_hyperfines(
+
+            # Load Molecule
+            base_molecule = load_base_molecule(local_cfg)
+
+            # Load Hyperfines
+            base_molecule = load_hyperfines(
+                molecule=base_molecule,
                 config=local_cfg,
-                delimiter=options.runtime.csv_delimiter,
             )
 
             for av in config.hyperfine_average or []:
