@@ -25,6 +25,10 @@ def read_molecule_csv(file_name: str) -> dict:
     This function preserves the legacy parsing behaviour previously implemented
     in `Molecule.from_csv` (domain), but keeps IO in the IO layer.
 
+    TODO(architecture): Split this reader into separate structural and HFC
+    readers. The current function still mixes base-molecule fields (labels,
+    coords) with hyperfine- and chem-label payloads for legacy compatibility.
+
     Returns dict with keys:
       - labels: list[str]
       - coords: np.ndarray shape (n, 3)
