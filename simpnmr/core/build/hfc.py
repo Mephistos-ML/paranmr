@@ -9,7 +9,6 @@ import logging
 from typing import Any
 
 import numpy as np
-from numpy.typing import NDArray
 
 from simpnmr.core.conv.freq_to_ang import a_tensor_mhz_to_ang
 from simpnmr.core.domain.mol import Molecule
@@ -24,7 +23,6 @@ def build_hfc_from_qca(
     *,
     converter: str | None = "MHz_to_Ang-3",
     orbital_contribution: str = "off",
-    g_tensor: NDArray | None = None,  # TODO: remove
 ) -> Molecule:
     """Build hyperfine data from a parsed QC object and attach it to a Molecule.
 
@@ -49,8 +47,6 @@ def build_hfc_from_qca(
         orbital_contribution: Whether to include `A(ORB)` in the effective tensor
             used to derive the PCS-effective deviatoric part. Supported values
             are "off" and "on".
-        g_tensor: g-tensor required for relativistic correction of the effective
-            deviatoric hyperfine tensor when orbital contribution is enabled.
 
     Returns:
         The input Molecule enriched via per-nucleus hyperfine assignments.
@@ -68,6 +64,14 @@ def build_hfc_from_qca(
         raise ValueError("QCA object is missing required attribute: a_orb")
     if not hasattr(qca, "labels"):
         raise ValueError("QCA object is missing required attribute: labels")
+
+    if orbital_contribution == "on":
+        g_tensor_dft = molecule.sh.g_tensor_dft
+        if g_tensor_dft is None:
+            raise ValueError(
+                "Orbital hyperfine contribution requested, but g-tensor is missing "
+                "and required for correct relativistic PCS scaling."
+            )
 
     labels = [str(lab) for lab in qca.labels]
 
@@ -160,18 +164,13 @@ def build_hfc_from_qca(
         dt = tensor - np.eye(3) * iso_full
 
         if orbital_contribution == "on":
-            if g_tensor is None:
-                raise ValueError(
-                    "Orbital hyperfine contribution requested, but g-tensor is missing "
-                    "and required for correct relativistic PCS scaling."
-                )
-            dt = calc_hfc_dtensor_eff_rel(dt, g_tensor)
+            dt = calc_hfc_dtensor_eff_rel(dt, g_tensor_dft)
             used_g_corr = True
 
         a_dtensor_eff[label] = dt
 
     if used_g_corr:
-        logger.info("Using g-tensor–corrected deviatoric (traceless) HFC tensor")
+        logger.info("Using DFT g-tensor–corrected deviatoric (traceless) HFC tensor")
 
     for nuc in molecule.nuclei:
         label = str(nuc.label)
