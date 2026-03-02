@@ -20,9 +20,13 @@ import numpy as np
 from simpnmr.app.loaders.dia_load import load_diamagnetic_shifts
 from simpnmr.app.loaders.elstate_load import load_electronic_state
 from simpnmr.app.loaders.exp_load import load_experiments
-from simpnmr.app.loaders.hfc_load import load_base_molecule_from_hyperfines
+from simpnmr.app.loaders.hfc_load import load_hyperfines
 from simpnmr.app.loaders.labels_load import load_chem_labels_from_csv
-from simpnmr.app.loaders.sh_load import load_g_tensor_ab_initio
+from simpnmr.app.loaders.mol_load import load_base_molecule
+from simpnmr.app.loaders.sh_load import (
+    load_g_tensor_ab_initio,
+    load_g_tensor_dft,
+)
 from simpnmr.app.loaders.susc_load import load_susceptibilities
 from simpnmr.app.params.options import PredictRunOptions
 from simpnmr.app.policies.susc import resolve_susceptibility_source
@@ -73,21 +77,29 @@ def run_predict(config, options: PredictRunOptions | None = None) -> int:
     if options is None:
         raise ValueError("PredictRunOptions is required")
 
-    delimiter = options.runtime.csv_delimiter
-
     # Build the resolved plotting contract for this run.
     spec = apply_profile(options.runtime.plot_profile)
 
-    # Load g-tensor early (Spin-Hamiltonian parameter) according to policy.
-    g_tensor = load_g_tensor_ab_initio(config)
+    # Load Molecule
+    base_molecule = load_base_molecule(config)
 
-    # Load hyperfines / construct base molecule
-    # TODO: remove g_tensor
-    base_molecule = load_base_molecule_from_hyperfines(
-        config=config, delimiter=delimiter, g_tensor=g_tensor
+    # Load DFT g-tensor (if available)
+    base_molecule.sh.g_tensor_dft = load_g_tensor_dft(
+        config=config,
     )
 
-    # Load electronic state
+    # Load ab-initio g-tensor (if available)
+    base_molecule.sh.g_tensor_ab_initio = load_g_tensor_ab_initio(
+        config=config,
+    )
+
+    # Load Hyperfines
+    base_molecule = load_hyperfines(
+        molecule=base_molecule,
+        config=config,
+    )
+
+    # Load Electronic State
     base_molecule.electronic = load_electronic_state(
         spin_S=config.spin_S,
         orbit_L=config.orbit,
@@ -96,20 +108,18 @@ def run_predict(config, options: PredictRunOptions | None = None) -> int:
         hyperfine_method=config.hyperfine_method if config.spin_S is None else None,
     )
 
-    # Attach spin-Hamiltonian parameters to the domain.
-    base_molecule.sh.g_tensor = g_tensor
-
-    # Resolve susceptibility source for downstream operations (rotations, output annotations).
+    # Resolve susceptibility source for downstream operations
     backend, section = resolve_susceptibility_source(
         config.susceptibility_file,
         config.susceptibility_format,
     )
 
+    # Load Magnetic Susceptibility
     suscs = load_susceptibilities(
         config.susceptibility_file,
         config.susceptibility_format,
         electronic=base_molecule.electronic,
-        g_tensor=g_tensor,
+        g_tensor=base_molecule.sh.g_tensor_ab_initio,
     )
 
     suscs = [
@@ -330,7 +340,7 @@ def run_predict(config, options: PredictRunOptions | None = None) -> int:
                 config.project_name,
                 f"hyperfines_and_shifts_{molecule.susc.temperature:.2f}_K.csv",
             ),
-            delimiter=delimiter,
+            delimiter=options.runtime.csv_delimiter,
             comment=f"T = {molecule.susc.temperature:.2f} K",
             verbose=True,
         )
