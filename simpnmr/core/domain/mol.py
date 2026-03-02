@@ -246,7 +246,8 @@ class SpinHamiltonian:
     from `ElectronicState`, which stores quantum-number metadata.
 
     Attributes:
-        g_tensor: 3x3 g-tensor matrix, if available.
+        g_tensor: 3x3 spin-Hamiltonian g-tensor matrix, if available.
+        g_tensor_dft: Optional 3x3 DFT-derived g-tensor matrix.
         D_tensor: Optional 3x3 zero-field splitting (ZFS) D tensor.
         E: Optional scalar E parameter (alternative ZFS representation).
     """
@@ -254,19 +255,21 @@ class SpinHamiltonian:
     def __init__(
         self,
         g_tensor: ArrayLike | None = None,
+        g_tensor_dft: ArrayLike | None = None,
         D_tensor: ArrayLike | None = None,
         E: float | None = None,
     ) -> None:
-        self.g_tensor = g_tensor
+        self.g_tensor_ab_initio = g_tensor
+        self.g_tensor_dft = g_tensor_dft
         self.D_tensor = D_tensor
         self.E = E
 
     @property
-    def g_tensor(self) -> NDArray | None:
+    def g_tensor_ab_initio(self) -> NDArray | None:
         return self._g_tensor
 
-    @g_tensor.setter
-    def g_tensor(self, value: ArrayLike | None) -> None:
+    @g_tensor_ab_initio.setter
+    def g_tensor_ab_initio(self, value: ArrayLike | None) -> None:
         if value is None:
             self._g_tensor = None
             return
@@ -275,6 +278,22 @@ class SpinHamiltonian:
         if arr.shape != (3, 3):
             raise ValueError("SpinHamiltonian.g_tensor must be a (3, 3) matrix")
         self._g_tensor = arr
+        return
+
+    @property
+    def g_tensor_dft(self) -> NDArray | None:
+        return self._g_tensor_dft
+
+    @g_tensor_dft.setter
+    def g_tensor_dft(self, value: ArrayLike | None) -> None:
+        if value is None:
+            self._g_tensor_dft = None
+            return
+
+        arr = np.asarray(value, dtype=float)
+        if arr.shape != (3, 3):
+            raise ValueError("SpinHamiltonian.g_tensor_dft must be a (3, 3) matrix")
+        self._g_tensor_dft = arr
         return
 
     @property
