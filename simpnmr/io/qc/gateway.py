@@ -46,7 +46,12 @@ from simpnmr.io.qc.backends.orca.geom import (  # noqa
     read_orca5_output_xyz,
     read_orca5_property_xyz,
 )
-from simpnmr.io.qc.backends.orca.gtensor import read_g_tensor_ab_initio  # noqa
+from simpnmr.io.qc.backends.orca.gtensor import (  # noqa
+    read_g_tensor_ab_initio,
+)
+from simpnmr.io.qc.backends.orca.gtensor import (
+    read_g_tensor_dft as read_orca_g_tensor_dft,
+)
 from simpnmr.io.qc.backends.orca.ham import read_eff_hamiltonian_tensor  # noqa
 from simpnmr.io.qc.backends.orca.hfc import (  # noqa
     read_orca5_output_a_tensors,
@@ -65,6 +70,37 @@ from simpnmr.io.qc.errors import (
 from simpnmr.tools.coords import xyz_fmt as xyzf
 
 logger = logging.getLogger(__name__)
+
+
+def read_g_tensor_dft(
+    file_name: str,
+) -> (
+    tuple[npt.NDArray[np.floating], npt.NDArray[np.floating], npt.NDArray[np.floating]]
+    | None
+):
+    """Read decomposed DFT g-tensor contributions from a supported QC file.
+
+    This gateway is the intermediate layer between backend-specific readers and
+    app-level loaders. It exposes the decomposed DFT g-tensor contribution
+    tensors as returned by the backend parser and keeps them separate from any
+    later builder step that assembles the full physical g-tensor.
+
+    Args:
+        file_name: Path to the QC output file.
+
+    Returns:
+        Tuple ``(g_rmc, g_dso, g_pso)`` of (3, 3) arrays when supported,
+        otherwise None.
+
+    Raises:
+        UnsupportedFileError: If the file is not a supported QC output for this
+            reader.
+    """
+
+    if is_orca_output(file_name):
+        return read_orca_g_tensor_dft(file_name)
+    else:
+        return None
 
 
 class QCStructure(ABC):
