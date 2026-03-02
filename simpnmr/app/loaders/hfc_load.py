@@ -16,8 +16,6 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from numpy.typing import NDArray
-
 from simpnmr.app.policies.hfc import (
     OrbitalContribution,
     normalise_orbital_contribution,
@@ -38,7 +36,6 @@ logger = logging.getLogger(__name__)
 def load_hyperfines(
     molecule: Molecule,
     config: Any,
-    g_tensor: NDArray | None = None,  # TODO: remove
 ) -> Molecule:
     """Enrich an existing Molecule with hyperfine information.
 
@@ -102,7 +99,6 @@ def load_hyperfines(
             qc_hyperfine_data,
             converter="MHz_to_Ang-3",
             orbital_contribution=effective_orbital_contribution.value,
-            g_tensor=g_tensor,
         )
 
         molecule.metadata.setdefault("hyperfine", {})["orbital_contribution"] = (
