@@ -120,7 +120,9 @@ def _load_orca_susceptibilities(
     )
 
     if iso_mode == "g_corr":
-        logger.info("Using g-tensor–corrected isotropic magnetic susceptibility")
+        logger.info(
+            "Using Ab-initio g-tensor–corrected isotropic magnetic susceptibility"
+        )
     elif iso_mode == "spin_only":
         logger.info("Using spin-only isotropic magnetic susceptibility")
     elif iso_mode == "raw":
