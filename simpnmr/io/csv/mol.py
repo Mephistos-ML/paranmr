@@ -48,13 +48,13 @@ def read_molecule_csv(file_name: str) -> dict:
         "Adip_zz (ppm Å^-3)",
     ]
     split_hyperfine_cols = [
-        "Aiso_eff (ppm Å^-3)",
-        "dA_xx (ppm Å^-3)",
-        "dA_xy (ppm Å^-3)",
-        "dA_xz (ppm Å^-3)",
-        "dA_yy (ppm Å^-3)",
-        "dA_yz (ppm Å^-3)",
-        "dA_zz (ppm Å^-3)",
+        "A_fc_iso (ppm Å^-3)",
+        "A_sd_xx (ppm Å^-3)",
+        "A_sd_xy (ppm Å^-3)",
+        "A_sd_xz (ppm Å^-3)",
+        "A_sd_yy (ppm Å^-3)",
+        "A_sd_yz (ppm Å^-3)",
+        "A_sd_zz (ppm Å^-3)",
     ]
     split_hyperfine_cols_alt_iso = [
         "Aiso (ppm Å^-3)",
@@ -171,19 +171,19 @@ def read_molecule_csv(file_name: str) -> dict:
                 np.array(
                     [
                         [
-                            row["dA_xx (ppm Å^-3)"],
-                            row["dA_xy (ppm Å^-3)"],
-                            row["dA_xz (ppm Å^-3)"],
+                            row["A_sd_xx (ppm Å^-3)"],
+                            row["A_sd_xy (ppm Å^-3)"],
+                            row["A_sd_xz (ppm Å^-3)"],
                         ],
                         [
-                            row["dA_xy (ppm Å^-3)"],
-                            row["dA_yy (ppm Å^-3)"],
-                            row["dA_yz (ppm Å^-3)"],
+                            row["A_sd_xy (ppm Å^-3)"],
+                            row["A_sd_yy (ppm Å^-3)"],
+                            row["A_sd_yz (ppm Å^-3)"],
                         ],
                         [
-                            row["dA_xz (ppm Å^-3)"],
-                            row["dA_yz (ppm Å^-3)"],
-                            row["dA_zz (ppm Å^-3)"],
+                            row["A_sd_xz (ppm Å^-3)"],
+                            row["A_sd_yz (ppm Å^-3)"],
+                            row["A_sd_zz (ppm Å^-3)"],
                         ],
                     ],
                     dtype=float,
@@ -269,13 +269,13 @@ def _build_molecule_df(molecule):
         "x (Å)",
         "y (Å)",
         "z (Å)",
-        "Aiso_eff (ppm Å^-3)",
-        "dA_xx (ppm Å^-3)",
-        "dA_xy (ppm Å^-3)",
-        "dA_xz (ppm Å^-3)",
-        "dA_yy (ppm Å^-3)",
-        "dA_yz (ppm Å^-3)",
-        "dA_zz (ppm Å^-3)",
+        "A_fc_iso (ppm Å^-3)",
+        "A_sd_xx (ppm Å^-3)",
+        "A_sd_xy (ppm Å^-3)",
+        "A_sd_xz (ppm Å^-3)",
+        "A_sd_yy (ppm Å^-3)",
+        "A_sd_yz (ppm Å^-3)",
+        "A_sd_zz (ppm Å^-3)",
         "δ_total_avg (ppm)",
         "δ_total (ppm)",
         "δ_dia (ppm)",
@@ -286,19 +286,22 @@ def _build_molecule_df(molecule):
 
     nuclei = molecule.nuclei
 
+    hyperfine_meta = molecule.metadata.get("hyperfine", {})
+    has_orb = hyperfine_meta.get("orbital_contribution") == "available"
+
     data = {
         "atom_label ()": [nuc.label for nuc in nuclei],
         "chem_label ()": [nuc.chem_label for nuc in nuclei],
         "x (Å)": [nuc.coord[0] for nuc in nuclei],
         "y (Å)": [nuc.coord[1] for nuc in nuclei],
         "z (Å)": [nuc.coord[2] for nuc in nuclei],
-        "Aiso_eff (ppm Å^-3)": [nuc.A.iso_eff for nuc in nuclei],
-        "dA_xx (ppm Å^-3)": [nuc.A.dtensor_eff[0, 0] for nuc in nuclei],
-        "dA_xy (ppm Å^-3)": [nuc.A.dtensor_eff[0, 1] for nuc in nuclei],
-        "dA_xz (ppm Å^-3)": [nuc.A.dtensor_eff[0, 2] for nuc in nuclei],
-        "dA_yy (ppm Å^-3)": [nuc.A.dtensor_eff[1, 1] for nuc in nuclei],
-        "dA_yz (ppm Å^-3)": [nuc.A.dtensor_eff[1, 2] for nuc in nuclei],
-        "dA_zz (ppm Å^-3)": [nuc.A.dtensor_eff[2, 2] for nuc in nuclei],
+        "A_fc_iso (ppm Å^-3)": [1.0 / 3.0 * np.trace(nuc.A.fc) for nuc in nuclei],
+        "A_sd_xx (ppm Å^-3)": [nuc.A.sd[0, 0] for nuc in nuclei],
+        "A_sd_xy (ppm Å^-3)": [nuc.A.sd[0, 1] for nuc in nuclei],
+        "A_sd_xz (ppm Å^-3)": [nuc.A.sd[0, 2] for nuc in nuclei],
+        "A_sd_yy (ppm Å^-3)": [nuc.A.sd[1, 1] for nuc in nuclei],
+        "A_sd_yz (ppm Å^-3)": [nuc.A.sd[1, 2] for nuc in nuclei],
+        "A_sd_zz (ppm Å^-3)": [nuc.A.sd[2, 2] for nuc in nuclei],
         "δ_total_avg (ppm)": [nuc.shift.avg for nuc in nuclei],
         "δ_total (ppm)": [nuc.shift.total for nuc in nuclei],
         "δ_dia (ppm)": [nuc.shift.dia for nuc in nuclei],
@@ -308,6 +311,18 @@ def _build_molecule_df(molecule):
             nuc.shift.lw if hasattr(nuc.shift, "lw") else 1.0 for nuc in nuclei
         ],
     }
+
+    if has_orb:
+        columns.extend(
+            [
+                "δ_orb_iso (ppm)",
+                "δ_orb_aniso (ppm)",
+            ]
+        )
+        data["δ_orb_iso (ppm)"] = [getattr(nuc.shift, "orb_iso", 0.0) for nuc in nuclei]
+        data["δ_orb_aniso (ppm)"] = [
+            getattr(nuc.shift, "orb_aniso", 0.0) for nuc in nuclei
+        ]
 
     df = pd.DataFrame(data, columns=columns)
 
