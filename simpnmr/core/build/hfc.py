@@ -12,7 +12,6 @@ import numpy as np
 
 from simpnmr.core.conv.freq_to_ang import a_tensor_mhz_to_ang
 from simpnmr.core.domain.mol import Molecule
-from simpnmr.core.domain.tensor import calc_hfc_dtensor_eff_rel
 
 logger = logging.getLogger(__name__)
 
@@ -33,8 +32,9 @@ def build_hfc_from_qca(
       - labels: list-like (n_atoms,) of indexed per-atom labels (e.g. H1, C2)
 
     The derived hyperfine data matches the current Molecule hyperfine contract:
-      - a_iso_eff: isotropic hyperfine coupling derived from A(FC)+A(SD)
-      - a_dtensor_eff: deviatoric tensor derived from the effective tensor
+      - a_fc: physical Fermi-contact hyperfine tensor
+      - a_sd: physical traceless spin-dipolar hyperfine tensor
+      - a_orb: physical traceless orbital hyperfine tensor when available
       - a_tensor_full: full physical hyperfine tensor derived from
         A(FC)+A(SD)+A(ORB) when available
 
@@ -44,17 +44,16 @@ def build_hfc_from_qca(
         converter: Optional converter string controlling unit conversion. When
             set to "MHz_to_Ang-3", component tensors are converted before
             deriving effective quantities. Defaults to "MHz_to_Ang-3".
-        orbital_contribution: Whether to include `A(ORB)` in the effective tensor
-            used to derive the PCS-effective deviatoric part. Supported values
-            are "off" and "on".
+        orbital_contribution: Whether to require and preserve `A(ORB)` as a
+            separate orbital hyperfine contribution. Supported values are
+            "off" and "on".
 
     Returns:
         The input Molecule enriched via per-nucleus hyperfine assignments.
 
     Raises:
         ValueError: If required fields are missing, tensor shapes are invalid,
-            orbital contribution policy is invalid, or g-tensor is required
-            but missing.
+            or orbital contribution policy is invalid.
     """
     if not hasattr(qca, "a_fc"):
         raise ValueError("QCA object is missing required attribute: a_fc")
@@ -64,14 +63,6 @@ def build_hfc_from_qca(
         raise ValueError("QCA object is missing required attribute: a_orb")
     if not hasattr(qca, "labels"):
         raise ValueError("QCA object is missing required attribute: labels")
-
-    if orbital_contribution == "on":
-        g_tensor_dft = molecule.sh.g_tensor_dft
-        if g_tensor_dft is None:
-            raise ValueError(
-                "Orbital hyperfine contribution requested, but g-tensor is missing "
-                "and required for correct relativistic PCS scaling."
-            )
 
     labels = [str(lab) for lab in qca.labels]
 
@@ -133,52 +124,24 @@ def build_hfc_from_qca(
 
         a_tensor_full[label] = total
 
-    a_iso_eff: dict[str, float] = {}
-    for label, fc_sd_tensor in a_fc_sd.items():
-        a_iso_eff[label] = float(np.trace(fc_sd_tensor) / 3.0)
+    for nuc in molecule.nuclei:
+        label = str(nuc.label)
+        if label not in a_fc or label not in a_sd:
+            continue
 
-    a_full_for_pcs: dict[str, np.ndarray] = {}
-    for label, fc_sd_tensor in a_fc_sd.items():
-        total = np.asarray(fc_sd_tensor, dtype=float)
+        nuc.A.fc = a_fc[label]
+        nuc.A.sd = a_sd[label]
 
-        if orbital_contribution == "on":
-            orb = a_orb.get(label)
-            if orb is None:
+        orb_tensor = a_orb.get(label)
+        if orb_tensor is None:
+            if orbital_contribution == "on":
                 raise ValueError(
                     f"A(ORB) contribution requested but missing for label {label}"
                 )
-            orb_arr = np.asarray(orb, dtype=float)
-            if orb_arr.shape != (3, 3):
-                raise ValueError(
-                    f"A(ORB) tensor for {label} must be (3,3), got {orb_arr.shape}"
-                )
-            total = total + orb_arr
+            nuc.A.orb = np.zeros((3, 3), dtype=float)
+        else:
+            nuc.A.orb = orb_tensor
 
-        a_full_for_pcs[label] = total
-
-    a_dtensor_eff: dict[str, np.ndarray] = {}
-    used_g_corr = False
-
-    for label, tensor in a_full_for_pcs.items():
-        iso_full = float(np.trace(tensor) / 3.0)
-        dt = tensor - np.eye(3) * iso_full
-
-        if orbital_contribution == "on":
-            dt = calc_hfc_dtensor_eff_rel(dt, g_tensor_dft)
-            used_g_corr = True
-
-        a_dtensor_eff[label] = dt
-
-    if used_g_corr:
-        logger.info("Using DFT g-tensor–corrected deviatoric (traceless) HFC tensor")
-
-    for nuc in molecule.nuclei:
-        label = str(nuc.label)
-        if label not in a_iso_eff or label not in a_dtensor_eff:
-            continue
-
-        nuc.A.iso_eff = a_iso_eff[label]
-        nuc.A.dtensor_eff = a_dtensor_eff[label]
         nuc.A.tensor_full = a_tensor_full.get(label)
 
     return molecule
@@ -265,8 +228,8 @@ def build_hfc_from_csv(
             for nuc in molecule.nuclei:
                 if str(nuc.label) != lab:
                     continue
-                nuc.A.iso_eff = iso
-                nuc.A.dtensor_eff = dt
+                nuc.A.fc = np.eye(3, dtype=float) * iso
+                nuc.A.sd = dt
                 nuc.A.tensor_full = A
                 break
 
