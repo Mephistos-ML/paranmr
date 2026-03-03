@@ -210,7 +210,10 @@ def main() -> None:
     molecules = load_hyperfine_data(sources, chem_labels=uargs.chem_labels)
 
     all_isos = {
-        name: {nuc.chem_math_label: nuc.A.iso for nuc in molecule.nuclei}
+        name: {
+            nuc.chem_math_label: (1.0 / 3.0) * np.trace(nuc.A.fc)
+            for nuc in molecule.nuclei
+        }
         for name, molecule in molecules.items()
     }
 
@@ -252,7 +255,7 @@ def main() -> None:
 
     all_ax = {
         name: {
-            nuc.chem_math_label: nuc.A.dtensor[0, 0] - nuc.A.dtensor[1, 1]
+            nuc.chem_math_label: nuc.A.sd[0, 0] - nuc.A.sd[1, 1]
             for nuc in molecule.nuclei
         }
         for name, molecule in molecules.items()
@@ -260,7 +263,7 @@ def main() -> None:
 
     all_rho = {
         name: {
-            nuc.chem_math_label: -nuc.A.dtensor[0, 0] - nuc.A.dtensor[1, 1]
+            nuc.chem_math_label: -nuc.A.sd[0, 0] - nuc.A.sd[1, 1]
             for nuc in molecule.nuclei
         }
         for name, molecule in molecules.items()
