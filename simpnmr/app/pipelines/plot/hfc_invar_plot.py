@@ -62,7 +62,8 @@ def run_plot_hfc_iso_ax(
                 base_molecule.apply_chem_labels(al_to_cl, al_to_cml)
 
             iso_div_ax = {
-                nuc.chem_math_label: nuc.A.iso / (nuc.A.dip[0, 0] + nuc.A.dip[1, 1])
+                nuc.chem_math_label: (np.trace(nuc.A.fc) / 3.0)
+                / (nuc.A.sd[0, 0] + nuc.A.sd[1, 1])
                 for nuc in base_molecule.nuclei
             }
 
