@@ -65,9 +65,9 @@ def run_calc_pdip(
             "{}, {}, {:.5f}, {:.5f}, {:.5f}, {:.5f}, {:.5f}, {:.5f}".format(
                 nuc.label,
                 nuc.chem_label,
-                *nuc.A.dtensor[0, :],
-                *nuc.A.dtensor[1, 1:],
-                nuc.A.dtensor[2, 2],
+                *nuc.A.sd[0, :],
+                *nuc.A.sd[1, 1:],
+                nuc.A.sd[2, 2],
             )
             for nuc in molecule.nuclei
         ]
