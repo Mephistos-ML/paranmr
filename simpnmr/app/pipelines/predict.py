@@ -199,6 +199,12 @@ def run_predict(config, options: PredictRunOptions | None = None) -> int:
             )
             base_molecule.rotate_hyperfines(rot_mat)
 
+            # Rotate DFT g-tensor into chi frame
+            if base_molecule.sh.g_tensor_dft is not None:
+                base_molecule.sh.g_tensor_dft = (
+                    rot_mat @ base_molecule.sh.g_tensor_dft @ rot_mat.T
+                )
+
             # Rotate HFC coords frame into chi eigenframe and save the transformed coords
             tfm.rotate_coords_to_chi_frame(
                 config.project_name, config, dft_coords=base_molecule.coords
@@ -393,7 +399,7 @@ def _apply_relaxation_linewidths(config, base_molecule: Molecule):
         A_iso_dict_MHz = {
             nuc.label: float(
                 angstrom_to_mhz(
-                    nuc.A.iso_eff,
+                    1.0 / 3.0 * np.trace(nuc.A.fc),
                     nuclear_gamma=NUCLEAR_GAMMAS[remove_numbers(nuc.label)],
                 )
             )
