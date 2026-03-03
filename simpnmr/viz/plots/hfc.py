@@ -56,25 +56,19 @@ def plot_hyperfine(
     for component in components:
         if component == "iso":
             for nuc in nuclei:
-                hf_components[component][nuc.label] = nuc.A.iso_eff
+                hf_components[component][nuc.label] = 1.0 / 3.0 * np.trace(nuc.A.fc)
                 complabels[component] = r"$A_\mathregular{iso}$"
         elif component == "ax":
             for nuc in nuclei:
-                hf_components[component][nuc.label] = (
-                    nuc.A.dtensor[0, 0] - nuc.A.dtensor[1, 1]
-                )
+                hf_components[component][nuc.label] = nuc.A.sd[0, 0] - nuc.A.sd[1, 1]
                 complabels[component] = r"$dA_\mathregular{ax}$"
         elif component == "rho":
             for nuc in nuclei:
-                hf_components[component][nuc.label] = (
-                    nuc.A.dtensor[0, 0] + nuc.A.dtensor[1, 1]
-                )
+                hf_components[component][nuc.label] = nuc.A.sd[0, 0] + nuc.A.sd[1, 1]
                 complabels[component] = r"$dA_\mathregular{rho}$"
         elif "d" in component:
             for nuc in nuclei:
-                hf_components[component][nuc.label] = nuc.A.dtensor[
-                    comp2ind(component[1:])
-                ]
+                hf_components[component][nuc.label] = nuc.A.sd[comp2ind(component[1:])]
                 complabels[component] = rf"$dA_{{\mathregular{{{component[1:]}}}}}$"
         elif component in ["x", "y", "z"]:  # eigenvalues
             _to_ind = {"x": 0, "y": 1, "z": 2}
@@ -83,9 +77,7 @@ def plot_hyperfine(
                 complabels[component] = rf"$A_{{\mathregular{{{component}}}}}$"
         else:
             for nuc in nuclei:
-                hf_components[component][nuc.label] = nuc.A.dtensor_eff[
-                    comp2ind(component)
-                ]
+                hf_components[component][nuc.label] = nuc.A.sd[comp2ind(component)]
                 complabels[component] = rf"$A_\mathregular{{{component}}}$"
 
     fig, ax = plt.subplots(1, 1, num=window_title)
@@ -247,30 +239,32 @@ def plot_hyperfine_spread(
     for component in components:
         if component == "iso":
             for nuc in nuclei:
-                a_comps[component][nuc.chem_math_label].append(nuc.A.iso)
+                a_comps[component][nuc.chem_math_label].append(
+                    (1.0 / 3.0) * np.trace(nuc.A.fc)
+                )
                 legend_labels[component] = r"$A_\mathregular{iso}$"
         elif component == "ax":
             for nuc in nuclei:
                 a_comps[component][nuc.chem_math_label].append(
-                    nuc.A.dtensor[0, 0] - nuc.A.dtensor[1, 1]
+                    nuc.A.sd[0, 0] - nuc.A.sd[1, 1]
                 )
                 legend_labels[component] = r"$dA_\mathregular{ax}$"
         elif component == "rho":
             for nuc in nuclei:
                 a_comps[component][nuc.chem_math_label].append(
-                    nuc.A.dtensor[0, 0] + nuc.A.dtensor[1, 1]
+                    nuc.A.sd[0, 0] + nuc.A.sd[1, 1]
                 )
                 legend_labels[component] = r"$dA_\mathregular{rho}$"
         elif "d" in component:
             for nuc in nuclei:
                 a_comps[component][nuc.chem_math_label].append(
-                    nuc.A.dtensor[comp2ind(component[1:])]
+                    nuc.A.sd[comp2ind(component[1:])]
                 )
                 legend_labels[component] = rf"$dA_{{\mathregular{{{component[1:]}}}}}$"
         else:
             for nuc in nuclei:
                 a_comps[component][nuc.chem_math_label].append(
-                    nuc.A.dtensor_eff[comp2ind(component)]
+                    nuc.A.sd[comp2ind(component)]
                 )
                 legend_labels[component] = rf"$A_\mathregular{{{component}}}$"
 
