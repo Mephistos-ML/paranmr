@@ -115,13 +115,13 @@ def _build_hyperfines_df(molecule):
     columns = [
         "atom_label ()",
         "chem_label ()",
-        "Aiso (ppm Å^-3)",
-        "dA_xx (ppm Å^-3)",
-        "dA_xy (ppm Å^-3)",
-        "dA_xz (ppm Å^-3)",
-        "dA_yy (ppm Å^-3)",
-        "dA_yz (ppm Å^-3)",
-        "dA_zz (ppm Å^-3)",
+        "A_fc_iso (ppm Å^-3)",
+        "A_sd_xx (ppm Å^-3)",
+        "A_sd_xy (ppm Å^-3)",
+        "A_sd_xz (ppm Å^-3)",
+        "A_sd_yy (ppm Å^-3)",
+        "A_sd_yz (ppm Å^-3)",
+        "A_sd_zz (ppm Å^-3)",
     ]
 
     nuclei = molecule.nuclei
@@ -129,13 +129,13 @@ def _build_hyperfines_df(molecule):
     data = {
         "atom_label ()": [nuc.label for nuc in nuclei],
         "chem_label ()": [nuc.chem_label for nuc in nuclei],
-        "Aiso (ppm Å^-3)": [nuc.A.iso for nuc in nuclei],
-        "dA_xx (ppm Å^-3)": [nuc.A.dtensor[0, 0] for nuc in nuclei],
-        "dA_xy (ppm Å^-3)": [nuc.A.dtensor[0, 1] for nuc in nuclei],
-        "dA_xz (ppm Å^-3)": [nuc.A.dtensor[0, 2] for nuc in nuclei],
-        "dA_yy (ppm Å^-3)": [nuc.A.dtensor[1, 1] for nuc in nuclei],
-        "dA_yz (ppm Å^-3)": [nuc.A.dtensor[1, 2] for nuc in nuclei],
-        "dA_zz (ppm Å^-3)": [nuc.A.dtensor[2, 2] for nuc in nuclei],
+        "A_fc_iso (ppm Å^-3)": [(1.0 / 3.0) * np.trace(nuc.A.fc) for nuc in nuclei],
+        "A_sd_xx (ppm Å^-3)": [nuc.A.sd[0, 0] for nuc in nuclei],
+        "A_sd_xy (ppm Å^-3)": [nuc.A.sd[0, 1] for nuc in nuclei],
+        "A_sd_xz (ppm Å^-3)": [nuc.A.sd[0, 2] for nuc in nuclei],
+        "A_sd_yy (ppm Å^-3)": [nuc.A.sd[1, 1] for nuc in nuclei],
+        "A_sd_yz (ppm Å^-3)": [nuc.A.sd[1, 2] for nuc in nuclei],
+        "A_sd_zz (ppm Å^-3)": [nuc.A.sd[2, 2] for nuc in nuclei],
     }
 
     df = pd.DataFrame(data, columns=columns)
