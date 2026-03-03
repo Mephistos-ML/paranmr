@@ -254,12 +254,12 @@ class SpinHamiltonian:
 
     def __init__(
         self,
-        g_tensor: ArrayLike | None = None,
+        g_tensor_ab_initio: ArrayLike | None = None,
         g_tensor_dft: ArrayLike | None = None,
         D_tensor: ArrayLike | None = None,
         E: float | None = None,
     ) -> None:
-        self.g_tensor_ab_initio = g_tensor
+        self.g_tensor_ab_initio = g_tensor_ab_initio
         self.g_tensor_dft = g_tensor_dft
         self.D_tensor = D_tensor
         self.E = E
@@ -370,8 +370,8 @@ class Molecule:
                 label = nuc.label
             else:
                 label = f"{nuc.chem_label} ({nuc.label})"
-
-            string += f"{label} {nuc.A.iso_eff: .6f}\n"
+            a_iso = 1.0 / 3.0 * np.trace(nuc.A.fc)
+            string += f"{label} {a_iso: .6f}\n"
 
         string += subtitle("Anisotropic (traceless) A Tensor (ppm Å^-3)")
 
@@ -382,13 +382,11 @@ class Molecule:
                 label = f"{nuc.chem_label} ({nuc.label})"
 
             string += "\n{:} {: .6f} {: .6f} {: .6f}\n".format(
-                " " * len(label), *nuc.A.dtensor_eff[0]
+                " " * len(label), *nuc.A.sd[0]
             )
+            string += "{:} {: .6f} {: .6f} {: .6f}\n".format(label, *nuc.A.sd[1])
             string += "{:} {: .6f} {: .6f} {: .6f}\n".format(
-                label, *nuc.A.dtensor_eff[1]
-            )
-            string += "{:} {: .6f} {: .6f} {: .6f}\n".format(
-                " " * len(label), *nuc.A.dtensor_eff[2]
+                " " * len(label), *nuc.A.sd[2]
             )
 
         return string
@@ -524,8 +522,9 @@ class Molecule:
         for ents in av_chemlabels:
             group = [nuc for nuc in self.nuclei if nuc.chem_label in ents]
 
-            avg_iso = float(np.mean([nuc.A.iso_eff for nuc in group]))
-            avg_dt = np.mean([nuc.A.dtensor_eff for nuc in group], axis=0)
+            avg_fc = np.mean([nuc.A.fc for nuc in group], axis=0)
+            avg_sd = np.mean([nuc.A.sd for nuc in group], axis=0)
+            avg_orb = np.mean([nuc.A.orb for nuc in group], axis=0)
 
             have_full = all(nuc.A.tensor_full is not None for nuc in group)
             avg_full = None
@@ -533,8 +532,9 @@ class Molecule:
                 avg_full = np.mean([nuc.A.tensor_full for nuc in group], axis=0)
 
             for nuc in group:
-                nuc.A.iso_eff = avg_iso
-                nuc.A.dtensor_eff = avg_dt
+                nuc.A.fc = avg_fc
+                nuc.A.sd = avg_sd
+                nuc.A.orb = avg_orb
                 if have_full:
                     nuc.A.tensor_full = avg_full
 
@@ -561,7 +561,9 @@ class Molecule:
             raise ValueError("rot_mat must be a (3x3) rotation matrix")
 
         for nuc in self.nuclei:
-            nuc.A.dtensor_eff = rot_mat @ nuc.A.dtensor_eff @ rot_mat.T
+            nuc.A.fc = rot_mat @ nuc.A.fc @ rot_mat.T
+            nuc.A.sd = rot_mat @ nuc.A.sd @ rot_mat.T
+            nuc.A.orb = rot_mat @ nuc.A.orb @ rot_mat.T
             if nuc.A.tensor_full is not None:
                 nuc.A.tensor_full = rot_mat @ nuc.A.tensor_full @ rot_mat.T
 
@@ -597,43 +599,50 @@ class Molecule:
                     continue
                 val = Hyperfine.calc_pdip(nuc.coord, self.coords[it[0]])
                 val *= 1e6 / len(centre_labels)
-                nuc.A.dtensor_eff = nuc.A.dtensor_eff + val
+                nuc.A.sd = nuc.A.sd + val
                 if nuc.A.tensor_full is not None:
                     nuc.A.tensor_full = nuc.A.tensor_full + val
         return
 
-    def calculate_shifts(self, shift_terms="full"):
-        """Compute paramagnetic chemical shift components for all nuclei.
+    def calculate_shifts(self):
+        """Compute chemical shift components for all nuclei.
 
-        This method acts as orchestration/policy for shift calculations:
-        it selects the hyperfine tensor representation used for pNMR shift
-        evaluation (raw vs effective relativistic tensor) and delegates the
-        numerical contractions to `Shift` methods.
-
-        Args:
-            shift_terms: Shift terms to calculate. Supported values are
-                ``"full"``, ``"pc"``, and ``"fc"``. ``"full"`` expands to
-                ``["pc", "fc"]``.
+        This method computes all standard shift contributions that are available
+        from the current molecule domain state. Fermi-contact and pseudocontact
+        contributions are always evaluated. Orbital contributions are evaluated
+        only when the hyperfine metadata reports orbital contribution as
+        available and a DFT-derived g-tensor is present in the spin-Hamiltonian
+        container.
 
         Raises:
-            ValueError: If an unsupported shift term is provided.
+            ValueError: If orbital contribution is marked as available but the
+                required DFT-derived g-tensor is missing.
         """
 
-        if isinstance(shift_terms, str):
-            shift_terms = [shift_terms]
+        hyperfine_meta = self.metadata.get("hyperfine", {})
+        orb_available = hyperfine_meta.get("orbital_contribution") == "available"
 
-        # Swap full for actual terms.
-        shift_terms = [
-            nst for st in shift_terms for nst in (st if st != "full" else ["pc", "fc"])
-        ]
-
-        if "fc" not in shift_terms and "pc" not in shift_terms:
-            raise ValueError("Unknown shift specified")
+        g_tensor_dft = None
+        if orb_available:
+            g_tensor_dft = self.sh.g_tensor_dft
+            if g_tensor_dft is None:
+                raise ValueError(
+                    "Orbital contribution is marked as available, but "
+                    "SpinHamiltonian.g_tensor_dft is missing."
+                )
 
         for nuc in self.nuclei:
             nuc.shift.pc = Shift.calc_pcs(nuc.A, self.susc)
-            if "fc" in shift_terms:
-                nuc.shift.fc = Shift.calc_fcs(nuc.A, self.susc)
+            nuc.shift.fc = Shift.calc_fcs(nuc.A, self.susc)
+
+            if orb_available:
+                nuc.shift.orb_iso = Shift.calc_orb_iso(nuc.A, self.susc, g_tensor_dft)
+                nuc.shift.orb_aniso = Shift.calc_orb_aniso(
+                    nuc.A, self.susc, g_tensor_dft
+                )
+            else:
+                nuc.shift.orb_iso = 0.0
+                nuc.shift.orb_aniso = 0.0
 
         return
 
