@@ -973,10 +973,10 @@ class IsoEigenFitter(SusceptibilityModel):
         dyy = parameters["dyy"]
         iso = parameters["iso"]
         shifts = {
-            nuc.label: nuc.A.iso_eff * iso
+            nuc.label: (1.0 / 3.0 * np.trace(nuc.A.fc)) * iso
             + nuc.shift.dia
-            + 1.0 / 3.0 * dxx * (nuc.A.dtensor_eff[0, 0] - nuc.A.dtensor_eff[2, 2])
-            + 1.0 / 3.0 * dyy * (nuc.A.dtensor_eff[1, 1] - nuc.A.dtensor_eff[2, 2])
+            + 1.0 / 3.0 * dxx * (nuc.A.sd[0, 0] - nuc.A.sd[2, 2])
+            + 1.0 / 3.0 * dyy * (nuc.A.sd[1, 1] - nuc.A.sd[2, 2])
             for nuc in nuclei
         }
 
