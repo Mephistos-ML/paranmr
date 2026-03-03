@@ -13,16 +13,22 @@ from simpnmr.core.const.physics import GE
 
 
 class Hyperfine:
-    """Hyperfine coupling container for a single nucleus (effective quantities).
+    """Hyperfine coupling container for a single nucleus.
 
     Args:
-        iso_eff: Effective isotropic hyperfine coupling (``ppm Å^-3``).
-        dtensor_eff: Effective deviatoric (traceless) hyperfine tensor (``ppm Å^-3``).
+        fc: Isotropic Fermi-contact hyperfine tensor (``ppm Å^-3``).
+        sd: Traceless spin-dipolar contribution to the hyperfine tensor
+            (``ppm Å^-3``).
+        orb: Traceless orbital contribution to the hyperfine tensor
+            (``ppm Å^-3``).
         tensor_full: Physical full hyperfine tensor (3x3) if available.
 
     Attributes:
-        iso_eff: Effective isotropic hyperfine coupling (``ppm Å^-3``).
-        dtensor_eff: Effective deviatoric (traceless) hyperfine tensor (``ppm Å^-3``).
+        fc: Isotropic Fermi-contact hyperfine tensor (``ppm Å^-3``).
+        sd: Traceless spin-dipolar contribution to the hyperfine tensor
+            (``ppm Å^-3``).
+        orb: Traceless orbital contribution to the hyperfine tensor
+            (``ppm Å^-3``).
         tensor_full: Physical full hyperfine tensor (3x3) if available.
         eigvals: Eigenvalues of ``tensor_full``.
         eigvecs: Eigenvectors corresponding to ``eigvals``.
@@ -31,22 +37,36 @@ class Hyperfine:
     def __init__(
         self,
         *,
-        iso_eff: float = 0.0,
-        dtensor_eff: NDArray | None = None,
+        fc: NDArray | None = None,
+        sd: NDArray | None = None,
+        orb: NDArray | None = None,
         tensor_full: NDArray | None = None,
     ) -> None:
         self._eigvals = None
         self._eigvecs = None
-
-        self.iso_eff = float(iso_eff)
-
-        if dtensor_eff is None:
-            self.dtensor_eff = np.zeros((3, 3), dtype=float)
+        if fc is None:
+            self.fc = np.zeros((3, 3), dtype=float)
         else:
-            arr = np.asarray(dtensor_eff, dtype=float)
+            arr = np.asarray(fc, dtype=float)
             if arr.shape != (3, 3):
-                raise ValueError("dtensor_eff must be a (3x3) matrix")
-            self.dtensor_eff = arr
+                raise ValueError("fc must be a (3x3) matrix")
+            self.fc = arr
+
+        if sd is None:
+            self.sd = np.zeros((3, 3), dtype=float)
+        else:
+            arr = np.asarray(sd, dtype=float)
+            if arr.shape != (3, 3):
+                raise ValueError("sd must be a (3x3) matrix")
+            self.sd = arr
+
+        if orb is None:
+            self.orb = np.zeros((3, 3), dtype=float)
+        else:
+            arr = np.asarray(orb, dtype=float)
+            if arr.shape != (3, 3):
+                raise ValueError("orb must be a (3x3) matrix")
+            self.orb = arr
 
         if tensor_full is None:
             self.tensor_full = None
@@ -54,28 +74,46 @@ class Hyperfine:
             self.tensor_full = tensor_full
 
     @property
-    def iso_eff(self) -> float:
-        """Effective isotropic hyperfine coupling constant (``ppm Å^-3``)."""
-        return self._iso_eff
+    def fc(self) -> NDArray:
+        """Fermi-contact hyperfine tensor (``ppm Å^-3``)."""
+        return self._fc
 
-    @iso_eff.setter
-    def iso_eff(self, val: float):
-        self._iso_eff = float(val)
+    @fc.setter
+    def fc(self, tensor: NDArray):
+        arr = np.asarray(tensor, dtype=float)
+        if arr.shape != (3, 3):
+            raise ValueError("fc must be a (3x3) matrix")
+        self._fc = arr
         self._eigvals = None
         self._eigvecs = None
         return
 
     @property
-    def dtensor_eff(self) -> NDArray:
-        """Effective deviatoric (traceless) hyperfine tensor (``ppm Å^-3``)."""
-        return self._dtensor_eff
+    def sd(self) -> NDArray:
+        """Traceless spin-dipolar contribution to the hyperfine tensor."""
+        return self._sd
 
-    @dtensor_eff.setter
-    def dtensor_eff(self, tensor: NDArray):
+    @sd.setter
+    def sd(self, tensor: NDArray):
         arr = np.asarray(tensor, dtype=float)
         if arr.shape != (3, 3):
-            raise ValueError("dtensor_eff must be a (3x3) matrix")
-        self._dtensor_eff = arr
+            raise ValueError("sd must be a (3x3) matrix")
+        self._sd = arr
+        self._eigvals = None
+        self._eigvecs = None
+        return
+
+    @property
+    def orb(self) -> NDArray:
+        """Traceless orbital contribution to the hyperfine tensor."""
+        return self._orb
+
+    @orb.setter
+    def orb(self, tensor: NDArray):
+        arr = np.asarray(tensor, dtype=float)
+        if arr.shape != (3, 3):
+            raise ValueError("orb must be a (3x3) matrix")
+        self._orb = arr
         self._eigvals = None
         self._eigvecs = None
         return
@@ -109,7 +147,7 @@ class Hyperfine:
 
     @property
     def eigvals(self) -> NDArray:
-        """Eigenvalues of the effective hyperfine tensor."""
+        """Eigenvalues of the physical full hyperfine tensor."""
         if self._eigvals is None:
             self.eigvals, self.eigvecs = self.calc_eig()
         return self._eigvals
@@ -124,7 +162,7 @@ class Hyperfine:
 
     @property
     def eigvecs(self) -> NDArray:
-        """Eigenvectors of the effective hyperfine tensor (dimensionless)."""
+        """Eigenvectors of the physical full hyperfine tensor (dimensionless)."""
         if self._eigvecs is None:
             self.eigvals, self.eigvecs = self.calc_eig()
         return self._eigvecs
@@ -139,7 +177,7 @@ class Hyperfine:
         return
 
     def calc_eig(self):
-        """Computes and stores eigenvalues/eigenvectors of the effective tensor.
+        """Computes and stores eigenvalues/eigenvectors of ``tensor_full``.
 
         Returns:
             A tuple ``(vals, vecs)`` as returned by ``numpy.linalg.eigh``.
@@ -175,43 +213,6 @@ class Hyperfine:
         pdip /= 4 * np.pi
 
         return pdip
-
-
-def calc_hfc_dtensor_eff_rel(
-    dtensor: NDArray,
-    g_tensor: NDArray,
-) -> NDArray:
-    """Calculate relativistic g-tensor scaling to a deviatoric hyperfine tensor.
-
-    This implements the transformation used in relativistic PCS formalisms:
-
-        A_eff = (GE * inv(g_tensor).T) @ dtensor.T
-
-    The function is purely algebraic and does not perform any policy or
-    availability checks.
-
-    Args:
-        dtensor: Deviatoric hyperfine tensor (3x3), traceless.
-        g_tensor: Electronic g-tensor (3x3).
-
-    Returns:
-        Transformed deviatoric hyperfine tensor (3x3).
-
-    Raises:
-        ValueError: If input tensors are not (3x3).
-    """
-
-    dtensor = np.asarray(dtensor)
-    g_tensor = np.asarray(g_tensor)
-
-    if dtensor.shape != (3, 3):
-        raise ValueError("dtensor must be a (3x3) matrix")
-    if g_tensor.shape != (3, 3):
-        raise ValueError("g_tensor must be a (3x3) matrix")
-
-    g_inv_T = la.inv(g_tensor).T
-    # Note: transpose is required for relativistic PCS formalisms
-    return GE * (g_inv_T @ dtensor.T)
 
 
 class Susceptibility:
@@ -584,19 +585,32 @@ class Shift:
     Attributes:
         dia: Diamagnetic chemical shift (ppm).
         fc: Fermi contact chemical shift (ppm).
+        orb_iso: Orbital isotropic shift contribution (ppm).
+        orb_aniso: Orbital anisotropic shift contribution (ppm).
+        orb: Total orbital shift contribution (ppm), equal to ``orb_iso + orb_aniso``.
         pc: Pseudocontact chemical shift (ppm).
         hf: Hyperfine chemical shift (ppm), equal to ``fc + pc``.
-        total: Total chemical shift (ppm), equal to ``dia + hf``.
+        paramag: Total paramagnetic chemical shift (ppm), equal to
+            ``fc + pc + orb``.
+        total: Total chemical shift (ppm), equal to ``dia + paramag``.
         avg: Averaged total shift (ppm). Defaults to ``total`` and is reset to
             ``total`` whenever any component is modified.
         lw: Linewidth of the signal.
     """
 
     def __init__(
-        self, dia: float = 0.0, pc: float = 0.0, fc: float = 0.0, lw: float = 1.0
+        self,
+        dia: float = 0.0,
+        pc: float = 0.0,
+        fc: float = 0.0,
+        orb_iso: float = 0.0,
+        orb_aniso: float = 0.0,
+        lw: float = 1.0,
     ) -> None:
         self._pc = pc  # Pseudocontact
         self._fc = fc  # Fermi Contact
+        self._orb_iso = orb_iso  # Orbital isotropic
+        self._orb_aniso = orb_aniso  # Orbital anisotropic
         self._dia = dia  # Diamagnetic
         self._lw = lw
         self._avg = copy.copy(self.total)
@@ -604,11 +618,15 @@ class Shift:
 
     @property
     def total(self) -> float:
-        return self.dia + self.hf
+        return self.dia + self.paramag
 
     @property
     def hf(self) -> float:
         return self.pc + self.fc
+
+    @property
+    def paramag(self) -> float:
+        return self.hf + self.orb
 
     @property
     def avg(self) -> float:
@@ -646,6 +664,34 @@ class Shift:
         return
 
     @property
+    def orb_iso(self) -> float:
+        return self._orb_iso
+
+    @orb_iso.setter
+    def orb_iso(self, val: float):
+        if not isinstance(val, (float, np.floating)):
+            raise TypeError("Chemical shift must be a float")
+        self._orb_iso = float(val)
+        self.avg = copy.copy(self.total)
+        return
+
+    @property
+    def orb_aniso(self) -> float:
+        return self._orb_aniso
+
+    @orb_aniso.setter
+    def orb_aniso(self, val: float):
+        if not isinstance(val, (float, np.floating)):
+            raise TypeError("Chemical shift must be a float")
+        self._orb_aniso = float(val)
+        self.avg = copy.copy(self.total)
+        return
+
+    @property
+    def orb(self) -> float:
+        return self.orb_iso + self.orb_aniso
+
+    @property
     def dia(self) -> float:
         return self._dia
 
@@ -669,6 +715,80 @@ class Shift:
         return
 
     @staticmethod
+    def calc_orb_iso(
+        A: Hyperfine, chi: "Susceptibility", g_tensor_dft: NDArray
+    ) -> float:
+        """
+        Compute isotropic part of the orbital shift contribution.
+
+        Args:
+            A: Hyperfine coupling container providing spin-dipolar and orbital tensors.
+            chi: Magnetic susceptibility tensor.
+            g_tensor_dft: Electronic g-tensor derived from DFT (3x3).
+
+        Returns:
+            Isotropic part of the orbital shift contribution.
+        """
+        g_tensor_dft = np.asarray(g_tensor_dft, dtype=float)
+        if g_tensor_dft.shape != (3, 3):
+            raise ValueError("g_tensor_dft must be a (3, 3) matrix")
+
+        try:
+            g_inv_t = la.inv(g_tensor_dft).T
+        except la.LinAlgError as exc:
+            raise ValueError("g_tensor_dft must be invertible") from exc
+
+        a_orb_eff = GE * (g_inv_t @ (A.sd + A.orb).T)
+        shift = chi.iso * (1.0 / 3.0) * np.trace(a_orb_eff)
+        return shift
+
+    @staticmethod
+    def calc_orb_aniso(
+        A: Hyperfine, chi: "Susceptibility", g_tensor_dft: NDArray
+    ) -> float:
+        """
+        Compute anisotropic part of the orbital shift contribution.
+
+        Args:
+            A: Hyperfine coupling container providing spin-dipolar and orbital tensors.
+            chi: Magnetic susceptibility tensor.
+            g_tensor_dft: Electronic g-tensor derived from DFT (3x3).
+
+        Returns:
+            Anisotropic part of the orbital shift contribution.
+        """
+        g_tensor_dft = np.asarray(g_tensor_dft, dtype=float)
+        if g_tensor_dft.shape != (3, 3):
+            raise ValueError("g_tensor_dft must be a (3, 3) matrix")
+
+        try:
+            g_inv_t = la.inv(g_tensor_dft).T
+        except la.LinAlgError as exc:
+            raise ValueError("g_tensor_dft must be invertible") from exc
+
+        a_orb_eff = GE * (g_inv_t @ (A.sd + A.orb).T)
+        shift = (1.0 / 3.0) * np.trace(chi.dtensor @ a_orb_eff - chi.dtensor @ A.sd)
+        return shift
+
+    @staticmethod
+    def calc_orb(A: Hyperfine, chi: "Susceptibility", g_tensor_dft: NDArray) -> float:
+        """
+        Compute the orbital shift contribution.
+
+        Args:
+            A: Hyperfine coupling container providing spin-dipolar and orbital tensors.
+            chi: Magnetic susceptibility tensor.
+            g_tensor_dft: Electronic g-tensor derived from DFT (3x3).
+
+        Returns:
+            The orbital shift contribution.
+        """
+        shift = Shift.calc_orb_iso(A, chi, g_tensor_dft) + Shift.calc_orb_aniso(
+            A, chi, g_tensor_dft
+        )
+        return shift
+
+    @staticmethod
     def calc_pcs(
         A: Hyperfine,
         chi: "Susceptibility",
@@ -676,25 +796,29 @@ class Shift:
         """Compute the pseudocontact shift contribution.
 
         Args:
-            A: Hyperfine coupling container providing effective tensors.
+            A: Hyperfine coupling container providing the spin-dipolar tensor.
             chi: Magnetic susceptibility tensor.
 
         Returns:
             The pseudocontact shift (PCS).
         """
-        shift = 1.0 / 3.0 * np.trace(chi.dtensor @ A.dtensor_eff)
+        shift = 1.0 / 3.0 * np.trace(chi.dtensor @ A.sd)
         return shift
 
     @staticmethod
     def calc_fcs(A: Hyperfine, chi: "Susceptibility") -> float:
         """Computes the Fermi contact contribution to the chemical shift."""
-        shift = chi.iso * A.iso_eff
+        shift = chi.iso * (1.0 / 3.0 * np.trace(A.fc))
         return shift
 
     @staticmethod
-    def calc_hfs(
-        A: Hyperfine,
-        chi: "Susceptibility",
+    def calc_paramag(
+        A: Hyperfine, chi: "Susceptibility", g_tensor_dft: NDArray
     ) -> float:
-        """Computes the total hyperfine shift (Fermi contact + PCS)."""
-        return Shift.calc_fcs(A, chi) + Shift.calc_pcs(A, chi)
+        """Compute the total paramagnetic shift (FC + PCS + orbital)."""
+        print("check")
+        return (
+            Shift.calc_fcs(A, chi)
+            + Shift.calc_pcs(A, chi)
+            + Shift.calc_orb(A, chi, g_tensor_dft)
+        )
