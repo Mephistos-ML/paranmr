@@ -93,7 +93,8 @@ Application layer (``simpnmr.app``)
 -----------------------------------
 
 The application layer orchestrates complete workflows. It connects user
-configuration, domain logic, IO, and visualisation into executable pipelines.
+configuration, domain logic, builders, IO, and visualisation into executable
+pipelines.
 
 Key responsibilities:
 
@@ -106,10 +107,10 @@ Key responsibilities:
 Submodules:
 
 - ``loaders``: application-layer adapters that translate user configuration into
-  fully initialised domain objects. Loaders select the appropriate IO backend
-  (e.g. CSV, quantum chemistry outputs) based on configuration options and
-  delegate file parsing to ``simpnmr.io`` and object construction to
-  ``simpnmr.core.build``.
+  domain-ready data or enriched domain objects. Loaders select the appropriate
+  IO backend (e.g. CSV, quantum chemistry outputs) based on configuration
+  options, delegate file parsing to ``simpnmr.io``, and delegate scientific
+  assembly to ``simpnmr.core.build``.
 - ``policies``: application-level decision logic that defines *how* workflows resolve ambiguities or defaults (e.g. backend routing, method prioritisation, legacy overrides). Policies act as a single source of truth for such decisions and are consumed by loaders and pipelines.
 - ``pipelines``: end-to-end workflow orchestration (e.g. prediction, fitting).
   Pipelines wire together loaders, core computations, output writers, and
@@ -132,6 +133,8 @@ independent of file formats, CLI concerns, and plotting.
 Subpackages include:
 
 - ``domain``: core data models (e.g. nuclei, tensors, electronic states)
+- ``build``: builder utilities that assemble canonical domain entities from
+  parsed raw inputs
 - ``pcs``: paramagnetic chemical shift calculations
 - ``fitting``: susceptibility fitting models and optimisation logic
 - ``relaxation``: relaxation and broadening models
@@ -139,13 +142,15 @@ Subpackages include:
 - ``spectrum``: spectrum construction and manipulation
 - ``const`` and ``conv``: physical constants and unit transformations
 
-All domain rules and mathematical assumptions must live in this layer.
+All domain rules, builder logic, and mathematical assumptions must live in this
+layer.
 
 
 IO layer (``simpnmr.io``)
 -------------------------
 
 The IO layer is responsible for reading and writing data in external formats.
+It performs parsing and serialization, but not scientific assembly.
 
 It includes parsers for:
 
@@ -154,7 +159,9 @@ It includes parsers for:
 - XYZ structures
 - plain text tensor formats
 
-The IO layer may not implement scientific logic or application policy; it only translates external representations into internal domain objects and vice versa.
+The IO layer may not implement scientific logic or application policy; it only
+translates external representations into parsed internal representations (and
+vice versa), leaving scientific assembly to ``simpnmr.core.build``.
 
 
 Visualisation layer (``simpnmr.viz``)
@@ -211,8 +218,10 @@ Conventions and constraints
 ---------------------------
 
 - Application policy (e.g. default selection rules, priority ordering, legacy overrides) must live in ``simpnmr.app.policies`` and must not be duplicated across loaders or pipelines.
-
-- Domain logic must not depend on IO or CLI modules.
+- Scientific assembly of parsed data into canonical domain entities must live in
+  ``simpnmr.core.build``. Loaders and pipelines may orchestrate builder calls
+  but must not duplicate builder logic.
+- Domain logic and builders must not depend on IO or CLI modules.
 
 - Public interfaces must be treated as stable contracts. Public APIs include:
 

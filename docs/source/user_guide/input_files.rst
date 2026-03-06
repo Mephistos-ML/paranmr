@@ -90,6 +90,10 @@ Used in workflows that require hyperfine tensor information, including:
         # Filename [Required]
         file: hfc/file # Input file corresponding to the selected method
 
+        # Optional orbital hyperfine contribution handling [Optional]
+        orbital_contribution: off # Ignore orbital hyperfine contribution
+                              on  # Include orbital hyperfine contribution when available
+
         # Define whether HFC averaging is needed [Optional]
         average: ['Me1', 'Me2'] # Chemical labels over which hyperfine tensors are averaged
         
@@ -106,9 +110,10 @@ Used in workflows that require hyperfine tensor information, including:
    Hyperfine and magnetic susceptibility tensors are assumed to be expressed in
    compatible coordinate frames.
 
-   Automatic rotation of hyperfine tensors into the susceptibility eigenframe is
-   performed only for specific combinations of susceptibility source and hyperfine
-   method (e.g. QC-derived hyperfine tensors with ORCA-based susceptibility data).
+   Automatic rotation of QC-derived hyperfine data into the susceptibility
+   eigenframe is performed only for specific combinations of susceptibility
+   source and hyperfine method (e.g. QC-derived hyperfine tensors with
+   ORCA-based susceptibility data).
 
 .. note::
 
@@ -116,8 +121,10 @@ Used in workflows that require hyperfine tensor information, including:
    For ``pdip`` and ``csv`` methods, explicit spin and angular momentum quantum
    numbers must be provided.
 
-   No validation is currently performed to ensure consistency between the supplied tensors
-   and the molecular structure.
+   The availability of individual hyperfine contributions depends on the
+   selected method and backend support. If ``orbital_contribution`` is set to
+   ``on``, the hyperfine QC file must provide the required orbital data and the
+   associated DFT g tensor needed to evaluate the orbital shift contribution.
 
 Chemical Labels
 ^^^^^^^^^^^^^^^
