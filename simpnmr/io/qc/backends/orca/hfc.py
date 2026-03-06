@@ -119,7 +119,7 @@ def read_orca5_output_a_tensors(
                 elif stripped.startswith("A(SD)"):
                     parts = stripped.split()
                     a_sd = [float(parts[1]), float(parts[2]), float(parts[3])]
-                elif stripped.startswith("A(ORB)"):
+                elif stripped.startswith("A(ORB+DIA)"):
                     parts = stripped.split()
                     a_orb = [float(parts[1]), float(parts[2]), float(parts[3])]
 
@@ -213,7 +213,7 @@ def read_orca6_output_a_tensors(
                         elif stripped.startswith("A(SD)"):
                             parts = stripped.split()
                             a_sd = [float(parts[1]), float(parts[2]), float(parts[3])]
-                        elif stripped.startswith("A(ORB)"):
+                        elif stripped.startswith("A(ORB+DIA)"):
                             parts = stripped.split()
                             a_orb = [float(parts[1]), float(parts[2]), float(parts[3])]
 
