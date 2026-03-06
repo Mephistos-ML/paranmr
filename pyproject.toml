@@ -27,3 +27,6 @@ markers = [
     "smoke: fast smoke tests for CLI/entrypoints",
     "unit: fast unit tests with no subprocess, no network, minimal IO",
 ]
+
+log_cli = true
+log_cli_level = "INFO"

@@ -29,6 +29,7 @@ Run without integration tests (default, fast):
     pytest
 """
 
+from asyncio.log import logger
 import os
 import shutil
 import subprocess
@@ -51,7 +52,8 @@ def parse_susceptibility_csv(csv_path: Path) -> dict[float, dict[str, float]]:
     -------
     dict[float, dict[str, float]]
         Dictionary mapping temperature to chi tensor parameters.
-        Example: {248.15: {'chi_iso': 0.12882, 'chi_ax': -0.03246, 'chi_rho': 0.0}, ...}
+        Example: {248.15: {'chi_iso': 0.12882, 'chi_ax': -0.03246, 'chi_rho': 0.0,
+                           'r2': 0.99962}, ...}
     """
     import csv
     
@@ -90,15 +92,18 @@ def parse_susceptibility_csv(csv_path: Path) -> dict[float, dict[str, float]]:
                 k for k in row if 'chi_rho' in k
                 and 's-dev' not in k
             ][0]
+            r2_key = [k for k in row if k.strip().startswith('r2 ')][0]
             
             chi_iso = float(row[chi_iso_key])
             chi_ax = float(row[chi_ax_key])  
             chi_rho = float(row[chi_rho_key])
+            r2 = float(row[r2_key])
             
             results[temp] = {
                 'chi_iso': chi_iso,
                 'chi_ax': chi_ax,
-                'chi_rho': chi_rho
+                'chi_rho': chi_rho,
+                'r2': r2,
             }
             success_count += 1
         except (KeyError, ValueError, IndexError):
@@ -320,7 +325,12 @@ def test_hungarian_vs_permute_diag_equal(tmp_path):
         hungarian_assignment = get_assignment_from_output(temp_hungarian, temp)
         chi_p = chi_permute[temp]
         chi_h = chi_hungarian[temp]
-        
+
+        logger.info(
+            f"T={temp}K: permute R²={chi_p.get('r2', float('nan')):.6f}, "
+            f"hungarian R²={chi_h.get('r2', float('nan')):.6f}"
+        )
+
         if not permute_assignment or not hungarian_assignment:
             assignment_problems += 1
             continue
@@ -368,4 +378,38 @@ def test_hungarian_vs_permute_diag_equal(tmp_path):
         f"for {chi_problems} components. "
         "Both methods should converge to the same χ tensor "
         "within tolerance (rtol=2e-4, atol=5e-5)."
+    )
+
+
+# Minimum R² required for a fit to be considered physically meaningful.
+_R2_THRESHOLD = 0.95
+
+
+@pytest.mark.integration
+def test_hungarian_r2_quality_diag_equal(tmp_path):
+    """Test that Hungarian assignment produces high-quality fits (R² ≥ threshold).
+
+    Running Hungarian on the diag_equal dataset must yield R² ≥ 0.95 at every
+    temperature.  This guards against silent degradation where Hungarian returns
+    a consistent-but-wrong assignment that the consistency test cannot detect.
+    """
+    test_data = Path('tests/integration/test_data/hungarian_assignment/diag_equal')
+
+    temp_hungarian = tmp_path / 'hungarian'
+    temp_hungarian.mkdir()
+    chi_hungarian = run_fit_susc(test_data, temp_hungarian, 'hungarian')
+
+    r2_failures: list[str] = []
+
+    for temp in sorted(chi_hungarian.keys()):
+        r2 = chi_hungarian[temp].get('r2', float('nan'))
+        logger.info(f"T={temp}K: hungarian R²={r2:.6f}")
+        if r2 < _R2_THRESHOLD:
+            r2_failures.append(
+                f"T={temp}K: R²={r2:.6f} < threshold {_R2_THRESHOLD}"
+            )
+
+    assert not r2_failures, (
+        "Hungarian assignment produced poor-quality fits:\n"
+        + "\n".join(r2_failures)
     )

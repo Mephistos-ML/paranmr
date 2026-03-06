@@ -12,7 +12,6 @@ import os
 
 import numpy as np
 from pathos import multiprocessing as mp
-from scipy.optimize import linear_sum_assignment
 
 # Application layer
 from simpnmr.app.loaders.dia_load import load_diamagnetic_shifts
@@ -21,7 +20,10 @@ from simpnmr.app.loaders.exp_load import load_experiments, save_experiment
 from simpnmr.app.loaders.hfc_load import load_base_molecule_from_hyperfines
 from simpnmr.app.loaders.labels_load import load_chem_labels_from_csv
 from simpnmr.app.params.options import FitSuscRunOptions
-from simpnmr.app.pipelines.fit.assign import generate_assignment_permutations
+from simpnmr.app.pipelines.fit.assign import (
+    _fit_with_hungarian_assignment,
+    generate_assignment_permutations,
+)
 from simpnmr.app.pipelines.fit.vt_fit import fit_vt
 
 # Core / domain
@@ -205,6 +207,7 @@ def run_fit_susc(config, options: FitSuscRunOptions | None = None) -> int:
 
     # Run fit for all experiments
     for molecule, susc_model, experiment in zip(molecules, susc_models, experiments):
+        
         # If permuting assignments, then first
         # run all assignment permutations to find best one
         if config.assignment_method == "permute":
@@ -288,10 +291,8 @@ def run_fit_susc(config, options: FitSuscRunOptions | None = None) -> int:
             )
         
         elif config.assignment_method == "hungarian":
-            # Hungarian assignment with alternating optimization
-            logger.info("Starting Hungarian assignment optimization")
             
-            # Call Hungarian assignment function - returns R² and final assignment
+            # Call Hungarian assignment function - returns R² and final assignment.
             opt_r2, assignment = _fit_with_hungarian_assignment(
                 molecule=molecule,
                 susc_model=susc_model,
@@ -299,10 +300,6 @@ def run_fit_susc(config, options: FitSuscRunOptions | None = None) -> int:
                 average_labels=average_labels
             )
             logger.info(f"Hungarian completed: best R² = {opt_r2:.6f}")
-            
-            # Apply best assignment to experiment signals
-            for it, new in enumerate(assignment):
-                experiment.signals[it].assignment = new
             
             # Save assigned experiment to file
             save_experiment(
@@ -319,13 +316,17 @@ def run_fit_susc(config, options: FitSuscRunOptions | None = None) -> int:
                 ),
             )
 
-        # Fit susceptibility model to experimental chemical shifts
+        # Fit susceptibility model to experimental chemical shifts.
         susc_model.fit_to(molecule, experiment, average_labels=average_labels)
 
         # Skip if fit fails
         if not susc_model.fit_status:
             continue
 
+        # logger.info("Final assignment: %s", assignment)
+        for i, chem_label in enumerate(assignment):
+            experiment.signals[i].assignment = chem_label
+        
         # Update susceptibility tensor of Molecule using model
         molecule.susc = susc_model.tosusceptibility()
 
@@ -541,143 +542,3 @@ def _obtain_r2a(
         print(model.adj_r2)
 
     return model.adj_r2
-
-
-def _fit_with_hungarian_assignment(
-    molecule: Molecule,
-    susc_model: models.SusceptibilityModel,
-    experiment: Experiment,
-    average_labels: list[list[str]],
-    n_attempts: int = 10,
-    max_iter: int = 50,
-) -> tuple[float, list[str]]:
-    """Perform Hungarian assignment with alternating optimization.
-
-    Iteratively optimizes the signal-to-label assignment:
-
-    1. Fit the χ tensor to the current assignment.
-    2. Predict chemical shifts from the fitted χ tensor.
-    3. Use the Hungarian algorithm to find the optimal assignment
-       of predictions to observed signals.
-    4. Repeat until the assignment converges or *max_iter* is
-       reached.
-
-    Multiple random restarts (controlled by *n_attempts*) are used
-    to reduce the risk of converging to a local minimum.
-
-    Args:
-        molecule: Molecule with hyperfine tensors.
-        susc_model: Susceptibility model to fit.
-        experiment: Experiment with observed signals.
-        average_labels: Groups of labels to average during fitting.
-        n_attempts: Number of random restarts.
-        max_iter: Maximum iterations per attempt.
-
-    Returns:
-        Tuple of (best adjusted R², best assignment as list of
-        chem_labels).
-    """
-    r2_records: list[float] = []
-    assignment_records: list[list[str]] = []
-
-    def _apply(exp: Experiment, assignment: list[str]) -> None:
-        for i, chem_label in enumerate(assignment):
-            exp.signals[i].assignment = chem_label
-
-    def _current(exp: Experiment) -> list[str]:
-        return [sig.assignment for sig in exp.signals]
-
-    for attempt in range(n_attempts):
-        logger.debug(
-            "Attempt %d/%d: starting Hungarian optimisation",
-            attempt + 1,
-            n_attempts,
-        )
-
-        # Randomly permute the initial assignment
-        initial = _current(experiment)
-        perm = np.random.permutation(len(initial))
-        current_assignment = [initial[i] for i in perm]
-        _apply(experiment, current_assignment)
-
-        for iteration in range(max_iter):
-            # Fit susceptibility model to current assignment
-            susc_model.fit_to(
-                molecule,
-                experiment,
-                average_labels=average_labels,
-            )
-            logger.debug(
-                "  Iteration %d/%d: R² = %.6f",
-                iteration + 1,
-                max_iter,
-                susc_model.adj_r2,
-            )
-
-            # Predict paramagnetic shifts from fitted model
-            pred_para = susc_model.model(
-                susc_model.final_var_values, molecule.nuclei
-            )
-
-            # Add diamagnetic contribution
-            dia = {
-                nuc.label: nuc.shift.dia
-                for nuc in molecule.nuclei
-            }
-            pred_total = {
-                label: pred_para[label] + dia[label]
-                for label in pred_para
-            }
-
-            # Map chem_labels to their averaging groups
-            cl_to_group: dict[str, list[str]] = {}
-            for group in average_labels:
-                nuc = next(
-                    n
-                    for n in molecule.nuclei
-                    if n.label == group[0]
-                )
-                cl_to_group[nuc.chem_label] = group
-
-            # Average predicted shifts within each group
-            avg_pred: dict[str, float] = {}
-            for cl, group in cl_to_group.items():
-                shifts = [pred_total[lbl] for lbl in group]
-                avg_pred[cl] = float(np.mean(shifts))
-
-            # Build cost matrix and solve with Hungarian algorithm
-            labels_ordered = sorted(avg_pred)
-            n_sig = len(experiment.signals)
-            n_lbl = len(labels_ordered)
-            cost = np.zeros((n_sig, n_lbl))
-            for i, sig in enumerate(experiment.signals):
-                for j, cl in enumerate(labels_ordered):
-                    cost[i, j] = abs(sig.shift - avg_pred[cl])
-
-            _, col_idx = linear_sum_assignment(cost)
-            new_assignment = [
-                labels_ordered[j] for j in col_idx
-            ]
-
-            # Check for convergence
-            if new_assignment == current_assignment:
-                logger.debug(
-                    "  Converged at iteration %d",
-                    iteration + 1,
-                )
-                r2_records.append(susc_model.adj_r2)
-                assignment_records.append(new_assignment)
-                break
-
-            current_assignment = new_assignment
-            _apply(experiment, current_assignment)
-
-    best_idx = int(np.argmax(r2_records))
-    best_r2 = r2_records[best_idx]
-    best_assignment = assignment_records[best_idx]
-    logger.info(
-        "Hungarian best R² = %.6f from %d attempts",
-        best_r2,
-        n_attempts,
-    )
-    return best_r2, best_assignment

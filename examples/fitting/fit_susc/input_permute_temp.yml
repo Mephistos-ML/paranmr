@@ -6,7 +6,7 @@ hyperfine:
   file: ni_0_cpcm_tpssh.out
 
 experiment:
-  files: [exp/exp*.csv]
+  files: [exp/exp_248.15.csv]
 
 diamagnetic:
   method: csv
@@ -29,8 +29,7 @@ susc_fit:
 # Permutation groups which modify initial
 # assignment in experiment file
 assignment:
-  # method: permute
-  method: hungarian
+  method: permute
   groups:
     - [tphz1, tpy1]
     - [tpy5, tpy4]
