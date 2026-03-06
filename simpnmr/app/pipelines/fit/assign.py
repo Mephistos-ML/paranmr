@@ -92,31 +92,32 @@ def _fit_with_hungarian_assignment(
     max_iter: int = 100,
     r2_threshold: float = 0.99,
 ) -> tuple[float, list[str]]:
-    """Perform Hungarian assignment with alternating optimization.
+    """Performs Hungarian assignment with alternating optimization.
 
-    Iteratively optimizes the signal-to-label assignment:
-
+    Iteratively optimizes the signal-to-label assignment through the following steps:
     1. Fit the χ tensor to the current assignment.
     2. Predict chemical shifts from the fitted χ tensor.
-    3. Use the Hungarian algorithm to find the optimal assignment
-       of predictions to observed signals.
-    4. Repeat until the assignment converges or *max_iter* is
-       reached.
+    3. Use the Hungarian algorithm to find the optimal assignment of predictions to
+    observed signals.
+    4. Repeat until the assignment converges or `max_iter` is reached.
 
-    Multiple random restarts (controlled by *n_attempts*) are used
-    to reduce the risk of converging to a local minimum.
+    Multiple random restarts (controlled by `n_attempts`) are used to reduce the
+    risk of converging to a local minimum.
 
     Args:
-        molecule: Molecule with hyperfine tensors.
-        susc_model: Susceptibility model to fit.
-        experiment: Experiment with observed signals.
-        average_labels: Groups of labels to average during fitting.
-        n_attempts: Number of random restarts.
-        max_iter: Maximum iterations per attempt.
+        molecule (Molecule): Molecule object containing hyperfine tensors.
+        susc_model (SuscModel): The susceptibility model to fit.
+        experiment (Experiment): Experiment object with observed signals.
+        average_labels (list of list of str): Groups of labels to average during
+            fitting (e.g., methyl protons).
+        n_attempts (int): Number of random restarts to perform.
+        max_iter (int): Maximum number of iterations allowed per attempt.
 
     Returns:
-        Tuple of (best adjusted R², best assignment as list of
-        chem_labels).
+        tuple: A tuple containing:
+            - float: The best adjusted $R^2$ value achieved.
+            - list of str: The best assignment, represented as a list of chemical
+            labels.
     """
     logger.info("Starting Hungarian assignment optimization for temperature %.4f K", experiment.temperature)
     logger.info("Parameters: n_attempts=%d, max_iter=%d, R² threshold=%.6f", n_attempts, max_iter, r2_threshold)

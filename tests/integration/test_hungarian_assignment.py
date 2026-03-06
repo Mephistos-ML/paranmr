@@ -41,19 +41,25 @@ import pytest
 
 
 def parse_susceptibility_csv(csv_path: Path) -> dict[float, dict[str, float]]:
-    """Parse susceptibility tensor CSV and return dict of values per temperature.
-    
-    Parameters
-    ----------
-    csv_path : Path
-        Path to susceptibility_tensor.csv output file
-    
-    Returns
-    -------
-    dict[float, dict[str, float]]
-        Dictionary mapping temperature to chi tensor parameters.
-        Example: {248.15: {'chi_iso': 0.12882, 'chi_ax': -0.03246, 'chi_rho': 0.0,
-                           'r2': 0.99962}, ...}
+    """Parses susceptibility tensor CSV and returns a dict of values per temperature.
+
+    Args:
+        csv_path (Path): Path to the `susceptibility_tensor.csv` output file.
+
+    Returns:
+        dict[float, dict[str, float]]: A dictionary mapping temperature to chi 
+            tensor parameters.
+            
+            Example:
+                {
+                    248.15: {
+                        'chi_iso': 0.12882, 
+                        'chi_ax': -0.03246, 
+                        'chi_rho': 0.0,
+                        'r2': 0.99962
+                    }, 
+                    ...
+                }
     """
     import csv
     
@@ -118,23 +124,20 @@ def run_fit_susc(
     method: str,
     single_temp: float = None,
 ) -> dict[float, dict[str, float]]:
-    """Run fit_susc with specified assignment method and return χ tensor.
-    
-    Parameters
-    ----------
-    test_data_dir : Path
-        Directory containing input.yml and data files
-    temp_dir : Path
-        Temporary directory for output files
-    method : str
-        Assignment method: 'permute' or 'hungarian'
-    single_temp : float, optional
-        If provided, only keep this temperature in experimental CSV files
-    
-    Returns
-    -------
-    dict[float, dict[str, float]]
-        Susceptibility tensor parameters per temperature
+    """Runs `fit_susc` with a specified assignment method and returns the $chi$ tensor.
+
+    Args:
+        test_data_dir (Path): Directory containing `input.yml` and data files.
+        temp_dir (Path): Temporary directory for output files.
+        method (str): Assignment method to use; must be either 'permute' 
+            or 'hungarian'.
+        single_temp (float, optional): If provided, the experimental CSV files 
+            will be filtered to only keep this specific temperature. 
+            Defaults to None.
+
+    Returns:
+        dict[float, dict[str, float]]: Susceptibility tensor parameters mapped 
+            per temperature.
     """
     # Copy test data to temp directory
     for item in test_data_dir.iterdir():
@@ -206,23 +209,19 @@ def run_fit_susc(
 
 
 def get_assignment_from_output(temp_dir: Path, temp: float) -> list[str]:
-    """Extract assignment from output CSV file.
-    
-    Handles two file formats:
-    - assigned_experiment_*.csv (created by permute method)
-    - hyperfines_and_fitted_shifts_*.csv (created by hungarian method)
-    
-    Parameters
-    ----------
-    temp_dir : Path
-        Output directory containing assignment files
-    temp : float
-        Temperature to find assignment for
-    
-    Returns
-    -------
-    list[str]
-        Assignment of chem_labels to signals, or None if not found
+    """Extracts the assignment from the output CSV file.
+
+    Handles two specific file formats depending on the optimization method used:
+    - `assigned_experiment_*.csv` (created by the permute method)
+    - `hyperfines_and_fitted_shifts_*.csv` (created by the hungarian method)
+
+    Args:
+        temp_dir (Path): Output directory containing the assignment files.
+        temp (float): The specific temperature for which to retrieve the assignment.
+
+    Returns:
+        list[str] | None: A list of chemical labels assigned to signals, 
+            or `None` if the file or assignment could not be found.
     """
     # Try to find assigned_experiment file first (permute format)
     assigned_csv = list(temp_dir.rglob(f'assigned_experiment_{temp:.2f}_K.csv'))
@@ -286,17 +285,23 @@ def get_assignment_from_output(temp_dir: Path, temp: float) -> list[str]:
 
 @pytest.mark.integration
 def test_hungarian_vs_permute_diag_equal(tmp_path):
-    """Test Hungarian vs permute for diagonal χ with equal signals to chem_label groups.
-    
-    When the number of experimental signals equals the number of chem_label groups,
-    both Hungarian and exhaustive permute search optimize the same assignment problem.
-    They should either:
-    - Find identical assignments, OR
-    - Find different assignments with nearly identical R² values
-      (indicating degenerate solutions)
-    
-    This test verifies that Hungarian finds assignments of
-    comparable quality to permute.
+    """Tests Hungarian vs. permute for diagonal $chi$ with equal signals to label groups.
+
+    When the number of experimental signals equals the number of `chem_label` groups,
+    both the Hungarian algorithm and exhaustive permute search optimize the same 
+    assignment problem. They should either:
+
+    1. Find identical assignments.
+    2. Find different assignments with nearly identical $R^2$ values 
+    (indicating degenerate solutions).
+
+    This test verifies that the Hungarian method finds assignments of comparable 
+    quality to the exhaustive permute search.
+
+    Raises:
+        AssertionError: If the Hungarian assignment quality is significantly lower 
+            than the permute method or if the $R^2$ values diverge beyond a 
+            defined tolerance.
     """
     test_data = Path('tests/integration/test_data/hungarian_assignment/diag_equal')
 
@@ -387,11 +392,20 @@ _R2_THRESHOLD = 0.95
 
 @pytest.mark.integration
 def test_hungarian_r2_quality_diag_equal(tmp_path):
-    """Test that Hungarian assignment produces high-quality fits (R² ≥ threshold).
+    """Tests that Hungarian assignment produces high-quality fits ($R^2 ≥ $ threshold).
 
-    Running Hungarian on the diag_equal dataset must yield R² ≥ 0.95 at every
-    temperature.  This guards against silent degradation where Hungarian returns
-    a consistent-but-wrong assignment that the consistency test cannot detect.
+    Runs the Hungarian algorithm on the `diag_equal` dataset to ensure it yields 
+    an $R^2 ≥ 0.95$ at every temperature. This check guards against "silent 
+    degradation," where the Hungarian method might return a consistent but 
+    sub-optimal assignment that standard consistency tests fail to detect.
+
+    Args:
+        threshold (float, optional): The minimum acceptable $R^2$ value. 
+            Defaults to 0.95.
+
+    Raises:
+        AssertionError: If any temperature in the dataset results in an $R^2$ 
+            value below the specified threshold.
     """
     test_data = Path('tests/integration/test_data/hungarian_assignment/diag_equal')
 

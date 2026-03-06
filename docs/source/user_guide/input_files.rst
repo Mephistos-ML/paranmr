@@ -361,21 +361,55 @@ Used in susceptibility fitting workflows that require assignment handling.
     # assignment block schema (reference):
     assignment:
         # Assignment strategy [Required]
-        method: fixed # Use assignments explicitly provided in the experimental data
-                permute # Permute assignments within user-defined groups
+        # One of: fixed | permute | hungarian
+        method: fixed
 
-        # Permutation groups [Required for permute]
+        # Permutation groups [Required for permute and hungarian]
         groups:
           - [H1, H2, H3]
           - [H4, H5]
 
+        # Hungarian-only options [Optional]
+        n_attempts: 10    # Number of random restarts (default: 10)
+        max_iter: 100     # Maximum iterations per attempt (default: 100)
+        r2_threshold: 0.99  # Stop early when R² exceeds this value (default: 0.99)
+
+The three supported strategies are:
+
+``fixed``
+    Uses the signal-to-nucleus assignments provided directly in the experimental
+    data files. No reordering is performed.
+
+``permute``
+    Exhaustively enumerates all permutations of assignments within the
+    user-defined ``groups`` and selects the permutation that maximises the
+    adjusted R². Guarantees the global optimum within the specified groups but
+    scales factorially with group size.
+
+``hungarian``
+    Uses the `Hungarian algorithm`_ (Munkres linear sum assignment) to
+    iteratively optimise the signal-to-nucleus assignment.  At each iteration
+    the susceptibility tensor is fitted to the current assignment, shifts are
+    predicted, and the Hungarian algorithm reassigns signals to nuclei so as to
+    minimise the total absolute shift deviation.  This is repeated until the
+    assignment converges or ``max_iter`` iterations are reached.  Multiple
+    random restarts (``n_attempts``) are used to escape local minima.  The
+    restart with the highest R² is retained.
+
+    This method scales polynomially with the number of signals and is therefore
+    preferred over ``permute`` for large or heavily degenerate assignment
+    problems.
+
+.. _Hungarian algorithm: https://en.wikipedia.org/wiki/Hungarian_algorithm
+
 .. note::
 
    Assignment handling is applied only during susceptibility fitting.
-   For permutation-based strategies, all permutation groups must be explicitly
-   defined by the user.
+   For ``permute`` and ``hungarian``, the ``groups`` key must be explicitly
+   defined.
 
-   Assignment handling assumes that experimental data and assignments are ordered consistently by the user.
+   Assignment handling assumes that experimental data and assignments are
+   ordered consistently by the user.
 
 Magnetic Susceptibility Fitting
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
