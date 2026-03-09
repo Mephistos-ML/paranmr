@@ -2,6 +2,67 @@
 
 <!-- version list -->
 
+## v1.5.0 (2026-03-09)
+
+### Bug Fixes
+
+- Resolve several bugs preventing Hungarian assignment from working
+  ([`f5ab4fa`](https://gitlab.com/suturina-group/simpnmr/-/commit/f5ab4fa1b313cc664133327a1751d5a24b5e4ef0))
+
+- **app**: Fix assignment behavior in susc fitting
+  ([`1b0d3df`](https://gitlab.com/suturina-group/simpnmr/-/commit/1b0d3df668e8f607ece6e4bbd00b1d1e8d276788))
+
+- **app**: Restore fixed assignment handling in susceptibility fitting pipeline
+  ([`84cdb29`](https://gitlab.com/suturina-group/simpnmr/-/commit/84cdb296e7d79c297c853805dfc275fcbc45b22b))
+
+- **core**: Prevent domain mutation during Hungarian search and restore best fit state instead of
+  leaking the last fit
+  ([`6f6a2fe`](https://gitlab.com/suturina-group/simpnmr/-/commit/6f6a2feaa1b96349f2f336a61480e6fd23b1ce6e))
+
+- **io**: Drop empty rows when loading experiment CSV files
+  ([`aaed38d`](https://gitlab.com/suturina-group/simpnmr/-/commit/aaed38d6a077e59068ba5a2d32b51519c09e92a6))
+
+### Chores
+
+- Remove stray file
+  ([`e506c54`](https://gitlab.com/suturina-group/simpnmr/-/commit/e506c548a55bc410e6c5b641b22b7c86fcc3181e))
+
+- **governance**: Introduce AI contribution contract and MR template
+  ([`f31fb82`](https://gitlab.com/suturina-group/simpnmr/-/commit/f31fb827faf035e23b4444c3a253f29428074acd))
+
+### Documentation
+
+- **user-guide**: Document Hungarian assignment search contract and defaults
+  ([`174dd38`](https://gitlab.com/suturina-group/simpnmr/-/commit/174dd380d8eaeddcfb3556376ffe1d96d25df783))
+
+- **user-guide**: Fix internal warning formatting in theory docs
+  ([`5e35e40`](https://gitlab.com/suturina-group/simpnmr/-/commit/5e35e40aaefddde76cf3ebb51384ed2dbddce69b))
+
+### Features
+
+- **app**: Add assignment search policy presets and resolver
+  ([`f9cc66d`](https://gitlab.com/suturina-group/simpnmr/-/commit/f9cc66d5667fb0ef605eb6e7827c72c7a220ff2a))
+
+- **fitting**: Add Hungarian assignment method for fit_susc
+  ([`60f933e`](https://gitlab.com/suturina-group/simpnmr/-/commit/60f933e6206de4266b30235cd57db97e607b6f86))
+
+### Refactoring
+
+- **cfg**: Enforce Hungarian search mapping contract in fit config
+  ([`ae467c1`](https://gitlab.com/suturina-group/simpnmr/-/commit/ae467c16a039aa75500b6f592c4911530805b1ae))
+
+- **core**: Move assignment algorithms from app pipeline to core fitting
+  ([`a116cb8`](https://gitlab.com/suturina-group/simpnmr/-/commit/a116cb861982c24b6420839b419f4230b177af86))
+
+### Testing
+
+- **integration**: Disable Hungarian vs permute equivalence test pending fixture migration
+  ([`7a9de1c`](https://gitlab.com/suturina-group/simpnmr/-/commit/7a9de1cb8fe1cd43b37e8fce6b5ee6d887487217))
+
+- **integration**: Fix Hungarian test setup and temporarily disable brittle test pending refactor
+  ([`b7ce49c`](https://gitlab.com/suturina-group/simpnmr/-/commit/b7ce49c60cd65f9814e96857d37259e2284dc601))
+
+
 ## v1.4.0 (2026-02-20)
 
 ### Documentation
