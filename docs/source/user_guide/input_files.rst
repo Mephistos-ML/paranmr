@@ -361,18 +361,19 @@ Used in susceptibility fitting workflows that require assignment handling.
     # assignment block schema (reference):
     assignment:
         # Assignment strategy [Required]
-        # One of: fixed | permute | hungarian
-        method: fixed
+        method: fixed # One of: fixed | permute | hungarian
 
-        # Permutation groups [Required for permute and hungarian]
+        # Permutation groups [Required for permute only]
         groups:
           - [H1, H2, H3]
           - [H4, H5]
 
-        # Hungarian-only options [Optional]
-        n_attempts: 10    # Number of random restarts (default: 10)
-        max_iter: 100     # Maximum iterations per attempt (default: 100)
-        r2_threshold: 0.99  # Stop early when R² exceeds this value (default: 0.99)
+        # Hungarian search policy [Optional, Hungarian only]
+        search:
+          mode: custom   # One of: fast | balanced | robust | custom
+          n_attempts: 10      # Optional, mode: custom only
+          max_iter: 100       # Optional, mode: custom only
+          r2_threshold: 0.99  # Optional, mode: custom only
 
 The three supported strategies are:
 
@@ -387,14 +388,26 @@ The three supported strategies are:
     scales factorially with group size.
 
 ``hungarian``
-    Uses the `Hungarian algorithm`_ (Munkres linear sum assignment) to
-    iteratively optimise the signal-to-nucleus assignment.  At each iteration
-    the susceptibility tensor is fitted to the current assignment, shifts are
-    predicted, and the Hungarian algorithm reassigns signals to nuclei so as to
-    minimise the total absolute shift deviation.  This is repeated until the
-    assignment converges or ``max_iter`` iterations are reached.  Multiple
-    random restarts (``n_attempts``) are used to escape local minima.  The
-    restart with the highest R² is retained.
+    Uses the `Hungarian algorithm`_ (Munkres linear sum assignment) inside an
+    iterative fit-and-reassign procedure. At each iteration the susceptibility
+    tensor is fitted to the current assignment, shifts are predicted, and the
+    Hungarian algorithm reassigns signals to nuclei so as to minimise the total
+    absolute shift deviation. This is repeated until the assignment converges or
+    the configured iteration limit is reached.
+
+    Search behaviour is controlled by the ``search`` mapping:
+
+    - ``mode: fast`` uses ``n_attempts=1``, ``max_iter=20``,
+      ``r2_threshold=0.95``.
+    - ``mode: balanced`` uses ``n_attempts=10``, ``max_iter=100``,
+      ``r2_threshold=0.99``.
+    - ``mode: robust`` uses ``n_attempts=25``, ``max_iter=250``,
+      ``r2_threshold=0.995``.
+    - ``mode: custom`` allows these three numeric controls to be provided
+      explicitly under ``assignment:search``.
+
+    If the ``search`` block is omitted, the policy layer resolves the default
+    behaviour to the ``balanced`` mode.
 
     This method scales polynomially with the number of signals and is therefore
     preferred over ``permute`` for large or heavily degenerate assignment
@@ -405,8 +418,15 @@ The three supported strategies are:
 .. note::
 
    Assignment handling is applied only during susceptibility fitting.
-   For ``permute`` and ``hungarian``, the ``groups`` key must be explicitly
-   defined.
+
+   For ``permute``, the ``groups`` key must be explicitly defined.
+
+   For ``hungarian``, the ``groups`` key is not supported. Hungarian assignment
+   is controlled only through the optional ``search`` mapping.
+
+   The canonical Hungarian forms are ``search: {mode: balanced}`` for preset
+   behaviour and ``search: {mode: custom, n_attempts: ..., max_iter: ...,
+   r2_threshold: ...}`` for fully explicit search control.
 
    Assignment handling assumes that experimental data and assignments are
    ordered consistently by the user.
