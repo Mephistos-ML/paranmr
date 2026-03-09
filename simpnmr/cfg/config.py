@@ -157,7 +157,11 @@ class FitSuscConfig(Config):
             "total_momentum_J",
         ],
         "experiment": ["files", "spectrum_files", "exp_reference"],
-        "assignment": ["method", "groups"],
+        "assignment": [
+            "method",
+            "groups",
+            "search",
+        ],
         "nuclei": ["include", "include_groups"],
         "susc_fit": ["type", "variables", "average_shifts"],
         "project": ["name"],
@@ -178,10 +182,7 @@ class FitSuscConfig(Config):
 
     KEYWORD_PARTNERS = {
         "hyperfine": ["method", "file"],
-        "assignment": [
-            "method",
-            "groups",
-        ],
+        "assignment": ["method"],
         "susc_fit": ["type", "variables"],
         "diamagnetic": [
             "method",
@@ -207,6 +208,10 @@ class FitSuscConfig(Config):
         self._diamagnetic_ref_file = ""
         self._assignment_method = ""
         self._assignment_groups = []
+        self._assignment_search = ""
+        self._assignment_n_attempts = None
+        self._assignment_max_iter = None
+        self._assignment_r2_threshold = None
         self._nuclei_include = ""
         self._nuclei_include_groups = []
         self._susc_fit_type = ""
@@ -441,6 +446,131 @@ class FitSuscConfig(Config):
     @assignment_groups.setter
     def assignment_groups(self, value: list[list[str]]):
         self._assignment_groups = value
+        return None
+
+    @property
+    def assignment_search(self) -> str:
+        return self._assignment_search
+
+    @assignment_search.setter
+    def assignment_search(self, value: dict | None):
+        if value is None or value == "":
+            self._assignment_search = ""
+            self._assignment_n_attempts = None
+            self._assignment_max_iter = None
+            self._assignment_r2_threshold = None
+            return None
+
+        if not isinstance(value, dict):
+            raise ValueError(
+                "assignment:search must be a mapping, e.g. search: {mode: balanced}"
+            )
+
+        mode_value = value.get("mode")
+        if mode_value is None:
+            raise ValueError("assignment:search must define 'mode'")
+        if not isinstance(mode_value, str):
+            raise ValueError("assignment:search:mode must be a string")
+
+        mode = mode_value.strip().lower()
+        allowed = {"fast", "balanced", "robust", "custom"}
+        if mode not in allowed:
+            raise ValueError(
+                "Invalid assignment:search:mode '"
+                + str(mode_value)
+                + "'. Allowed values are: 'fast', 'balanced', 'robust', 'custom'."
+            )
+
+        unknown = set(value) - {"mode", "n_attempts", "max_iter", "r2_threshold"}
+        if unknown:
+            raise ValueError(
+                "assignment:search contains unknown key(s): "
+                + ", ".join(sorted(unknown))
+            )
+
+        if mode != "custom":
+            unexpected = []
+            if "n_attempts" in value:
+                unexpected.append("n_attempts")
+            if "max_iter" in value:
+                unexpected.append("max_iter")
+            if "r2_threshold" in value:
+                unexpected.append("r2_threshold")
+            if unexpected:
+                raise ValueError(
+                    "assignment:search only allows n_attempts, max_iter, and "
+                    "r2_threshold when mode is 'custom'; unexpected key(s): "
+                    + ", ".join(unexpected)
+                )
+
+        self._assignment_search = mode
+        self.assignment_n_attempts = value.get("n_attempts")
+        self.assignment_max_iter = value.get("max_iter")
+        self.assignment_r2_threshold = value.get("r2_threshold")
+        return None
+
+    @property
+    def assignment_n_attempts(self) -> int | None:
+        return self._assignment_n_attempts
+
+    @assignment_n_attempts.setter
+    def assignment_n_attempts(self, value: int | None):
+        if value is None or value == "":
+            self._assignment_n_attempts = None
+            return None
+        if isinstance(value, (list, tuple)):
+            value = value[0]
+        try:
+            ivalue = int(value)
+        except Exception as exc:
+            raise ValueError(
+                f"Cannot convert assignment:n_attempts={value} to int"
+            ) from exc
+        if ivalue <= 0:
+            raise ValueError("assignment:n_attempts must be positive")
+        self._assignment_n_attempts = ivalue
+        return None
+
+    @property
+    def assignment_max_iter(self) -> int | None:
+        return self._assignment_max_iter
+
+    @assignment_max_iter.setter
+    def assignment_max_iter(self, value: int | None):
+        if value is None or value == "":
+            self._assignment_max_iter = None
+            return None
+        if isinstance(value, (list, tuple)):
+            value = value[0]
+        try:
+            ivalue = int(value)
+        except Exception as exc:
+            raise ValueError(
+                f"Cannot convert assignment:max_iter={value} to int"
+            ) from exc
+        if ivalue <= 0:
+            raise ValueError("assignment:max_iter must be positive")
+        self._assignment_max_iter = ivalue
+        return None
+
+    @property
+    def assignment_r2_threshold(self) -> float | None:
+        return self._assignment_r2_threshold
+
+    @assignment_r2_threshold.setter
+    def assignment_r2_threshold(self, value: float | None):
+        if value is None or value == "":
+            self._assignment_r2_threshold = None
+            return None
+        if isinstance(value, (list, tuple)):
+            value = value[0]
+        try:
+            fvalue = float(value)
+        except Exception as exc:
+            raise ValueError(
+                f"Cannot convert assignment:r2_threshold={value} to float"
+            ) from exc
+        self._assignment_r2_threshold = fvalue
         return None
 
     @property
@@ -946,9 +1076,27 @@ class FitSuscConfig(Config):
         if config.assignment_method == "permute":
             if not len(config.assignment_groups):
                 logger.warning("Missing permutation groups in input")
+            if config.assignment_search:
+                logger.warning(
+                    "Ignoring Hungarian-only assignment:search mapping for "
+                    "assignment method 'permute'"
+                )
+
         elif config.assignment_method == "fixed":
             if len(config.assignment_groups):
                 logger.info("Chemical groups (signals) provided with fixed assignment")
+            if config.assignment_search:
+                logger.warning(
+                    "Ignoring Hungarian-only assignment:search mapping for "
+                    "assignment method 'fixed'"
+                )
+
+        elif config.assignment_method == "hungarian":
+            if len(config.assignment_groups):
+                raise ValueError(
+                    "assignment:groups is not supported when "
+                    "assignment:method is 'hungarian'"
+                )
 
         return config
 
