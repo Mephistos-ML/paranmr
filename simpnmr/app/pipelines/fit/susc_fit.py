@@ -21,7 +21,7 @@ from simpnmr.app.loaders.hfc_load import load_base_molecule_from_hyperfines
 from simpnmr.app.loaders.labels_load import load_chem_labels_from_csv
 from simpnmr.app.params.options import FitSuscRunOptions
 from simpnmr.app.pipelines.fit.assign import (
-    _fit_with_hungarian_assignment,
+    fit_with_hungarian_assignment,
     generate_assignment_permutations,
 )
 from simpnmr.app.pipelines.fit.vt_fit import fit_vt
@@ -207,7 +207,6 @@ def run_fit_susc(config, options: FitSuscRunOptions | None = None) -> int:
 
     # Run fit for all experiments
     for molecule, susc_model, experiment in zip(molecules, susc_models, experiments):
-        
         # If permuting assignments, then first
         # run all assignment permutations to find best one
         if config.assignment_method == "permute":
@@ -267,9 +266,7 @@ def run_fit_susc(config, options: FitSuscRunOptions | None = None) -> int:
             # and use in subsequent (re)fitting
             assignment = permed_assignments[np.nanargmax(results)]
             opt_r2 = np.nanmax(results)
-            logger.info(
-                "Optimal assignment with adj R² = %.6f", opt_r2
-            )
+            logger.info("Optimal assignment with adj R² = %.6f", opt_r2)
 
             # and swap in new, permuted, assignments
             for it, new in enumerate(assignment):
@@ -289,18 +286,17 @@ def run_fit_susc(config, options: FitSuscRunOptions | None = None) -> int:
                     f"T = {experiment.temperature:.2f} K"
                 ),
             )
-        
+
         elif config.assignment_method == "hungarian":
-            
-            # Call Hungarian assignment function - returns R² and final assignment.
-            opt_r2, assignment = _fit_with_hungarian_assignment(
+            # Call Hungarian assignment function
+            opt_r2, assignment = fit_with_hungarian_assignment(
                 molecule=molecule,
                 susc_model=susc_model,
                 experiment=experiment,
-                average_labels=average_labels
+                average_labels=average_labels,
             )
             logger.info(f"Hungarian completed: best R² = {opt_r2:.6f}")
-            
+
             # Save assigned experiment to file
             save_experiment(
                 experiment,
@@ -323,10 +319,6 @@ def run_fit_susc(config, options: FitSuscRunOptions | None = None) -> int:
         if not susc_model.fit_status:
             continue
 
-        # logger.info("Final assignment: %s", assignment)
-        for i, chem_label in enumerate(assignment):
-            experiment.signals[i].assignment = chem_label
-        
         # Update susceptibility tensor of Molecule using model
         molecule.susc = susc_model.tosusceptibility()
 
