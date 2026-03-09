@@ -26,11 +26,8 @@ susc_fit:
     rho_over_ax: [fix, 0.00]
   average_shifts: 'all'
 
-# Permutation groups which modify initial
-# assignment in experiment file
 assignment:
-  # method: permute
-  method: hungarian
+  method: permute
   groups:
     - [tphz1, tpy1]
     - [tpy5, tpy4]

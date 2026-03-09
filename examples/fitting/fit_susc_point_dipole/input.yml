@@ -35,8 +35,6 @@ susc_fit:
     dyy: [fit, 0.1]
     dyz: [fit, 0.01]
 
-# Permutation groups which modify initial
-# assignment in experiment file
 assignment:
   method: permute
   groups:

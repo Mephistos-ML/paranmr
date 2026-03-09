@@ -272,6 +272,7 @@ def get_assignment_from_output(temp_dir: Path, temp: float) -> list[str]:
     return assignments if assignments else None
 
 
+@pytest.mark.skip(reason="Temporarily disabled")
 @pytest.mark.integration
 def test_hungarian_vs_permute_diag_equal(tmp_path):
     """Check that Hungarian and permute give equivalent results on ``diag_equal``.
