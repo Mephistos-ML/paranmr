@@ -368,21 +368,75 @@ Used in susceptibility fitting workflows that require assignment handling.
     # assignment block schema (reference):
     assignment:
         # Assignment strategy [Required]
-        method: fixed # Use assignments explicitly provided in the experimental data
-                permute # Permute assignments within user-defined groups
+        method: fixed # One of: fixed | permute | hungarian
 
-        # Permutation groups [Required for permute]
+        # Permutation groups [Required for permute only]
         groups:
           - [H1, H2, H3]
           - [H4, H5]
 
+        # Hungarian search policy [Optional, Hungarian only]
+        search:
+          mode: custom   # One of: fast | balanced | robust | custom
+          n_attempts: 10      # Optional, mode: custom only
+          max_iter: 100       # Optional, mode: custom only
+          r2_threshold: 0.99  # Optional, mode: custom only
+
+The three supported strategies are:
+
+``fixed``
+    Uses the signal-to-nucleus assignments provided directly in the experimental
+    data files. No reordering is performed.
+
+``permute``
+    Exhaustively enumerates all permutations of assignments within the
+    user-defined ``groups`` and selects the permutation that maximises the
+    adjusted R². Guarantees the global optimum within the specified groups but
+    scales factorially with group size.
+
+``hungarian``
+    Uses the `Hungarian algorithm`_ (Munkres linear sum assignment) inside an
+    iterative fit-and-reassign procedure. At each iteration the susceptibility
+    tensor is fitted to the current assignment, shifts are predicted, and the
+    Hungarian algorithm reassigns signals to nuclei so as to minimise the total
+    absolute shift deviation. This is repeated until the assignment converges or
+    the configured iteration limit is reached.
+
+    Search behaviour is controlled by the ``search`` mapping:
+
+    - ``mode: fast`` uses ``n_attempts=1``, ``max_iter=20``,
+      ``r2_threshold=0.95``.
+    - ``mode: balanced`` uses ``n_attempts=10``, ``max_iter=100``,
+      ``r2_threshold=0.99``.
+    - ``mode: robust`` uses ``n_attempts=25``, ``max_iter=250``,
+      ``r2_threshold=0.995``.
+    - ``mode: custom`` allows these three numeric controls to be provided
+      explicitly under ``assignment:search``.
+
+    If the ``search`` block is omitted, the policy layer resolves the default
+    behaviour to the ``balanced`` mode.
+
+    This method scales polynomially with the number of signals and is therefore
+    preferred over ``permute`` for large or heavily degenerate assignment
+    problems.
+
+.. _Hungarian algorithm: https://en.wikipedia.org/wiki/Hungarian_algorithm
+
 .. note::
 
    Assignment handling is applied only during susceptibility fitting.
-   For permutation-based strategies, all permutation groups must be explicitly
-   defined by the user.
 
-   Assignment handling assumes that experimental data and assignments are ordered consistently by the user.
+   For ``permute``, the ``groups`` key must be explicitly defined.
+
+   For ``hungarian``, the ``groups`` key is not supported. Hungarian assignment
+   is controlled only through the optional ``search`` mapping.
+
+   The canonical Hungarian forms are ``search: {mode: balanced}`` for preset
+   behaviour and ``search: {mode: custom, n_attempts: ..., max_iter: ...,
+   r2_threshold: ...}`` for fully explicit search control.
+
+   Assignment handling assumes that experimental data and assignments are
+   ordered consistently by the user.
 
 Magnetic Susceptibility Fitting
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

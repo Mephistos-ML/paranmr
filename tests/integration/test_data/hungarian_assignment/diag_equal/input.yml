@@ -1,12 +1,12 @@
 project:
-  name: proton
+  name: test_diag_equal
 
 hyperfine:
   method: dft
   file: ni_0_cpcm_tpssh.out
 
 experiment:
-  files: [exp/exp*.csv]
+  files: [exp/*.csv]
 
 diamagnetic:
   method: csv
@@ -27,10 +27,9 @@ susc_fit:
   average_shifts: 'all'
 
 assignment:
-  method: permute
-  groups:
+  method: hungarian  # Will be switched to permute for comparison test
+  groups:  # Required for permute method
     - [tphz1, tpy1]
     - [tpy5, tpy4]
     - [tphz2, tpy2]
     - [tpy6, tpy3, tphz3]
-  # method: fixed

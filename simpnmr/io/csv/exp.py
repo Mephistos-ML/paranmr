@@ -88,6 +88,7 @@ def load_experiments_from_csv(
 
     for file_name in file_names:
         df = read_csv_safe(file_name)
+        df = df.replace(r"^\s*$", pd.NA, regex=True).dropna(how="all")
 
         temperature, magnetic_field, isotope = read_exp_metadata(file_name)
         df["temperature"] = temperature
