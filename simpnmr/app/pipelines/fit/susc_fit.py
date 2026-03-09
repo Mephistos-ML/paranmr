@@ -20,17 +20,18 @@ from simpnmr.app.loaders.exp_load import load_experiments, save_experiment
 from simpnmr.app.loaders.hfc_load import load_base_molecule_from_hyperfines
 from simpnmr.app.loaders.labels_load import load_chem_labels_from_csv
 from simpnmr.app.params.options import FitSuscRunOptions
-from simpnmr.app.pipelines.fit.assign import (
-    fit_with_hungarian_assignment,
-    generate_assignment_permutations,
-)
 from simpnmr.app.pipelines.fit.vt_fit import fit_vt
+from simpnmr.app.policies.assignment import resolve_assignment_search_settings
 
 # Core / domain
 from simpnmr.core.domain.exp import Experiment
 from simpnmr.core.domain.mol import Molecule
 from simpnmr.core.domain.tensor import Hyperfine
 from simpnmr.core.fitting import models
+from simpnmr.core.fitting.assign import (
+    fit_with_hungarian_assignment,
+    generate_assignment_permutations,
+)
 from simpnmr.core.pcs.isosurf import compute_pcs_isosurface
 
 # IO layer
@@ -288,14 +289,32 @@ def run_fit_susc(config, options: FitSuscRunOptions | None = None) -> int:
             )
 
         elif config.assignment_method == "hungarian":
+            search_settings = resolve_assignment_search_settings(
+                mode=config.assignment_search,
+                n_attempts=config.assignment_n_attempts,
+                max_iter=config.assignment_max_iter,
+                r2_threshold=config.assignment_r2_threshold,
+            )
+            logger.info(
+                "Hungarian search policy resolved: mode=%s, n_attempts=%d, "
+                "max_iter=%d, r2_threshold=%.6f",
+                search_settings.mode,
+                search_settings.n_attempts,
+                search_settings.max_iter,
+                search_settings.r2_threshold,
+            )
+
             # Call Hungarian assignment function
             opt_r2, assignment = fit_with_hungarian_assignment(
                 molecule=molecule,
                 susc_model=susc_model,
                 experiment=experiment,
                 average_labels=average_labels,
+                n_attempts=search_settings.n_attempts,
+                max_iter=search_settings.max_iter,
+                r2_threshold=search_settings.r2_threshold,
             )
-            logger.info(f"Hungarian completed: best R² = {opt_r2:.6f}")
+            logger.info("Hungarian completed: best R² = %.6f", opt_r2)
 
             # Save assigned experiment to file
             save_experiment(
