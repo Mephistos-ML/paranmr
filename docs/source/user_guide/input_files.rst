@@ -125,6 +125,7 @@ Used in workflows that require hyperfine tensor information, including:
    selected method and backend support. If ``orbital_contribution`` is set to
    ``on``, the hyperfine QC file must provide the required orbital data and the
    associated DFT g tensor needed to evaluate the orbital shift contribution.
+   At present, this pathway is implemented only for ORCA 5 and ORCA 6 outputs.
 
 Chemical Labels
 ^^^^^^^^^^^^^^^
