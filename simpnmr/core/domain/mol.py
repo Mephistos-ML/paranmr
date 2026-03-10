@@ -325,6 +325,9 @@ class Molecule:
     Attributes:
         labels: Full atomic labels with indices for the whole structure.
         coords: Full atomic coordinates as an ``(n_atoms, 3)`` array in Å.
+        chi_source_coords: Optional full atomic coordinates from the
+            susceptibility/chi source geometry, stored as an ``(n_atoms, 3)``
+            array in Å.
         n_atoms: Number of atoms in the full structure.
         available_hfc_by_label: Canonical hyperfine payload store keyed by atom
             label for all HFC data available from the source.
@@ -343,6 +346,7 @@ class Molecule:
     ) -> None:
         self.labels = xyzf.add_label_indices(labels)
         self.coords = coords
+        self.chi_source_coords = None
 
         # List of Nucleus objects
         self.nuclei = nuclei
@@ -363,6 +367,22 @@ class Molecule:
     @property
     def n_atoms(self):
         return len(self.labels)
+
+    @property
+    def chi_source_coords(self) -> NDArray | None:
+        return self._chi_source_coords
+
+    @chi_source_coords.setter
+    def chi_source_coords(self, value: ArrayLike | None) -> None:
+        if value is None:
+            self._chi_source_coords = None
+            return
+
+        arr = np.asarray(value, dtype=float)
+        if len(arr.shape) != 2 or arr.shape[1] != 3:
+            raise ValueError("chi_source_coords must be an (n_atoms, 3) array")
+        self._chi_source_coords = arr
+        return
 
     def __str__(self):
         string = ""
