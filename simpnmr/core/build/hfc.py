@@ -11,9 +11,77 @@ from typing import Any
 import numpy as np
 
 from simpnmr.core.conv.freq_to_ang import a_tensor_mhz_to_ang
-from simpnmr.core.domain.mol import Molecule
+from simpnmr.core.domain.mol import Hyperfine, Molecule
 
 logger = logging.getLogger(__name__)
+
+
+def _assemble_hfc_from_components(
+    *,
+    fc: np.ndarray,
+    sd: np.ndarray,
+    orb: np.ndarray | None,
+    tensor_full: np.ndarray | None,
+    orbital_contribution: str,
+    label: str,
+) -> Hyperfine:
+    """Assemble a canonical `Hyperfine` object from decomposed components."""
+    fc_arr = np.asarray(fc, dtype=float)
+    sd_arr = np.asarray(sd, dtype=float)
+
+    if fc_arr.shape != (3, 3):
+        raise ValueError(f"A(FC) tensor for {label} must be (3,3), got {fc_arr.shape}")
+    if sd_arr.shape != (3, 3):
+        raise ValueError(f"A(SD) tensor for {label} must be (3,3), got {sd_arr.shape}")
+
+    if orb is None:
+        if orbital_contribution == "on":
+            raise ValueError(
+                f"A(ORB) contribution requested but missing for label {label}"
+            )
+        orb_arr = np.zeros((3, 3), dtype=float)
+    else:
+        orb_arr = np.asarray(orb, dtype=float)
+        if orb_arr.shape != (3, 3):
+            raise ValueError(
+                f"A(ORB) tensor for {label} must be (3,3), got {orb_arr.shape}"
+            )
+
+    full_arr = None
+    if tensor_full is not None:
+        full_arr = np.asarray(tensor_full, dtype=float)
+        if full_arr.shape != (3, 3):
+            raise ValueError(
+                f"Full hyperfine tensor for {label} must be (3,3), got {full_arr.shape}"
+            )
+
+    hfc = Hyperfine()
+    hfc.fc = fc_arr
+    hfc.sd = sd_arr
+    hfc.orb = orb_arr
+    hfc.tensor_full = full_arr
+    return hfc
+
+
+def _assemble_hfc_from_full_tensor(*, tensor_full: np.ndarray, label: str) -> Hyperfine:
+    """Assemble a canonical `Hyperfine` object from a full hyperfine tensor."""
+    full_arr = np.asarray(tensor_full, dtype=float)
+    if full_arr.shape != (3, 3):
+        raise ValueError(
+            f"Hyperfine tensor for {label} must be (3,3), got {full_arr.shape}"
+        )
+
+    iso = float(np.trace(full_arr) / 3.0)
+    dt = full_arr - np.eye(3) * iso
+
+    hfc = Hyperfine()
+    hfc.fc = np.eye(3, dtype=float) * iso
+    hfc.sd = dt
+    # TODO(orbital): Preserve CSV-side orbital hyperfine decomposition once
+    # the CSV contract exposes it explicitly.
+    hfc.orb = np.zeros((3, 3), dtype=float)
+    hfc.tensor_full = full_arr
+    return hfc
 
 
 def build_hfc_from_qca(
@@ -49,7 +117,8 @@ def build_hfc_from_qca(
             "off" and "on".
 
     Returns:
-        The input Molecule enriched via per-nucleus hyperfine assignments.
+        The input Molecule enriched via canonical HFC assembly and runtime
+        projection onto matching nuclei.
 
     Raises:
         ValueError: If required fields are missing, tensor shapes are invalid,
@@ -124,25 +193,20 @@ def build_hfc_from_qca(
 
         a_tensor_full[label] = total
 
-    for nuc in molecule.nuclei:
-        label = str(nuc.label)
+    hfc_by_label: dict[str, Hyperfine] = {}
+    for label in labels:
         if label not in a_fc or label not in a_sd:
             continue
+        hfc_by_label[label] = _assemble_hfc_from_components(
+            fc=a_fc[label],
+            sd=a_sd[label],
+            orb=a_orb.get(label),
+            tensor_full=a_tensor_full.get(label),
+            orbital_contribution=orbital_contribution,
+            label=label,
+        )
 
-        nuc.A.fc = a_fc[label]
-        nuc.A.sd = a_sd[label]
-
-        orb_tensor = a_orb.get(label)
-        if orb_tensor is None:
-            if orbital_contribution == "on":
-                raise ValueError(
-                    f"A(ORB) contribution requested but missing for label {label}"
-                )
-            nuc.A.orb = np.zeros((3, 3), dtype=float)
-        else:
-            nuc.A.orb = orb_tensor
-
-        nuc.A.tensor_full = a_tensor_full.get(label)
+    molecule.set_available_hfc_by_label(hfc_by_label)
 
     return molecule
 
@@ -191,8 +255,8 @@ def build_hfc_from_csv(
             - chem_math_labels
 
     Returns:
-        The input Molecule enriched with CSV-derived hyperfine data and, when
-        available, chemical labels.
+        The input Molecule enriched with canonical CSV-derived HFC assembly,
+        runtime projection onto matching nuclei, and optional chemical labels.
 
     Raises:
         KeyError: If a required tensor is missing for a labelled nucleus.
@@ -212,26 +276,16 @@ def build_hfc_from_csv(
                 lab: np.asarray(t, float) for lab, t in zip(labels, tensors)
             }
 
+        hfc_by_label: dict[str, Hyperfine] = {}
         for lab in labels:
             if lab not in tensor_by_label:
                 raise KeyError(f"Missing hyperfine tensor for label: {lab}")
+            hfc_by_label[lab] = _assemble_hfc_from_full_tensor(
+                tensor_full=tensor_by_label[lab],
+                label=lab,
+            )
 
-            A = np.asarray(tensor_by_label[lab], float)
-            if A.shape != (3, 3):
-                raise ValueError(
-                    f"Hyperfine tensor for {lab} must be (3,3), got {A.shape}"
-                )
-
-            iso = float(np.trace(A) / 3.0)
-            dt = A - np.eye(3) * iso
-
-            for nuc in molecule.nuclei:
-                if str(nuc.label) != lab:
-                    continue
-                nuc.A.fc = np.eye(3, dtype=float) * iso
-                nuc.A.sd = dt
-                nuc.A.tensor_full = A
-                break
+        molecule.set_available_hfc_by_label(hfc_by_label)
 
     al_to_cl = None
     al_to_cml = None
