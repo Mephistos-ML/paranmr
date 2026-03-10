@@ -325,6 +325,8 @@ class Molecule:
     Attributes:
         labels: Full atomic labels with indices for the whole structure.
         coords: Full atomic coordinates as an ``(n_atoms, 3)`` array in Å.
+        chi_source_labels: Optional full atomic labels from the
+            susceptibility/chi source geometry.
         chi_source_coords: Optional full atomic coordinates from the
             susceptibility/chi source geometry, stored as an ``(n_atoms, 3)``
             array in Å.
@@ -346,6 +348,7 @@ class Molecule:
     ) -> None:
         self.labels = xyzf.add_label_indices(labels)
         self.coords = coords
+        self.chi_source_labels = None
         self.chi_source_coords = None
 
         # List of Nucleus objects
@@ -367,6 +370,22 @@ class Molecule:
     @property
     def n_atoms(self):
         return len(self.labels)
+
+    @property
+    def chi_source_labels(self) -> NDArray[np.str_] | None:
+        return self._chi_source_labels
+
+    @chi_source_labels.setter
+    def chi_source_labels(self, value: ArrayLike | None) -> None:
+        if value is None:
+            self._chi_source_labels = None
+            return
+
+        arr = np.asarray(value)
+        if len(arr.shape) != 1:
+            raise ValueError("chi_source_labels must be a 1D array")
+        self._chi_source_labels = np.asarray([str(label) for label in arr])
+        return
 
     @property
     def chi_source_coords(self) -> NDArray | None:
