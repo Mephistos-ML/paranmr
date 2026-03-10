@@ -315,10 +315,12 @@ def _build_molecule_df(molecule):
     if has_orb:
         columns.extend(
             [
+                "δ_orb (ppm)",
                 "δ_orb_iso (ppm)",
                 "δ_orb_aniso (ppm)",
             ]
         )
+        data["δ_orb (ppm)"] = [getattr(nuc.shift, "orb", 0.0) for nuc in nuclei]
         data["δ_orb_iso (ppm)"] = [getattr(nuc.shift, "orb_iso", 0.0) for nuc in nuclei]
         data["δ_orb_aniso (ppm)"] = [
             getattr(nuc.shift, "orb_aniso", 0.0) for nuc in nuclei
