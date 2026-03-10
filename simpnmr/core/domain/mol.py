@@ -462,6 +462,26 @@ class Molecule:
         self._susc = new_susc
         return
 
+    def set_available_hfc_by_label(
+        self,
+        hfc_by_label: dict[str, Hyperfine],
+    ) -> None:
+        """Set canonical available HFC payload and project it onto runtime nuclei.
+
+        Args:
+            hfc_by_label: Hyperfine payload keyed by atom label for all HFC data
+                available from the source.
+        """
+        self.available_hfc_by_label = {
+            str(label): copy.deepcopy(hfc) for label, hfc in hfc_by_label.items()
+        }
+
+        for nuc in self.nuclei:
+            label = str(nuc.label)
+            if label not in self.available_hfc_by_label:
+                continue
+            nuc.A = copy.deepcopy(self.available_hfc_by_label[label])
+
     def average_shifts(self):
         """Average total shifts over nuclei sharing the same chemical label.
 
