@@ -252,7 +252,16 @@ def save_molecule_to_csv(
 
     df = _build_molecule_df(molecule)
 
-    write_csv_safe(df, file_name, comment)
+    frame_value = molecule.metadata.get("frame")
+    merged_comment = comment
+    if frame_value == "chi":
+        frame_comment = (
+            "# Coordinates and hyperfine tensors in "
+            "this file are stored in the chi frame."
+        )
+        merged_comment = frame_comment if not comment else f"{comment}\n{frame_comment}"
+
+    write_csv_safe(df, file_name, merged_comment)
 
     if verbose:
         logger.info("Molecule data written to %s", file_name)
