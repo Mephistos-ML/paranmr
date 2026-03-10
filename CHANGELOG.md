@@ -2,6 +2,29 @@
 
 <!-- version list -->
 
+## v1.6.0 (2026-03-10)
+
+### Documentation
+
+- Clarify orbital contribution support for ORCA 5/6 outputs
+  ([`c89eadd`](https://gitlab.com/suturina-group/simpnmr/-/commit/c89eadd8284b4d3e70495028985c8fa4ae0131f2))
+
+### Features
+
+- **csv**: Export total orbital shift contribution
+  ([`ad20f88`](https://gitlab.com/suturina-group/simpnmr/-/commit/ad20f88cd2145c1ceaac3b4d53573612a4b1b3ba))
+
+### Refactoring
+
+- **csv**: Define molecule export columns via specs
+  ([`a816f06`](https://gitlab.com/suturina-group/simpnmr/-/commit/a816f06eea2f213fb4e65cd5e48ef07d2d8caff5))
+
+### Testing
+
+- Remove overly brittle tests
+  ([`50b4301`](https://gitlab.com/suturina-group/simpnmr/-/commit/50b4301ecac227f613598fcebf0925f524d6e08b))
+
+
 ## v1.5.0 (2026-03-09)
 
 ### Bug Fixes
