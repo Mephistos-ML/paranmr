@@ -25,9 +25,8 @@ def read_molecule_csv(file_name: str) -> dict:
     This function preserves the legacy parsing behaviour previously implemented
     in `Molecule.from_csv` (domain), but keeps IO in the IO layer.
 
-    TODO(architecture): Split this reader into separate structural and HFC
-    readers. The current function still mixes base-molecule fields (labels,
-    coords) with hyperfine- and chem-label payloads for legacy compatibility.
+    Hyperfine tensor payload is optional at the file level in this phase-1
+    contract: structure-only CSV files are accepted and return ``tensors=None``.
 
     Returns dict with keys:
       - labels: list[str]
@@ -127,15 +126,16 @@ def read_molecule_csv(file_name: str) -> dict:
     elif has_full:
         split = False
     else:
-        # Preserve old behaviour: error if hyperfine headers incomplete.
-        # If you later want "structure-only CSV", this is where you'd relax it.
-        raise ValueError(f"Incomplete hyperfine headers in {file_name}")
+        split = None
 
     labels = data["atom_label ()"].tolist()
 
     coords = np.array([data["x (Å)"], data["y (Å)"], data["z (Å)"]]).T
 
-    if split:
+    if split is None:
+        tensors = None
+
+    elif split:
         aiso_key = (
             "Aiso_eff (ppm Å^-3)"
             if "Aiso_eff (ppm Å^-3)" in data.columns
