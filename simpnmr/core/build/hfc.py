@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (C) 2026 Suturina Group
 
-"""Builders for attaching hyperfine data to an existing Molecule."""
+"""Builders for assembling hyperfine data and attaching it to a Molecule."""
 
 from __future__ import annotations
 
@@ -25,7 +25,31 @@ def _assemble_hfc_from_components(
     orbital_contribution: str,
     label: str,
 ) -> Hyperfine:
-    """Assemble a canonical `Hyperfine` object from decomposed components."""
+    """Assemble a canonical `Hyperfine` object from decomposed QC components.
+
+    This helper finalizes one label-indexed HFC payload from already parsed
+    physical components. It is the single assembly point used before the
+    canonical HFC map is stored on `Molecule`.
+
+    Args:
+        fc: Physical Fermi-contact hyperfine tensor for one atom label.
+        sd: Physical traceless spin-dipolar hyperfine tensor for one atom
+            label.
+        orb: Physical orbital hyperfine tensor for one atom label, if
+            available.
+        tensor_full: Physical full hyperfine tensor for one atom label, if
+            available.
+        orbital_contribution: Orbital contribution policy. When set to
+            ``"on"``, missing orbital data is treated as an error.
+        label: Atom label used only for validation/error messages.
+
+    Returns:
+        A finalized `Hyperfine` object for the supplied atom label.
+
+    Raises:
+        ValueError: If any provided tensor has invalid shape, or if orbital
+            contribution is required but orbital data is missing.
+    """
     fc_arr = np.asarray(fc, dtype=float)
     sd_arr = np.asarray(sd, dtype=float)
 
@@ -64,7 +88,24 @@ def _assemble_hfc_from_components(
 
 
 def _assemble_hfc_from_full_tensor(*, tensor_full: np.ndarray, label: str) -> Hyperfine:
-    """Assemble a canonical `Hyperfine` object from a full hyperfine tensor."""
+    """Assemble a canonical `Hyperfine` object from a full hyperfine tensor.
+
+    This helper is used for CSV-derived HFC payloads where only the full tensor
+    is available. The isotropic part is mapped to `fc`, the deviatoric part is
+    mapped to `sd`, and orbital contribution is currently represented as a zero
+    tensor because CSV-side orbital decomposition is not yet part of the
+    contract.
+
+    Args:
+        tensor_full: Physical full hyperfine tensor for one atom label.
+        label: Atom label used only for validation/error messages.
+
+    Returns:
+        A finalized `Hyperfine` object for the supplied atom label.
+
+    Raises:
+        ValueError: If the supplied full tensor is not shaped ``(3, 3)``.
+    """
     full_arr = np.asarray(tensor_full, dtype=float)
     if full_arr.shape != (3, 3):
         raise ValueError(
@@ -99,12 +140,9 @@ def build_hfc_from_qca(
       - a_orb: mapping label -> (3, 3) A(ORB) tensor or None
       - labels: list-like (n_atoms,) of indexed per-atom labels (e.g. H1, C2)
 
-    The derived hyperfine data matches the current Molecule hyperfine contract:
-      - a_fc: physical Fermi-contact hyperfine tensor
-      - a_sd: physical traceless spin-dipolar hyperfine tensor
-      - a_orb: physical traceless orbital hyperfine tensor when available
-      - a_tensor_full: full physical hyperfine tensor derived from
-        A(FC)+A(SD)+A(ORB) when available
+    The parsed QC payload is assembled into canonical `Hyperfine` objects keyed
+    by atom label. The assembled payload is stored on the `Molecule` and then
+    projected onto matching runtime nuclei.
 
     Args:
         molecule: Existing Molecule to enrich with derived hyperfine data.
@@ -241,10 +279,10 @@ def build_hfc_from_csv(
     """Build hyperfine data from a CSV payload and attach it to a Molecule.
 
     This builder reads full hyperfine tensors from a CSV-derived payload,
-    derives the isotropic and deviatoric effective parts, and attaches them to
-    the existing per-nucleus hyperfine contract on `Molecule`. If chemical
-    labels are present in the payload, they are also applied to the domain
-    object.
+    assembles canonical `Hyperfine` objects keyed by atom label, stores them on
+    the `Molecule`, and projects matching payloads onto runtime nuclei. If
+    chemical labels are present in the payload, they are also applied to the
+    domain object.
 
     Args:
         molecule: Existing Molecule to enrich with CSV-derived hyperfine data.
