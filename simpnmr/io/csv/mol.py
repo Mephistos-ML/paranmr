@@ -263,68 +263,56 @@ def save_molecule_to_csv(
 def _build_molecule_df(molecule):
     """Build a full molecule table for CSV export."""
 
-    columns = [
-        "atom_label ()",
-        "chem_label ()",
-        "x (Å)",
-        "y (Å)",
-        "z (Å)",
-        "A_fc_iso (ppm Å^-3)",
-        "A_sd_xx (ppm Å^-3)",
-        "A_sd_xy (ppm Å^-3)",
-        "A_sd_xz (ppm Å^-3)",
-        "A_sd_yy (ppm Å^-3)",
-        "A_sd_yz (ppm Å^-3)",
-        "A_sd_zz (ppm Å^-3)",
-        "δ_total_avg (ppm)",
-        "δ_total (ppm)",
-        "δ_dia (ppm)",
-        "δ_fc (ppm)",
-        "δ_pc (ppm)",
-        "linewidth (ppm)",
-    ]
-
     nuclei = molecule.nuclei
 
     hyperfine_meta = molecule.metadata.get("hyperfine", {})
     has_orb = hyperfine_meta.get("orbital_contribution") == "available"
 
-    data = {
-        "atom_label ()": [nuc.label for nuc in nuclei],
-        "chem_label ()": [nuc.chem_label for nuc in nuclei],
-        "x (Å)": [nuc.coord[0] for nuc in nuclei],
-        "y (Å)": [nuc.coord[1] for nuc in nuclei],
-        "z (Å)": [nuc.coord[2] for nuc in nuclei],
-        "A_fc_iso (ppm Å^-3)": [1.0 / 3.0 * np.trace(nuc.A.fc) for nuc in nuclei],
-        "A_sd_xx (ppm Å^-3)": [nuc.A.sd[0, 0] for nuc in nuclei],
-        "A_sd_xy (ppm Å^-3)": [nuc.A.sd[0, 1] for nuc in nuclei],
-        "A_sd_xz (ppm Å^-3)": [nuc.A.sd[0, 2] for nuc in nuclei],
-        "A_sd_yy (ppm Å^-3)": [nuc.A.sd[1, 1] for nuc in nuclei],
-        "A_sd_yz (ppm Å^-3)": [nuc.A.sd[1, 2] for nuc in nuclei],
-        "A_sd_zz (ppm Å^-3)": [nuc.A.sd[2, 2] for nuc in nuclei],
-        "δ_total_avg (ppm)": [nuc.shift.avg for nuc in nuclei],
-        "δ_total (ppm)": [nuc.shift.total for nuc in nuclei],
-        "δ_dia (ppm)": [nuc.shift.dia for nuc in nuclei],
-        "δ_fc (ppm)": [nuc.shift.fc for nuc in nuclei],
-        "δ_pc (ppm)": [nuc.shift.pc for nuc in nuclei],
-        "linewidth (ppm)": [
-            nuc.shift.lw if hasattr(nuc.shift, "lw") else 1.0 for nuc in nuclei
-        ],
-    }
+    base_specs = [
+        ("atom_label ()", lambda nuc: nuc.label),
+        ("chem_label ()", lambda nuc: nuc.chem_label),
+        ("x (Å)", lambda nuc: nuc.coord[0]),
+        ("y (Å)", lambda nuc: nuc.coord[1]),
+        ("z (Å)", lambda nuc: nuc.coord[2]),
+        ("A_fc_iso (ppm Å^-3)", lambda nuc: 1.0 / 3.0 * np.trace(nuc.A.fc)),
+        ("A_sd_xx (ppm Å^-3)", lambda nuc: nuc.A.sd[0, 0]),
+        ("A_sd_xy (ppm Å^-3)", lambda nuc: nuc.A.sd[0, 1]),
+        ("A_sd_xz (ppm Å^-3)", lambda nuc: nuc.A.sd[0, 2]),
+        ("A_sd_yy (ppm Å^-3)", lambda nuc: nuc.A.sd[1, 1]),
+        ("A_sd_yz (ppm Å^-3)", lambda nuc: nuc.A.sd[1, 2]),
+        ("A_sd_zz (ppm Å^-3)", lambda nuc: nuc.A.sd[2, 2]),
+        ("δ_total_avg (ppm)", lambda nuc: nuc.shift.avg),
+        ("δ_total (ppm)", lambda nuc: nuc.shift.total),
+        ("δ_dia (ppm)", lambda nuc: nuc.shift.dia),
+        ("δ_fc (ppm)", lambda nuc: nuc.shift.fc),
+        ("δ_pc (ppm)", lambda nuc: nuc.shift.pc),
+    ]
 
-    if has_orb:
-        columns.extend(
-            [
-                "δ_orb (ppm)",
-                "δ_orb_iso (ppm)",
-                "δ_orb_aniso (ppm)",
-            ]
-        )
-        data["δ_orb (ppm)"] = [getattr(nuc.shift, "orb", 0.0) for nuc in nuclei]
-        data["δ_orb_iso (ppm)"] = [getattr(nuc.shift, "orb_iso", 0.0) for nuc in nuclei]
-        data["δ_orb_aniso (ppm)"] = [
-            getattr(nuc.shift, "orb_aniso", 0.0) for nuc in nuclei
-        ]
+    orb_specs = [
+        ("δ_orb (ppm)", lambda nuc: getattr(nuc.shift, "orb", 0.0)),
+        ("δ_orb_iso (ppm)", lambda nuc: getattr(nuc.shift, "orb_iso", 0.0)),
+        (
+            "δ_orb_aniso (ppm)",
+            lambda nuc: getattr(nuc.shift, "orb_aniso", 0.0),
+        ),
+    ]
+
+    tail_specs = [
+        (
+            "linewidth (ppm)",
+            lambda nuc: nuc.shift.lw if hasattr(nuc.shift, "lw") else 1.0,
+        ),
+    ]
+
+    spec_groups = [
+        base_specs,
+        orb_specs if has_orb else [],
+        tail_specs,
+    ]
+    specs = [spec for group in spec_groups for spec in group]
+
+    columns = [name for name, _ in specs]
+    data = {name: [getter(nuc) for nuc in nuclei] for name, getter in specs}
 
     df = pd.DataFrame(data, columns=columns)
 
