@@ -37,6 +37,9 @@ from simpnmr.core.const.physics import EGAMMA
 from simpnmr.core.conv.ang_to_freq import angstrom_to_mhz
 from simpnmr.core.domain.mol import Molecule
 from simpnmr.core.relaxation import gueron, sbm
+
+# Tools
+from simpnmr.core.util import transform as tfm
 from simpnmr.core.util.strings import remove_numbers
 
 # IO layer
@@ -44,11 +47,8 @@ from simpnmr.io.csv import relax
 from simpnmr.io.csv.mol import save_molecule_to_csv
 from simpnmr.io.csv.spec import read_spectrum
 from simpnmr.io.csv.susc import save_susc
-from simpnmr.io.qc import readers as rdrs
+from simpnmr.io.qc.backends.orca.geom import read_orca5_output_xyz  # TODO: remove
 from simpnmr.io.xyz import xyz_write
-
-# Tools
-from simpnmr.tools.coords import transform as tfm
 
 # Visualisation
 from simpnmr.viz.plots.shifts import plot_shift_contrib, plot_shift_spread
@@ -121,7 +121,7 @@ def run_predict(config, options: PredictRunOptions | None = None) -> int:
     if backend == "orca":
         try:
             base_molecule.chi_source_labels, base_molecule.chi_source_coords = (
-                rdrs.read_orca5_output_xyz(config.susceptibility_file)
+                read_orca5_output_xyz(config.susceptibility_file)
             )
         except Exception as exc:
             logger.warning(
@@ -203,27 +203,45 @@ def run_predict(config, options: PredictRunOptions | None = None) -> int:
     if len(config.hyperfine_average):
         base_molecule.average_hyperfine(config.hyperfine_average)
 
+    # TODO(app): Temporary ORCA-specific chi-frame wiring.
+    # Move chi-source geometry loading, alignment susceptibility selection, and
+    # frame preparation out of predict.py into the appropriate loader/builder
+    # layer once chi-frame domain flow is formalized.
+
+    # Use the first loaded susceptibility for chi-frame rotation
+    rotation_susc = suscs[0]
+
     # Rotate hyperfine tensors from DFT frame into chi eigenframe (if provided)
     if backend == "orca":
-        if (
-            "dft" in config.hyperfine_method
-        ):  # TODO: remove condition and remove config from tf.
-            rot_mat, _ = tfm.get_rotation_and_transformation(
-                config,
-                dft_coords=base_molecule.coords,
-            )
-            base_molecule.rotate_hyperfines(rot_mat)
-
-            # Rotate DFT g-tensor into chi frame
-            if base_molecule.sh.g_tensor_dft is not None:
-                base_molecule.sh.g_tensor_dft = (
-                    rot_mat @ base_molecule.sh.g_tensor_dft @ rot_mat.T
+        if "dft" in config.hyperfine_method:
+            if base_molecule.chi_source_coords is None:
+                logger.warning(
+                    "Chi-source geometry is unavailable; skipping chi-frame rotation"
                 )
+            else:
+                rot_mat, _ = tfm.get_rotation_and_transformation(
+                    chi_tensor=rotation_susc.tensor,
+                    temperature=rotation_susc.temperature,
+                    chi_source_coords=base_molecule.chi_source_coords,
+                    dft_coords=base_molecule.coords,
+                )
+                base_molecule.apply_frame_rotation(rot_mat)
 
-            # Rotate HFC coords frame into chi eigenframe and save the transformed coords
-            tfm.rotate_coords_to_chi_frame(
-                config.project_name, config, dft_coords=base_molecule.coords
-            )
+                # Rotate DFT g-tensor into chi frame
+                if base_molecule.sh.g_tensor_dft is not None:
+                    base_molecule.sh.g_tensor_dft = (
+                        rot_mat @ base_molecule.sh.g_tensor_dft @ rot_mat.T
+                    )
+
+                # Rotate chi-source coords into chi eigenframe and save the
+                # transformed susceptibility-source structure.
+                if base_molecule.chi_source_labels is not None:
+                    tfm.rotate_coords_to_chi_frame(
+                        config.project_name,
+                        chi_tensor=rotation_susc.tensor,
+                        chi_source_labels=base_molecule.chi_source_labels,
+                        chi_source_coords=base_molecule.chi_source_coords,
+                    )
 
     # Calculate linewidths using user-specified relaxation model (optional)
     if not getattr(config, "relaxation_model", None):
