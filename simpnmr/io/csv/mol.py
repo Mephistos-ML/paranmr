@@ -314,6 +314,48 @@ def _build_molecule_df(molecule):
             "A_sd_zz (ppm Å^-3)",
             lambda ctx: ctx["hfc"].sd[2, 2] if ctx["hfc"] is not None else np.nan,
         ),
+        *(
+            [
+                (
+                    "A_orb_xx (ppm Å^-3)",
+                    lambda ctx: ctx["hfc"].orb[0, 0]
+                    if ctx["hfc"] is not None
+                    else np.nan,
+                ),
+                (
+                    "A_orb_xy (ppm Å^-3)",
+                    lambda ctx: ctx["hfc"].orb[0, 1]
+                    if ctx["hfc"] is not None
+                    else np.nan,
+                ),
+                (
+                    "A_orb_xz (ppm Å^-3)",
+                    lambda ctx: ctx["hfc"].orb[0, 2]
+                    if ctx["hfc"] is not None
+                    else np.nan,
+                ),
+                (
+                    "A_orb_yy (ppm Å^-3)",
+                    lambda ctx: ctx["hfc"].orb[1, 1]
+                    if ctx["hfc"] is not None
+                    else np.nan,
+                ),
+                (
+                    "A_orb_yz (ppm Å^-3)",
+                    lambda ctx: ctx["hfc"].orb[1, 2]
+                    if ctx["hfc"] is not None
+                    else np.nan,
+                ),
+                (
+                    "A_orb_zz (ppm Å^-3)",
+                    lambda ctx: ctx["hfc"].orb[2, 2]
+                    if ctx["hfc"] is not None
+                    else np.nan,
+                ),
+            ]
+            if has_orb
+            else []
+        ),
         (
             "δ_total_avg (ppm)",
             lambda ctx: ctx["nuc"].shift.avg if ctx["nuc"] is not None else np.nan,
