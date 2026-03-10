@@ -264,6 +264,7 @@ def _build_molecule_df(molecule):
     """Build a full molecule table for CSV export."""
 
     nuc_by_label = {nuc.label: nuc for nuc in molecule.nuclei}
+    hfc_by_label = molecule.available_hfc_by_label
 
     hyperfine_meta = molecule.metadata.get("hyperfine", {})
     has_orb = hyperfine_meta.get("orbital_contribution") == "available"
@@ -285,33 +286,33 @@ def _build_molecule_df(molecule):
         ("z (Å)", lambda ctx: ctx["coord"][2]),
         (
             "A_fc_iso (ppm Å^-3)",
-            lambda ctx: 1.0 / 3.0 * np.trace(ctx["nuc"].A.fc)
-            if ctx["nuc"] is not None
+            lambda ctx: 1.0 / 3.0 * np.trace(ctx["hfc"].fc)
+            if ctx["hfc"] is not None
             else np.nan,
         ),
         (
             "A_sd_xx (ppm Å^-3)",
-            lambda ctx: ctx["nuc"].A.sd[0, 0] if ctx["nuc"] is not None else np.nan,
+            lambda ctx: ctx["hfc"].sd[0, 0] if ctx["hfc"] is not None else np.nan,
         ),
         (
             "A_sd_xy (ppm Å^-3)",
-            lambda ctx: ctx["nuc"].A.sd[0, 1] if ctx["nuc"] is not None else np.nan,
+            lambda ctx: ctx["hfc"].sd[0, 1] if ctx["hfc"] is not None else np.nan,
         ),
         (
             "A_sd_xz (ppm Å^-3)",
-            lambda ctx: ctx["nuc"].A.sd[0, 2] if ctx["nuc"] is not None else np.nan,
+            lambda ctx: ctx["hfc"].sd[0, 2] if ctx["hfc"] is not None else np.nan,
         ),
         (
             "A_sd_yy (ppm Å^-3)",
-            lambda ctx: ctx["nuc"].A.sd[1, 1] if ctx["nuc"] is not None else np.nan,
+            lambda ctx: ctx["hfc"].sd[1, 1] if ctx["hfc"] is not None else np.nan,
         ),
         (
             "A_sd_yz (ppm Å^-3)",
-            lambda ctx: ctx["nuc"].A.sd[1, 2] if ctx["nuc"] is not None else np.nan,
+            lambda ctx: ctx["hfc"].sd[1, 2] if ctx["hfc"] is not None else np.nan,
         ),
         (
             "A_sd_zz (ppm Å^-3)",
-            lambda ctx: ctx["nuc"].A.sd[2, 2] if ctx["nuc"] is not None else np.nan,
+            lambda ctx: ctx["hfc"].sd[2, 2] if ctx["hfc"] is not None else np.nan,
         ),
         (
             "δ_total_avg (ppm)",
@@ -378,6 +379,7 @@ def _build_molecule_df(molecule):
             "label": label,
             "coord": coord,
             "nuc": nuc_by_label.get(label),
+            "hfc": hfc_by_label.get(label),
         }
         rows.append({name: getter(ctx) for name, getter in specs})
 
