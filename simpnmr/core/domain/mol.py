@@ -15,9 +15,9 @@ from numpy.typing import ArrayLike, NDArray
 
 from simpnmr.core.const import isotopes, ptable
 from simpnmr.core.domain.tensor import Hyperfine, Shift, Susceptibility
+from simpnmr.core.util import transform as tfm
 from simpnmr.core.util.arrays import flatten
 from simpnmr.core.util.text import subtitle, title
-from simpnmr.tools.coords import transform as tfm
 from simpnmr.tools.coords import xyz_fmt as xyzf
 
 logger = logging.getLogger(__name__)
@@ -386,6 +386,7 @@ class Molecule:
         if len(arr.shape) != 1:
             raise ValueError("chi_source_labels must be a 1D array")
         self._chi_source_labels = np.asarray([str(label) for label in arr])
+        self._validate_chi_source_geometry()
         return
 
     @property
@@ -402,7 +403,38 @@ class Molecule:
         if len(arr.shape) != 2 or arr.shape[1] != 3:
             raise ValueError("chi_source_coords must be an (n_atoms, 3) array")
         self._chi_source_coords = arr
+        self._validate_chi_source_geometry()
         return
+
+    def _validate_chi_source_geometry(self) -> None:
+        """Validate the optional chi-source geometry stored on the molecule.
+
+        Raises:
+            ValueError: If chi-source labels/coordinates disagree in length or
+                do not match the full molecule atom count.
+        """
+        if self.chi_source_labels is None or self.chi_source_coords is None:
+            return
+
+        if len(self.chi_source_labels) != len(self.chi_source_coords):
+            raise ValueError(
+                "chi_source_labels and chi_source_coords must have matching lengths"
+            )
+
+        if len(self.chi_source_labels) != self.n_atoms:
+            raise ValueError(
+                "chi-source geometry must match the full molecule atom count"
+            )
+
+        # TODO(domain): Support automatic chi-source label alignment when the
+        # susceptibility-source geometry contains the same atoms but arrives in
+        # a different order. For now, require the indexed label order to match
+        # Molecule.labels exactly.
+        indexed_chi_labels = xyzf.add_label_indices(self.chi_source_labels)
+        if list(indexed_chi_labels) != list(self.labels):
+            raise ValueError(
+                "chi_source_labels must match Molecule.labels in the same order"
+            )
 
     def __str__(self):
         string = ""
