@@ -314,22 +314,25 @@ class SpinHamiltonian:
 
 
 class Molecule:
-    """Molecular container holding structure and NMR-active nuclei.
+    """Molecular container holding structure, available HFC data, and runtime nuclei.
 
     Args:
-        labels: Atomic labels (no indices).
-        coords: Atomic coordinates as an ``(n_atoms, 3)`` array in Å.
-        nuclei: List of NMR-active `Nucleus` objects.
+        labels: Atomic labels for the full structure (no indices).
+        coords: Atomic coordinates for the full structure as an ``(n_atoms, 3)``
+            array in Å.
+        nuclei: List of runtime `Nucleus` objects used by magnetic workflows.
 
     Attributes:
-        labels: Atomic labels with indices.
-        coords: Atomic coordinates as an ``(n_atoms, 3)`` array in Å.
-        n_atoms: Number of atoms.
-        nuclei: NMR-active nuclei.
+        labels: Full atomic labels with indices for the whole structure.
+        coords: Full atomic coordinates as an ``(n_atoms, 3)`` array in Å.
+        n_atoms: Number of atoms in the full structure.
+        available_hfc_by_label: Canonical hyperfine payload store keyed by atom
+            label for all HFC data available from the source.
+        nuclei: Runtime nuclei used by downstream magnetic workflows.
         susc: Magnetic susceptibility tensor for the molecule.
         electronic: Electronic state metadata (spin/orbit/J model selection).
         sh: Spin-Hamiltonian parameters (e.g. g-tensor, ZFS),
-        shared across the molecule.
+            shared across the molecule.
         metadata: Dictionary for domain-level metadata and model provenance.
             Stores final, effective modelling decisions that affect downstream
             physics (e.g. availability of orbital hyperfine contributions).
@@ -343,6 +346,9 @@ class Molecule:
 
         # List of Nucleus objects
         self.nuclei = nuclei
+
+        # Canonical HFC store for all source-available hyperfine data.
+        self.available_hfc_by_label: dict[str, Hyperfine] = {}
 
         # Susceptibility object
         self.susc = copy.deepcopy(Susceptibility())
