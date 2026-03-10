@@ -1139,7 +1139,7 @@ class PredictConfig(FitSuscConfig):
         "nuclei": [
             "include",
         ],
-        "susceptibility": ["file", "temperatures"],
+        "susceptibility": ["temperatures"],
         "project": ["name"],
     }
 
@@ -1373,8 +1373,15 @@ class PredictConfig(FitSuscConfig):
         Returns:
             A populated `PredictConfig` instance.
         """
-        cls: PredictConfig = super().from_file(file_name)
-        return cls
+        config: PredictConfig = super().from_file(file_name)
+
+        if config.susceptibility_format and not config.susceptibility_file:
+            logger.warning(
+                "Ignoring susceptibility:format because no susceptibility:file was "
+                "provided."
+            )
+
+        return config
 
 
 class FitCorrTimeConfig(FitSuscConfig):
