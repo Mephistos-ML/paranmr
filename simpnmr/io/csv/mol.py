@@ -263,44 +263,105 @@ def save_molecule_to_csv(
 def _build_molecule_df(molecule):
     """Build a full molecule table for CSV export."""
 
-    nuclei = molecule.nuclei
+    nuc_by_label = {nuc.label: nuc for nuc in molecule.nuclei}
 
     hyperfine_meta = molecule.metadata.get("hyperfine", {})
     has_orb = hyperfine_meta.get("orbital_contribution") == "available"
 
+    labels = list(molecule.labels)
+    coords = np.asarray(molecule.coords)
+
+    if len(labels) != len(coords):
+        raise ValueError("Molecule labels and coordinates must have matching lengths")
+
     base_specs = [
-        ("atom_label ()", lambda nuc: nuc.label),
-        ("chem_label ()", lambda nuc: nuc.chem_label),
-        ("x (Å)", lambda nuc: nuc.coord[0]),
-        ("y (Å)", lambda nuc: nuc.coord[1]),
-        ("z (Å)", lambda nuc: nuc.coord[2]),
-        ("A_fc_iso (ppm Å^-3)", lambda nuc: 1.0 / 3.0 * np.trace(nuc.A.fc)),
-        ("A_sd_xx (ppm Å^-3)", lambda nuc: nuc.A.sd[0, 0]),
-        ("A_sd_xy (ppm Å^-3)", lambda nuc: nuc.A.sd[0, 1]),
-        ("A_sd_xz (ppm Å^-3)", lambda nuc: nuc.A.sd[0, 2]),
-        ("A_sd_yy (ppm Å^-3)", lambda nuc: nuc.A.sd[1, 1]),
-        ("A_sd_yz (ppm Å^-3)", lambda nuc: nuc.A.sd[1, 2]),
-        ("A_sd_zz (ppm Å^-3)", lambda nuc: nuc.A.sd[2, 2]),
-        ("δ_total_avg (ppm)", lambda nuc: nuc.shift.avg),
-        ("δ_total (ppm)", lambda nuc: nuc.shift.total),
-        ("δ_dia (ppm)", lambda nuc: nuc.shift.dia),
-        ("δ_fc (ppm)", lambda nuc: nuc.shift.fc),
-        ("δ_pc (ppm)", lambda nuc: nuc.shift.pc),
+        ("atom_label ()", lambda ctx: ctx["label"]),
+        (
+            "chem_label ()",
+            lambda ctx: ctx["nuc"].chem_label if ctx["nuc"] is not None else np.nan,
+        ),
+        ("x (Å)", lambda ctx: ctx["coord"][0]),
+        ("y (Å)", lambda ctx: ctx["coord"][1]),
+        ("z (Å)", lambda ctx: ctx["coord"][2]),
+        (
+            "A_fc_iso (ppm Å^-3)",
+            lambda ctx: 1.0 / 3.0 * np.trace(ctx["nuc"].A.fc)
+            if ctx["nuc"] is not None
+            else np.nan,
+        ),
+        (
+            "A_sd_xx (ppm Å^-3)",
+            lambda ctx: ctx["nuc"].A.sd[0, 0] if ctx["nuc"] is not None else np.nan,
+        ),
+        (
+            "A_sd_xy (ppm Å^-3)",
+            lambda ctx: ctx["nuc"].A.sd[0, 1] if ctx["nuc"] is not None else np.nan,
+        ),
+        (
+            "A_sd_xz (ppm Å^-3)",
+            lambda ctx: ctx["nuc"].A.sd[0, 2] if ctx["nuc"] is not None else np.nan,
+        ),
+        (
+            "A_sd_yy (ppm Å^-3)",
+            lambda ctx: ctx["nuc"].A.sd[1, 1] if ctx["nuc"] is not None else np.nan,
+        ),
+        (
+            "A_sd_yz (ppm Å^-3)",
+            lambda ctx: ctx["nuc"].A.sd[1, 2] if ctx["nuc"] is not None else np.nan,
+        ),
+        (
+            "A_sd_zz (ppm Å^-3)",
+            lambda ctx: ctx["nuc"].A.sd[2, 2] if ctx["nuc"] is not None else np.nan,
+        ),
+        (
+            "δ_total_avg (ppm)",
+            lambda ctx: ctx["nuc"].shift.avg if ctx["nuc"] is not None else np.nan,
+        ),
+        (
+            "δ_total (ppm)",
+            lambda ctx: ctx["nuc"].shift.total if ctx["nuc"] is not None else np.nan,
+        ),
+        (
+            "δ_dia (ppm)",
+            lambda ctx: ctx["nuc"].shift.dia if ctx["nuc"] is not None else np.nan,
+        ),
+        (
+            "δ_fc (ppm)",
+            lambda ctx: ctx["nuc"].shift.fc if ctx["nuc"] is not None else np.nan,
+        ),
+        (
+            "δ_pc (ppm)",
+            lambda ctx: ctx["nuc"].shift.pc if ctx["nuc"] is not None else np.nan,
+        ),
     ]
 
     orb_specs = [
-        ("δ_orb (ppm)", lambda nuc: getattr(nuc.shift, "orb", 0.0)),
-        ("δ_orb_iso (ppm)", lambda nuc: getattr(nuc.shift, "orb_iso", 0.0)),
+        (
+            "δ_orb (ppm)",
+            lambda ctx: getattr(ctx["nuc"].shift, "orb", np.nan)
+            if ctx["nuc"] is not None
+            else np.nan,
+        ),
+        (
+            "δ_orb_iso (ppm)",
+            lambda ctx: getattr(ctx["nuc"].shift, "orb_iso", np.nan)
+            if ctx["nuc"] is not None
+            else np.nan,
+        ),
         (
             "δ_orb_aniso (ppm)",
-            lambda nuc: getattr(nuc.shift, "orb_aniso", 0.0),
+            lambda ctx: getattr(ctx["nuc"].shift, "orb_aniso", np.nan)
+            if ctx["nuc"] is not None
+            else np.nan,
         ),
     ]
 
     tail_specs = [
         (
             "linewidth (ppm)",
-            lambda nuc: nuc.shift.lw if hasattr(nuc.shift, "lw") else 1.0,
+            lambda ctx: ctx["nuc"].shift.lw
+            if ctx["nuc"] is not None and hasattr(ctx["nuc"].shift, "lw")
+            else np.nan,
         ),
     ]
 
@@ -311,10 +372,17 @@ def _build_molecule_df(molecule):
     ]
     specs = [spec for group in spec_groups for spec in group]
 
-    columns = [name for name, _ in specs]
-    data = {name: [getter(nuc) for nuc in nuclei] for name, getter in specs}
+    rows: list[dict[str, object]] = []
+    for label, coord in zip(labels, coords):
+        ctx = {
+            "label": label,
+            "coord": coord,
+            "nuc": nuc_by_label.get(label),
+        }
+        rows.append({name: getter(ctx) for name, getter in specs})
 
-    df = pd.DataFrame(data, columns=columns)
+    columns = [name for name, _ in specs]
+    df = pd.DataFrame(rows, columns=columns)
 
     if df.empty:
         return df
