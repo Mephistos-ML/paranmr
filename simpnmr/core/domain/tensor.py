@@ -816,7 +816,6 @@ class Shift:
         A: Hyperfine, chi: "Susceptibility", g_tensor_dft: NDArray
     ) -> float:
         """Compute the total paramagnetic shift (FC + PCS + orbital)."""
-        print("check")
         return (
             Shift.calc_fcs(A, chi)
             + Shift.calc_pcs(A, chi)
