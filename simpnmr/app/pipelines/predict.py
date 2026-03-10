@@ -44,6 +44,7 @@ from simpnmr.io.csv import relax
 from simpnmr.io.csv.mol import save_molecule_to_csv
 from simpnmr.io.csv.spec import read_spectrum
 from simpnmr.io.csv.susc import save_susc
+from simpnmr.io.qc import readers as rdrs
 from simpnmr.io.xyz import xyz_write
 
 # Tools
@@ -113,6 +114,20 @@ def run_predict(config, options: PredictRunOptions | None = None) -> int:
         config.susceptibility_file,
         config.susceptibility_format,
     )
+
+    # TODO(app): Temporary ORCA-only chi-source geometry load for prediction.
+    # Move this into the appropriate loader/builder layer once the chi-source
+    # geometry flow is formalized outside the pipeline.
+    if backend == "orca":
+        try:
+            base_molecule.chi_source_labels, base_molecule.chi_source_coords = (
+                rdrs.read_orca5_output_xyz(config.susceptibility_file)
+            )
+        except Exception as exc:
+            logger.warning(
+                "Failed to read chi-source geometry from ORCA susceptibility file: %s",
+                exc,
+            )
 
     # Load Magnetic Susceptibility
     suscs = load_susceptibilities(
