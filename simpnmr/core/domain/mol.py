@@ -719,7 +719,7 @@ class Molecule:
         return
 
     def calc_pdip(self, centre_labels: list[str]):
-        """Add point-dipole dipolar hyperfine contributions for all nuclei.
+        """Add point-dipole dipolar hyperfine contributions to canonical HFC state.
 
         Args:
             centre_labels: Labels of paramagnetic centers.
@@ -734,6 +734,11 @@ class Molecule:
                 "Error: No paramagnetic centres specified for point dipole"
             )
 
+        updated_hfc_by_label = {
+            str(label): copy.deepcopy(hfc)
+            for label, hfc in self.available_hfc_by_label.items()
+        }
+
         # Find user specified centre(s)
         for centre in centre_labels:
             it = [i for i, x in enumerate(self.labels) if x == centre]
@@ -746,11 +751,15 @@ class Molecule:
             for nuc in self.nuclei:
                 if nuc.label in centre_labels:
                     continue
+
+                label = str(nuc.label)
+                hfc = copy.deepcopy(updated_hfc_by_label.get(label, Hyperfine()))
                 val = Hyperfine.calc_pdip(nuc.coord, self.coords[it[0]])
                 val *= 1e6 / len(centre_labels)
-                nuc.A.sd = nuc.A.sd + val
-                if nuc.A.tensor_full is not None:
-                    nuc.A.tensor_full = nuc.A.tensor_full + val
+                hfc.sd = hfc.sd + val
+                updated_hfc_by_label[label] = hfc
+
+        self.set_available_hfc_by_label(updated_hfc_by_label)
         return
 
     def calculate_shifts(self):
