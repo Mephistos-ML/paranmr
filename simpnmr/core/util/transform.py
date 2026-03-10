@@ -20,6 +20,36 @@ from simpnmr.tools.coords import xyz_fmt
 logger = logging.getLogger(__name__)
 
 
+def rotate_coords(coords: np.ndarray, rot_mat: np.ndarray) -> np.ndarray:
+    """Rotate Cartesian coordinates by a rotation matrix.
+
+    Args:
+        coords: Cartesian coordinates with shape ``(n_atoms, 3)``.
+        rot_mat: Rotation matrix with shape ``(3, 3)``.
+
+    Returns:
+        np.ndarray: Rotated coordinates with shape ``(n_atoms, 3)``.
+    """
+    coords = np.asarray(coords, dtype=float)
+    rot_mat = np.asarray(rot_mat, dtype=float)
+    return coords @ rot_mat.T
+
+
+def rotate_tensor(tensor: np.ndarray, rot_mat: np.ndarray) -> np.ndarray:
+    """Rotate a rank-2 Cartesian tensor by a rotation matrix.
+
+    Args:
+        tensor: Tensor with shape ``(3, 3)``.
+        rot_mat: Rotation matrix with shape ``(3, 3)``.
+
+    Returns:
+        np.ndarray: Rotated tensor with shape ``(3, 3)``.
+    """
+    tensor = np.asarray(tensor, dtype=float)
+    rot_mat = np.asarray(rot_mat, dtype=float)
+    return rot_mat @ tensor @ rot_mat.T
+
+
 def get_rotation_and_transformation(
     *,
     chi_tensor: np.ndarray,
@@ -134,13 +164,13 @@ def rotate_coords_to_chi_frame(
     # sort eigenvectors by |eigenvalue|, no additional arbitrary global-axis alignment.
     eigenvecs_sort_traceless = eigvecs_traceless[:, idx]
 
-    # Center NEVPT2 coordinates
+    # Center susceptibility-source coordinates
     chi_source_coords_center = chi_source_coords.mean(axis=0, keepdims=True)
     chi_source_coords_centerless = chi_source_coords - chi_source_coords_center
 
-    # Convert NEVPT2 coordinates to chi frame
+    # Convert susceptibility-source coordinates to chi frame
     chi_source_coords_chi_frame = (
-        chi_source_coords_centerless @ eigenvecs_sort_traceless
+        rotate_coords(chi_source_coords_centerless, eigenvecs_sort_traceless.T)
         + chi_source_coords_center
     )
 

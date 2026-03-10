@@ -17,6 +17,7 @@ from simpnmr.core.const import isotopes, ptable
 from simpnmr.core.domain.tensor import Hyperfine, Shift, Susceptibility
 from simpnmr.core.util.arrays import flatten
 from simpnmr.core.util.text import subtitle, title
+from simpnmr.tools.coords import transform as tfm
 from simpnmr.tools.coords import xyz_fmt as xyzf
 
 logger = logging.getLogger(__name__)
@@ -520,6 +521,57 @@ class Molecule:
             if label not in self.available_hfc_by_label:
                 continue
             nuc.A = copy.deepcopy(self.available_hfc_by_label[label])
+
+    def apply_frame_rotation(self, rot_mat: ArrayLike) -> None:
+        """Apply a frame rotation to canonical molecule state.
+
+        The canonical coordinate set and canonical available HFC store are
+        rotated first. Runtime nucleus coordinates and runtime hyperfine payload
+        are then re-projected from the rotated canonical state.
+
+        Args:
+            rot_mat: Rotation matrix with shape ``(3, 3)``.
+
+        Raises:
+            ValueError: If the rotation matrix does not have shape ``(3, 3)``.
+        """
+        rot_arr = np.asarray(rot_mat, dtype=float)
+        if rot_arr.shape != (3, 3):
+            raise ValueError("rot_mat must be a (3, 3) matrix")
+
+        self.coords = tfm.rotate_coords(self.coords, rot_arr)
+
+        if self.chi_source_coords is not None:
+            self.chi_source_coords = tfm.rotate_coords(
+                self.chi_source_coords,
+                rot_arr,
+            )
+
+        rotated_hfc_by_label: dict[str, Hyperfine] = {}
+        for label, hfc in self.available_hfc_by_label.items():
+            rotated_hfc = copy.deepcopy(hfc)
+            rotated_hfc.fc = tfm.rotate_tensor(rotated_hfc.fc, rot_arr)
+            rotated_hfc.sd = tfm.rotate_tensor(rotated_hfc.sd, rot_arr)
+            rotated_hfc.orb = tfm.rotate_tensor(rotated_hfc.orb, rot_arr)
+            if rotated_hfc.tensor_full is not None:
+                rotated_hfc.tensor_full = tfm.rotate_tensor(
+                    rotated_hfc.tensor_full,
+                    rot_arr,
+                )
+            rotated_hfc_by_label[str(label)] = rotated_hfc
+
+        self.set_available_hfc_by_label(rotated_hfc_by_label)
+
+        coord_by_label = {
+            str(label): np.asarray(coord, dtype=float)
+            for label, coord in zip(self.labels, self.coords)
+        }
+        for nuc in self.nuclei:
+            label = str(nuc.label)
+            if label in coord_by_label:
+                nuc.coord = coord_by_label[label]
+
+        self.metadata["frame"] = "chi"
 
     def average_shifts(self):
         """Average total shifts over nuclei sharing the same chemical label.
