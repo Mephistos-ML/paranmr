@@ -3,8 +3,8 @@
 
 """Transform coordinates for PCS geometry mapping.
 
-Provides helpers to align Susceptibility and HFC geometries and to rotate coordinates
-into the susceptibility principal-axis (chi) frame.
+Provides pure helpers to align susceptibility-source and HFC geometries and to
+rotate coordinates into the susceptibility principal-axis (chi) frame.
 """
 
 import logging
@@ -17,69 +17,43 @@ import numpy.linalg as la
 from simpnmr.io.xyz import xyz_write
 from simpnmr.tools.coords import xyz_fmt
 
-from ...cfg import config as inps
-from ...io.qc import gateway as rdrs
-
 logger = logging.getLogger(__name__)
 
 
-def access_input_data(cfg, dft_coords):
-    """
-    Load and extract all PCS-related input data using an already parsed
-    PredictConfig instance.
+def get_rotation_and_transformation(
+    *,
+    chi_tensor: np.ndarray,
+    temperature: float,
+    chi_source_coords: np.ndarray,
+    dft_coords: np.ndarray,
+):
+    """Compute the rotation and chi-frame transformation for PCS mapping.
 
     Args:
-        cfg (PredictConfig): Parsed YAML configuration object containing file paths
-            and susceptibility settings.
-
-    Returns:
-        tuple[np.ndarray, list[float], list[str], np.ndarray, np.ndarray]:
-            - chiT (np.ndarray): Susceptibility tensor for the target temperature
-              with shape (3, 3).
-            - temperature (list[float]): Temperature values provided in the YAML
-              configuration.
-            - nevpt2_labels (list[str]): Atomic labels extracted from the NEVPT2
-              coordinate file.
-            - nevpt2_coords (np.ndarray): NEVPT2 atomic Cartesian coordinates with
-              shape (N, 3).
-            - dft_coords (np.ndarray): DFT atomic Cartesian coordinates extracted
-              from the hyperfine file with shape (N, 3).
-    """
-
-    # Temperatures come from YAML; we treat it as a single-element list for now
-    temperature = cfg.susceptibility_temperatures
-
-    # NEVPT2 coordinates
-    nevpt2_labels, nevpt2_coords = rdrs.read_orca5_output_xyz(cfg.susceptibility_file)
-
-    # Susceptibility tensor
-    chi_dict = rdrs.read_orca_susceptibility(cfg.susceptibility_file, section="nevpt2")
-    chiT = chi_dict[temperature[0]]
-
-    return chiT, temperature, nevpt2_labels, nevpt2_coords, dft_coords
-
-
-def get_rotation_and_transformation(cfg: inps.PredictConfig, dft_coords):
-    """
-    Compute and return both the rotation matrix aligning NEVPT2 and DFT
-    geometries and the final transformation matrix used for PCS mapping.
-
-    Args:
-        cfg (PredictConfig): Parsed YAML configuration containing susceptibility
-            and geometry inputs.
+        chi_tensor: Susceptibility tensor at the target temperature.
+        temperature: Temperature corresponding to ``chi_tensor``.
+        chi_source_coords: Coordinates from the susceptibility/chi source
+            geometry.
+        dft_coords: Coordinates from the HFC/DFT geometry.
 
     Returns:
         tuple[np.ndarray, np.ndarray]:
             - rot_mat (np.ndarray): Rotation matrix with shape (3, 3) that maps
-              DFT-frame coordinates/components into the NEVPT2 (susceptibility) frame.
-            - trans_mat (np.ndarray): Transformation matrix with shape (3, 3) that maps
-              DFT-frame coordinates/components into the susceptibility principal-axis
-              (chi) frame.
+              DFT-frame coordinates/components into the susceptibility-source
+              frame.
+            - trans_mat (np.ndarray): Transformation matrix with shape (3, 3)
+              that maps DFT-frame coordinates/components into the susceptibility
+              principal-axis (chi) frame.
+
+    Raises:
+        ValueError: If the susceptibility-source and DFT coordinate sets do not
+            have the same number of atoms.
     """
+    chi_tensor = np.asarray(chi_tensor, dtype=float)
+    chi_source_coords = np.asarray(chi_source_coords, dtype=float)
+    dft_coords = np.asarray(dft_coords, dtype=float)
 
-    chiT, temperature, _, nevpt2_coords, dft_coords = access_input_data(cfg, dft_coords)
-
-    if len(nevpt2_coords) != len(dft_coords):
+    if len(chi_source_coords) != len(dft_coords):
         raise ValueError(
             "NEVPT2 and DFT coordinate sets have different lengths; cannot determine "
             "a meaningful rotational alignment."
@@ -88,14 +62,14 @@ def get_rotation_and_transformation(cfg: inps.PredictConfig, dft_coords):
     # Compute rotation aligning DFT → NEVPT2 (susceptibility frame).
     # `find_rotation(coords_1, coords_2)` returns R
     # such that coords_2 rotated onto coords_1.
-    if np.allclose(nevpt2_coords, dft_coords, rtol=1e-6, atol=1e-8):
+    if np.allclose(chi_source_coords, dft_coords, rtol=1e-6, atol=1e-8):
         rot_mat = np.eye(3)
         rmsd = 0.0
     else:
-        rot_mat, rmsd = xyz_fmt.find_rotation(nevpt2_coords, dft_coords)
+        rot_mat, rmsd = xyz_fmt.find_rotation(chi_source_coords, dft_coords)
 
     # Temperature-normalised tensor (scaling does not change eigenvectors)
-    chi = chiT / temperature[0]
+    chi = chi_tensor / temperature
 
     # Use a single chi-frame convention everywhere:
     # 1) remove isotropic (trace) component
@@ -122,31 +96,37 @@ def get_rotation_and_transformation(cfg: inps.PredictConfig, dft_coords):
     return rot_mat, trans_mat
 
 
-def rotate_coords_to_chi_frame(file_path, cfg: inps.PredictConfig, dft_coords):
-    """
-    Rotate NEVPT2 coordinates into the principal-axis frame of the
-    susceptibility (chi) tensor and write the resulting structure to an
-    XYZ file.
+def rotate_coords_to_chi_frame(
+    file_path,
+    *,
+    chi_tensor: np.ndarray,
+    chi_source_labels,
+    chi_source_coords,
+):
+    """Rotate susceptibility-source coordinates into the chi principal-axis frame.
 
     Args:
-        file_path (str): Directory in which the output chi-frame XYZ file
-            should be saved.
-        cfg (PredictConfig): Parsed YAML configuration containing susceptibility
-            and geometry inputs.
+        file_path (str): Directory in which the output chi-frame XYZ file should
+            be saved.
+        chi_tensor (np.ndarray): Susceptibility tensor at the target
+            temperature.
+        chi_source_labels: Atomic labels from the susceptibility/chi source
+            geometry.
+        chi_source_coords: Atomic coordinates from the susceptibility/chi source
+            geometry.
 
     Returns:
-        list[tuple[str, np.ndarray]]: A list of (label, coordinate) pairs
-        representing the rotated structure, suitable for downstream
-        processing.
+        list[tuple[str, np.ndarray]]: A list of ``(label, coordinate)`` pairs
+        representing the rotated structure, suitable for downstream processing.
     """
-
-    chiT, _, nevpt2_labels, nevpt2_coords, _ = access_input_data(cfg, dft_coords)
+    chi_tensor = np.asarray(chi_tensor, dtype=float)
+    chi_source_coords = np.asarray(chi_source_coords, dtype=float)
 
     # Subtract isotropic component (trace)
-    chiT_traceless = chiT - np.eye(3) * (np.trace(chiT) / 3.0)
+    chi_tensor_traceless = chi_tensor - np.eye(3) * (np.trace(chi_tensor) / 3.0)
 
     # Diagonalize matrix
-    eigvals_traceless, eigvecs_traceless = la.eigh(chiT_traceless)
+    eigvals_traceless, eigvecs_traceless = la.eigh(chi_tensor_traceless)
 
     idx = np.argsort(np.abs(eigvals_traceless))
 
@@ -155,16 +135,17 @@ def rotate_coords_to_chi_frame(file_path, cfg: inps.PredictConfig, dft_coords):
     eigenvecs_sort_traceless = eigvecs_traceless[:, idx]
 
     # Center NEVPT2 coordinates
-    nevpt2_coords_center = nevpt2_coords.mean(axis=0, keepdims=True)
-    nevpt2_coords_centerless = nevpt2_coords - nevpt2_coords_center
+    chi_source_coords_center = chi_source_coords.mean(axis=0, keepdims=True)
+    chi_source_coords_centerless = chi_source_coords - chi_source_coords_center
 
     # Convert NEVPT2 coordinates to chi frame
-    nevpt2_coords_chi_frame = (
-        nevpt2_coords_centerless @ eigenvecs_sort_traceless + nevpt2_coords_center
+    chi_source_coords_chi_frame = (
+        chi_source_coords_centerless @ eigenvecs_sort_traceless
+        + chi_source_coords_center
     )
 
     # Clean labels (remove numeric indices, if any)
-    clean_labels = [re.sub(r"\d+", "", str(label)) for label in nevpt2_labels]
+    clean_labels = [re.sub(r"\d+", "", str(label)) for label in chi_source_labels]
 
     # Prepare output directory and filename
     os.makedirs(file_path, exist_ok=True)
@@ -177,7 +158,7 @@ def rotate_coords_to_chi_frame(file_path, cfg: inps.PredictConfig, dft_coords):
     xyz_write.save_xyz(
         file_name=xyz_filename,
         labels=clean_labels,
-        coords=nevpt2_coords_chi_frame,
+        coords=chi_source_coords_chi_frame,
         verbose=False,
         comment=_comment,
     )
@@ -185,6 +166,6 @@ def rotate_coords_to_chi_frame(file_path, cfg: inps.PredictConfig, dft_coords):
     logger.info("Chi-frame coordinates saved to %s", xyz_filename)
 
     # Return list of (label, coord) tuples for possible downstream use
-    coords_chi_frame_out = list(zip(clean_labels, nevpt2_coords_chi_frame))
+    coords_chi_frame_out = list(zip(clean_labels, chi_source_coords_chi_frame))
 
     return coords_chi_frame_out
