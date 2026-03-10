@@ -112,12 +112,12 @@ def plot_component(
     xvals = np.arange(1, len(func_comps[_frst]) + 1)
 
     for (functional, a_vals), shift in zip(func_comps.items(), shifts):
-        if functional == "pdip":
+        if functional == "pdA":
             ax.bar(
                 xvals + shift,
                 a_vals.values(),
                 width=width,
-                label="Point Dipole",
+                label="Point Dipole (dA)",
                 color="k",
             )
         else:
@@ -251,7 +251,10 @@ def main():
     )
 
     all_isos = {
-        name: {nuc.chem_math_label: nuc.A.iso for nuc in molecule.nuclei}
+        name: {
+            nuc.chem_math_label: (1.0 / 3.0) * np.trace(nuc.A.fc)
+            for nuc in molecule.nuclei
+        }
         for name, molecule in molecules.items()
     }
 
@@ -303,7 +306,7 @@ def main():
 
     all_ax = {
         name: {
-            nuc.chem_math_label: nuc.A.dip[0, 0] - nuc.A.dip[1, 1]
+            nuc.chem_math_label: nuc.A.sd[0, 0] - nuc.A.sd[1, 1]
             for nuc in molecule.nuclei
         }
         for name, molecule in molecules.items()
@@ -311,7 +314,7 @@ def main():
 
     all_rho = {
         name: {
-            nuc.chem_math_label: -nuc.A.dip[0, 0] - nuc.A.dip[1, 1]
+            nuc.chem_math_label: -nuc.A.sd[0, 0] - nuc.A.sd[1, 1]
             for nuc in molecule.nuclei
         }
         for name, molecule in molecules.items()

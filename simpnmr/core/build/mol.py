@@ -1,59 +1,50 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (C) 2026 Suturina Group
 
-"""Construct Molecule domain objects from external payloads.
+"""Construct base Molecule domain objects from structural payloads.
 
-Provides helpers to build Molecule instances from QC-derived data or CSV payloads.
+Provides helpers to build Molecule instances from QC-derived or CSV-derived
+structural data without attaching hyperfine information.
 """
 
 from __future__ import annotations
 
-from typing import Any
-
 import numpy as np
 
-from simpnmr.core.conv.freq_to_ang import a_iso_mhz_to_ang, a_tensor_mhz_to_ang
 from simpnmr.core.domain.mol import Molecule
 
 
 def build_molecule_from_qca(
-    qca: Any,
+    qca: object,
     *,
     elements: list[str] | str = "all",
-    converter: str | None = "MHz_to_Ang-3",
 ) -> Molecule:
-    """Build a `Molecule` from a parsed QC hyperfine object.
+    """Build a base `Molecule` from structural data available on a QCA payload.
 
-    Expects `qca` (typically `rdrs.QCA`) to provide:
-      - coords: array-like (n_atoms, 3) in Å
-      - labels: list-like (n_atoms,) of indexed per-atom labels (e.g. H1, C2)
-      - a_iso: mapping label -> float (keyed by the same labels as `labels`)
-      - a_dip: mapping label -> (3, 3) array-like (keyed by the same labels as `labels`)
+    This builder is intentionally limited to molecule initialisation. It reads
+    only labels and coordinates from the parsed QC payload and returns a base
+    domain `Molecule` without attaching any hyperfine information.
 
     Args:
-        qca: Parsed QC hyperfine object.
+        qca: Parsed QC payload expected to expose `labels` and `coords`.
         elements: Elements/labels to include.
-        converter: Optional converter string matching the behaviour of
-            `Molecule.from_QCA(..., converter=...)`. Defaults to "MHz_to_Ang-3".
 
     Returns:
-        A `Molecule` instance.
+        A base `Molecule` instance.
 
     Raises:
-        ValueError: If required fields are missing or unknown converter specified.
+        ValueError: If required structural fields are missing or inconsistent.
     """
     if not hasattr(qca, "coords"):
         raise ValueError("QCA object is missing required attribute: coords")
-    if not hasattr(qca, "a_iso"):
-        raise ValueError("QCA object is missing required attribute: a_iso")
-    if not hasattr(qca, "a_dip"):
-        raise ValueError("QCA object is missing required attribute: a_dip")
-
     if not hasattr(qca, "labels"):
         raise ValueError("QCA object is missing required attribute: labels")
 
     coords = np.asarray(qca.coords, dtype=float)
     labels = [str(lab) for lab in qca.labels]
+
+    if coords.ndim != 2 or coords.shape[1] != 3:
+        raise ValueError(f"QCA coords must have shape (n_atoms, 3), got {coords.shape}")
 
     if len(labels) != coords.shape[0]:
         raise ValueError(
@@ -61,60 +52,11 @@ def build_molecule_from_qca(
             f"{len(labels)} labels vs {coords.shape[0]} coordinate rows"
         )
 
-    # Keep the QC geometry labels (indexed, per-atom) to preserve 1:1 mapping to coords.
-    # Hyperfine tensors are expected to be keyed by the same labels; some atoms may be
-    # missing (e.g. Fe/Cl/Si) depending on the QC output and user configuration.
-    a_iso: dict[str, float] = {str(k): float(v) for k, v in qca.a_iso.items()}
-    a_dip: dict[str, np.ndarray] = {
-        str(k): np.asarray(v, dtype=float) for k, v in qca.a_dip.items()
-    }
-
-    # Conversion logic copied from Molecule.from_QCA to preserve previous behaviour
-    if converter is None:
-        pass
-    elif converter == "MHz_to_Ang-3":
-        # Convert isotropic hyperfine values
-        a_iso = a_iso_mhz_to_ang(a_iso)
-        # Convert dipolar hyperfine tensors
-        a_dip = a_tensor_mhz_to_ang(a_dip)
-
-    else:
-        raise ValueError(f"Unknown converter: {converter}")
-
-    return Molecule.from_hyperfine_data(
-        labels=labels,
-        coords=coords,
-        a_iso=a_iso,
-        a_dip=a_dip,
-        elements=elements,
-    )
-
-
-def build_molecule_with_pdip(
-    labels: list[str],
-    coords: np.ndarray,
-    *,
-    centres: list[int] | np.ndarray,
-    elements: list[str] | str = "all",
-) -> Molecule:
-    """Build a `Molecule` and populate point-dipole hyperfine couplings.
-
-    Args:
-        labels: Atom labels.
-        coords: Cartesian coordinates in Å.
-        centres: Indices or coordinates defining PDIP centres.
-        elements: Elements/labels to include.
-
-    Returns:
-        A `Molecule` instance with PDIP hyperfine couplings populated.
-    """
-    molecule = build_molecule_from_labels_coords(
+    return Molecule.from_labels_coords(
         labels=labels,
         coords=coords,
         elements=elements,
     )
-    molecule.calc_pdip(centres)
-    return molecule
 
 
 def build_molecule_from_labels_coords(
@@ -145,77 +87,25 @@ def build_molecule_from_csv(
     *,
     elements: list[str] | str = "all",
 ) -> Molecule:
-    """Build a `Molecule` from an IO CSV payload."""
+    """Build a base `Molecule` from a CSV-derived structural payload.
 
+    The CSV payload may contain additional fields such as hyperfine tensors or
+    chemical labels. This builder intentionally uses only the structural fields
+    required to initialise a base `Molecule`. Any hyperfine enrichment should be
+    handled later by a dedicated HFC builder/loader path.
+
+    Args:
+        payload: CSV payload expected to contain at least `labels` and `coords`.
+        elements: Elements/labels to include.
+
+    Returns:
+        A base `Molecule` instance.
+    """
     labels: list[str] = payload["labels"]
     coords = payload["coords"]
 
-    tensors = payload.get("tensors")  # dict[label, (3,3)] | None
-    chem_labels = payload.get("chem_labels")  # list[str] | None
-    chem_math_labels = payload.get("chem_math_labels")  # list[str] | None
-
-    # --- Hyperfine: tensors -> (a_iso, a_dip) ---
-    a_iso = None
-    a_dip = None
-    if tensors is not None:
-        if isinstance(tensors, dict):
-            tensor_by_label = {k: np.asarray(v, float) for k, v in tensors.items()}
-        else:
-            tensor_by_label = {
-                lab: np.asarray(t, float) for lab, t in zip(labels, tensors)
-            }
-
-        a_iso = {}
-        a_dip = {}
-        for lab in labels:
-            if lab not in tensor_by_label:
-                raise KeyError(f"Missing hyperfine tensor for label: {lab}")
-
-            A = np.asarray(tensor_by_label[lab], float)
-            if A.shape != (3, 3):
-                raise ValueError(
-                    f"Hyperfine tensor for {lab} must be (3,3), got {A.shape}"
-                )
-
-            iso = float(np.trace(A) / 3.0)
-            a_iso[lab] = iso
-            a_dip[lab] = A - np.eye(3) * iso
-
-    # --- Chem labels ---
-    al_to_cl = None
-    al_to_cml = None
-    if chem_labels is not None:
-        if len(chem_labels) != len(labels):
-            raise ValueError(
-                f"chem_labels length mismatch: {len(chem_labels)} vs {len(labels)}"
-            )
-        al_to_cl = {lab: str(cl) for lab, cl in zip(labels, chem_labels)}
-
-        if chem_math_labels is not None:
-            if len(chem_math_labels) != len(labels):
-                raise ValueError(
-                    f"chem_math_labels length mismatch: "
-                    f"{len(chem_math_labels)} vs {len(labels)}"
-                )
-            al_to_cml = {lab: str(cml) for lab, cml in zip(labels, chem_math_labels)}
-
-    # --- Build molecule ---
-    if a_iso is not None and a_dip is not None:
-        molecule = Molecule.from_hyperfine_data(
-            labels=labels,
-            coords=coords,
-            a_iso=a_iso,
-            a_dip=a_dip,
-            elements=elements,
-        )
-    else:
-        molecule = Molecule.from_labels_coords(
-            labels=labels,
-            coords=coords,
-            elements=elements,
-        )
-
-    if al_to_cl is not None:
-        molecule.apply_chem_labels(al_to_cl, al_to_cml)
-
-    return molecule
+    return Molecule.from_labels_coords(
+        labels=labels,
+        coords=coords,
+        elements=elements,
+    )

@@ -16,5 +16,5 @@ class HyperfineData:
     labels: npt.NDArray[np.str_]
     coords: npt.NDArray[np.float64]
     a_iso: dict[str, float]
-    a_dip: dict[str, npt.NDArray[np.float64]]
+    a_dtensor: dict[str, npt.NDArray[np.float64]]
     a_units: str

@@ -182,8 +182,10 @@ def plot_raw_deconv_pred(
 
     Args:
         molecule: Molecule containing theoretical shift data.
-        isotope: TODO
-        shift_range: TODO
+        isotope: Isotope to plot (e.g. ``"1H"``).
+        shift_range: Two-element sequence specifying the initial min/max ppm.
+            The final plotting window is expanded to include the experimental
+            peak range with additional padding.
         experiment: Experiment containing the raw spectrum and deconvolution results.
         save: If ``True``, saves the plot to `save_name`.
         show: If ``True``, shows the plot.

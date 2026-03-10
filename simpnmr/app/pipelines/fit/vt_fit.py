@@ -76,10 +76,10 @@ def fit_vt(
             or "orca" not in config.susc_vt_ab_initio_format
         ):
             raise ValueError("Only Orca is currently supported")
-
+        # TODO: use new functionality for an auto method detection here
         section = config.susc_vt_ab_initio_format.split("orca_", 1)[1]
 
-        g_tensor = rdrs.read_orca_g_tensor(
+        g_tensor = rdrs.read_g_tensor_ab_initio(
             config.susc_vt_ab_initio_file,
             section=section,
         )

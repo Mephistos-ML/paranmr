@@ -666,7 +666,7 @@ class SplitFitter(SusceptibilityModel):
         tnsr = SplitFitter.totensor(delta_params)
 
         shifts = {
-            nuc.label: 1.0 / 3.0 * np.trace(tnsr @ nuc.A.tensor) for nuc in nuclei
+            nuc.label: 1.0 / 3.0 * np.trace(tnsr @ nuc.A.tensor_full) for nuc in nuclei
         }
 
         return shifts
@@ -805,7 +805,7 @@ class IsoAxRhoFitter(SusceptibilityModel):
         tnsr = IsoAxRhoFitter.totensor(delta_params)
 
         shifts = {
-            nuc.label: 1.0 / 3.0 * np.trace(tnsr @ nuc.A.tensor) for nuc in nuclei
+            nuc.label: 1.0 / 3.0 * np.trace(tnsr @ nuc.A.tensor_full) for nuc in nuclei
         }
 
         return shifts
@@ -912,7 +912,7 @@ class EigenFitter(SusceptibilityModel):
         )
 
         shifts = {
-            nuc.label: 1.0 / 3.0 * np.trace(tnsr @ nuc.A.tensor) for nuc in nuclei
+            nuc.label: 1.0 / 3.0 * np.trace(tnsr @ nuc.A.tensor_full) for nuc in nuclei
         }
 
         return shifts
@@ -973,10 +973,10 @@ class IsoEigenFitter(SusceptibilityModel):
         dyy = parameters["dyy"]
         iso = parameters["iso"]
         shifts = {
-            nuc.label: nuc.A.iso * iso
+            nuc.label: (1.0 / 3.0 * np.trace(nuc.A.fc)) * iso
             + nuc.shift.dia
-            + 1.0 / 3.0 * dxx * (nuc.A.tensor[0, 0] - nuc.A.tensor[2, 2])
-            + 1.0 / 3.0 * dyy * (nuc.A.tensor[1, 1] - nuc.A.tensor[2, 2])
+            + 1.0 / 3.0 * dxx * (nuc.A.sd[0, 0] - nuc.A.sd[2, 2])
+            + 1.0 / 3.0 * dyy * (nuc.A.sd[1, 1] - nuc.A.sd[2, 2])
             for nuc in nuclei
         }
 
@@ -1055,7 +1055,7 @@ class FullSuscFitter(SusceptibilityModel):
         tnsr = FullSuscFitter.totensor(parameters)
 
         shifts = {
-            nuc.label: 1.0 / 3.0 * np.trace(tnsr @ nuc.A.tensor) for nuc in nuclei
+            nuc.label: 1.0 / 3.0 * np.trace(tnsr @ nuc.A.tensor_full) for nuc in nuclei
         }
 
         return shifts
@@ -1077,12 +1077,12 @@ class FullSuscFitter(SusceptibilityModel):
 
         for nuc in nuclei:
             _vec = [
-                nuc.A.tensor[0, 0],
-                nuc.A.tensor[1, 0] + nuc.A.tensor[0, 1],
-                nuc.A.tensor[0, 2] + nuc.A.tensor[2, 0],
-                nuc.A.tensor[1, 1],
-                nuc.A.tensor[2, 1] + nuc.A.tensor[1, 2],
-                nuc.A.tensor[2, 2],
+                nuc.A.tensor_full[0, 0],
+                nuc.A.tensor_full[1, 0] + nuc.A.tensor_full[0, 1],
+                nuc.A.tensor_full[0, 2] + nuc.A.tensor_full[2, 0],
+                nuc.A.tensor_full[1, 1],
+                nuc.A.tensor_full[2, 1] + nuc.A.tensor_full[1, 2],
+                nuc.A.tensor_full[2, 2],
             ]
 
             for var in fix_vars.keys():
@@ -1115,12 +1115,12 @@ class FullSuscFitter(SusceptibilityModel):
         for nuc in nuclei:
             _tgt = experiment[nuc.chem_label]
             to_subtract = {
-                "xx": nuc.A.tensor[0, 0],
-                "xy": nuc.A.tensor[1, 0] + nuc.A.tensor[0, 1],
-                "xz": nuc.A.tensor[0, 2] + nuc.A.tensor[2, 0],
-                "yy": nuc.A.tensor[1, 1],
-                "yz": nuc.A.tensor[2, 1] + nuc.A.tensor[1, 2],
-                "zz": nuc.A.tensor[2, 2],
+                "xx": nuc.A.tensor_full[0, 0],
+                "xy": nuc.A.tensor_full[1, 0] + nuc.A.tensor_full[0, 1],
+                "xz": nuc.A.tensor_full[0, 2] + nuc.A.tensor_full[2, 0],
+                "yy": nuc.A.tensor_full[1, 1],
+                "yz": nuc.A.tensor_full[2, 1] + nuc.A.tensor_full[1, 2],
+                "zz": nuc.A.tensor_full[2, 2],
             }
             for key, val in fix_vars.items():
                 _tgt -= 1.0 / 3.0 * to_subtract[key] * val

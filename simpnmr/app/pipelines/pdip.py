@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (C) 2026 Suturina Group
 
-"""Compute point-dipole hyperfine dipolar tensors.
+"""Compute point-dipole hyperfine deviatoric (traceless) tensors.
 
 Loads structural data, evaluates point-dipole A_dip tensors, optionally applies
 chemical labels, and writes results to CSV with optional plots.
@@ -52,7 +52,7 @@ def run_calc_pdip(
     # Create molecule
     molecule = Molecule.from_labels_coords(labels, coords, elements=elements)
 
-    # Calculate point dipole A_dip tensor
+    # Calculate point-dipole hyperfine deviatoric (traceless) tensor
     molecule.calc_pdip(centres)
 
     if chem_labels is not None:
@@ -65,24 +65,24 @@ def run_calc_pdip(
             "{}, {}, {:.5f}, {:.5f}, {:.5f}, {:.5f}, {:.5f}, {:.5f}".format(
                 nuc.label,
                 nuc.chem_label,
-                *nuc.A.dip[0, :],
-                *nuc.A.dip[1, 1:],
-                nuc.A.dip[2, 2],
+                *nuc.A.sd[0, :],
+                *nuc.A.sd[1, 1:],
+                nuc.A.sd[2, 2],
             )
             for nuc in molecule.nuclei
         ]
     )
 
     file_head = os.path.splitext(structure_file)[0]
-    file_name = f"point_dipole_A_dip_{file_head}.csv"
+    file_name = f"point_dipole_dA_{file_head}.csv"
 
     header = (
-        "Label, Adip_xx (ppm Å^-3), "
-        "Adip_xy (ppm Å^-3), "
-        "Adip_xz (ppm Å^-3), "
-        "Adip_yy (ppm Å^-3), "
-        "Adip_yz (ppm Å^-3), "
-        "Adip_zz (ppm Å^-3)"
+        "Label, dA_xx (ppm Å^-3), "
+        "dA_xy (ppm Å^-3), "
+        "dA_xz (ppm Å^-3), "
+        "dA_yy (ppm Å^-3), "
+        "dA_yz (ppm Å^-3), "
+        "dA_zz (ppm Å^-3)"
     )
 
     np.savetxt(
@@ -92,7 +92,7 @@ def run_calc_pdip(
         header=header,
         fmt="%s",
     )
-    logger.info("Point dipole dipolar tensors saved to %s", file_name)
+    logger.info("Point-dipole deviatoric hyperfine tensors saved to %s", file_name)
 
     # Build the resolved plotting contract once per run.
     spec = apply_profile(options.runtime.plot_profile)
@@ -105,7 +105,7 @@ def run_calc_pdip(
                 spec=spec,
                 save=True,
                 show=options.runtime.show_plots,
-                save_name=f"point_dipole_A_dip_{file_head}",
+                save_name=f"point_dipole_dA_{file_head}",
                 verbose=True,
                 window_title="Point-Dipole Hyperfines",
             )
@@ -117,7 +117,7 @@ def run_calc_pdip(
                     spec=spec,
                     save=True,
                     show=options.runtime.show_plots,
-                    save_name=f"spread_point_dipole_A_dip_{file_head}",
+                    save_name=f"spread_point_dipole_dA_{file_head}",
                     verbose=True,
                     window_title="Point-Dipole Hyperfines Spread",
                 )

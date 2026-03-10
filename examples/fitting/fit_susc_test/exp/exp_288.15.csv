@@ -1,0 +1,13 @@
+#temperature 288.15
+#magnetic_field 9.4
+#isotope 1H
+assignment,shift,width,area
+tpy1, 154.8607,1,1
+tphz1,104.5581,1,1
+tpy5, 80.44,1,1
+tpy4, 79.6794,1,1
+tpy2, 48.6301,1,1
+tphz2,45.8578,1,1
+tpy6, 17.7014,1,1
+tpy3, 14.4676,1,1
+tphz3,12.4625,1,1

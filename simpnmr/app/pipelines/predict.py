@@ -20,8 +20,13 @@ import numpy as np
 from simpnmr.app.loaders.dia_load import load_diamagnetic_shifts
 from simpnmr.app.loaders.elstate_load import load_electronic_state
 from simpnmr.app.loaders.exp_load import load_experiments
-from simpnmr.app.loaders.hfc_load import load_base_molecule_from_hyperfines
+from simpnmr.app.loaders.hfc_load import load_hyperfines
 from simpnmr.app.loaders.labels_load import load_chem_labels_from_csv
+from simpnmr.app.loaders.mol_load import load_base_molecule
+from simpnmr.app.loaders.sh_load import (
+    load_g_tensor_ab_initio,
+    load_g_tensor_dft,
+)
 from simpnmr.app.loaders.susc_load import load_susceptibilities
 from simpnmr.app.params.options import PredictRunOptions
 from simpnmr.app.policies.susc import resolve_susceptibility_source
@@ -29,6 +34,7 @@ from simpnmr.app.policies.susc import resolve_susceptibility_source
 # Core / domain
 from simpnmr.core.const.gammas import NUCLEAR_GAMMAS
 from simpnmr.core.const.physics import EGAMMA
+from simpnmr.core.conv.ang_to_freq import angstrom_to_mhz
 from simpnmr.core.domain.mol import Molecule
 from simpnmr.core.relaxation import gueron, sbm
 from simpnmr.core.util.strings import remove_numbers
@@ -38,7 +44,6 @@ from simpnmr.io.csv import relax
 from simpnmr.io.csv.mol import save_molecule_to_csv
 from simpnmr.io.csv.spec import read_spectrum
 from simpnmr.io.csv.susc import save_susc
-from simpnmr.io.qc import gateway as rdrs
 from simpnmr.io.xyz import xyz_write
 
 # Tools
@@ -62,23 +67,39 @@ def run_predict(config, options: PredictRunOptions | None = None) -> int:
         Exit code: 0 on success.
     """
 
+    # TODO(policy): introduce a unified InputSpec policy (file backend/format/section)
+    #               to resolve HFC/SH/Susceptibility readers in one place and avoid
+    #               duplicated format detection across pipelines and loaders.
+
     # Make output directory and file
     os.makedirs(config.project_name, exist_ok=True)
 
     if options is None:
         raise ValueError("PredictRunOptions is required")
 
-    delimiter = options.runtime.csv_delimiter
-
     # Build the resolved plotting contract for this run.
     spec = apply_profile(options.runtime.plot_profile)
 
-    # Load hyperfines / construct base molecule
-    base_molecule = load_base_molecule_from_hyperfines(
-        config=config, delimiter=delimiter
+    # Load Molecule
+    base_molecule = load_base_molecule(config)
+
+    # Load DFT g-tensor (if available)
+    base_molecule.sh.g_tensor_dft = load_g_tensor_dft(
+        config=config,
     )
 
-    # Load electronic state
+    # Load ab-initio g-tensor (if available)
+    base_molecule.sh.g_tensor_ab_initio = load_g_tensor_ab_initio(
+        config=config,
+    )
+
+    # Load Hyperfines
+    base_molecule = load_hyperfines(
+        molecule=base_molecule,
+        config=config,
+    )
+
+    # Load Electronic State
     base_molecule.electronic = load_electronic_state(
         spin_S=config.spin_S,
         orbit_L=config.orbit,
@@ -87,26 +108,18 @@ def run_predict(config, options: PredictRunOptions | None = None) -> int:
         hyperfine_method=config.hyperfine_method if config.spin_S is None else None,
     )
 
-    # Load susceptibility information
+    # Resolve susceptibility source for downstream operations
     backend, section = resolve_susceptibility_source(
         config.susceptibility_file,
         config.susceptibility_format,
     )
 
-    if backend == "orca":
-        # Section is resolved by policy (legacy override or autodetect priority).
-        g_tensor = rdrs.read_orca_g_tensor(
-            config.susceptibility_file,
-            section=section,
-        )
-    else:
-        g_tensor = None
-
+    # Load Magnetic Susceptibility
     suscs = load_susceptibilities(
         config.susceptibility_file,
         config.susceptibility_format,
         electronic=base_molecule.electronic,
-        g_tensor=g_tensor,
+        g_tensor=base_molecule.sh.g_tensor_ab_initio,
     )
 
     suscs = [
@@ -180,11 +193,22 @@ def run_predict(config, options: PredictRunOptions | None = None) -> int:
         if (
             "dft" in config.hyperfine_method
         ):  # TODO: remove condition and remove config from tf.
-            rot_mat, trans_mat = tfm.get_rotation_and_transformation(config)
+            rot_mat, _ = tfm.get_rotation_and_transformation(
+                config,
+                dft_coords=base_molecule.coords,
+            )
             base_molecule.rotate_hyperfines(rot_mat)
 
+            # Rotate DFT g-tensor into chi frame
+            if base_molecule.sh.g_tensor_dft is not None:
+                base_molecule.sh.g_tensor_dft = (
+                    rot_mat @ base_molecule.sh.g_tensor_dft @ rot_mat.T
+                )
+
             # Rotate HFC coords frame into chi eigenframe and save the transformed coords
-            tfm.rotate_coords_to_chi_frame(config.project_name, config)
+            tfm.rotate_coords_to_chi_frame(
+                config.project_name, config, dft_coords=base_molecule.coords
+            )
 
     # Calculate linewidths using user-specified relaxation model (optional)
     if not getattr(config, "relaxation_model", None):
@@ -322,7 +346,7 @@ def run_predict(config, options: PredictRunOptions | None = None) -> int:
                 config.project_name,
                 f"hyperfines_and_shifts_{molecule.susc.temperature:.2f}_K.csv",
             ),
-            delimiter=delimiter,
+            delimiter=options.runtime.csv_delimiter,
             comment=f"T = {molecule.susc.temperature:.2f} K",
             verbose=True,
         )
@@ -370,13 +394,21 @@ def _apply_relaxation_linewidths(config, base_molecule: Molecule):
         # In point-dipole (pdip) model, contact hyperfine A_iso = 0 for all nuclei.
         A_iso_dict = {label: 0.0 for label in nuclei_coords}
     else:
-        qc_hyperfine_data = rdrs.QCA.guess_from_file(config.hyperfine_file)
-        A_iso_dict_MHz = qc_hyperfine_data.a_iso  # MHz
-        A_iso_dict = {
-            nuc.label: A_iso_dict_MHz[nuc.label] * 1e6
+        # Convert domain A_iso (ppm Å^-3) back to MHz for relaxation formulas.
+        # Note: conversion depends on the nuclear gyromagnetic ratio for each nucleus.
+        A_iso_dict_MHz = {
+            nuc.label: float(
+                angstrom_to_mhz(
+                    1.0 / 3.0 * np.trace(nuc.A.fc),
+                    nuclear_gamma=NUCLEAR_GAMMAS[remove_numbers(nuc.label)],
+                )
+            )
             for nuc in base_molecule.nuclei
             if nuc.label in nuclei_coords
         }
+
+        # Convert MHz -> Hz for relaxation routines.
+        A_iso_dict = {label: val_mhz * 1e6 for label, val_mhz in A_iso_dict_MHz.items()}
 
     gamma_I_dict = {
         label: NUCLEAR_GAMMAS[remove_numbers(label)] * 2 * np.pi * 1e6

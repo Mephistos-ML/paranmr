@@ -19,8 +19,9 @@ from scipy.optimize import curve_fit
 
 from simpnmr.app.loaders.elstate_load import load_electronic_state
 from simpnmr.app.loaders.exp_load import load_experiments
-from simpnmr.app.loaders.hfc_load import load_base_molecule_from_hyperfines
+from simpnmr.app.loaders.hfc_load import load_hyperfines
 from simpnmr.app.loaders.labels_load import load_chem_labels_from_csv
+from simpnmr.app.loaders.mol_load import load_base_molecule
 from simpnmr.app.params.options import FitCorrTimeRunOptions
 from simpnmr.core.const.gammas import NUCLEAR_GAMMAS
 from simpnmr.core.const.physics import EGAMMA
@@ -131,10 +132,13 @@ def run_fit_corr_time(config, options: FitCorrTimeRunOptions | None = None) -> i
         exp_r1 = np.concatenate([blk[2] for blk in exp_blocks])
         xdata = np.arange(len(exp_r1))
 
-        # Load hyperfines / construct base molecule
-        base_molecule = load_base_molecule_from_hyperfines(
+        # Load Molecule
+        base_molecule = load_base_molecule(config)
+
+        # Load Hyperfines
+        base_molecule = load_hyperfines(
+            molecule=base_molecule,
             config=config,
-            delimiter=CSV_DELIMITER,
         )
 
         # Add chemical labels if provided

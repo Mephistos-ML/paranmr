@@ -13,7 +13,7 @@ from typing import Any
 
 import numpy as np
 
-from simpnmr.app.policies.susc import resolve_susceptibility_source
+from simpnmr.app.policies.susc import resolve_iso_mode, resolve_susceptibility_source
 from simpnmr.core.build.susc import susc_from_orca_xt
 from simpnmr.core.domain.tensor import Susceptibility
 from simpnmr.io.csv.susc import read_susceptibilities_csv
@@ -103,23 +103,33 @@ def _load_orca_susceptibilities(
     if not tensors:
         raise ValueError("No susceptibility data found in ORCA output")
 
-    # Derive iso handling mode from available electronic-state context.
-    # Priority: g-corr iso -> spin-only -> raw.
+    # Resolve iso handling mode via policy.
+    # For g-correction we require a g-tensor and at least one quantum-number handle.
     spin = electronic.spin_S if electronic is not None else None
     orbit = electronic.orbit_L if electronic is not None else None
     total_J = electronic.total_J if electronic is not None else None
 
-    # g-correction requires a g-tensor and at least one quantum-number handle.
-    if g_tensor is not None and (
-        spin is not None or orbit is not None or total_J is not None
-    ):
-        iso_mode = "g_corr"
-        logger.info("Using g-tensor–corrected isotropic magnetic susceptibility")
-    elif spin is not None:
-        iso_mode = "spin_only"
+    has_quantum_number = (
+        (spin is not None) or (orbit is not None) or (total_J is not None)
+    )
+    has_g_tensor = g_tensor is not None
+
+    iso_mode = resolve_iso_mode(
+        has_g_tensor=has_g_tensor,
+        has_spin=has_quantum_number,
+    )
+
+    if iso_mode == "g_corr":
+        logger.info(
+            "Using Ab-initio g-tensor–corrected isotropic magnetic susceptibility"
+        )
+    elif iso_mode == "spin_only":
         logger.info("Using spin-only isotropic magnetic susceptibility")
-    else:
-        iso_mode = "raw"
+    elif iso_mode == "raw":
+        logger.info(
+            "Using isotropic magnetic susceptibility defined as 1/3 "
+            "of the trace of the susceptibility tensor"
+        )
 
     suscs: list[Susceptibility] = []
     for temperature, tensor_xt in tensors.items():

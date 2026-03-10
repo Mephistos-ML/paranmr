@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Suturina Group
+
 """Susceptibility policy helpers.
 
 This module centralizes application-level decisions for loading susceptibility
@@ -13,14 +16,19 @@ so pipelines and loaders do not need to embed backend-specific heuristics.
 
 from __future__ import annotations
 
+import logging
 from functools import lru_cache
 from pathlib import Path
-from typing import Final, Literal
+from typing import Final, Literal, TypeAlias
 
 from simpnmr.io.qc.backends.orca.detect import detect_susc_methods
 from simpnmr.io.qc.detect import detect_backend
 
+logger = logging.getLogger(__name__)
+
 SusceptibilityBackend = Literal["csv", "orca"]
+
+IsoMode: TypeAlias = Literal["g_corr", "spin_only", "raw"]
 
 _ORCA_PREFIX: Final[str] = "orca_"
 
@@ -123,6 +131,39 @@ def resolve_susceptibility_source(
 
     section = resolve_orca_section(susceptibility_file, susceptibility_format)
     return backend, section
+
+
+def resolve_iso_mode(
+    *,
+    has_g_tensor: bool,
+    has_spin: bool,
+) -> IsoMode:
+    """Resolve isotropic susceptibility handling mode.
+
+    The selection is a simple fallback chain driven only by what information is
+    available to define an isotropic susceptibility:
+
+    - If both g-tensor and spin information are available, use g-tensor–corrected
+      isotropic susceptibility ("g_corr").
+    - Otherwise, if spin information is available, use spin-only isotropic
+      susceptibility ("spin_only").
+    - Otherwise, use the isotropic susceptibility defined as one third of the
+      trace of the susceptibility tensor ("raw").
+
+    Args:
+        has_g_tensor: Whether g-tensor information is available.
+        has_spin: Whether spin quantum number information is available.
+
+    Returns:
+        Selected isotropic susceptibility mode.
+    """
+
+    if has_g_tensor and has_spin:
+        return "g_corr"
+    elif has_spin:
+        return "spin_only"
+    else:
+        return "raw"
 
 
 def _normalize_format(fmt: str | None) -> str | None:

@@ -3,14 +3,18 @@
 
 """Parse hyperfine coupling data from ORCA outputs.
 
-Provides helpers to extract isotropic and anisotropic hyperfine tensors from
+Provides helpers to extract isotropic and deviatoric (traceless) hyperfine tensors from
 ORCA quantum-chemistry calculation files.
 """
+
+import logging
 
 import numpy as np
 import numpy.typing as npt
 
 from simpnmr.core.util.strings import remove_letters, remove_numbers
+
+logger = logging.getLogger(__name__)
 
 
 def read_orca5_property_a_tensors(
@@ -22,13 +26,13 @@ def read_orca5_property_a_tensors(
         file_name: Path to the ORCA property file.
 
     Returns:
-        A tuple `(a_iso, a_dip)` where:
+        A tuple `(a_iso, a_dtensor)` where:
             * `a_iso` maps atom labels to isotropic couplings in MHz.
-            * `a_dip` maps atom labels to 3x3 traceless dipolar tensors in MHz.
+            * `a_dtensor` maps atom labels to 3x3 deviatoric (traceless) tensors in MHz.
     """
 
-    a_dip = {}
     a_iso = {}
+    a_dtensor = {}
 
     with open(file_name, "r") as f:
         for line in f:
@@ -48,87 +52,128 @@ def read_orca5_property_a_tensors(
                     row_2 = [float(val) for val in line.split()[1:]]
                     line = next(f)
                     row_3 = [float(val) for val in line.split()[1:]]
-                    a_dip[label] = np.array([row_1, row_2, row_3])
+                    a_dtensor[label] = np.array([row_1, row_2, row_3])
                     for _ in range(9):
                         line = next(f)
                     # Isotropic value
                     a_iso[label] = float(line.split()[-1])
-                    a_dip[label] -= np.eye(3) * a_iso[label]
+                    a_dtensor[label] -= np.eye(3) * a_iso[label]
                     line = next(f)
 
-    return a_iso, a_dip
+    return a_iso, a_dtensor
 
 
 def read_orca5_output_a_tensors(
     file_name: str,
-) -> tuple[dict[str, float], dict[str, npt.NDArray]]:
+) -> tuple[
+    dict[str, npt.NDArray],
+    dict[str, npt.NDArray],
+    dict[str, npt.NDArray | None],
+]:
     """Extract hyperfine (A) tensors from an ORCA 5 output file.
 
     Args:
         file_name: Path to the ORCA output file.
 
     Returns:
-        A tuple `(a_iso, a_dip)` where:
-            * `a_iso` maps atom labels to isotropic couplings in MHz.
-            * `a_dip` maps atom labels to 3x3 traceless dipolar tensors in MHz.
+        A tuple `(a_fc, a_sd, a_orb)` where:
+            * `a_fc` maps atom labels to full A(FC) tensors in MHz (shape `(3, 3)`).
+            * `a_sd` maps atom labels to full A(SD) tensors in MHz (shape `(3, 3)`).
+            * `a_orb` maps atom labels to full A(ORB) tensors in MHz (shape `(3, 3)`)
+              when present, otherwise `None`.
     """
 
-    # Find how many nuclei have been calculated
-    with open(file_name, "r") as f:
-        for line in f:
-            if "Number of nuclei for epr/nmr" in line:
-                n_calcd = int(line.split()[-1])
+    a_fc_tensors: dict[str, npt.NDArray] = {}
+    a_sd_tensors: dict[str, npt.NDArray] = {}
+    a_orb_tensors: dict[str, npt.NDArray | None] = {}
 
-    a_iso = {}
-    a_dip = {}
-
-    # Read hyperfine data
     with open(file_name, "r") as f:
         for line in f:
             if "ELECTRIC AND MAGNETIC HYPERFINE STRUCTURE" in line:
+                break
+        else:
+            raise ValueError(
+                "Could not find 'ELECTRIC AND MAGNETIC HYPERFINE STRUCTURE' section "
+                f"in: {file_name}"
+            )
+
+        for line in f:
+            if "Nucleus" not in line or ":" not in line:
+                continue
+
+            tmp = line.split()[1]
+            label = "{}{}".format(remove_numbers(tmp), remove_letters(tmp))
+
+            a_fc: list[float] | None = None
+            a_sd: list[float] | None = None
+            a_orb: list[float] | None = None
+            r_rows: list[list[float]] = []
+
+            while "Orientation:" not in line:
                 line = next(f)
+                stripped = line.strip()
+
+                if stripped.startswith("A(FC)"):
+                    parts = stripped.split()
+                    a_fc = [float(parts[1]), float(parts[2]), float(parts[3])]
+                elif stripped.startswith("A(SD)"):
+                    parts = stripped.split()
+                    a_sd = [float(parts[1]), float(parts[2]), float(parts[3])]
+                elif stripped.startswith("A(ORB+DIA)"):
+                    parts = stripped.split()
+                    a_orb = [float(parts[1]), float(parts[2]), float(parts[3])]
+
+            if a_fc is None or a_sd is None:
+                raise ValueError(
+                    "Could not find A(FC)/A(SD) principal values "
+                    f"for nucleus {label} in: {file_name}"
+                )
+
+            for _axis in ("X", "Y", "Z"):
                 line = next(f)
-                line = next(f)
-                for it in range(n_calcd):
-                    line = next(f)
-                    tmp = line.split()[1]
-                    label = "{}{}".format(remove_numbers(tmp), remove_letters(tmp))
-                    for _ in range(5):
-                        line = next(f)
+                parts = line.split()
+                if not parts or parts[0] != _axis:
+                    raise ValueError(
+                        "Unexpected Orientation format for "
+                        "nucleus {label} in: {file_name}"
+                    )
+                r_rows.append([float(parts[1]), float(parts[2]), float(parts[3])])
 
-                    # Raw matrix in MHz
-                    row_1 = [float(val) for val in line.split()]
-                    line = next(f)
-                    row_2 = [float(val) for val in line.split()]
-                    line = next(f)
-                    row_3 = [float(val) for val in line.split()]
+            r_mat = np.array(r_rows, dtype=float)
 
-                    for _ in range(5):
-                        line = next(f)
-                    a_iso[label] = float(line.split()[-1])
+            fc_pas = np.diag(np.array(a_fc, dtype=float))
+            sd_pas = np.diag(np.array(a_sd, dtype=float))
 
-                    for _ in range(9):
-                        line = next(f)
+            a_fc_tensors[label] = r_mat @ fc_pas @ r_mat.T
+            a_sd_tensors[label] = r_mat @ sd_pas @ r_mat.T
 
-                    full = np.array([row_1, row_2, row_3])
+            if a_orb is None:
+                a_orb_tensors[label] = None
+            else:
+                orb_pas = np.diag(np.array(a_orb, dtype=float))
+                a_orb_tensors[label] = r_mat @ orb_pas @ r_mat.T
 
-                    a_dip[label] = full - np.eye(3) * a_iso[label]
-
-    return a_iso, a_dip
+    return a_fc_tensors, a_sd_tensors, a_orb_tensors
 
 
 def read_orca6_output_a_tensors(
     file_name: str,
-) -> tuple[dict[str, float], dict[str, npt.NDArray]]:
+) -> tuple[
+    dict[str, npt.NDArray],
+    dict[str, npt.NDArray],
+    dict[str, npt.NDArray | None],
+]:
     """Extract hyperfine (A) tensors from an ORCA 6 output file.
 
     Args:
         file_name: Path to the ORCA output file.
 
     Returns:
-        A tuple `(a_iso, a_dip)` where:
-            * `a_iso` maps atom labels to isotropic couplings in MHz.
-            * `a_dip` maps atom labels to 3x3 traceless dipolar tensors in MHz.
+        A tuple `(a_fc, a_sd, a_orb)` where:
+            * `a_fc` maps atom labels to full A(FC) tensors in MHz (shape `(3, 3)`).
+            * `a_sd` maps atom labels to full A(SD) tensors in MHz (shape `(3, 3)`).
+            * `a_orb` maps atom labels to full A(ORB) tensors in MHz (shape `(3, 3)`)
+              when present, otherwise `None`.
     """
 
     # Find how many nuclei have been calculated
@@ -137,8 +182,9 @@ def read_orca6_output_a_tensors(
             if "ELECTRIC AND MAGNETIC HYPERFINE STRUCTURE" in line:
                 n_calcd = int(line.split()[5][1:])
 
-    a_iso = {}
-    a_dip = {}
+    a_fc_tensors: dict[str, npt.NDArray] = {}
+    a_sd_tensors: dict[str, npt.NDArray] = {}
+    a_orb_tensors: dict[str, npt.NDArray | None] = {}
 
     # Read hyperfine data
     with open(file_name, "r") as f:
@@ -149,19 +195,57 @@ def read_orca6_output_a_tensors(
                         line = next(f)
                     tmp = line.split()[1]
                     label = "{}{}".format(remove_numbers(tmp), remove_letters(tmp))
-                    for _ in range(8):
+                    # Parse principal hyperfine components and orientation.
+                    a_fc: list[float] | None = None
+                    a_sd: list[float] | None = None
+                    a_orb: list[float] | None = None
+                    r_rows: list[list[float]] = []
+
+                    # Collect principal values reported by ORCA (PAS)
+                    # Advance until we reach the Orientation block, collecting
+                    # principal values on the way.
+                    while "Orientation:" not in line:
                         line = next(f)
+                        stripped = line.strip()
+                        if stripped.startswith("A(FC)"):
+                            parts = stripped.split()
+                            a_fc = [float(parts[1]), float(parts[2]), float(parts[3])]
+                        elif stripped.startswith("A(SD)"):
+                            parts = stripped.split()
+                            a_sd = [float(parts[1]), float(parts[2]), float(parts[3])]
+                        elif stripped.startswith("A(ORB+DIA)"):
+                            parts = stripped.split()
+                            a_orb = [float(parts[1]), float(parts[2]), float(parts[3])]
 
-                    # Raw matrix in MHz
-                    row_1 = [float(val) for val in line.split()]
-                    line = next(f)
-                    row_2 = [float(val) for val in line.split()]
-                    line = next(f)
-                    row_3 = [float(val) for val in line.split()]
+                    if a_fc is None or a_sd is None:
+                        raise ValueError(
+                            "Could not find A(FC)/A(SD) principal values "
+                            f"for nucleus {label}"
+                        )
 
-                    full = np.array([row_1, row_2, row_3])
+                    for _axis in ("X", "Y", "Z"):
+                        line = next(f)
+                        parts = line.split()
+                        if not parts or parts[0] != _axis:
+                            raise ValueError(
+                                f"Unexpected Orientation format for nucleus {label}"
+                            )
+                        r_rows.append(
+                            [float(parts[1]), float(parts[2]), float(parts[3])]
+                        )
 
-                    a_iso[label] = 1 / 3 * np.trace(full)
-                    a_dip[label] = full - np.eye(3) * a_iso[label]
+                    r_mat = np.array(r_rows, dtype=float)
 
-    return a_iso, a_dip
+                    fc_pas = np.diag(np.array(a_fc, dtype=float))
+                    sd_pas = np.diag(np.array(a_sd, dtype=float))
+
+                    a_fc_tensors[label] = r_mat @ fc_pas @ r_mat.T
+                    a_sd_tensors[label] = r_mat @ sd_pas @ r_mat.T
+
+                    if a_orb is None:
+                        a_orb_tensors[label] = None
+                    else:
+                        orb_pas = np.diag(np.array(a_orb, dtype=float))
+                        a_orb_tensors[label] = r_mat @ orb_pas @ r_mat.T
+
+    return a_fc_tensors, a_sd_tensors, a_orb_tensors

@@ -23,7 +23,7 @@ from ...io.qc import gateway as rdrs
 logger = logging.getLogger(__name__)
 
 
-def access_input_data(cfg: inps.PredictConfig):
+def access_input_data(cfg, dft_coords):
     """
     Load and extract all PCS-related input data using an already parsed
     PredictConfig instance.
@@ -52,10 +52,6 @@ def access_input_data(cfg: inps.PredictConfig):
     # NEVPT2 coordinates
     nevpt2_labels, nevpt2_coords = rdrs.read_orca5_output_xyz(cfg.susceptibility_file)
 
-    # DFT coordinates
-    qca = rdrs.QCA.guess_from_file(cfg.hyperfine_file)
-    dft_coords = qca.coords
-
     # Susceptibility tensor
     chi_dict = rdrs.read_orca_susceptibility(cfg.susceptibility_file, section="nevpt2")
     chiT = chi_dict[temperature[0]]
@@ -63,7 +59,7 @@ def access_input_data(cfg: inps.PredictConfig):
     return chiT, temperature, nevpt2_labels, nevpt2_coords, dft_coords
 
 
-def get_rotation_and_transformation(cfg: inps.PredictConfig):
+def get_rotation_and_transformation(cfg: inps.PredictConfig, dft_coords):
     """
     Compute and return both the rotation matrix aligning NEVPT2 and DFT
     geometries and the final transformation matrix used for PCS mapping.
@@ -81,7 +77,7 @@ def get_rotation_and_transformation(cfg: inps.PredictConfig):
               (chi) frame.
     """
 
-    chiT, temperature, _, nevpt2_coords, dft_coords = access_input_data(cfg)
+    chiT, temperature, _, nevpt2_coords, dft_coords = access_input_data(cfg, dft_coords)
 
     if len(nevpt2_coords) != len(dft_coords):
         raise ValueError(
@@ -126,7 +122,7 @@ def get_rotation_and_transformation(cfg: inps.PredictConfig):
     return rot_mat, trans_mat
 
 
-def rotate_coords_to_chi_frame(file_path, cfg: inps.PredictConfig):
+def rotate_coords_to_chi_frame(file_path, cfg: inps.PredictConfig, dft_coords):
     """
     Rotate NEVPT2 coordinates into the principal-axis frame of the
     susceptibility (chi) tensor and write the resulting structure to an
@@ -144,7 +140,7 @@ def rotate_coords_to_chi_frame(file_path, cfg: inps.PredictConfig):
         processing.
     """
 
-    chiT, _, nevpt2_labels, nevpt2_coords, _ = access_input_data(cfg)
+    chiT, _, nevpt2_labels, nevpt2_coords, _ = access_input_data(cfg, dft_coords)
 
     # Subtract isotropic component (trace)
     chiT_traceless = chiT - np.eye(3) * (np.trace(chiT) / 3.0)

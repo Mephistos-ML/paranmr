@@ -206,42 +206,9 @@ class Nucleus:
         else:
             self._isotope = value
 
-    @classmethod
-    def from_a_values(
-        cls, a_isos: dict[str, float], a_dips: dict[str, NDArray], coords: NDArray
-    ) -> list["Nucleus"]:
-        """Build nuclei from isotropic and dipolar hyperfine data.
-
-        Args:
-            a_isos: Mapping from atom label to isotropic hyperfine coupling
-                (ppm Å^-3).
-            a_dips: Mapping from atom label to dipolar hyperfine tensor as a
-                3x3 array (ppm Å^-3).
-            coords: Coordinates for each nucleus. The ordering must match the
-                ordering of the dictionaries.
-
-        Returns:
-            A list of `Nucleus` instances.
-        """
-
-        tensors = {
-            label: Hyperfine(a_dips[label] + np.eye(3) * a_isos[label])
-            for label in a_dips
-        }
-
-        nuclei = [
-            cls(key, coord, value)
-            for (key, value), coord in zip(tensors.items(), coords)
-        ]
-
-        if not len(nuclei):
-            raise ValueError("No Nuclei selected!")
-
-        return nuclei
-
 
 class ElectronicState:
-    """Electronic/magnetic state of the system.
+    """Electronic/magnetic state of the system (spin Hamiltonian metadata).
 
     Stores global quantum numbers and magnetic-model metadata.
     """
@@ -271,6 +238,81 @@ class ElectronicState:
         return
 
 
+class SpinHamiltonian:
+    """Spin-Hamiltonian parameters used across pNMR models.
+
+    This container is intended to hold magnetic-model tensors/parameters that are
+    shared across the molecule (e.g., g-tensor, ZFS parameters). It is independent
+    from `ElectronicState`, which stores quantum-number metadata.
+
+    Attributes:
+        g_tensor: 3x3 spin-Hamiltonian g-tensor matrix, if available.
+        g_tensor_dft: Optional 3x3 DFT-derived g-tensor matrix.
+        D_tensor: Optional 3x3 zero-field splitting (ZFS) D tensor.
+        E: Optional scalar E parameter (alternative ZFS representation).
+    """
+
+    def __init__(
+        self,
+        g_tensor_ab_initio: ArrayLike | None = None,
+        g_tensor_dft: ArrayLike | None = None,
+        D_tensor: ArrayLike | None = None,
+        E: float | None = None,
+    ) -> None:
+        self.g_tensor_ab_initio = g_tensor_ab_initio
+        self.g_tensor_dft = g_tensor_dft
+        self.D_tensor = D_tensor
+        self.E = E
+
+    @property
+    def g_tensor_ab_initio(self) -> NDArray | None:
+        return self._g_tensor
+
+    @g_tensor_ab_initio.setter
+    def g_tensor_ab_initio(self, value: ArrayLike | None) -> None:
+        if value is None:
+            self._g_tensor = None
+            return
+
+        arr = np.asarray(value, dtype=float)
+        if arr.shape != (3, 3):
+            raise ValueError("SpinHamiltonian.g_tensor must be a (3, 3) matrix")
+        self._g_tensor = arr
+        return
+
+    @property
+    def g_tensor_dft(self) -> NDArray | None:
+        return self._g_tensor_dft
+
+    @g_tensor_dft.setter
+    def g_tensor_dft(self, value: ArrayLike | None) -> None:
+        if value is None:
+            self._g_tensor_dft = None
+            return
+
+        arr = np.asarray(value, dtype=float)
+        if arr.shape != (3, 3):
+            raise ValueError("SpinHamiltonian.g_tensor_dft must be a (3, 3) matrix")
+        self._g_tensor_dft = arr
+        return
+
+    @property
+    def D_tensor(self) -> NDArray | None:
+        return self._D_tensor
+
+    @D_tensor.setter
+    def D_tensor(self, value: ArrayLike | None) -> None:
+        if value is None:
+            self._D_tensor = None
+            return
+
+        arr = np.asarray(value, dtype=float)
+        if arr.shape != (3, 3):
+            raise ValueError("SpinHamiltonian.D_tensor must be a (3, 3) matrix")
+        self._D_tensor = arr
+        return
+
+
 class Molecule:
     """Molecular container holding structure and NMR-active nuclei.
 
@@ -286,6 +328,11 @@ class Molecule:
         nuclei: NMR-active nuclei.
         susc: Magnetic susceptibility tensor for the molecule.
         electronic: Electronic state metadata (spin/orbit/J model selection).
+        sh: Spin-Hamiltonian parameters (e.g. g-tensor, ZFS),
+        shared across the molecule.
+        metadata: Dictionary for domain-level metadata and model provenance.
+            Stores final, effective modelling decisions that affect downstream
+            physics (e.g. availability of orbital hyperfine contributions).
     """
 
     def __init__(
@@ -300,8 +347,12 @@ class Molecule:
         # Susceptibility object
         self.susc = copy.deepcopy(Susceptibility())
 
-        # List of quantum number objects
+        # Electronic state and spin Hamiltonian as separate attributes
         self.electronic = ElectronicState()
+        self.sh = SpinHamiltonian()
+
+        # Domain-level metadata
+        self.metadata: dict[str, dict[str, object]] = {}
 
     @property
     def n_atoms(self):
@@ -319,10 +370,10 @@ class Molecule:
                 label = nuc.label
             else:
                 label = f"{nuc.chem_label} ({nuc.label})"
+            a_iso = 1.0 / 3.0 * np.trace(nuc.A.fc)
+            string += f"{label} {a_iso: .6f}\n"
 
-            string += f"{label} {nuc.A.iso: .6f}\n"
-
-        string += subtitle("Anisotropic (dipolar) A Tensor (ppm Å^-3)")
+        string += subtitle("Anisotropic (traceless) A Tensor (ppm Å^-3)")
 
         for nuc in self.nuclei:
             if not len(nuc.chem_label):
@@ -331,11 +382,11 @@ class Molecule:
                 label = f"{nuc.chem_label} ({nuc.label})"
 
             string += "\n{:} {: .6f} {: .6f} {: .6f}\n".format(
-                " " * len(label), *nuc.A.dip[0]
+                " " * len(label), *nuc.A.sd[0]
             )
-            string += "{:} {: .6f} {: .6f} {: .6f}\n".format(label, *nuc.A.dip[1])
+            string += "{:} {: .6f} {: .6f} {: .6f}\n".format(label, *nuc.A.sd[1])
             string += "{:} {: .6f} {: .6f} {: .6f}\n".format(
-                " " * len(label), *nuc.A.dip[2]
+                " " * len(label), *nuc.A.sd[2]
             )
 
         return string
@@ -393,74 +444,6 @@ class Molecule:
         base = cls(labels_list, coords, nuclei)
 
         return base
-
-    @classmethod
-    def from_hyperfine_data(
-        cls,
-        *,
-        labels: list[str],
-        coords: ArrayLike,
-        a_iso: dict[str, float],
-        a_dip: dict[str, NDArray],
-        elements: list[str] | str = "all",
-    ) -> "Molecule":
-        """Create a `Molecule` from already-parsed hyperfine data.
-
-        This is a pure domain constructor: no file I/O, no QC parsing, no unit
-        conversion. Callers must provide labels/coords and hyperfine tensors in
-        consistent units.
-
-        Args:
-            labels: Atomic labels (with indices) in the same ordering as `coords`,
-                e.g. ["H1", "C2", ...].
-            coords: Atomic coordinates as an (n_atoms, 3) array-like in Å.
-            a_iso: Mapping atom_label -> isotropic hyperfine coupling.
-            a_dip: Mapping atom_label -> dipolar hyperfine tensor (3x3).
-            elements: Elements/labels to include. Use "all" to include all atoms,
-                "all_H" to include all H, etc., or explicit labels like "H7".
-
-        Returns:
-            A `Molecule` instance.
-
-        Raises:
-            ValueError: If no nuclei were selected.
-        """
-        if isinstance(elements, str):
-            elements = [elements]
-
-        labels_list = [str(lab) for lab in labels]
-        coords_arr = np.asarray(coords)
-
-        elements_to_include: list[str] = []
-        for ele in elements:
-            if ele == "all":
-                elements_to_include = labels_list
-                break
-            if "all_" in ele or ele in ptable.elements:
-                elem = ele[4:] if "all_" in ele else ele
-                elements_to_include += [
-                    lab for lab in labels_list if elem == xyzf.remove_label_indices(lab)
-                ]
-            else:
-                elements_to_include.append(ele)
-
-        # Filter hyperfine dicts by selection.
-        a_iso_sel = {k: v for k, v in a_iso.items() if k in elements_to_include}
-        a_dip_sel = {k: v for k, v in a_dip.items() if k in elements_to_include}
-
-        # Filter coords by selection, preserving the original label ordering.
-        coords_sel = [
-            coord
-            for lab, coord in zip(labels_list, coords_arr)
-            if lab in elements_to_include
-        ]
-
-        nuclei = Nucleus.from_a_values(a_iso_sel, a_dip_sel, coords_sel)
-        if not nuclei:
-            raise ValueError("No Nuclei selected!")
-
-        # Molecule keeps the full structure labels/coords.
-        return cls(labels_list, coords_arr, nuclei)
 
     @property
     def susc(self) -> Susceptibility:
@@ -537,13 +520,23 @@ class Molecule:
 
         # Average hyperfines and diamagnetic shifts
         for ents in av_chemlabels:
-            avg_atens = np.mean(
-                [nuc.A.tensor for nuc in self.nuclei if nuc.chem_label in ents],
-                axis=0,
-            )
-            for nuc in self.nuclei:
-                if nuc.chem_label in ents:
-                    nuc.A.tensor = avg_atens
+            group = [nuc for nuc in self.nuclei if nuc.chem_label in ents]
+
+            avg_fc = np.mean([nuc.A.fc for nuc in group], axis=0)
+            avg_sd = np.mean([nuc.A.sd for nuc in group], axis=0)
+            avg_orb = np.mean([nuc.A.orb for nuc in group], axis=0)
+
+            have_full = all(nuc.A.tensor_full is not None for nuc in group)
+            avg_full = None
+            if have_full:
+                avg_full = np.mean([nuc.A.tensor_full for nuc in group], axis=0)
+
+            for nuc in group:
+                nuc.A.fc = avg_fc
+                nuc.A.sd = avg_sd
+                nuc.A.orb = avg_orb
+                if have_full:
+                    nuc.A.tensor_full = avg_full
 
         return
 
@@ -568,7 +561,11 @@ class Molecule:
             raise ValueError("rot_mat must be a (3x3) rotation matrix")
 
         for nuc in self.nuclei:
-            nuc.A.tensor = rot_mat @ nuc.A.tensor @ rot_mat.T
+            nuc.A.fc = rot_mat @ nuc.A.fc @ rot_mat.T
+            nuc.A.sd = rot_mat @ nuc.A.sd @ rot_mat.T
+            nuc.A.orb = rot_mat @ nuc.A.orb @ rot_mat.T
+            if nuc.A.tensor_full is not None:
+                nuc.A.tensor_full = rot_mat @ nuc.A.tensor_full @ rot_mat.T
 
         return
 
@@ -602,38 +599,50 @@ class Molecule:
                     continue
                 val = Hyperfine.calc_pdip(nuc.coord, self.coords[it[0]])
                 val *= 1e6 / len(centre_labels)
-                nuc.A.tensor += val
+                nuc.A.sd = nuc.A.sd + val
+                if nuc.A.tensor_full is not None:
+                    nuc.A.tensor_full = nuc.A.tensor_full + val
         return
 
-    def calculate_shifts(self, shift_terms="full"):
-        """Compute paramagnetic chemical shift components for all nuclei.
+    def calculate_shifts(self):
+        """Compute chemical shift components for all nuclei.
 
-        Args:
-            shift_terms: Shift terms to calculate. Supported values are
-                ``"full"``, ``"pc"``, and ``"fc"``. ``"full"`` expands to
-                ``["pc", "fc"]``.
+        This method computes all standard shift contributions that are available
+        from the current molecule domain state. Fermi-contact and pseudocontact
+        contributions are always evaluated. Orbital contributions are evaluated
+        only when the hyperfine metadata reports orbital contribution as
+        available and a DFT-derived g-tensor is present in the spin-Hamiltonian
+        container.
 
         Raises:
-            ValueError: If an unsupported shift term is provided.
+            ValueError: If orbital contribution is marked as available but the
+                required DFT-derived g-tensor is missing.
         """
 
-        if isinstance(shift_terms, str):
-            shift_terms = [shift_terms]
+        hyperfine_meta = self.metadata.get("hyperfine", {})
+        orb_available = hyperfine_meta.get("orbital_contribution") == "available"
 
-        # Swap full for actual terms
-        shift_terms = [
-            nst for st in shift_terms for nst in (st if st != "full" else ["pc", "fc"])
-        ]
+        g_tensor_dft = None
+        if orb_available:
+            g_tensor_dft = self.sh.g_tensor_dft
+            if g_tensor_dft is None:
+                raise ValueError(
+                    "Orbital contribution is marked as available, but "
+                    "SpinHamiltonian.g_tensor_dft is missing."
+                )
 
-        if "pc" in shift_terms:
-            for nuc in self.nuclei:
-                nuc.shift.pc = Shift.calc_pcs(nuc.A, self.susc)
-        if "fc" in shift_terms:
-            for nuc in self.nuclei:
-                nuc.shift.fc = Shift.calc_fcs(nuc.A, self.susc)
+        for nuc in self.nuclei:
+            nuc.shift.pc = Shift.calc_pcs(nuc.A, self.susc)
+            nuc.shift.fc = Shift.calc_fcs(nuc.A, self.susc)
 
-        if "fc" not in shift_terms and "pc" not in shift_terms:
-            raise ValueError("Unknown shift specified")
+            if orb_available:
+                nuc.shift.orb_iso = Shift.calc_orb_iso(nuc.A, self.susc, g_tensor_dft)
+                nuc.shift.orb_aniso = Shift.calc_orb_aniso(
+                    nuc.A, self.susc, g_tensor_dft
+                )
+            else:
+                nuc.shift.orb_iso = 0.0
+                nuc.shift.orb_aniso = 0.0
 
         return
 

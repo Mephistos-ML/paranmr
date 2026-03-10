@@ -25,6 +25,10 @@ def read_molecule_csv(file_name: str) -> dict:
     This function preserves the legacy parsing behaviour previously implemented
     in `Molecule.from_csv` (domain), but keeps IO in the IO layer.
 
+    TODO(architecture): Split this reader into separate structural and HFC
+    readers. The current function still mixes base-molecule fields (labels,
+    coords) with hyperfine- and chem-label payloads for legacy compatibility.
+
     Returns dict with keys:
       - labels: list[str]
       - coords: np.ndarray shape (n, 3)
@@ -35,14 +39,31 @@ def read_molecule_csv(file_name: str) -> dict:
     data = read_csv_safe(file_name)
 
     required_cols = ["atom_label ()", "x (Å)", "y (Å)", "z (Å)"]
-    split_hyperfine_cols = [
-        "Aiso (ppm Å^-3)",
+    legacy_split_hyperfine_cols = [
         "Adip_xx (ppm Å^-3)",
         "Adip_xy (ppm Å^-3)",
         "Adip_xz (ppm Å^-3)",
         "Adip_yy (ppm Å^-3)",
         "Adip_yz (ppm Å^-3)",
         "Adip_zz (ppm Å^-3)",
+    ]
+    split_hyperfine_cols = [
+        "A_fc_iso (ppm Å^-3)",
+        "A_sd_xx (ppm Å^-3)",
+        "A_sd_xy (ppm Å^-3)",
+        "A_sd_xz (ppm Å^-3)",
+        "A_sd_yy (ppm Å^-3)",
+        "A_sd_yz (ppm Å^-3)",
+        "A_sd_zz (ppm Å^-3)",
+    ]
+    split_hyperfine_cols_alt_iso = [
+        "Aiso (ppm Å^-3)",
+        "dA_xx (ppm Å^-3)",
+        "dA_xy (ppm Å^-3)",
+        "dA_xz (ppm Å^-3)",
+        "dA_yy (ppm Å^-3)",
+        "dA_yz (ppm Å^-3)",
+        "dA_zz (ppm Å^-3)",
     ]
     full_hyperfine_cols = [
         "A_xx (ppm Å^-3)",
@@ -80,11 +101,29 @@ def read_molecule_csv(file_name: str) -> dict:
         raise ValueError(f"Missing header(s) {missing} in {file_name}")
 
     # Detect hyperfine encoding (split vs full) exactly like before
-    has_split = all(col in data.columns for col in split_hyperfine_cols)
+    has_new_split = all(col in data.columns for col in split_hyperfine_cols)
+    has_new_split_alt_iso = all(
+        col in data.columns for col in split_hyperfine_cols_alt_iso
+    )
+    has_legacy_split = all(col in data.columns for col in legacy_split_hyperfine_cols)
     has_full = all(col in data.columns for col in full_hyperfine_cols)
 
-    if has_split:
+    use_legacy = False
+    if has_new_split:
         split = True
+    elif not has_new_split and has_new_split_alt_iso:
+        split = True
+        logger.warning(
+            "Legacy hyperfine column 'Aiso' detected. Please rename to 'Aiso_eff'; "
+            "support for 'Aiso' will be removed in a future release."
+        )
+    elif has_legacy_split:
+        split = True
+        use_legacy = True
+        logger.warning(
+            "Legacy hyperfine columns 'Adip_*' detected. Please migrate to 'dA_*'; "
+            "support for 'Adip_*' will be removed in a future release."
+        )
     elif has_full:
         split = False
     else:
@@ -97,30 +136,61 @@ def read_molecule_csv(file_name: str) -> dict:
     coords = np.array([data["x (Å)"], data["y (Å)"], data["z (Å)"]]).T
 
     if split:
-        tensors = [
-            np.array(
-                [
+        aiso_key = (
+            "Aiso_eff (ppm Å^-3)"
+            if "Aiso_eff (ppm Å^-3)" in data.columns
+            else "Aiso (ppm Å^-3)"
+        )
+        if use_legacy:
+            tensors = [
+                np.array(
                     [
-                        row["Adip_xx (ppm Å^-3)"],
-                        row["Adip_xy (ppm Å^-3)"],
-                        row["Adip_xz (ppm Å^-3)"],
+                        [
+                            row["Adip_xx (ppm Å^-3)"],
+                            row["Adip_xy (ppm Å^-3)"],
+                            row["Adip_xz (ppm Å^-3)"],
+                        ],
+                        [
+                            row["Adip_xy (ppm Å^-3)"],
+                            row["Adip_yy (ppm Å^-3)"],
+                            row["Adip_yz (ppm Å^-3)"],
+                        ],
+                        [
+                            row["Adip_xz (ppm Å^-3)"],
+                            row["Adip_yz (ppm Å^-3)"],
+                            row["Adip_zz (ppm Å^-3)"],
+                        ],
                     ],
+                    dtype=float,
+                )
+                + np.eye(3) * float(row[aiso_key])
+                for _, row in data.iterrows()
+            ]
+        else:
+            tensors = [
+                np.array(
                     [
-                        row["Adip_xy (ppm Å^-3)"],
-                        row["Adip_yy (ppm Å^-3)"],
-                        row["Adip_yz (ppm Å^-3)"],
+                        [
+                            row["A_sd_xx (ppm Å^-3)"],
+                            row["A_sd_xy (ppm Å^-3)"],
+                            row["A_sd_xz (ppm Å^-3)"],
+                        ],
+                        [
+                            row["A_sd_xy (ppm Å^-3)"],
+                            row["A_sd_yy (ppm Å^-3)"],
+                            row["A_sd_yz (ppm Å^-3)"],
+                        ],
+                        [
+                            row["A_sd_xz (ppm Å^-3)"],
+                            row["A_sd_yz (ppm Å^-3)"],
+                            row["A_sd_zz (ppm Å^-3)"],
+                        ],
                     ],
-                    [
-                        row["Adip_xz (ppm Å^-3)"],
-                        row["Adip_yz (ppm Å^-3)"],
-                        row["Adip_zz (ppm Å^-3)"],
-                    ],
-                ],
-                dtype=float,
-            )
-            + np.eye(3) * float(row["Aiso (ppm Å^-3)"])
-            for _, row in data.iterrows()
-        ]
+                    dtype=float,
+                )
+                + np.eye(3) * float(row[aiso_key])
+                for _, row in data.iterrows()
+            ]
     else:
         tensors = [
             np.array(
@@ -193,51 +263,56 @@ def save_molecule_to_csv(
 def _build_molecule_df(molecule):
     """Build a full molecule table for CSV export."""
 
-    columns = [
-        "atom_label ()",
-        "chem_label ()",
-        "x (Å)",
-        "y (Å)",
-        "z (Å)",
-        "Aiso (ppm Å^-3)",
-        "Adip_xx (ppm Å^-3)",
-        "Adip_xy (ppm Å^-3)",
-        "Adip_xz (ppm Å^-3)",
-        "Adip_yy (ppm Å^-3)",
-        "Adip_yz (ppm Å^-3)",
-        "Adip_zz (ppm Å^-3)",
-        "δ_total_avg (ppm)",
-        "δ_total (ppm)",
-        "δ_dia (ppm)",
-        "δ_fc (ppm)",
-        "δ_pc (ppm)",
-        "linewidth (ppm)",
-    ]
-
     nuclei = molecule.nuclei
 
-    data = {
-        "atom_label ()": [nuc.label for nuc in nuclei],
-        "chem_label ()": [nuc.chem_label for nuc in nuclei],
-        "x (Å)": [nuc.coord[0] for nuc in nuclei],
-        "y (Å)": [nuc.coord[1] for nuc in nuclei],
-        "z (Å)": [nuc.coord[2] for nuc in nuclei],
-        "Aiso (ppm Å^-3)": [nuc.A.iso for nuc in nuclei],
-        "Adip_xx (ppm Å^-3)": [nuc.A.dip[0, 0] for nuc in nuclei],
-        "Adip_xy (ppm Å^-3)": [nuc.A.dip[0, 1] for nuc in nuclei],
-        "Adip_xz (ppm Å^-3)": [nuc.A.dip[0, 2] for nuc in nuclei],
-        "Adip_yy (ppm Å^-3)": [nuc.A.dip[1, 1] for nuc in nuclei],
-        "Adip_yz (ppm Å^-3)": [nuc.A.dip[1, 2] for nuc in nuclei],
-        "Adip_zz (ppm Å^-3)": [nuc.A.dip[2, 2] for nuc in nuclei],
-        "δ_total_avg (ppm)": [nuc.shift.avg for nuc in nuclei],
-        "δ_total (ppm)": [nuc.shift.total for nuc in nuclei],
-        "δ_dia (ppm)": [nuc.shift.dia for nuc in nuclei],
-        "δ_fc (ppm)": [nuc.shift.fc for nuc in nuclei],
-        "δ_pc (ppm)": [nuc.shift.pc for nuc in nuclei],
-        "linewidth (ppm)": [
-            nuc.shift.lw if hasattr(nuc.shift, "lw") else 1.0 for nuc in nuclei
-        ],
-    }
+    hyperfine_meta = molecule.metadata.get("hyperfine", {})
+    has_orb = hyperfine_meta.get("orbital_contribution") == "available"
+
+    base_specs = [
+        ("atom_label ()", lambda nuc: nuc.label),
+        ("chem_label ()", lambda nuc: nuc.chem_label),
+        ("x (Å)", lambda nuc: nuc.coord[0]),
+        ("y (Å)", lambda nuc: nuc.coord[1]),
+        ("z (Å)", lambda nuc: nuc.coord[2]),
+        ("A_fc_iso (ppm Å^-3)", lambda nuc: 1.0 / 3.0 * np.trace(nuc.A.fc)),
+        ("A_sd_xx (ppm Å^-3)", lambda nuc: nuc.A.sd[0, 0]),
+        ("A_sd_xy (ppm Å^-3)", lambda nuc: nuc.A.sd[0, 1]),
+        ("A_sd_xz (ppm Å^-3)", lambda nuc: nuc.A.sd[0, 2]),
+        ("A_sd_yy (ppm Å^-3)", lambda nuc: nuc.A.sd[1, 1]),
+        ("A_sd_yz (ppm Å^-3)", lambda nuc: nuc.A.sd[1, 2]),
+        ("A_sd_zz (ppm Å^-3)", lambda nuc: nuc.A.sd[2, 2]),
+        ("δ_total_avg (ppm)", lambda nuc: nuc.shift.avg),
+        ("δ_total (ppm)", lambda nuc: nuc.shift.total),
+        ("δ_dia (ppm)", lambda nuc: nuc.shift.dia),
+        ("δ_fc (ppm)", lambda nuc: nuc.shift.fc),
+        ("δ_pc (ppm)", lambda nuc: nuc.shift.pc),
+    ]
+
+    orb_specs = [
+        ("δ_orb (ppm)", lambda nuc: getattr(nuc.shift, "orb", 0.0)),
+        ("δ_orb_iso (ppm)", lambda nuc: getattr(nuc.shift, "orb_iso", 0.0)),
+        (
+            "δ_orb_aniso (ppm)",
+            lambda nuc: getattr(nuc.shift, "orb_aniso", 0.0),
+        ),
+    ]
+
+    tail_specs = [
+        (
+            "linewidth (ppm)",
+            lambda nuc: nuc.shift.lw if hasattr(nuc.shift, "lw") else 1.0,
+        ),
+    ]
+
+    spec_groups = [
+        base_specs,
+        orb_specs if has_orb else [],
+        tail_specs,
+    ]
+    specs = [spec for group in spec_groups for spec in group]
+
+    columns = [name for name, _ in specs]
+    data = {name: [getter(nuc) for nuc in nuclei] for name, getter in specs}
 
     df = pd.DataFrame(data, columns=columns)
 
