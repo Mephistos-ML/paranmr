@@ -20,6 +20,7 @@ from simpnmr.app.loaders.exp_load import load_experiments, save_experiment
 from simpnmr.app.loaders.hfc_load import load_hyperfines
 from simpnmr.app.loaders.labels_load import load_chem_labels_from_csv
 from simpnmr.app.loaders.mol_load import load_base_molecule
+from simpnmr.app.loaders.sh_load import load_g_tensor_dft
 from simpnmr.app.params.options import FitSuscRunOptions
 from simpnmr.app.pipelines.fit.vt_fit import fit_vt
 from simpnmr.app.policies.assignment import resolve_assignment_search_settings
@@ -80,6 +81,11 @@ def run_fit_susc(config, options: FitSuscRunOptions | None = None) -> int:
 
     # Load Molecule
     base_molecule = load_base_molecule(config)
+
+    # Load DFT g-tensor (if available)
+    base_molecule.sh.g_tensor_dft = load_g_tensor_dft(
+        config=config,
+    )
 
     # Load Hyperfines
     base_molecule = load_hyperfines(
