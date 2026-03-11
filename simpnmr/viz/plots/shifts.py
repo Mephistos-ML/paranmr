@@ -102,9 +102,14 @@ def plot_fitted_shifts(
             exp[nuc.chem_math_label] = exp.pop(nuc.chem_label)
 
     fig, ax = plt.subplots(1, 1, figsize=(5.6, 6.4), num=window_title)
+    fig.patch.set_facecolor("white")
+    ax.set_facecolor("#f3f3f7")
     glyphs = spec.glyphs
     palette = spec.palette
     scale = spec.skin_axes(ax)
+    ax.grid(True, which="major", color="white", linewidth=1.0)
+    ax.grid(True, which="minor", color="white", linewidth=0.7, alpha=0.8)
+    ax.set_axisbelow(True)
 
     for (label, calc), expt in zip(calc_shifts.items(), exp.values()):
         ax.plot(
@@ -129,10 +134,8 @@ def plot_fitted_shifts(
     x_lim = ax.get_xlim()
     y_lim = ax.get_ylim()
 
-    ax.yaxis.set_minor_locator(ticker.AutoMinorLocator())
-    ax.yaxis.set_major_locator(ticker.AutoLocator())
-    ax.xaxis.set_minor_locator(ticker.AutoMinorLocator())
-    ax.xaxis.set_major_locator(ticker.AutoLocator())
+    ax.yaxis.set_major_locator(ticker.MaxNLocator(nbins=10))
+    ax.xaxis.set_major_locator(ticker.MaxNLocator(nbins=10))
 
     ax.set_xlim([np.min([x_lim, y_lim]), np.max([x_lim, y_lim])])
     ax.set_ylim([np.min([x_lim, y_lim]), np.max([x_lim, y_lim])])
