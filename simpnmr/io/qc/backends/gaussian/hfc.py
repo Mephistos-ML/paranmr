@@ -1,10 +1,10 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (C) 2026 Suturina Group
 
-"""Parse hyperfine coupling data from Gaussian outputs.
+"""Parse Gaussian hyperfine coupling components.
 
-Provides helpers to extract isotropic and anisotropic hyperfine tensors from
-Gaussian quantum-chemistry calculation files.
+Provides helpers to extract isotropic Fermi-contact values and traceless
+spin-dipolar tensors from Gaussian quantum-chemistry calculation files.
 """
 
 import numpy as np
@@ -14,18 +14,24 @@ import numpy.typing as npt
 from simpnmr.io.qc.errors import MissingSectionError
 
 
-def read_gaussian_log_a_tensors(file_name: str) -> tuple[npt.NDArray, npt.NDArray]:
-    """Extract isotropic and deviatoric (traceless)
-    hyperfine (A) tensors from a Gaussian log.
+def read_gaussian_log_a_tensors(
+    file_name: str,
+) -> tuple[npt.NDArray, npt.NDArray]:
+    """Extract Gaussian hyperfine components from a log file.
+
+    Gaussian outputs provide isotropic Fermi-contact values separately from
+    anisotropic spin-dipolar tensors. This reader returns those raw backend
+    quantities without converting the isotropic values into 3x3 tensors.
 
     Args:
         file_name: Path to the Gaussian log file.
 
     Returns:
-        A tuple `(a_iso, a_dtensor)` where:
-            * `a_iso` is an array of shape `(n_atoms,)` with isotropic values in MHz.
-            * `a_dtensor` is an array of shape `(n_atoms, 3, 3)` with deviatoric
-            (traceless) tensors in MHz.
+        A tuple `(a_fc_tensors, a_sd_tensors)` where:
+            * `a_fc_tensors` is an array of shape `(n_atoms,)` containing isotropic
+              Fermi-contact values in MHz.
+            * `a_sd_tensors` is an array of shape `(n_atoms, 3, 3)` containing
+              traceless spin-dipolar tensors in MHz.
     """
 
     # Read number of atoms
@@ -36,7 +42,7 @@ def read_gaussian_log_a_tensors(file_name: str) -> tuple[npt.NDArray, npt.NDArra
                 n_atoms = int(spl_line[spl_line.index("NAtoms=") + 1])
                 break
 
-    a_iso = np.zeros(n_atoms)
+    a_fc_tensors = np.zeros(n_atoms)
 
     # Read isotropic part
     with open(file_name, "r") as f:
@@ -45,9 +51,9 @@ def read_gaussian_log_a_tensors(file_name: str) -> tuple[npt.NDArray, npt.NDArra
                 line = next(f)
                 for it in range(n_atoms):
                     line = next(f)
-                    a_iso[it] = float(line.split()[3])  # MHz
+                    a_fc_tensors[it] = float(line.split()[3])  # MHz
 
-    a_dtensor = np.zeros([n_atoms, 3, 3])
+    a_sd_tensors = np.zeros([n_atoms, 3, 3])
     # Read traceless tensor as eigenvalues and eigenvectors
     track = 0
     with open(file_name, "r") as f:
@@ -74,7 +80,7 @@ def read_gaussian_log_a_tensors(file_name: str) -> tuple[npt.NDArray, npt.NDArra
                     vecs = np.array([vecs_1, vecs_2, vecs_3]).T
 
                     # Transform back to coordinate frame in MHz
-                    a_dtensor[it, :, :] = vecs @ np.diag(vals) @ la.inv(vecs)
+                    a_sd_tensors[it, :, :] = vecs @ np.diag(vals) @ la.inv(vecs)
                     line = next(f)
 
     if track != 2:
@@ -89,4 +95,4 @@ def read_gaussian_log_a_tensors(file_name: str) -> tuple[npt.NDArray, npt.NDArra
             section="Anisotropic Spin Dipole Couplings",
         )
 
-    return a_iso, a_dtensor
+    return a_fc_tensors, a_sd_tensors
