@@ -41,13 +41,10 @@ from simpnmr.io.csv.mol import save_molecule_to_csv
 from simpnmr.io.csv.susc import save_susc
 from simpnmr.io.cube.pcs_iso_write import write_pcs_cube
 from simpnmr.io.xyz import xyz_write
+from simpnmr.viz.plots.fitted_shifts import plot_fitted_shifts
 
 # Visualisation
-from simpnmr.viz.plots.shifts import (
-    plot_fitted_shifts,
-    plot_shift_contrib,
-    plot_shift_spread,
-)
+from simpnmr.viz.plots.shifts import plot_shift_contrib, plot_shift_spread
 from simpnmr.viz.plots.spect import plot_pred_spectrum
 from simpnmr.viz.style.theme import apply_profile
 
