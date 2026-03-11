@@ -27,7 +27,7 @@ from simpnmr.app.loaders.sh_load import (
     load_g_tensor_ab_initio,
     load_g_tensor_dft,
 )
-from simpnmr.app.loaders.susc_load import load_susceptibilities
+from simpnmr.app.loaders.susc_load import resolve_susceptibilities
 from simpnmr.app.params.options import PredictRunOptions
 from simpnmr.app.policies.susc import resolve_susceptibility_source
 
@@ -109,11 +109,14 @@ def run_predict(config, options: PredictRunOptions | None = None) -> int:
         hyperfine_method=config.hyperfine_method if config.spin_S is None else None,
     )
 
-    # Resolve susceptibility source for downstream operations
-    backend, section = resolve_susceptibility_source(
-        config.susceptibility_file,
-        config.susceptibility_format,
-    )
+    # Resolve susceptibility source for downstream operations when an explicit
+    # susceptibility file is available.
+    backend, section = None, None
+    if config.susceptibility_file is not None:
+        backend, section = resolve_susceptibility_source(
+            config.susceptibility_file,
+            config.susceptibility_format,
+        )
 
     # TODO(app): Temporary ORCA-only chi-source geometry load for prediction.
     # Move this into the appropriate loader/builder layer once the chi-source
@@ -129,10 +132,11 @@ def run_predict(config, options: PredictRunOptions | None = None) -> int:
                 exc,
             )
 
-    # Load Magnetic Susceptibility
-    suscs = load_susceptibilities(
+    # Load or resolve magnetic susceptibility objects.
+    suscs = resolve_susceptibilities(
         config.susceptibility_file,
         config.susceptibility_format,
+        temperatures=config.susceptibility_temperatures,
         electronic=base_molecule.electronic,
         g_tensor=base_molecule.sh.g_tensor_ab_initio,
     )
@@ -362,11 +366,15 @@ def run_predict(config, options: PredictRunOptions | None = None) -> int:
     save_susc(
         molecules,
         os.path.join(config.project_name, "susceptibility_tensor.csv"),
-        comment="Data from {} ({})".format(
-            Path(config.susceptibility_file).name,
-            config.susceptibility_format
-            if config.susceptibility_format is not None
-            else (f"orca_{section}" if backend == "orca" else backend),
+        comment=(
+            "Data from spin-only fallback (no susceptibility file)"
+            if config.susceptibility_file is None
+            else "Data from {} ({})".format(
+                Path(config.susceptibility_file).name,
+                config.susceptibility_format
+                if config.susceptibility_format is not None
+                else (f"orca_{section}" if backend == "orca" else backend),
+            )
         ),
         susc_units=getattr(config, "susc_units", "A3"),
     )
