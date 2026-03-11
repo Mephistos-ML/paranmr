@@ -14,7 +14,7 @@ from typing import Any
 import numpy as np
 
 from simpnmr.app.policies.susc import resolve_iso_mode, resolve_susceptibility_source
-from simpnmr.core.build.susc import susc_from_orca_xt, susc_from_spin_only_fallback
+from simpnmr.core.build.susc import susc_from_orca_xt, susc_from_spin_only_iso
 from simpnmr.core.domain.tensor import Susceptibility
 from simpnmr.io.csv.susc import read_susceptibilities_csv
 from simpnmr.io.qc import gateway as rdrs
@@ -75,7 +75,7 @@ def resolve_susceptibilities(
     )
 
     return [
-        susc_from_spin_only_fallback(
+        susc_from_spin_only_iso(
             spin=electronic.spin_S,
             orbit=electronic.orbit_L,
             total_momentum_J=electronic.total_J,
