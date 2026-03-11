@@ -36,6 +36,12 @@ def load_g_tensor_ab_initio(config: Any) -> NDArray[np.floating] | None:
         Ab initio g-tensor as a (3, 3) ndarray, or None if not available
         for the backend.
     """
+    if config.susceptibility_file is None:
+        logger.info(
+            "No susceptibility file provided; skipping ab initio g-tensor load."
+        )
+        return None
+
     backend, section = resolve_susceptibility_source(
         config.susceptibility_file,
         config.susceptibility_format,
