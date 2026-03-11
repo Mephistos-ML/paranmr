@@ -1176,7 +1176,7 @@ class PredictConfig(FitSuscConfig):
     }
 
     def __init__(self, **kwargs):
-        self._susceptibility_file = ""
+        self._susceptibility_file = None
         self._susceptibility_format = None
         self._susceptibility_temperatures = []
         self._relaxation_model = ""
@@ -1190,11 +1190,16 @@ class PredictConfig(FitSuscConfig):
         super().__init__(**kwargs)
 
     @property
-    def susceptibility_file(self) -> str:
+    def susceptibility_file(self) -> str | None:
         return self._susceptibility_file
 
     @susceptibility_file.setter
-    def susceptibility_file(self, value: str):
+    def susceptibility_file(self, value: str | None):
+        if value is None or value == "":
+            self._susceptibility_file = None
+            return None
+        if not isinstance(value, str):
+            raise ValueError("susceptibility:file must be a string or None")
         self._susceptibility_file = os.path.abspath(value)
         return None
 
