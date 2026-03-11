@@ -828,7 +828,7 @@ class GaussianLogA(QCA):
         # Read raw data
         labels, coords = read_gaussian_log_xyz(file_name)
         labels = np.array(xyzf.add_label_indices(labels))
-        a_iso_raw, a_dtensor_raw = read_gaussian_log_a_tensors(file_name)
+        a_fc_raw, a_sd_raw = read_gaussian_log_a_tensors(file_name)
 
         mult = read_gaussian_log_spin(file_name)
         n_unpaired = mult - 1
@@ -838,12 +838,11 @@ class GaussianLogA(QCA):
         # component contract expected downstream: A(FC) as an isotropic 3x3 tensor
         # and A(SD) as the traceless spin-dipolar tensor.
         a_fc = {
-            label: np.eye(3, dtype=float) * float(a_iso)
-            for label, a_iso in zip(labels, a_iso_raw)
+            label: np.eye(3, dtype=float) * float(fc_iso)
+            for label, fc_iso in zip(labels, a_fc_raw)
         }
         a_sd = {
-            label: tensor * 1.0 / n_unpaired
-            for label, tensor in zip(labels, a_dtensor_raw)
+            label: tensor * 1.0 / n_unpaired for label, tensor in zip(labels, a_sd_raw)
         }
         a_orb = {label: None for label in labels}
 
