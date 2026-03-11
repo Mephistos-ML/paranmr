@@ -197,9 +197,9 @@ def plot_fitted_shifts(
             f"{molecule.susc.rhombicity * conv:.3f} {unit_label}"
         )
         expression += "\n"
-    expression += rf"$\alpha$ = {molecule.susc.alpha:.2f}"
-    expression += rf"  $\beta$ = {molecule.susc.beta:.2f}"
-    expression += rf"  $\gamma$ = {molecule.susc.gamma:.2f}"
+    expression += rf"$\alpha$ = {int(round(molecule.susc.alpha))}"
+    expression += rf"  $\beta$ = {int(round(molecule.susc.beta))}"
+    expression += rf"  $\gamma$ = {int(round(molecule.susc.gamma))}"
 
     ax.text(
         0.0,
