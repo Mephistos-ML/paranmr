@@ -757,6 +757,7 @@ class Molecule:
                 val = Hyperfine.calc_pdip(nuc.coord, self.coords[it[0]])
                 val *= 1e6 / len(centre_labels)
                 hfc.sd = hfc.sd + val
+                hfc.tensor_full = hfc.fc + hfc.sd + hfc.orb
                 updated_hfc_by_label[label] = hfc
 
         self.set_available_hfc_by_label(updated_hfc_by_label)
