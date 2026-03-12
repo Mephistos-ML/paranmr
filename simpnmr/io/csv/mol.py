@@ -277,6 +277,20 @@ def _build_molecule_df(molecule):
 
     hyperfine_meta = molecule.metadata.get("hyperfine", {})
     has_orb = hyperfine_meta.get("orbital_contribution") == "available"
+    has_fc_gcorr = (
+        getattr(molecule.susc, "iso_g_corr", None) is not None
+        and getattr(molecule.susc, "iso_spin_only", None) is not None
+    )
+    has_fc_spin_only = (
+        getattr(molecule.susc, "iso_spin_only", None) is not None
+        and getattr(molecule.susc, "iso_g_corr", None) is None
+    )
+    if has_fc_gcorr:
+        fc_column_name = "δ_fc_g_corr (ppm)"
+    elif has_fc_spin_only:
+        fc_column_name = "δ_fc_spin_only (ppm)"
+    else:
+        fc_column_name = "δ_fc (ppm)"
 
     labels = list(molecule.labels)
     coords = np.asarray(molecule.coords)
@@ -378,12 +392,30 @@ def _build_molecule_df(molecule):
             lambda ctx: ctx["nuc"].shift.dia if ctx["nuc"] is not None else np.nan,
         ),
         (
-            "δ_fc (ppm)",
-            lambda ctx: ctx["nuc"].shift.fc if ctx["nuc"] is not None else np.nan,
-        ),
-        (
             "δ_pc (ppm)",
             lambda ctx: ctx["nuc"].shift.pc if ctx["nuc"] is not None else np.nan,
+        ),
+        (
+            fc_column_name,
+            lambda ctx: ctx["nuc"].shift.fc if ctx["nuc"] is not None else np.nan,
+        ),
+        *(
+            [
+                (
+                    "δ_fc_spin_only (ppm)",
+                    lambda ctx: ctx["nuc"].shift.fc_spin_only
+                    if ctx["nuc"] is not None
+                    else np.nan,
+                ),
+                (
+                    "Δδ_fc_g_corr (ppm)",
+                    lambda ctx: ctx["nuc"].shift.fc_delta_g_corr
+                    if ctx["nuc"] is not None
+                    else np.nan,
+                ),
+            ]
+            if has_fc_gcorr
+            else []
         ),
     ]
 
