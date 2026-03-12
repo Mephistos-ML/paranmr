@@ -284,10 +284,17 @@ class SusceptibilityModel(ABC):
         """Converts the fitted model into a `Susceptibility` instance.
 
         Returns:
-            A `Susceptibility` object at `self.temperature`.
+            A `Susceptibility` object at `self.temperature` with canonical
+            ``chi.iso`` assigned from the fitted model.
         """
         tensor = self.totensor(self.final_var_values)
         susc = Susceptibility(tensor, self.temperature)
+
+        fitted_iso = self.final_var_values.get("iso")
+        if fitted_iso is None:
+            fitted_iso = float(np.trace(tensor) / 3.0)
+
+        susc.iso = float(fitted_iso)
         return susc
 
     @staticmethod
