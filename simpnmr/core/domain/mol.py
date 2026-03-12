@@ -315,6 +315,30 @@ class SpinHamiltonian:
 
 
 class Molecule:
+    def _calculate_fc_gcorr_delta(self) -> None:
+        """Compute spin-only FC reference and g-correction delta for all nuclei.
+
+        This diagnostic is only available when the canonical susceptibility was
+        built with both a stored spin-only isotropic susceptibility baseline and
+        a stored g-corrected isotropic susceptibility.
+
+        The canonical molecule state is preserved. Spin-only FC values are
+        evaluated using a copied susceptibility object with ``chi.iso`` replaced
+        by ``chi.iso_spin_only``.
+        """
+        if self.susc.iso_g_corr is None or self.susc.iso_spin_only is None:
+            return
+
+        chi_spin_only = copy.deepcopy(self.susc)
+        chi_spin_only.iso = chi_spin_only.iso_spin_only
+
+        for nuc in self.nuclei:
+            fc_spin_only = Shift.calc_fcs(nuc.A, chi_spin_only)
+            nuc.shift.fc_spin_only = fc_spin_only
+            nuc.shift.fc_delta_g_corr = nuc.shift.fc - fc_spin_only
+
+        return
+
     """Molecular container holding structure, available HFC data, and runtime nuclei.
 
     Args:
@@ -768,7 +792,11 @@ class Molecule:
 
         This method computes all standard shift contributions that are available
         from the current molecule domain state. Fermi-contact and pseudocontact
-        contributions are always evaluated. Orbital contributions are evaluated
+        contributions are always evaluated.
+        When both spin-only and g-corrected isotropic susceptibility values are
+        available, the method also stores spin-only FC reference values and the
+        corresponding FC g-correction deltas.
+        Orbital contributions are evaluated
         only when the hyperfine metadata reports orbital contribution as
         available and a DFT-derived g-tensor is present in the spin-Hamiltonian
         container.
@@ -803,6 +831,7 @@ class Molecule:
                 nuc.shift.orb_iso = 0.0
                 nuc.shift.orb_aniso = 0.0
 
+        self._calculate_fc_gcorr_delta()
         return
 
     def apply_diamagnetic_shifts(
