@@ -124,9 +124,9 @@ def _draw_fitted_shift_header_table(
             model_lines.append(f"{label}  {val:.3f}")
 
     euler_lines = [
-        f"α  {int(round(molecule.susc.alpha))}",
-        f"β  {int(round(molecule.susc.beta))}",
-        f"γ  {int(round(molecule.susc.gamma))}",
+        f"α  {int(round(molecule.susc.alpha))}°",
+        f"β  {int(round(molecule.susc.beta))}°",
+        f"γ  {int(round(molecule.susc.gamma))}°",
     ]
 
     n_rows = max(len(fit_lines), len(model_lines), len(euler_lines))
