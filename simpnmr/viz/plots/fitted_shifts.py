@@ -106,9 +106,9 @@ def _draw_fitted_shift_header_table(
         model_unit_label = "cm³ mol⁻¹"
 
     fit_lines = [
-        f"R²adj  {susc_model.adj_r2:.4f}",
-        f"MAE    {susc_model.mae:.3f} ppm",
-        f"RMSE   {susc_model.rmse:.3f} ppm",
+        f"R²adj  {susc_model.adj_r2:.3f}",
+        f"MAE    {susc_model.mae:.1f} ppm",
+        f"RMSE   {susc_model.rmse:.1f} ppm",
     ]
 
     model_lines = []
