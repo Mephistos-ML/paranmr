@@ -21,7 +21,6 @@ def susc_from_orca_xt(
     temperature: float,
     tensor_xt: NDArray,
     *,
-    iso_mode: str = "raw",
     electronic: Any | None = None,
     g_tensor: np.ndarray | None = None,
 ) -> Susceptibility:
@@ -31,16 +30,20 @@ def susc_from_orca_xt(
     molar susceptibility tensor chi (Å^3) by applying the appropriate physical
     conversion and dividing by temperature.
 
-    The isotropic component (``susc.iso``) is set according to ``iso_mode``:
-    - "g_corr": g-tensor-corr iso (requires g_tensor and spin_S; orbit_L optional)
-    - "spin_only": spin-only Curie iso (requires spin_S; orbit_L optional)
-    - "raw": trace-based iso from the susceptibility tensor
+    The builder always computes the spin-only isotropic susceptibility and
+    stores it in ``susc.iso_spin_only``. If ``g_tensor`` is available, it also
+    computes the g-tensor-corrected isotropic susceptibility and stores it in
+    ``susc.iso_g_corr``. The canonical isotropic susceptibility used downstream
+    is always assigned to ``susc.iso``: ``g_corr`` when available, otherwise
+    ``spin_only``.
 
     Args:
         temperature: Temperature in Kelvin.
         tensor_xt: ORCA XT tensor as a (3, 3) array in cm^3 mol^-1 K.
-        iso_mode: Iso handling mode ("raw", "spin_only", "g_corr").
-        electronic: Optional electronic-state context used for iso computation.
+        electronic: Electronic-state context required for spin-only isotropic
+            susceptibility evaluation.
+        g_tensor: Optional g-tensor used for g-corrected isotropic
+            susceptibility evaluation.
 
     Returns:
         Susceptibility domain object.
@@ -57,19 +60,38 @@ def susc_from_orca_xt(
     susc = Susceptibility(chi_tensor, temperature=float(temperature))
     susc.calc_irred()
 
-    if iso_mode == "g_corr":
-        if electronic is None:
-            raise ValueError("iso_mode='g_corr' requires an electronic-state context.")
-        spin = getattr(electronic, "spin_S", None)
-        orbit = getattr(electronic, "orbit_L", None)
-        total_J = getattr(electronic, "total_J", None)
+    if electronic is None:
+        raise ValueError(
+            "Susceptibility isotropic evaluation requires quantum-state "
+            "information (spin/orbit/angular momentum)."
+        )
 
-        if g_tensor is None or spin is None:
-            raise ValueError("iso_mode='g_corr' requires g_tensor and quantum number")
+    spin = getattr(electronic, "spin_S", None)
+    orbit = getattr(electronic, "orbit_L", None)
+    total_J = getattr(electronic, "total_J", None)
 
-        orbit_val = 0.0 if orbit is None else float(orbit)
+    if spin is None:
+        raise ValueError(
+            "Susceptibility isotropic evaluation requires quantum-state "
+            "information (spin/orbit/angular momentum); "
+            "spin-only isotropic susceptibility requires electronic.spin_S."
+        )
 
-        susc.iso = float(
+    # For strict domain naming, orbit_L may legitimately be None for spin-only.
+    # Treat missing orbit_L as 0.0 for the Landé-factor helper.
+    orbit_val = 0.0 if orbit is None else float(orbit)
+
+    susc.iso_spin_only = float(
+        get_spin_only_susc(
+            spin=float(spin),
+            orbit=orbit_val,
+            total_momentum_J=total_J,
+            temperature=float(temperature),
+        )
+    )
+
+    if g_tensor is not None:
+        susc.iso_g_corr = float(
             get_g_corr_iso_susc(
                 spin=float(spin),
                 orbit=orbit_val,
@@ -79,36 +101,7 @@ def susc_from_orca_xt(
             )
         )
 
-    elif iso_mode == "spin_only":
-        if electronic is None:
-            raise ValueError(
-                "iso_mode='spin_only' requires an electronic-state context."
-            )
-        spin = getattr(electronic, "spin_S", None)
-        orbit = getattr(electronic, "orbit_L", None)
-        total_J = getattr(electronic, "total_J", None)
-
-        if spin is None:
-            raise ValueError("iso_mode='spin_only' requires electronic.spin_S.")
-
-        # For strict domain naming, orbit_L may legitimately be None for spin-only.
-        # Treat missing orbit_L as 0.0 for the Landé-factor helper.
-        orbit_val = 0.0 if orbit is None else float(orbit)
-
-        susc.iso = float(
-            get_spin_only_susc(
-                spin=float(spin),
-                orbit=orbit_val,
-                total_momentum_J=total_J,
-                temperature=float(temperature),
-            )
-        )
-
-    elif iso_mode == "raw":
-        susc.iso = float(np.trace(chi_tensor) / 3.0)
-
-    else:
-        raise ValueError(f"Unknown iso_mode: {iso_mode!r}")
+    susc.iso = susc.iso_g_corr if susc.iso_g_corr is not None else susc.iso_spin_only
 
     return susc
 
@@ -137,7 +130,7 @@ def susc_from_spin_only_iso(
     susc = Susceptibility(chi_tensor, temperature=float(temperature))
     susc.calc_irred()
 
-    susc.iso = float(
+    susc.iso_spin_only = float(
         get_spin_only_susc(
             spin=float(spin),
             orbit=0.0 if orbit is None else float(orbit),
@@ -145,7 +138,14 @@ def susc_from_spin_only_iso(
             temperature=float(temperature),
         )
     )
+    susc.iso = susc.iso_spin_only
     return susc
+
+
+# TODO: Refactor this helper to consume stored susceptibility iso values
+# from domain objects (`s.iso`, `s.iso_spin_only`, `s.iso_g_corr`) instead of
+# recomputing isotropic susceptibility from builder-time inputs. The current
+# `g_corr_iso` pathway reflects an obsolete pre-refactor contract.
 
 
 # TODO: Consider moving this helper out of the builder layer.
