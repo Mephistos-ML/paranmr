@@ -9,6 +9,11 @@ from collections.abc import Mapping
 
 from simpnmr.core.relaxation import gueron, sbm
 
+# TODO(core): Refactor evaluate_relaxation_rates to consume a domain-derived
+# relaxation context/system object for static molecule/electronic/HFC inputs,
+# while keeping only per-calculation conditions (field, temperature, tau values)
+# as explicit call-time arguments.
+
 
 def evaluate_relaxation_rates(
     *,
