@@ -21,6 +21,7 @@ from simpnmr.app.loaders.exp_load import load_experiments
 from simpnmr.app.loaders.hfc_load import load_hyperfines
 from simpnmr.app.loaders.labels_load import load_chem_labels_from_csv
 from simpnmr.app.loaders.mol_load import load_base_molecule
+from simpnmr.app.loaders.paramag_centre_load import load_paramagnetic_centre
 from simpnmr.app.params.options import FitCorrTimeRunOptions
 from simpnmr.core.const.gammas import NUCLEAR_GAMMAS
 from simpnmr.core.const.physics import EGAMMA
@@ -137,6 +138,11 @@ def run_fit_corr_time(config, options: FitCorrTimeRunOptions | None = None) -> i
         # Load Molecule
         base_molecule = load_base_molecule(config)
 
+        # Load canonical paramagnetic centre into the molecule domain container
+        base_molecule.paramagnetic_centre = load_paramagnetic_centre(
+            config.hyperfine_paramagnetic_centre
+        )
+
         # Load Hyperfines
         base_molecule = load_hyperfines(
             molecule=base_molecule,
@@ -153,9 +159,6 @@ def run_fit_corr_time(config, options: FitCorrTimeRunOptions | None = None) -> i
 
         # Prepare relaxation model inputs
         nuclei_coords = {nuc.label: nuc.coord for nuc in base_molecule.nuclei}
-        # TODO(domain): Replace relaxation-specific electron coordinates
-        # with a domain-level paramagnetic centre entity.
-        paramagnetic_centre = config.hyperfine_paramagnetic_centre
 
         # Dictionaries for relaxation calculations
         A_fc_dict = {
@@ -211,7 +214,7 @@ def run_fit_corr_time(config, options: FitCorrTimeRunOptions | None = None) -> i
                     rates_r1, _ = evaluate_relaxation_rates(
                         relaxation_model=config.relaxation_model,
                         nuclei_coords=nuclei_coords,
-                        electron_coords=paramagnetic_centre,
+                        electron_coords=base_molecule.paramagnetic_centre,
                         gamma_I_dict=gamma_I_dict,
                         omega_I_dict=omega_I_dict,
                         omega_S=omega_S,
@@ -284,7 +287,7 @@ def run_fit_corr_time(config, options: FitCorrTimeRunOptions | None = None) -> i
                     rates_r1, _ = evaluate_relaxation_rates(
                         relaxation_model=config.relaxation_model,
                         nuclei_coords=nuclei_coords,
-                        electron_coords=paramagnetic_centre,
+                        electron_coords=base_molecule.paramagnetic_centre,
                         gamma_I_dict=gamma_I_dict,
                         omega_I_dict=omega_I_dict,
                         omega_S=omega_S,
@@ -365,7 +368,7 @@ def run_fit_corr_time(config, options: FitCorrTimeRunOptions | None = None) -> i
                     rates_r1, _ = evaluate_relaxation_rates(
                         relaxation_model=config.relaxation_model,
                         nuclei_coords=nuclei_coords,
-                        electron_coords=paramagnetic_centre,
+                        electron_coords=base_molecule.paramagnetic_centre,
                         gamma_I_dict=gamma_I_dict,
                         omega_I_dict=omega_I_dict,
                         omega_S=omega_S,
