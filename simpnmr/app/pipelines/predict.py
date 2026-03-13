@@ -36,7 +36,7 @@ from simpnmr.core.const.gammas import NUCLEAR_GAMMAS
 from simpnmr.core.const.physics import EGAMMA
 from simpnmr.core.conv.ang_to_freq import angstrom_to_mhz
 from simpnmr.core.domain.mol import Molecule
-from simpnmr.core.relaxation import gueron, sbm
+from simpnmr.core.relaxation.eval import evaluate_relaxation_rates
 
 # Tools
 from simpnmr.core.util import transform as tfm
@@ -468,179 +468,29 @@ def _apply_relaxation_linewidths(config, base_molecule: Molecule):
     orbit = base_molecule.electronic.orbit_L
     total_momentum_J = base_molecule.electronic.total_J
 
-    if config.relaxation_model == "sbm":
-        # Calculate SBM dipolar rates (R1)
-        sbm_dipolar_r1_rates = sbm.calc_r1_dipolar(
-            list(nuclei_coords.keys()),
-            nuclei_coords,
-            electron_coords,
-            gamma_I_dict,
-            omega_I_dict,
-            omega_S,
-            tau_c1,
-            tau_c2,
-            spin,
-            orbit,
-            total_momentum_J,
-        )
-        # Calculate SBM contact rates (R1)
-        sbm_contact_r1_rates = sbm.calc_r1_contact(
-            list(nuclei_coords.keys()),
-            A_iso_dict,
-            omega_I_dict,
-            omega_S,
-            tau_e2,
-            spin,
-            total_momentum_J,
-        )
-        # Calculate SBM dipolar rates (R2)
-        sbm_dipolar_r2_rates = sbm.calc_r2_dipolar(
-            list(nuclei_coords.keys()),
-            nuclei_coords,
-            electron_coords,
-            gamma_I_dict,
-            omega_I_dict,
-            omega_S,
-            tau_c1,
-            tau_c2,
-            spin,
-            orbit,
-            total_momentum_J,
-        )
-        # Calculate SBM contact rates (R2)
-        sbm_contact_r2_rates = sbm.calc_r2_contact(
-            list(nuclei_coords.keys()),
-            A_iso_dict,
-            omega_I_dict,
-            omega_S,
-            tau_e1,
-            tau_e2,
-            spin,
-            total_momentum_J,
-        )
-        # Combine rates into a single dictionary
-        rates_r1 = {
-            label: sbm_dipolar_r1_rates[label] + sbm_contact_r1_rates[label]
-            for label in nuclei_coords
-        }
-        rates_r2 = {
-            label: sbm_dipolar_r2_rates[label] + sbm_contact_r2_rates[label]
-            for label in nuclei_coords
-        }
-    # Curie mechanism only (R1 and R2)
-    elif config.relaxation_model == "curie":
-        curie_r1_rates = gueron.calc_r1_curie(
-            list(nuclei_coords.keys()),
-            nuclei_coords,
-            electron_coords,
-            omega_I_dict,
-            config.relaxation_temperature,
-            tau_R,
-            spin,
-            orbit,
-            total_momentum_J,
-        )
-        curie_r2_rates = gueron.calc_r2_curie(
-            list(nuclei_coords.keys()),
-            nuclei_coords,
-            electron_coords,
-            omega_I_dict,
-            config.relaxation_temperature,
-            tau_R,
-            spin,
-            orbit,
-            total_momentum_J,
-        )
-        rates_r1 = {label: curie_r1_rates[label] for label in nuclei_coords}
-        rates_r2 = {label: curie_r2_rates[label] for label in nuclei_coords}
+    rates_r1, rates_r2 = evaluate_relaxation_rates(
+        relaxation_model=config.relaxation_model,
+        nuclei_coords=nuclei_coords,
+        electron_coords=electron_coords,
+        gamma_I_dict=gamma_I_dict,
+        omega_I_dict=omega_I_dict,
+        omega_S=omega_S,
+        spin=spin,
+        orbit=orbit,
+        total_momentum_J=total_momentum_J,
+        A_iso_dict=A_iso_dict,
+        temperature=config.relaxation_temperature,
+        tau_R=tau_R,
+        tau_c1=tau_c1,
+        tau_c2=tau_c2,
+        tau_e1=tau_e1,
+        tau_e2=tau_e2,
+        compute_r1=True,
+        compute_r2=True,
+    )
 
-    # Combined SBM and Curie mechanisms
-    elif (
-        config.relaxation_model == "sbm curie" or config.relaxation_model == "curie sbm"
-    ):
-        sbm_dipolar_r1_rates = sbm.calc_r1_dipolar(
-            list(nuclei_coords.keys()),
-            nuclei_coords,
-            electron_coords,
-            gamma_I_dict,
-            omega_I_dict,
-            omega_S,
-            tau_c1,
-            tau_c2,
-            spin,
-            orbit,
-            total_momentum_J,
-        )
-        sbm_contact_r1_rates = sbm.calc_r1_contact(
-            list(nuclei_coords.keys()),
-            A_iso_dict,
-            omega_I_dict,
-            omega_S,
-            tau_e1,
-            spin,
-            total_momentum_J,
-        )
-        sbm_dipolar_r2_rates = sbm.calc_r2_dipolar(
-            list(nuclei_coords.keys()),
-            nuclei_coords,
-            electron_coords,
-            gamma_I_dict,
-            omega_I_dict,
-            omega_S,
-            tau_c1,
-            tau_c2,
-            spin,
-            orbit,
-            total_momentum_J,
-        )
-
-        # Calculate SBM contact rates
-        sbm_contact_r2_rates = sbm.calc_r2_contact(
-            list(nuclei_coords.keys()),
-            A_iso_dict,
-            omega_I_dict,
-            omega_S,
-            tau_e1,
-            tau_e2,
-            spin,
-            total_momentum_J,
-        )
-
-        curie_r1_rates = gueron.calc_r1_curie(
-            list(nuclei_coords.keys()),
-            nuclei_coords,
-            electron_coords,
-            omega_I_dict,
-            config.relaxation_temperature,
-            tau_R,
-            spin,
-            orbit,
-            total_momentum_J,
-        )
-        curie_r2_rates = gueron.calc_r2_curie(
-            list(nuclei_coords.keys()),
-            nuclei_coords,
-            electron_coords,
-            omega_I_dict,
-            config.relaxation_temperature,
-            tau_R,
-            spin,
-            orbit,
-            total_momentum_J,
-        )
-
-        rates_r1 = {
-            label: sbm_dipolar_r1_rates[label]
-            + sbm_contact_r1_rates[label]
-            + curie_r1_rates[label]
-            for label in nuclei_coords
-        }
-        rates_r2 = {
-            label: sbm_dipolar_r2_rates[label]
-            + sbm_contact_r2_rates[label]
-            + curie_r2_rates[label]
-            for label in nuclei_coords
-        }
+    if rates_r1 is None or rates_r2 is None:
+        raise ValueError("Shared relaxation evaluator returned incomplete R1/R2 rates")
 
     # Group rates by chemical label
     r1_by_chem_label = defaultdict(list)
@@ -673,37 +523,6 @@ def _apply_relaxation_linewidths(config, base_molecule: Molecule):
     avg_dipolar_by_chem_label = None
     avg_contact_by_chem_label = None
     avg_curie_by_chem_label = None
-
-    if "sbm" in config.relaxation_model:
-        dipolar_by_chem_label = defaultdict(list)
-        contact_by_chem_label = defaultdict(list)
-        for nuc in base_molecule.nuclei:
-            if "sbm_dipolar_r1_rates" in locals() and nuc.label in sbm_dipolar_r1_rates:
-                dipolar_by_chem_label[nuc.chem_label].append(
-                    sbm_dipolar_r1_rates[nuc.label]
-                )
-            if "sbm_contact_r1_rates" in locals() and nuc.label in sbm_contact_r1_rates:
-                contact_by_chem_label[nuc.chem_label].append(
-                    sbm_contact_r1_rates[nuc.label]
-                )
-        avg_dipolar_by_chem_label = {
-            chem_label: np.mean(rate_list)
-            for chem_label, rate_list in dipolar_by_chem_label.items()
-        }
-        avg_contact_by_chem_label = {
-            chem_label: np.mean(rate_list)
-            for chem_label, rate_list in contact_by_chem_label.items()
-        }
-
-    if "curie" in config.relaxation_model:
-        curie_by_chem_label = defaultdict(list)
-        for nuc in base_molecule.nuclei:
-            if "curie_r1_rates" in locals() and nuc.label in curie_r1_rates:
-                curie_by_chem_label[nuc.chem_label].append(curie_r1_rates[nuc.label])
-        avg_curie_by_chem_label = {
-            chem_label: np.mean(rate_list)
-            for chem_label, rate_list in curie_by_chem_label.items()
-        }
 
     # Save the relaxation data to CSV
     relax.save_relaxation_decomposition(
