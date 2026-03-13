@@ -14,7 +14,6 @@ import os
 from collections import defaultdict
 
 import numpy as np
-from matplotlib import pyplot as plt
 from scipy.optimize import curve_fit
 
 from simpnmr.app.loaders.elstate_load import load_electronic_state
@@ -25,11 +24,12 @@ from simpnmr.app.loaders.mol_load import load_base_molecule
 from simpnmr.app.params.options import FitCorrTimeRunOptions
 from simpnmr.core.const.gammas import NUCLEAR_GAMMAS
 from simpnmr.core.const.physics import EGAMMA
+from simpnmr.core.conv.ang_to_freq import angstrom_to_mhz
 from simpnmr.core.relaxation import gueron, sbm
 from simpnmr.core.util.strings import remove_numbers
 from simpnmr.io.csv import relax
-from simpnmr.io.qc import gateway as rdrs
 from simpnmr.io.xyz import xyz_write
+from simpnmr.viz.plots.corr_time import plot_corr_time_by_label, plot_corr_time_scatter
 
 logger = logging.getLogger(__name__)
 
@@ -167,12 +167,16 @@ def run_fit_corr_time(config, options: FitCorrTimeRunOptions | None = None) -> i
         electron_coords = config.relaxation_electron_coords
 
         # Dictionaries for relaxation calculations
-        # TODO(core): Source isotropic hyperfine data from the loaded
-        # domain object instead of re-reading QC output here.
-        qc_hyperfine_data = rdrs.QCA.guess_from_file(config.hyperfine_file)
-        A_iso_dict_MHz = qc_hyperfine_data.a_iso
-        A_iso_dict = {
-            nuc.label: A_iso_dict_MHz[nuc.label] * 1e6 for nuc in base_molecule.nuclei
+        A_fc_dict = {
+            nuc.label: float(
+                angstrom_to_mhz(
+                    np.trace(nuc.A.fc) / 3.0,
+                    NUCLEAR_GAMMAS[remove_numbers(nuc.label)],
+                )
+            )
+            * 1e6
+            for nuc in base_molecule.nuclei
+            if nuc.A is not None
         }
         gamma_I_dict = {
             label: NUCLEAR_GAMMAS[remove_numbers(label)] * 2 * np.pi * 1e6
@@ -241,7 +245,7 @@ def run_fit_corr_time(config, options: FitCorrTimeRunOptions | None = None) -> i
                         )
                         sbm_contact_r1_rates = sbm.calc_r1_contact(
                             list(nuclei_coords.keys()),
-                            A_iso_dict,
+                            A_fc_dict,
                             omega_I_dict,
                             omega_S,
                             tau_E,
@@ -284,7 +288,7 @@ def run_fit_corr_time(config, options: FitCorrTimeRunOptions | None = None) -> i
                         )
                         sbm_contact_r1_rates = sbm.calc_r1_contact(
                             list(nuclei_coords.keys()),
-                            A_iso_dict,
+                            A_fc_dict,
                             omega_I_dict,
                             omega_S,
                             tau_E,
@@ -389,7 +393,7 @@ def run_fit_corr_time(config, options: FitCorrTimeRunOptions | None = None) -> i
                         )
                         sbm_contact_r1_rates = sbm.calc_r1_contact(
                             list(nuclei_coords.keys()),
-                            A_iso_dict,
+                            A_fc_dict,
                             omega_I_dict,
                             omega_S,
                             tau_E,
@@ -432,7 +436,7 @@ def run_fit_corr_time(config, options: FitCorrTimeRunOptions | None = None) -> i
                         )
                         sbm_contact_r1_rates = sbm.calc_r1_contact(
                             list(nuclei_coords.keys()),
-                            A_iso_dict,
+                            A_fc_dict,
                             omega_I_dict,
                             omega_S,
                             tau_E,
@@ -547,7 +551,7 @@ def run_fit_corr_time(config, options: FitCorrTimeRunOptions | None = None) -> i
                         )
                         sbm_contact_r1_rates = sbm.calc_r1_contact(
                             list(nuclei_coords.keys()),
-                            A_iso_dict,
+                            A_fc_dict,
                             omega_I_dict,
                             omega_S,
                             tau_E,
@@ -589,7 +593,7 @@ def run_fit_corr_time(config, options: FitCorrTimeRunOptions | None = None) -> i
                         )
                         sbm_contact_r1_rates = sbm.calc_r1_contact(
                             list(nuclei_coords.keys()),
-                            A_iso_dict,
+                            A_fc_dict,
                             omega_I_dict,
                             omega_S,
                             tau_E,
@@ -676,91 +680,30 @@ def run_fit_corr_time(config, options: FitCorrTimeRunOptions | None = None) -> i
             verbose=True,
         )
 
-        # TODO(viz): Move inline Matplotlib plotting out of the pipeline into viz/plots.
-
-        # Plot experimental vs theoretical R2
-        plt.figure(figsize=(6, 6))
-        plt.scatter(theory_r1, exp_r1, marker="x", color="blue")
-
-        for x, y, label in zip(theory_r1, exp_r1, chem_labels):
-            plt.text(x, y, label, fontsize=12)
-
-        # Add x = y reference line
-        min_val = min(np.min(theory_r1), np.min(exp_r1))
-        max_val = max(np.max(theory_r1), np.max(exp_r1))
-        plt.plot([min_val, max_val], [min_val, max_val], "k--", lw=1, label="x = y")
-
-        plt.xlabel("Fitted $R_1$ (s$^{-1}$)", fontsize=14)
-        plt.ylabel("Experimental $R_1$ (s$^{-1}$)", fontsize=14)
-        plt.title("Experimental vs Fitted $R_1$", fontsize=16)
-
-        # Print R2 above the plot
-        plt.text(
-            0.01,
-            0.96,
-            f"$r^2$ = {rsquared:.3f}",
-            fontsize=12,
-            ha="left",
-            va="top",
-            transform=plt.gca().transAxes,
+        plot_corr_time_scatter(
+            theory_r1=theory_r1,
+            exp_r1=exp_r1,
+            chem_labels=list(chem_labels),
+            rsquared=rsquared,
+            fix_param=fix_param,
+            tau_R_fit=tau_R_fit,
+            tau_E_fit=tau_E_fit,
+            save=True,
+            show=options.runtime.show_plots,
+            save_name=os.path.join(
+                config.project_name, "experimental_vs_fitted_R1.pdf"
+            ),
+            verbose=True,
         )
-
-        # Print fitted value just below R^2, automated by fix_param
-        if fix_param == "tau_r":
-            plt.text(
-                0.01,
-                0.91,
-                f"Fitted $\\tau_{{\\mathrm{{E}}}}$: {tau_E_fit:.3e} s",
-                fontsize=12,
-                ha="left",
-                va="top",
-                transform=plt.gca().transAxes,
-            )
-        elif fix_param == "tau_e":
-            plt.text(
-                0.01,
-                0.91,
-                f"Fitted $\\tau_{{\\mathrm{{R}}}}$: {tau_R_fit:.3e} s",
-                fontsize=12,
-                ha="left",
-                va="top",
-                transform=plt.gca().transAxes,
-            )
-        elif not fix_param or fix_param in ["none", ""]:
-            plt.text(
-                0.01,
-                0.91,
-                (
-                    f"Fitted $\\tau_{{\\mathrm{{R}}}}$: {tau_R_fit:.3e} s\n"
-                    f"Fitted $\\tau_{{\\mathrm{{E}}}}$: {tau_E_fit:.3e} s"
-                ),
-                fontsize=12,
-                ha="left",
-                va="top",
-                transform=plt.gca().transAxes,
-            )
-
-        plt.tight_layout()
-        plt.savefig(os.path.join(config.project_name, "experimental_vs_fitted_R1.pdf"))
-        plt.show()
-
-        plt.figure(figsize=(8, 5))
-        # circles for experiment
-        plt.plot(chem_labels, exp_r1, "o", label="Experimental R1")
-        # squares for theory
-        plt.plot(chem_labels, theory_r1, "s", label="Fitted Theory R1")
-        plt.plot(
-            chem_labels, theory_r1, "x", color="red", label="Theory X"
-        )  # X marker for theory
-
-        plt.xlabel("Chemical Label")
-        plt.ylabel("R1 (s$^{-1}$)")
-        plt.title("Experimental vs Fitted R1")
-        plt.legend()
-        plt.xticks(rotation=45)
-        plt.tight_layout()
-        plt.savefig(os.path.join(config.project_name, "r1_fit_comparison.pdf"))
-        plt.show()
+        plot_corr_time_by_label(
+            theory_r1=theory_r1,
+            exp_r1=exp_r1,
+            chem_labels=list(chem_labels),
+            save=True,
+            show=options.runtime.show_plots,
+            save_name=os.path.join(config.project_name, "r1_fit_comparison.pdf"),
+            verbose=True,
+        )
 
     else:
         raise ValueError(
