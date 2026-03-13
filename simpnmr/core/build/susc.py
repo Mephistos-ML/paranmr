@@ -106,6 +106,47 @@ def susc_from_orca_xt(
     return susc
 
 
+def susc_from_csv(
+    temperature: float,
+    tensor: NDArray,
+    *,
+    spin: float,
+    orbit: float | None = None,
+    total_momentum_J: float | None = None,
+) -> Susceptibility:
+    """Build a susceptibility object from a CSV tensor and spin-only iso.
+
+    The anisotropic susceptibility tensor is taken directly from the CSV input.
+    The isotropic susceptibility is evaluated through the spin-only pipeline and
+    stored in both ``susc.iso_spin_only`` and the canonical ``susc.iso`` field.
+
+    Args:
+        temperature: Temperature in Kelvin.
+        tensor: Susceptibility tensor from CSV as a (3, 3) array.
+        spin: Spin quantum number ``S``.
+        orbit: Orbital angular momentum quantum number ``L``.
+        total_momentum_J: Total angular momentum ``J`` or ``None``.
+
+    Returns:
+        Susceptibility domain object.
+    """
+    susc = Susceptibility(
+        np.asarray(tensor, dtype=float), temperature=float(temperature)
+    )
+    susc.calc_irred()
+
+    susc.iso_spin_only = float(
+        get_spin_only_susc(
+            spin=float(spin),
+            orbit=0.0 if orbit is None else float(orbit),
+            total_momentum_J=total_momentum_J,
+            temperature=float(temperature),
+        )
+    )
+    susc.iso = susc.iso_spin_only
+    return susc
+
+
 def susc_from_spin_only_iso(
     temperature: float,
     *,
