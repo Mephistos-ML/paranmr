@@ -155,7 +155,7 @@ def run_fit_corr_time(config, options: FitCorrTimeRunOptions | None = None) -> i
         nuclei_coords = {nuc.label: nuc.coord for nuc in base_molecule.nuclei}
         # TODO(domain): Replace relaxation-specific electron coordinates
         # with a domain-level paramagnetic centre entity.
-        electron_coords = config.relaxation_electron_coords
+        paramagnetic_centre = config.hyperfine_paramagnetic_centre
 
         # Dictionaries for relaxation calculations
         A_fc_dict = {
@@ -211,7 +211,7 @@ def run_fit_corr_time(config, options: FitCorrTimeRunOptions | None = None) -> i
                     rates_r1, _ = evaluate_relaxation_rates(
                         relaxation_model=config.relaxation_model,
                         nuclei_coords=nuclei_coords,
-                        electron_coords=electron_coords,
+                        electron_coords=paramagnetic_centre,
                         gamma_I_dict=gamma_I_dict,
                         omega_I_dict=omega_I_dict,
                         omega_S=omega_S,
@@ -284,7 +284,7 @@ def run_fit_corr_time(config, options: FitCorrTimeRunOptions | None = None) -> i
                     rates_r1, _ = evaluate_relaxation_rates(
                         relaxation_model=config.relaxation_model,
                         nuclei_coords=nuclei_coords,
-                        electron_coords=electron_coords,
+                        electron_coords=paramagnetic_centre,
                         gamma_I_dict=gamma_I_dict,
                         omega_I_dict=omega_I_dict,
                         omega_S=omega_S,
@@ -365,7 +365,7 @@ def run_fit_corr_time(config, options: FitCorrTimeRunOptions | None = None) -> i
                     rates_r1, _ = evaluate_relaxation_rates(
                         relaxation_model=config.relaxation_model,
                         nuclei_coords=nuclei_coords,
-                        electron_coords=electron_coords,
+                        electron_coords=paramagnetic_centre,
                         gamma_I_dict=gamma_I_dict,
                         omega_I_dict=omega_I_dict,
                         omega_S=omega_S,
