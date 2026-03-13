@@ -25,9 +25,9 @@ from simpnmr.app.params.options import FitCorrTimeRunOptions
 from simpnmr.core.const.gammas import NUCLEAR_GAMMAS
 from simpnmr.core.const.physics import EGAMMA
 from simpnmr.core.conv.ang_to_freq import angstrom_to_mhz
-from simpnmr.core.relaxation import gueron, sbm
+from simpnmr.core.relaxation.eval import evaluate_relaxation_rates
 from simpnmr.core.util.strings import remove_numbers
-from simpnmr.io.csv import relax
+from simpnmr.io.csv.relax import save_corr_time_fit_data
 from simpnmr.io.xyz import xyz_write
 from simpnmr.viz.plots.corr_time import plot_corr_time_by_label, plot_corr_time_scatter
 
@@ -203,125 +203,50 @@ def run_fit_corr_time(config, options: FitCorrTimeRunOptions | None = None) -> i
             initial_guess = [float(tau_E_guess)]
 
             def r1_model(_, tau_E):
-                """
-                Compute model R1 values for the current tau_E with tau_R fixed
-                across all experiments.
-
-                Args:
-                    _ (np.ndarray): Dummy data input required by `curve_fit` (not used).
-                    tau_E (float): Electron relaxation time (s).
-
-                Returns:
-                    np.ndarray: Model R1 values aligned with the flattened
-                    experimental array.
-                """
+                """Compute model R1 values for the current tau_E with tau_R fixed."""
                 tau_c1 = 1.0 / ((1.0 / tau_R) + (1.0 / tau_E))
                 tau_c2 = tau_c1
 
                 theory_all = []
 
-                for experiment, labels_this, r1_this in exp_blocks:
-                    B0 = experiment.magnetic_field
-                    temp = experiment.temperature
+                for experiment, labels_this, _r1_this in exp_blocks:
+                    b0 = experiment.magnetic_field
+                    temperature = experiment.temperature
                     omega_I_dict = {
-                        label: -gamma_I_dict[label] * B0 for label in nuclei_coords
+                        label: -gamma_I_dict[label] * b0 for label in nuclei_coords
                     }
-                    omega_S = -EGAMMA * B0 * 2 * np.pi * 1e6
+                    omega_S = -EGAMMA * b0 * 2 * np.pi * 1e6
 
-                    # Calculate relaxation rates for current tau_R, tau_E
-                    if config.relaxation_model == "sbm":
-                        sbm_dipolar_r1_rates = sbm.calc_r1_dipolar(
-                            list(nuclei_coords.keys()),
-                            nuclei_coords,
-                            electron_coords,
-                            gamma_I_dict,
-                            omega_I_dict,
-                            omega_S,
-                            tau_c1,
-                            tau_c2,
-                            spin,
-                            orbit,
-                            total_momentum_J,
-                        )
-                        sbm_contact_r1_rates = sbm.calc_r1_contact(
-                            list(nuclei_coords.keys()),
-                            A_fc_dict,
-                            omega_I_dict,
-                            omega_S,
-                            tau_E,
-                            spin,
-                            total_momentum_J,
-                        )
-                        rates_r1 = {
-                            label: sbm_dipolar_r1_rates[label]
-                            + sbm_contact_r1_rates[label]
-                            for label in nuclei_coords
-                        }
-                    elif config.relaxation_model == "curie":
-                        curie_r1_rates = gueron.calc_r1_curie(
-                            list(nuclei_coords.keys()),
-                            nuclei_coords,
-                            electron_coords,
-                            omega_I_dict,
-                            temp,
-                            tau_R,
-                            spin,
-                            orbit,
-                            total_momentum_J,
-                        )
-                        rates_r1 = {
-                            label: curie_r1_rates[label] for label in nuclei_coords
-                        }
-                    elif config.relaxation_model in ["sbm curie", "curie sbm"]:
-                        sbm_dipolar_r1_rates = sbm.calc_r1_dipolar(
-                            list(nuclei_coords.keys()),
-                            nuclei_coords,
-                            electron_coords,
-                            gamma_I_dict,
-                            omega_I_dict,
-                            omega_S,
-                            tau_c1,
-                            tau_c2,
-                            spin,
-                            orbit,
-                            total_momentum_J,
-                        )
-                        sbm_contact_r1_rates = sbm.calc_r1_contact(
-                            list(nuclei_coords.keys()),
-                            A_fc_dict,
-                            omega_I_dict,
-                            omega_S,
-                            tau_E,
-                            spin,
-                            total_momentum_J,
-                        )
-                        curie_r1_rates = gueron.calc_r1_curie(
-                            list(nuclei_coords.keys()),
-                            nuclei_coords,
-                            electron_coords,
-                            omega_I_dict,
-                            temp,
-                            tau_R,
-                            spin,
-                            orbit,
-                            total_momentum_J,
-                        )
-                        rates_r1 = {
-                            label: sbm_dipolar_r1_rates[label]
-                            + sbm_contact_r1_rates[label]
-                            + curie_r1_rates[label]
-                            for label in nuclei_coords
-                        }
-                    else:
-                        raise ValueError("Unknown relaxation model")
+                    rates_r1, _ = evaluate_relaxation_rates(
+                        relaxation_model=config.relaxation_model,
+                        nuclei_coords=nuclei_coords,
+                        electron_coords=electron_coords,
+                        gamma_I_dict=gamma_I_dict,
+                        omega_I_dict=omega_I_dict,
+                        omega_S=omega_S,
+                        spin=spin,
+                        orbit=orbit,
+                        total_momentum_J=total_momentum_J,
+                        A_iso_dict=A_fc_dict,
+                        temperature=temperature,
+                        tau_R=tau_R,
+                        tau_c1=tau_c1,
+                        tau_c2=tau_c2,
+                        tau_e2=tau_E,
+                        compute_r1=True,
+                        compute_r2=False,
+                    )
 
-                    # Group rates by chemical label
+                    if rates_r1 is None:
+                        raise ValueError(
+                            "Shared relaxation evaluator returned no R1 rates"
+                        )
+
                     r1_by_chem_label = defaultdict(list)
                     for nuc in base_molecule.nuclei:
                         if nuc.label in rates_r1:
                             r1_by_chem_label[nuc.chem_label].append(rates_r1[nuc.label])
 
-                    # Calculate average R1 rates for each chemical label
                     avg_r1_by_chem_label = {
                         chem_label: np.mean(rate_list)
                         for chem_label, rate_list in r1_by_chem_label.items()
@@ -351,125 +276,50 @@ def run_fit_corr_time(config, options: FitCorrTimeRunOptions | None = None) -> i
             initial_guess = [float(tau_R_guess)]
 
             def r1_model(_, tau_R):
-                """
-                Compute model R1 values for the current tau_R with tau_E fixed
-                across all experiments.
-
-                Args:
-                    _ (np.ndarray): Dummy data input required by `curve_fit` (not used).
-                    tau_R (float): Rotational correlation time (s).
-
-                Returns:
-                    np.ndarray: Model R1 values aligned with the flattened
-                    experimental array.
-                """
-                tau_c1 = 1 / ((1 / tau_R) + (1 / tau_E))
+                """Compute model R1 values for the current tau_R with tau_E fixed."""
+                tau_c1 = 1.0 / ((1.0 / tau_R) + (1.0 / tau_E))
                 tau_c2 = tau_c1
 
                 theory_all = []
 
-                for experiment, labels_this, r1_this in exp_blocks:
-                    B0 = experiment.magnetic_field
-                    temp = experiment.temperature
+                for experiment, labels_this, _r1_this in exp_blocks:
+                    b0 = experiment.magnetic_field
+                    temperature = experiment.temperature
                     omega_I_dict = {
-                        label: -gamma_I_dict[label] * B0 for label in nuclei_coords
+                        label: -gamma_I_dict[label] * b0 for label in nuclei_coords
                     }
-                    omega_S = -EGAMMA * B0 * 2 * np.pi * 1e6
+                    omega_S = -EGAMMA * b0 * 2 * np.pi * 1e6
 
-                    # Calculate relaxation rates for current tau_R, tau_E
-                    if config.relaxation_model == "sbm":
-                        sbm_dipolar_r1_rates = sbm.calc_r1_dipolar(
-                            list(nuclei_coords.keys()),
-                            nuclei_coords,
-                            electron_coords,
-                            gamma_I_dict,
-                            omega_I_dict,
-                            omega_S,
-                            tau_c1,
-                            tau_c2,
-                            spin,
-                            orbit,
-                            total_momentum_J,
-                        )
-                        sbm_contact_r1_rates = sbm.calc_r1_contact(
-                            list(nuclei_coords.keys()),
-                            A_fc_dict,
-                            omega_I_dict,
-                            omega_S,
-                            tau_E,
-                            spin,
-                            total_momentum_J,
-                        )
-                        rates_r1 = {
-                            label: sbm_dipolar_r1_rates[label]
-                            + sbm_contact_r1_rates[label]
-                            for label in nuclei_coords
-                        }
-                    elif config.relaxation_model == "curie":
-                        curie_r1_rates = gueron.calc_r1_curie(
-                            list(nuclei_coords.keys()),
-                            nuclei_coords,
-                            electron_coords,
-                            omega_I_dict,
-                            temp,
-                            tau_R,
-                            spin,
-                            orbit,
-                            total_momentum_J,
-                        )
-                        rates_r1 = {
-                            label: curie_r1_rates[label] for label in nuclei_coords
-                        }
-                    elif config.relaxation_model in ["sbm curie", "curie sbm"]:
-                        sbm_dipolar_r1_rates = sbm.calc_r1_dipolar(
-                            list(nuclei_coords.keys()),
-                            nuclei_coords,
-                            electron_coords,
-                            gamma_I_dict,
-                            omega_I_dict,
-                            omega_S,
-                            tau_c1,
-                            tau_c2,
-                            spin,
-                            orbit,
-                            total_momentum_J,
-                        )
-                        sbm_contact_r1_rates = sbm.calc_r1_contact(
-                            list(nuclei_coords.keys()),
-                            A_fc_dict,
-                            omega_I_dict,
-                            omega_S,
-                            tau_E,
-                            spin,
-                            total_momentum_J,
-                        )
-                        curie_r1_rates = gueron.calc_r1_curie(
-                            list(nuclei_coords.keys()),
-                            nuclei_coords,
-                            electron_coords,
-                            omega_I_dict,
-                            temp,
-                            tau_R,
-                            spin,
-                            orbit,
-                            total_momentum_J,
-                        )
-                        rates_r1 = {
-                            label: sbm_dipolar_r1_rates[label]
-                            + sbm_contact_r1_rates[label]
-                            + curie_r1_rates[label]
-                            for label in nuclei_coords
-                        }
-                    else:
-                        raise ValueError("Unknown relaxation model")
+                    rates_r1, _ = evaluate_relaxation_rates(
+                        relaxation_model=config.relaxation_model,
+                        nuclei_coords=nuclei_coords,
+                        electron_coords=electron_coords,
+                        gamma_I_dict=gamma_I_dict,
+                        omega_I_dict=omega_I_dict,
+                        omega_S=omega_S,
+                        spin=spin,
+                        orbit=orbit,
+                        total_momentum_J=total_momentum_J,
+                        A_iso_dict=A_fc_dict,
+                        temperature=temperature,
+                        tau_R=tau_R,
+                        tau_c1=tau_c1,
+                        tau_c2=tau_c2,
+                        tau_e2=tau_E,
+                        compute_r1=True,
+                        compute_r2=False,
+                    )
 
-                    # Group rates by chemical label
+                    if rates_r1 is None:
+                        raise ValueError(
+                            "Shared relaxation evaluator returned no R1 rates"
+                        )
+
                     r1_by_chem_label = defaultdict(list)
                     for nuc in base_molecule.nuclei:
                         if nuc.label in rates_r1:
                             r1_by_chem_label[nuc.chem_label].append(rates_r1[nuc.label])
 
-                    # Calculate average R1 rates for each chemical label
                     avg_r1_by_chem_label = {
                         chem_label: np.mean(rate_list)
                         for chem_label, rate_list in r1_by_chem_label.items()
@@ -507,126 +357,50 @@ def run_fit_corr_time(config, options: FitCorrTimeRunOptions | None = None) -> i
                 )
 
             def r1_model(_, tau_R, tau_E):
-                """
-                Compute model R1 values for the current (tau_R, tau_E)
-                across all experiments.
-
-                Args:
-                    _ (np.ndarray): Dummy data input required by `curve_fit` (not used).
-                    tau_R (float): Rotational correlation time (s).
-                    tau_E (float): Electron relaxation time (s).
-
-                Returns:
-                    np.ndarray: Model R1 values aligned with the flattened
-                    experimental array.
-                """
+                """Compute model R1 values for the current (tau_R, tau_E)."""
                 tau_c1 = 1.0 / ((1.0 / tau_R) + (1.0 / tau_E))
                 tau_c2 = tau_c1
 
                 theory_all = []
 
-                for experiment, labels_this, r1_this in exp_blocks:
-                    B0 = experiment.magnetic_field
-                    Temp = experiment.temperature
-
-                    # Dictionaries for relaxation calculations
+                for experiment, labels_this, _r1_this in exp_blocks:
+                    b0 = experiment.magnetic_field
+                    temperature = experiment.temperature
                     omega_I_dict = {
-                        label: -gamma_I_dict[label] * B0 for label in nuclei_coords
+                        label: -gamma_I_dict[label] * b0 for label in nuclei_coords
                     }
-                    omega_S = -EGAMMA * B0 * 2 * np.pi * 1e6
+                    omega_S = -EGAMMA * b0 * 2 * np.pi * 1e6
 
-                    if config.relaxation_model == "sbm":
-                        sbm_dipolar_r1_rates = sbm.calc_r1_dipolar(
-                            list(nuclei_coords.keys()),
-                            nuclei_coords,
-                            electron_coords,
-                            gamma_I_dict,
-                            omega_I_dict,
-                            omega_S,
-                            tau_c1,
-                            tau_c2,
-                            spin,
-                            orbit,
-                            total_momentum_J,
-                        )
-                        sbm_contact_r1_rates = sbm.calc_r1_contact(
-                            list(nuclei_coords.keys()),
-                            A_fc_dict,
-                            omega_I_dict,
-                            omega_S,
-                            tau_E,
-                            spin,
-                            total_momentum_J,
-                        )
-                        rates_r1 = {
-                            lab: sbm_dipolar_r1_rates[lab] + sbm_contact_r1_rates[lab]
-                            for lab in nuclei_coords
-                        }
+                    rates_r1, _ = evaluate_relaxation_rates(
+                        relaxation_model=config.relaxation_model,
+                        nuclei_coords=nuclei_coords,
+                        electron_coords=electron_coords,
+                        gamma_I_dict=gamma_I_dict,
+                        omega_I_dict=omega_I_dict,
+                        omega_S=omega_S,
+                        spin=spin,
+                        orbit=orbit,
+                        total_momentum_J=total_momentum_J,
+                        A_iso_dict=A_fc_dict,
+                        temperature=temperature,
+                        tau_R=tau_R,
+                        tau_c1=tau_c1,
+                        tau_c2=tau_c2,
+                        tau_e2=tau_E,
+                        compute_r1=True,
+                        compute_r2=False,
+                    )
 
-                    elif config.relaxation_model == "curie":
-                        curie_r1_rates = gueron.calc_r1_curie(
-                            list(nuclei_coords.keys()),
-                            nuclei_coords,
-                            electron_coords,
-                            omega_I_dict,
-                            Temp,
-                            tau_R,
-                            spin,
-                            orbit,
-                            total_momentum_J,
+                    if rates_r1 is None:
+                        raise ValueError(
+                            "Shared relaxation evaluator returned no R1 rates"
                         )
-                        rates_r1 = {lab: curie_r1_rates[lab] for lab in nuclei_coords}
 
-                    elif config.relaxation_model in ["sbm curie", "curie sbm"]:
-                        sbm_dipolar_r1_rates = sbm.calc_r1_dipolar(
-                            list(nuclei_coords.keys()),
-                            nuclei_coords,
-                            electron_coords,
-                            gamma_I_dict,
-                            omega_I_dict,
-                            omega_S,
-                            tau_c1,
-                            tau_c2,
-                            spin,
-                            orbit,
-                            total_momentum_J,
-                        )
-                        sbm_contact_r1_rates = sbm.calc_r1_contact(
-                            list(nuclei_coords.keys()),
-                            A_fc_dict,
-                            omega_I_dict,
-                            omega_S,
-                            tau_E,
-                            spin,
-                            total_momentum_J,
-                        )
-                        curie_r1_rates = gueron.calc_r1_curie(
-                            list(nuclei_coords.keys()),
-                            nuclei_coords,
-                            electron_coords,
-                            omega_I_dict,
-                            Temp,
-                            tau_R,
-                            spin,
-                            orbit,
-                            total_momentum_J,
-                        )
-                        rates_r1 = {
-                            lab: sbm_dipolar_r1_rates[lab]
-                            + sbm_contact_r1_rates[lab]
-                            + curie_r1_rates[lab]
-                            for lab in nuclei_coords
-                        }
-                    else:
-                        raise ValueError("Unknown relaxation model")
-
-                    # Group rates by chemical label
                     r1_by_chem_label = defaultdict(list)
                     for nuc in base_molecule.nuclei:
                         if nuc.label in rates_r1:
                             r1_by_chem_label[nuc.chem_label].append(rates_r1[nuc.label])
 
-                    # Calculate average R1 rates for each chemical label
                     avg_r1_by_chem_label = {
                         chem_label: np.mean(rate_list)
                         for chem_label, rate_list in r1_by_chem_label.items()
@@ -664,8 +438,8 @@ def run_fit_corr_time(config, options: FitCorrTimeRunOptions | None = None) -> i
             np.sum((exp_r1 - theory_r1) ** 2) / np.sum((exp_r1 - np.mean(exp_r1)) ** 2)
         )
 
-        # Save fit diagnostics
-        relax.save_corr_time_fit_data(
+        # Write fit diagnostics data
+        save_corr_time_fit_data(
             xdata=xdata,
             exp_r1=exp_r1,
             chem_labels=chem_labels,
@@ -680,6 +454,7 @@ def run_fit_corr_time(config, options: FitCorrTimeRunOptions | None = None) -> i
             verbose=True,
         )
 
+        # Plot fit diagnostics data
         plot_corr_time_scatter(
             theory_r1=theory_r1,
             exp_r1=exp_r1,
