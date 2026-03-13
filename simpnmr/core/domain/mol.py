@@ -350,6 +350,8 @@ class Molecule:
     Attributes:
         labels: Full atomic labels with indices for the whole structure.
         coords: Full atomic coordinates as an ``(n_atoms, 3)`` array in Å.
+        paramagnetic_centre: Optional Cartesian coordinates of the canonical
+            paramagnetic centre as a length-3 array in Å.
         chi_source_labels: Optional full atomic labels from the
             susceptibility/chi source geometry.
         chi_source_coords: Optional full atomic coordinates from the
@@ -373,6 +375,7 @@ class Molecule:
     ) -> None:
         self.labels = xyzf.add_label_indices(labels)
         self.coords = coords
+        self.paramagnetic_centre = None
         self.chi_source_labels = None
         self.chi_source_coords = None
 
@@ -395,6 +398,22 @@ class Molecule:
     @property
     def n_atoms(self):
         return len(self.labels)
+
+    @property
+    def paramagnetic_centre(self) -> NDArray | None:
+        return self._paramagnetic_centre
+
+    @paramagnetic_centre.setter
+    def paramagnetic_centre(self, value: ArrayLike | None) -> None:
+        if value is None:
+            self._paramagnetic_centre = None
+            return
+
+        arr = np.asarray(value, dtype=float)
+        if len(arr.shape) != 1 or arr.shape[0] != 3:
+            raise ValueError("paramagnetic_centre must be a length-3 array")
+        self._paramagnetic_centre = arr
+        return
 
     @property
     def chi_source_labels(self) -> NDArray[np.str_] | None:
@@ -742,25 +761,16 @@ class Molecule:
 
         return
 
-    def calc_pdip(self, paramagnetic_centre: list[float]) -> None:
+    def calc_pdip(self) -> None:
         """Add point-dipole dipolar hyperfine contributions to canonical HFC state.
 
-        Args:
-            paramagnetic_centre: Cartesian coordinates ``[x, y, z]`` of the
-                paramagnetic centre.
-
         Raises:
-            ValueError: If `paramagnetic_centre` is not a list of three floats.
+            ValueError: If `Molecule.paramagnetic_centre` is not set.
         """
-        if not isinstance(paramagnetic_centre, list) or len(paramagnetic_centre) != 3:
-            raise ValueError("paramagnetic_centre must be a list of three floats")
+        if self.paramagnetic_centre is None:
+            raise ValueError("Molecule.paramagnetic_centre must be set")
 
-        try:
-            centre_coord = np.asarray(paramagnetic_centre, dtype=float)
-        except Exception as exc:
-            raise ValueError(
-                "paramagnetic_centre must be a list of three floats"
-            ) from exc
+        centre_coord = np.asarray(self.paramagnetic_centre, dtype=float)
 
         updated_hfc_by_label = {
             str(label): copy.deepcopy(hfc)
