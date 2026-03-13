@@ -151,7 +151,6 @@ class FitSuscConfig(Config):
             "method",
             "file",
             "average",
-            "pdip_centres",
             "spin",
             "orbit",
             "total_momentum_J",
@@ -197,7 +196,6 @@ class FitSuscConfig(Config):
         self._hyperfine_method = ""
         self._hyperfine_file = ""
         self._hyperfine_average = []
-        self._hyperfine_pdip_centres = []
         self._hyperfine_rotate = []
         self._project_name = ""
         self._experiment_files = []
@@ -428,14 +426,6 @@ class FitSuscConfig(Config):
     def hyperfine_average(self, values: list[list[str]]):
         self._hyperfine_average = values
         return
-
-    @property
-    def hyperfine_pdip_centres(self) -> list[str]:
-        return self._hyperfine_pdip_centres
-
-    @hyperfine_pdip_centres.setter
-    def hyperfine_pdip_centres(self, value: list[str]):
-        self._hyperfine_pdip_centres = value
 
     @property
     def susc_fit_type(self) -> bool:
@@ -1148,7 +1138,6 @@ class PredictConfig(FitSuscConfig):
             "method",
             "file",
             "average",
-            "pdip_centres",
             "spin",
             "orbit",
             "total_momentum_J",
@@ -1417,7 +1406,6 @@ class FitCorrTimeConfig(FitSuscConfig):
             "method",
             "file",
             "average",
-            "pdip_centre",
             "paramagnetic_centre",
         ],
         "nuclei": ["include", "include_groups"],
@@ -1605,7 +1593,6 @@ class PlotHFCConfig(FitSuscConfig):
             "method",
             "file",
             "average",
-            "pdip_centres",
             "orbital_contribution",
         ],
         "nuclei": ["include", "include_groups"],
@@ -1669,14 +1656,6 @@ class PlotHFCConfig(FitSuscConfig):
     def hyperfine_average(self, values: list[list[str]]):
         self._hyperfine_average = values
         return
-
-    @property
-    def hyperfine_pdip_centres(self) -> list[str]:
-        return self._hyperfine_pdip_centres
-
-    @hyperfine_pdip_centres.setter
-    def hyperfine_pdip_centres(self, value: list[str]):
-        self._hyperfine_pdip_centres = value
 
     @property
     def nuclei_include(self) -> list | str:

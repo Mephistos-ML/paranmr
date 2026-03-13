@@ -742,47 +742,39 @@ class Molecule:
 
         return
 
-    def calc_pdip(self, centre_labels: list[str]):
+    def calc_pdip(self, paramagnetic_centre: list[float]) -> None:
         """Add point-dipole dipolar hyperfine contributions to canonical HFC state.
 
         Args:
-            centre_labels: Labels of paramagnetic centers.
+            paramagnetic_centre: Cartesian coordinates ``[x, y, z]`` of the
+                paramagnetic centre.
 
         Raises:
-            ValueError: If `centre_labels` is empty, if multiple matches are
-                found for a center label, or if a center label is not found.
+            ValueError: If `paramagnetic_centre` is not a list of three floats.
         """
+        if not isinstance(paramagnetic_centre, list) or len(paramagnetic_centre) != 3:
+            raise ValueError("paramagnetic_centre must be a list of three floats")
 
-        if not len(centre_labels):
+        try:
+            centre_coord = np.asarray(paramagnetic_centre, dtype=float)
+        except Exception as exc:
             raise ValueError(
-                "Error: No paramagnetic centres specified for point dipole"
-            )
+                "paramagnetic_centre must be a list of three floats"
+            ) from exc
 
         updated_hfc_by_label = {
             str(label): copy.deepcopy(hfc)
             for label, hfc in self.available_hfc_by_label.items()
         }
 
-        # Find user specified centre(s)
-        for centre in centre_labels:
-            it = [i for i, x in enumerate(self.labels) if x == centre]
-
-            if len(it) > 1:
-                raise ValueError("Error: More than one of specified label found")
-            elif not len(it):
-                raise ValueError(f"Cant find {centre} in labels")
-
-            for nuc in self.nuclei:
-                if nuc.label in centre_labels:
-                    continue
-
-                label = str(nuc.label)
-                hfc = copy.deepcopy(updated_hfc_by_label.get(label, Hyperfine()))
-                val = Hyperfine.calc_pdip(nuc.coord, self.coords[it[0]])
-                val *= 1e6 / len(centre_labels)
-                hfc.sd = hfc.sd + val
-                hfc.tensor_full = hfc.fc + hfc.sd + hfc.orb
-                updated_hfc_by_label[label] = hfc
+        for nuc in self.nuclei:
+            label = str(nuc.label)
+            hfc = copy.deepcopy(updated_hfc_by_label.get(label, Hyperfine()))
+            val = Hyperfine.calc_pdip(nuc.coord, centre_coord)
+            val *= 1e6
+            hfc.sd = hfc.sd + val
+            hfc.tensor_full = hfc.fc + hfc.sd + hfc.orb
+            updated_hfc_by_label[label] = hfc
 
         self.set_available_hfc_by_label(updated_hfc_by_label)
         return

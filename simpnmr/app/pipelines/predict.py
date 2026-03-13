@@ -424,7 +424,7 @@ def _apply_relaxation_linewidths(config, base_molecule: Molecule):
         for nuc in base_molecule.nuclei
         if remove_numbers(nuc.label) in nuclei_labels
     }
-    electron_coords = config.relaxation_electron_coords
+    paramagnetic_centre = config.hyperfine_paramagnetic_centre
     B0 = config.relaxation_magnetic_field_tesla
 
     # Build Aiso, gamma and omega dictionaries for selected nuclei
@@ -471,7 +471,7 @@ def _apply_relaxation_linewidths(config, base_molecule: Molecule):
     rates_r1, rates_r2 = evaluate_relaxation_rates(
         relaxation_model=config.relaxation_model,
         nuclei_coords=nuclei_coords,
-        electron_coords=electron_coords,
+        electron_coords=paramagnetic_centre,
         gamma_I_dict=gamma_I_dict,
         omega_I_dict=omega_I_dict,
         omega_S=omega_S,

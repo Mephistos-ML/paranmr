@@ -109,7 +109,7 @@ def load_hyperfines(
     elif method == "pdip":
         molecule = build_hfc_from_pdip(
             molecule,
-            centres=config.hyperfine_pdip_centres,
+            paramagnetic_centre=config.hyperfine_paramagnetic_centre,
         )
 
         molecule.metadata.setdefault("hyperfine", {})["orbital_contribution"] = (
