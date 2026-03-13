@@ -147,19 +147,6 @@ def run_fit_corr_time(config, options: FitCorrTimeRunOptions | None = None) -> i
         if len(config.chem_labels_file):
             al_to_cl, al_to_cml = load_chem_labels_from_csv(config.chem_labels_file)
             base_molecule.apply_chem_labels(al_to_cl, al_to_cml)
-
-            xyz_write.save_chemcraft_xyz(
-                file_name=os.path.join(config.project_name, "chemcraft_structure.xyz"),
-                labels=base_molecule.labels,
-                coords=base_molecule.coords,
-                chem_labels={nuc.label: nuc.chem_label for nuc in base_molecule.nuclei},
-            )
-        xyz_write.save_xyz(
-            file_name=os.path.join(config.project_name, "structure.xyz"),
-            labels=base_molecule.labels,
-            coords=base_molecule.coords,
-            comment=f"Structure from {config.hyperfine_file}",
-        )
         label_to_chem_label = {
             nuc.label: nuc.chem_label for nuc in base_molecule.nuclei
         }
@@ -486,6 +473,21 @@ def run_fit_corr_time(config, options: FitCorrTimeRunOptions | None = None) -> i
                 save_name=os.path.join(config.project_name, "r1_fit_comparison.pdf"),
                 verbose=True,
             )
+
+        if len(config.chem_labels_file):
+            xyz_write.save_chemcraft_xyz(
+                file_name=os.path.join(config.project_name, "chemcraft_structure.xyz"),
+                labels=base_molecule.labels,
+                coords=base_molecule.coords,
+                chem_labels={nuc.label: nuc.chem_label for nuc in base_molecule.nuclei},
+            )
+
+        xyz_write.save_xyz(
+            file_name=os.path.join(config.project_name, "structure.xyz"),
+            labels=base_molecule.labels,
+            coords=base_molecule.coords,
+            comment=f"Structure from {config.hyperfine_file}",
+        )
 
     else:
         raise ValueError(
