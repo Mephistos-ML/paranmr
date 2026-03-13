@@ -14,7 +14,11 @@ from typing import Any
 import numpy as np
 
 from simpnmr.app.policies.susc import resolve_susceptibility_source
-from simpnmr.core.build.susc import susc_from_orca_xt, susc_from_spin_only_iso
+from simpnmr.core.build.susc import (
+    susc_from_csv,
+    susc_from_orca_xt,
+    susc_from_spin_only_iso,
+)
 from simpnmr.core.domain.tensor import Susceptibility
 from simpnmr.io.csv.susc import read_susceptibilities_csv
 from simpnmr.io.qc import gateway as rdrs
@@ -116,8 +120,23 @@ def load_susceptibilities(
     )
 
     if backend == "csv":
+        if electronic is None:
+            raise ValueError(
+                "Electronic-state data is required to build spin-only isotropic "
+                "susceptibility when loading susceptibility tensors from CSV"
+            )
+
         rows = read_susceptibilities_csv(susceptibility_file)
-        return [Susceptibility(tensor, temperature=t) for tensor, t in rows]
+        return [
+            susc_from_csv(
+                temperature=float(temperature),
+                tensor=tensor,
+                spin=electronic.spin_S,
+                orbit=electronic.orbit_L,
+                total_momentum_J=electronic.total_J,
+            )
+            for tensor, temperature in rows
+        ]
 
     if backend == "orca":
         logger.info(
