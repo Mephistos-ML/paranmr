@@ -47,8 +47,6 @@ def load_hyperfines(
             - hyperfine_file: Path to the input file.
             - hyperfine_orbital_contribution: Orbital-contribution policy for
               QC-derived hyperfine data.
-            - hyperfine_pdip_centres: Labels of the paramagnetic centres for
-              point-dipole hyperfine calculation.
 
     Returns:
         The input Molecule enriched with hyperfine data as required by the
@@ -107,10 +105,7 @@ def load_hyperfines(
 
     # Point dipole approximation.
     elif method == "pdip":
-        molecule = build_hfc_from_pdip(
-            molecule,
-            paramagnetic_centre=config.hyperfine_paramagnetic_centre,
-        )
+        molecule = build_hfc_from_pdip(molecule)
 
         molecule.metadata.setdefault("hyperfine", {})["orbital_contribution"] = (
             "unavailable"
