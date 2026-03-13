@@ -9,9 +9,11 @@ import logging
 
 import numpy as np
 from matplotlib import pyplot as plt
+from matplotlib import ticker
 
 from simpnmr.viz.layout.export import render_figure
 from simpnmr.viz.style.theme import PlotSpec
+from simpnmr.viz.utils.label_layout import resolve_label_layout
 
 logger = logging.getLogger(__name__)
 
@@ -55,101 +57,86 @@ def plot_corr_time_scatter(
     Returns:
         Tuple of ``(figure, axes)`` for the rendered scatter plot.
     """
-    glyphs = spec.glyphs if spec is not None else None
-    palette = spec.palette if spec is not None else None
+    if spec is None:
+        raise ValueError("plot_corr_time_scatter requires a PlotSpec")
+
+    glyphs = spec.glyphs
+    palette = spec.palette
 
     fig, ax = plt.subplots(figsize=(6, 6))
-    if spec is not None:
-        fig.patch.set_facecolor(palette.annotation_bg)
-        ax.set_facecolor(palette.annotation_bg)
-        scale = spec.skin_axes(ax)
-        ax.grid(True, which="major", color=palette.grid, linewidth=1.0)
-        ax.grid(True, which="minor", color=palette.grid, linewidth=0.7, alpha=0.8)
-        ax.set_axisbelow(True)
-        marker_size = glyphs.ms
-        annotation_size = scale.annotation
-        axis_label_size = scale.axis_label
-        title_size = scale.title
-    else:
-        marker_size = 6.0
-        annotation_size = 12.0
-        axis_label_size = 14.0
-        title_size = 16.0
+    fig.patch.set_facecolor("white")
+    ax.set_facecolor("white")
+    scale = spec.skin_axes(ax)
+    ax.minorticks_on()
+    ax.grid(True, which="major", color=palette.grid, linewidth=0.7, alpha=0.8)
+    ax.set_axisbelow(True)
+    marker_size = glyphs.ms
+    annotation_size = scale.annotation
+    axis_label_size = scale.axis_label
+    title_size = scale.title
 
-    scatter_color = palette.primary if palette is not None else "blue"
-    reference_color = palette.reference if palette is not None else "black"
+    scatter_color = palette.primary
 
     ax.scatter(
         theory_r1,
         exp_r1,
-        marker="x",
-        color=scatter_color,
+        marker="o",
+        facecolors="white",
+        edgecolors=scatter_color,
+        linewidths=1.2,
         s=(marker_size**2),
     )
 
-    for x_val, y_val, label in zip(theory_r1, exp_r1, chem_labels):
-        ax.text(x_val, y_val, label, fontsize=annotation_size)
+    x_limits = ax.get_xlim()
+    y_limits = ax.get_ylim()
+    shared_min = min(x_limits[0], y_limits[0])
+    shared_max = max(x_limits[1], y_limits[1])
+    ax.set_xlim(shared_min, shared_max)
+    ax.set_ylim(shared_min, shared_max)
+    ax.set_aspect("equal", adjustable="box")
 
-    min_val = float(min(np.min(theory_r1), np.min(exp_r1)))
-    max_val = float(max(np.max(theory_r1), np.max(exp_r1)))
-    ax.plot(
-        [min_val, max_val],
-        [min_val, max_val],
-        linestyle="--",
-        color=reference_color,
+    diag_line = ax.plot(
+        [shared_min, shared_max],
+        [shared_min, shared_max],
+        linestyle="-",
+        color="black",
         lw=1.0,
-        label="x = y",
-    )
+    )[0]
 
-    ax.set_xlabel("Fitted $R_1$ (s$^{-1}$)", fontsize=axis_label_size)
-    ax.set_ylabel("Experimental $R_1$ (s$^{-1}$)", fontsize=axis_label_size)
-    ax.set_title("Experimental vs Fitted $R_1$", fontsize=title_size)
-    ax.text(
-        0.01,
-        0.96,
-        f"$r^2$ = {rsquared:.3f}",
+    label_entries = [
+        (label, float(theory_val), float(exp_val))
+        for label, theory_val, exp_val in zip(chem_labels, theory_r1, exp_r1)
+    ]
+    resolve_label_layout(
+        ax,
+        label_entries,
         fontsize=annotation_size,
-        ha="left",
-        va="top",
-        transform=ax.transAxes,
+        marker_size=marker_size,
+        diag_line=diag_line,
     )
 
+    ax.set_xlabel("Theoretical $R_1$ (s$^{-1}$)", fontsize=axis_label_size)
+    ax.set_ylabel("Experimental $R_1$ (s$^{-1}$)", fontsize=axis_label_size)
+    ax.set_title("Experimental vs Theoretical $R_1$ (s$^{-1}$)", fontsize=title_size)
+    legend_labels = [f"$R^2$ = {rsquared:.3f}"]
     if fix_param == "tau_r" and tau_E_fit is not None:
-        ax.text(
-            0.01,
-            0.91,
-            f"Fitted $\\tau_{{\\mathrm{{E}}}}$: {tau_E_fit:.3e} s",
-            fontsize=annotation_size,
-            ha="left",
-            va="top",
-            transform=ax.transAxes,
-        )
+        legend_labels.append(f"Fitted $\\tau_{{\\mathrm{{E}}}}$: {tau_E_fit:.3e} s")
     elif fix_param == "tau_e" and tau_R_fit is not None:
-        ax.text(
-            0.01,
-            0.91,
-            f"Fitted $\\tau_{{\\mathrm{{R}}}}$: {tau_R_fit:.3e} s",
-            fontsize=annotation_size,
-            ha="left",
-            va="top",
-            transform=ax.transAxes,
-        )
+        legend_labels.append(f"Fitted $\\tau_{{\\mathrm{{R}}}}$: {tau_R_fit:.3e} s")
     elif fix_param in {None, "", "none"}:
-        fit_lines: list[str] = []
         if tau_R_fit is not None:
-            fit_lines.append(f"Fitted $\\tau_{{\\mathrm{{R}}}}$: {tau_R_fit:.3e} s")
+            legend_labels.append(f"Fitted $\\tau_{{\\mathrm{{R}}}}$: {tau_R_fit:.3e} s")
         if tau_E_fit is not None:
-            fit_lines.append(f"Fitted $\\tau_{{\\mathrm{{E}}}}$: {tau_E_fit:.3e} s")
-        if fit_lines:
-            ax.text(
-                0.01,
-                0.91,
-                "\n".join(fit_lines),
-                fontsize=annotation_size,
-                ha="left",
-                va="top",
-                transform=ax.transAxes,
-            )
+            legend_labels.append(f"Fitted $\\tau_{{\\mathrm{{E}}}}$: {tau_E_fit:.3e} s")
+    empty_handles = [plt.Line2D([], [], linestyle="none") for _ in legend_labels]
+    ax.legend(
+        empty_handles,
+        legend_labels,
+        loc="best",
+        handlelength=0,
+        handletextpad=0,
+        ncol=len(legend_labels),
+    )
 
     render_figure(
         fig,
@@ -191,55 +178,53 @@ def plot_corr_time_by_label(
     Returns:
         Tuple of ``(figure, axes)`` for the rendered per-label comparison plot.
     """
-    glyphs = spec.glyphs if spec is not None else None
-    palette = spec.palette if spec is not None else None
+    if spec is None:
+        raise ValueError("plot_corr_time_by_label requires a PlotSpec")
+
+    glyphs = spec.glyphs
+    palette = spec.palette
 
     fig, ax = plt.subplots(figsize=(8, 5))
-    if spec is not None:
-        fig.patch.set_facecolor(palette.annotation_bg)
-        ax.set_facecolor(palette.annotation_bg)
-        scale = spec.skin_axes(ax)
-        ax.grid(True, which="major", color=palette.grid, linewidth=1.0)
-        ax.grid(True, which="minor", color=palette.grid, linewidth=0.7, alpha=0.8)
-        ax.set_axisbelow(True)
-        marker_size = glyphs.ms
-        axis_label_size = scale.axis_label
-        title_size = scale.title
-    else:
-        marker_size = 6.0
-        axis_label_size = 14.0
-        title_size = 16.0
+    fig.patch.set_facecolor(palette.annotation_bg)
+    ax.set_facecolor(palette.annotation_bg)
+    scale = spec.skin_axes(ax)
+    ax.grid(axis="x", ls="--", which="minor", color=palette.grid)
+    ax.grid(False, axis="y")
+    ax.set_axisbelow(True)
+    marker_size = glyphs.ms
+    axis_label_size = scale.axis_label
+    title_size = scale.title
 
-    series_theory_color = palette.highlight if palette is not None else "red"
+    xvals = np.arange(len(chem_labels), dtype=float)
+    xpos = xvals + 0.5
 
     ax.plot(
-        chem_labels,
+        xpos,
         exp_r1,
         "o",
         label="Experimental $R_1$",
         markersize=marker_size,
+        color=palette.highlight,
     )
     ax.plot(
-        chem_labels,
+        xpos,
         theory_r1,
         "s",
         label="Fitted Theory $R_1$",
         markersize=marker_size,
-    )
-    ax.plot(
-        chem_labels,
-        theory_r1,
-        "x",
-        color=series_theory_color,
-        label="Theory X",
-        markersize=marker_size,
+        color=palette.auxiliary,
     )
 
+    ax.set_xticks(xpos)
+    ax.set_xticklabels(chem_labels, rotation=45)
+    ax.xaxis.set_minor_locator(ticker.MultipleLocator(1))
+    ax.xaxis.set_tick_params("major", length=0)
+    ax.xaxis.set_tick_params("minor", length=0)
+    ax.xaxis.set_minor_formatter(ticker.NullFormatter())
     ax.set_xlabel("Chemical Label", fontsize=axis_label_size)
     ax.set_ylabel("$R_1$ (s$^{-1}$)", fontsize=axis_label_size)
-    ax.set_title("Experimental vs Fitted $R_1$", fontsize=title_size)
-    ax.legend(frameon=False)
-    ax.tick_params(axis="x", rotation=45)
+    ax.set_title("Experimental vs Theoretical $R_1$ (s$^{-1}$)", fontsize=title_size)
+    ax.legend(loc="best")
 
     render_figure(
         fig,
