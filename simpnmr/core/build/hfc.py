@@ -251,8 +251,6 @@ def build_hfc_from_qca(
 
 def build_hfc_from_pdip(
     molecule: Molecule,
-    *,
-    paramagnetic_centre: list[float],
 ) -> Molecule:
     """Build point-dipole hyperfine data and attach it to a Molecule.
 
@@ -262,22 +260,14 @@ def build_hfc_from_pdip(
 
     Args:
         molecule: Existing Molecule to enrich with point-dipole hyperfine data.
-        paramagnetic_centre: Cartesian coordinates ``[x, y, z]`` of the
-            paramagnetic centre.
 
     Returns:
         The input Molecule enriched with point-dipole hyperfine data.
 
     Raises:
-        ValueError: If `paramagnetic_centre` is not a list of three floats.
+        ValueError: If `Molecule.paramagnetic_centre` is not set.
     """
-    if not isinstance(paramagnetic_centre, list) or len(paramagnetic_centre) != 3:
-        raise ValueError("paramagnetic_centre must be a list of three floats")
-    try:
-        paramagnetic_centre = [float(value) for value in paramagnetic_centre]
-    except Exception as exc:
-        raise ValueError("paramagnetic_centre must be a list of three floats") from exc
-    molecule.calc_pdip(paramagnetic_centre)
+    molecule.calc_pdip()
     return molecule
 
 
