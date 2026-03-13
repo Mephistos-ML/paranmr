@@ -1246,13 +1246,15 @@ class PredictConfig(FitSuscConfig):
         if value is None or value == "":
             self._hyperfine_paramagnetic_centre = None
             return None
+        if isinstance(value, str):
+            value = yaml.safe_load(value)
         if isinstance(value, (list, tuple)) and len(value) == 3:
             try:
                 self._hyperfine_paramagnetic_centre = [float(val) for val in value]
             except Exception as exc:
                 raise ValueError(
-                    f"Cannot convert hyperfine:paramagnetic_centre={value} "
-                    "to list of 3 floats"
+                    f"Cannot convert hyperfine:paramagnetic_centre={value} to "
+                    "list of 3 floats"
                 ) from exc
             return None
         raise ValueError("hyperfine:paramagnetic_centre must be a list of 3 floats")
@@ -1549,13 +1551,15 @@ class FitCorrTimeConfig(FitSuscConfig):
         if value is None or value == "":
             self._hyperfine_paramagnetic_centre = None
             return None
+        if isinstance(value, str):
+            value = yaml.safe_load(value)
         if isinstance(value, (list, tuple)) and len(value) == 3:
             try:
                 self._hyperfine_paramagnetic_centre = [float(val) for val in value]
             except Exception as exc:
                 raise ValueError(
-                    f"Cannot convert hyperfine:paramagnetic_centre={value} to "
-                    "list of 3 floats"
+                    f"Cannot convert hyperfine:paramagnetic_centre={value} "
+                    "to list of 3 floats"
                 ) from exc
             return None
         raise ValueError("hyperfine:paramagnetic_centre must be a list of 3 floats")
