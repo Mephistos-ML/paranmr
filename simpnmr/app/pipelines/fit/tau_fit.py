@@ -30,6 +30,7 @@ from simpnmr.core.util.strings import remove_numbers
 from simpnmr.io.csv.relax import save_corr_time_fit_data
 from simpnmr.io.xyz import xyz_write
 from simpnmr.viz.plots.corr_time import plot_corr_time_by_label, plot_corr_time_scatter
+from simpnmr.viz.style.theme import apply_profile
 
 logger = logging.getLogger(__name__)
 
@@ -52,6 +53,9 @@ def run_fit_corr_time(config, options: FitCorrTimeRunOptions | None = None) -> i
 
     # Make output directory and file
     os.makedirs(config.project_name, exist_ok=True)
+
+    # Build the resolved plotting contract for this run.
+    spec = apply_profile(options.runtime.plot_profile)
 
     tau_R_mode, tau_R_guess = (
         config.fit_corr_time_tau_R[0].lower(),
@@ -455,30 +459,33 @@ def run_fit_corr_time(config, options: FitCorrTimeRunOptions | None = None) -> i
         )
 
         # Plot fit diagnostics data
-        plot_corr_time_scatter(
-            theory_r1=theory_r1,
-            exp_r1=exp_r1,
-            chem_labels=list(chem_labels),
-            rsquared=rsquared,
-            fix_param=fix_param,
-            tau_R_fit=tau_R_fit,
-            tau_E_fit=tau_E_fit,
-            save=True,
-            show=options.runtime.show_plots,
-            save_name=os.path.join(
-                config.project_name, "experimental_vs_fitted_R1.pdf"
-            ),
-            verbose=True,
-        )
-        plot_corr_time_by_label(
-            theory_r1=theory_r1,
-            exp_r1=exp_r1,
-            chem_labels=list(chem_labels),
-            save=True,
-            show=options.runtime.show_plots,
-            save_name=os.path.join(config.project_name, "r1_fit_comparison.pdf"),
-            verbose=True,
-        )
+        with spec.context():
+            plot_corr_time_scatter(
+                theory_r1=theory_r1,
+                exp_r1=exp_r1,
+                chem_labels=list(chem_labels),
+                rsquared=rsquared,
+                fix_param=fix_param,
+                tau_R_fit=tau_R_fit,
+                tau_E_fit=tau_E_fit,
+                spec=spec,
+                save=True,
+                show=options.runtime.show_plots,
+                save_name=os.path.join(
+                    config.project_name, "experimental_vs_fitted_R1.pdf"
+                ),
+                verbose=True,
+            )
+            plot_corr_time_by_label(
+                theory_r1=theory_r1,
+                exp_r1=exp_r1,
+                chem_labels=list(chem_labels),
+                spec=spec,
+                save=True,
+                show=options.runtime.show_plots,
+                save_name=os.path.join(config.project_name, "r1_fit_comparison.pdf"),
+                verbose=True,
+            )
 
     else:
         raise ValueError(
