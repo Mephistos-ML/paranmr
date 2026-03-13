@@ -186,9 +186,7 @@ def plot_fitted_shifts(
     _unique_elements = [
         ele for ele in ptable.elements if ele in [nuc.label_nn for nuc in unique_nuclei]
     ]
-    _markers = {
-        ele: mrkr for (ele, mrkr) in zip(_unique_elements, ["x", "o", "v", "s", "*"])
-    }
+    _markers = {ele: mrkr for (ele, mrkr) in zip(_unique_elements, ["o", "v", "s"])}
 
     markers = {nuc.chem_label: _markers[nuc.label_nn] for nuc in molecule.nuclei}
 
@@ -207,12 +205,12 @@ def plot_fitted_shifts(
     fig.patch.set_facecolor("white")
     header_ax.set_facecolor("white")
     header_ax.axis("off")
-    ax.set_facecolor("#f3f3f7")
+    ax.set_facecolor("white")
     glyphs = spec.glyphs
     palette = spec.palette
     scale = spec.skin_axes(ax)
-    ax.grid(True, which="major", color="white", linewidth=1.0)
-    ax.grid(True, which="minor", color="white", linewidth=0.7, alpha=0.8)
+    ax.grid(True, which="major", color=palette.grid, linewidth=1.0)
+    ax.grid(True, which="minor", color=palette.grid, linewidth=0.7, alpha=0.8)
     ax.set_axisbelow(True)
 
     for (label, calc), expt in zip(calc_shifts.items(), exp.values()):
@@ -223,6 +221,8 @@ def plot_fitted_shifts(
             marker=markers[label],
             color=palette.primary,
             markersize=glyphs.ms,
+            markerfacecolor="none",
+            markeredgecolor=palette.primary,
         )
 
     x_lim = ax.get_xlim()
