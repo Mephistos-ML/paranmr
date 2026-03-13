@@ -33,8 +33,6 @@ from simpnmr.io.xyz import xyz_write
 
 logger = logging.getLogger(__name__)
 
-CSV_DELIMITER = ","
-
 
 def run_fit_corr_time(config, options: FitCorrTimeRunOptions | None = None) -> int:
     """Fit correlation-time parameters to experimental R1 values.
@@ -164,9 +162,13 @@ def run_fit_corr_time(config, options: FitCorrTimeRunOptions | None = None) -> i
 
         # Prepare relaxation model inputs
         nuclei_coords = {nuc.label: nuc.coord for nuc in base_molecule.nuclei}
+        # TODO(domain): Replace relaxation-specific electron coordinates
+        # with a domain-level paramagnetic centre entity.
         electron_coords = config.relaxation_electron_coords
 
         # Dictionaries for relaxation calculations
+        # TODO(core): Source isotropic hyperfine data from the loaded
+        # domain object instead of re-reading QC output here.
         qc_hyperfine_data = rdrs.QCA.guess_from_file(config.hyperfine_file)
         A_iso_dict_MHz = qc_hyperfine_data.a_iso
         A_iso_dict = {
@@ -190,6 +192,8 @@ def run_fit_corr_time(config, options: FitCorrTimeRunOptions | None = None) -> i
         total_momentum_J = base_molecule.electronic.total_J
 
         # --- Model function for curve_fit ---
+        # TODO(core): Collapse duplicated tau-fit theory evaluation
+        # into a single reusable R1 model function.
         if fix_param == "tau_r":
             tau_R = float(tau_R_guess)
             initial_guess = [float(tau_E_guess)]
@@ -668,13 +672,11 @@ def run_fit_corr_time(config, options: FitCorrTimeRunOptions | None = None) -> i
             fitted_tau_r=tau_R_fit,
             fitted_tau_e=tau_E_fit,
             covariance=pcov,
-            delimiter=CSV_DELIMITER,
             comment=f"r2: {rsquared:.6f}",
             verbose=True,
         )
 
-        # TODO(viz): Move all inline Matplotlib plotting from this pipeline into
-        # viz/plots and render via the unified PlotSpec style contract.
+        # TODO(viz): Move inline Matplotlib plotting out of the pipeline into viz/plots.
 
         # Plot experimental vs theoretical R2
         plt.figure(figsize=(6, 6))

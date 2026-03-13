@@ -111,7 +111,6 @@ def save_corr_time_fit_data(
     fitted_tau_r: float | None = None,
     fitted_tau_e: float | None = None,
     covariance: np.ndarray | None = None,
-    delimiter: str = ",",
     comment: str = "",
     verbose: bool = True,
 ) -> None:
@@ -130,7 +129,6 @@ def save_corr_time_fit_data(
         fitted_tau_r: Optional fitted tau_R value (s).
         fitted_tau_e: Optional fitted tau_E value (s).
         covariance: Optional covariance matrix returned by the fit.
-        delimiter: CSV delimiter.
         comment: Optional comment line appended to the file header. If provided,
             it must begin with ``#`` (or will be prefixed automatically).
         verbose: If ``True``, prints the output file path.
