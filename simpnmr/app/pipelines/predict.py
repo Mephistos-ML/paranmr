@@ -23,6 +23,7 @@ from simpnmr.app.loaders.exp_load import load_experiments
 from simpnmr.app.loaders.hfc_load import load_hyperfines
 from simpnmr.app.loaders.labels_load import load_chem_labels_from_csv
 from simpnmr.app.loaders.mol_load import load_base_molecule
+from simpnmr.app.loaders.paramag_centre_load import load_paramagnetic_centre
 from simpnmr.app.loaders.sh_load import (
     load_g_tensor_ab_initio,
     load_g_tensor_dft,
@@ -83,6 +84,12 @@ def run_predict(config, options: PredictRunOptions | None = None) -> int:
 
     # Load Molecule
     base_molecule = load_base_molecule(config)
+
+    # Load canonical paramagnetic centre into the molecule domain container
+    base_molecule = load_paramagnetic_centre(
+        molecule=base_molecule,
+        paramagnetic_centre=config.hyperfine_paramagnetic_centre,
+    )
 
     # Load DFT g-tensor (if available)
     base_molecule.sh.g_tensor_dft = load_g_tensor_dft(
@@ -424,7 +431,6 @@ def _apply_relaxation_linewidths(config, base_molecule: Molecule):
         for nuc in base_molecule.nuclei
         if remove_numbers(nuc.label) in nuclei_labels
     }
-    paramagnetic_centre = config.hyperfine_paramagnetic_centre
     B0 = config.relaxation_magnetic_field_tesla
 
     # Build Aiso, gamma and omega dictionaries for selected nuclei
@@ -471,7 +477,7 @@ def _apply_relaxation_linewidths(config, base_molecule: Molecule):
     rates_r1, rates_r2 = evaluate_relaxation_rates(
         relaxation_model=config.relaxation_model,
         nuclei_coords=nuclei_coords,
-        electron_coords=paramagnetic_centre,
+        electron_coords=base_molecule.paramagnetic_centre,
         gamma_I_dict=gamma_I_dict,
         omega_I_dict=omega_I_dict,
         omega_S=omega_S,
