@@ -155,6 +155,7 @@ class FitSuscConfig(Config):
             "orbit",
             "total_momentum_J",
             "orbital_contribution",
+            "paramagnetic_centre",
         ],
         "experiment": ["files", "spectrum_files", "exp_reference"],
         "assignment": [
@@ -223,6 +224,7 @@ class FitSuscConfig(Config):
         self._orbit = None
         self._total_momentum_J = None
         self._hyperfine_orbital_contribution = "auto"
+        self._hyperfine_paramagnetic_centre = None
         self._susc_vt_method = None
         self._susc_vt_tip_type = None
         self._susc_vt_variables = None
@@ -235,6 +237,30 @@ class FitSuscConfig(Config):
         self._resolve_nuclei_include_groups()
 
         pass
+
+    @property
+    def hyperfine_paramagnetic_centre(self) -> list[float] | None:
+        return self._hyperfine_paramagnetic_centre
+
+    @hyperfine_paramagnetic_centre.setter
+    def hyperfine_paramagnetic_centre(
+        self, value: list[float] | tuple[float, float, float] | None
+    ):
+        if value is None or value == "":
+            self._hyperfine_paramagnetic_centre = None
+            return None
+        if isinstance(value, str):
+            value = yaml.safe_load(value)
+        if isinstance(value, (list, tuple)) and len(value) == 3:
+            try:
+                self._hyperfine_paramagnetic_centre = [float(val) for val in value]
+            except Exception as exc:
+                raise ValueError(
+                    f"Cannot convert hyperfine:paramagnetic_centre={value} to "
+                    "list of 3 floats"
+                ) from exc
+            return None
+        raise ValueError("hyperfine:paramagnetic_centre must be a list of 3 floats")
 
     @property
     def hyperfine_orbital_contribution(self) -> str:
