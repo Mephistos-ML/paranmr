@@ -22,6 +22,7 @@ line-length = 88
 select = ["E", "F", "I"]
 
 [tool.pytest.ini_options]
+addopts = "-ra -q"
 markers = [
     "integration: end-to-end example/CLI integration tests (may be slow)",
     "smoke: fast smoke tests for CLI/entrypoints",
