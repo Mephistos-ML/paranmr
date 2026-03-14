@@ -139,8 +139,9 @@ def run_fit_corr_time(config, options: FitCorrTimeRunOptions | None = None) -> i
         base_molecule = load_base_molecule(config)
 
         # Load canonical paramagnetic centre into the molecule domain container
-        base_molecule.paramagnetic_centre = load_paramagnetic_centre(
-            config.hyperfine_paramagnetic_centre
+        base_molecule = load_paramagnetic_centre(
+            molecule=base_molecule,
+            paramagnetic_centre=config.hyperfine_paramagnetic_centre,
         )
 
         # Load Hyperfines
