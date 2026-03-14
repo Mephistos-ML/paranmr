@@ -18,6 +18,66 @@ from simpnmr.viz.utils.label_layout import resolve_label_layout
 logger = logging.getLogger(__name__)
 
 
+def _render_corr_time_summary_table(
+    ax: plt.Axes,
+    *,
+    rsquared: float,
+    fix_param: str | None,
+    tau_R_fit: float | None,
+    tau_E_fit: float | None,
+    fontsize: float,
+) -> None:
+    """Render a compact 2x2 correlation-time summary table.
+
+    Args:
+        ax: Header axes used only for table rendering.
+        rsquared: Coefficient of determination for the fit.
+        fix_param: Optional fit mode. Supported values are ``"tau_r"``,
+            ``"tau_e"``, ``"none"``, ``""``, or ``None``.
+        tau_R_fit: Fitted rotational correlation time.
+        tau_E_fit: Fitted electronic correlation time.
+        fontsize: Font size used for the rendered table text.
+    """
+    ax.axis("off")
+
+    fit_label = r"$R^2$ = " + f"{rsquared:.3f}"
+    model_label = "—"
+    if fix_param == "tau_r" and tau_E_fit is not None:
+        model_label = r"$\tau_{\mathrm{E}}$ = " + f"{tau_E_fit:.3e} s"
+    elif fix_param == "tau_e" and tau_R_fit is not None:
+        model_label = r"$\tau_{\mathrm{R}}$ = " + f"{tau_R_fit:.3e} s"
+    elif fix_param in {None, "", "none"}:
+        tau_parts: list[str] = []
+        if tau_R_fit is not None:
+            tau_parts.append(r"$\tau_{\mathrm{R}}$ = " + f"{tau_R_fit:.3e} s")
+        if tau_E_fit is not None:
+            tau_parts.append(r"$\tau_{\mathrm{E}}$ = " + f"{tau_E_fit:.3e} s")
+        if tau_parts:
+            model_label = "\n".join(tau_parts)
+
+    table = ax.table(
+        cellText=[["Fit", "Model"], [fit_label, model_label]],
+        cellLoc="center",
+        colWidths=[0.5, 0.5],
+        bbox=[0.0, 0.0, 1.0, 1.0],
+    )
+    table.auto_set_font_size(False)
+    table.set_fontsize(fontsize)
+
+    for (row, col), cell in table.get_celld().items():
+        cell.set_linewidth(0.8)
+        if row == 0 and col == 0:
+            cell.visible_edges = "RB"
+        elif row == 0 and col == 1:
+            cell.visible_edges = "LB"
+        elif row == 1 and col == 0:
+            cell.visible_edges = "RT"
+        elif row == 1 and col == 1:
+            cell.visible_edges = "LT"
+        if row == 0:
+            cell.set_text_props(weight="bold")
+
+
 def plot_corr_time_scatter(
     *,
     theory_r1: np.ndarray,
@@ -63,7 +123,14 @@ def plot_corr_time_scatter(
     glyphs = spec.glyphs
     palette = spec.palette
 
-    fig, ax = plt.subplots(figsize=(6, 6))
+    fig = plt.figure(figsize=(3.15, 3.60), layout="constrained")
+    gs = fig.add_gridspec(
+        nrows=2,
+        ncols=1,
+        height_ratios=[0.55, 3.05],
+    )
+    summary_ax = fig.add_subplot(gs[0])
+    ax = fig.add_subplot(gs[1])
     fig.patch.set_facecolor("white")
     ax.set_facecolor("white")
     scale = spec.skin_axes(ax)
@@ -73,7 +140,15 @@ def plot_corr_time_scatter(
     marker_size = glyphs.ms
     annotation_size = scale.annotation
     axis_label_size = scale.axis_label
-    title_size = scale.title
+
+    _render_corr_time_summary_table(
+        summary_ax,
+        rsquared=rsquared,
+        fix_param=fix_param,
+        tau_R_fit=tau_R_fit,
+        tau_E_fit=tau_E_fit,
+        fontsize=annotation_size,
+    )
 
     scatter_color = palette.primary
 
@@ -117,26 +192,6 @@ def plot_corr_time_scatter(
 
     ax.set_xlabel("Theoretical $R_1$ (s$^{-1}$)", fontsize=axis_label_size)
     ax.set_ylabel("Experimental $R_1$ (s$^{-1}$)", fontsize=axis_label_size)
-    ax.set_title("Experimental vs Theoretical $R_1$ (s$^{-1}$)", fontsize=title_size)
-    legend_labels = [f"$R^2$ = {rsquared:.3f}"]
-    if fix_param == "tau_r" and tau_E_fit is not None:
-        legend_labels.append(f"Fitted $\\tau_{{\\mathrm{{E}}}}$: {tau_E_fit:.3e} s")
-    elif fix_param == "tau_e" and tau_R_fit is not None:
-        legend_labels.append(f"Fitted $\\tau_{{\\mathrm{{R}}}}$: {tau_R_fit:.3e} s")
-    elif fix_param in {None, "", "none"}:
-        if tau_R_fit is not None:
-            legend_labels.append(f"Fitted $\\tau_{{\\mathrm{{R}}}}$: {tau_R_fit:.3e} s")
-        if tau_E_fit is not None:
-            legend_labels.append(f"Fitted $\\tau_{{\\mathrm{{E}}}}$: {tau_E_fit:.3e} s")
-    empty_handles = [plt.Line2D([], [], linestyle="none") for _ in legend_labels]
-    ax.legend(
-        empty_handles,
-        legend_labels,
-        loc="best",
-        handlelength=0,
-        handletextpad=0,
-        ncol=len(legend_labels),
-    )
 
     render_figure(
         fig,
@@ -184,7 +239,7 @@ def plot_corr_time_by_label(
     glyphs = spec.glyphs
     palette = spec.palette
 
-    fig, ax = plt.subplots(figsize=(8, 5))
+    fig, ax = plt.subplots(figsize=(3.54, 2.40), layout="constrained")
     fig.patch.set_facecolor(palette.annotation_bg)
     ax.set_facecolor(palette.annotation_bg)
     scale = spec.skin_axes(ax)
