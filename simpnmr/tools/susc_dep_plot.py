@@ -84,7 +84,6 @@ def plot_component(
     ax.set_xticklabels(func_comps.keys(), rotation=45)
 
     ax.set_ylabel(ylabel)
-    fig.tight_layout()
 
     if save:
         plt.savefig(f"{savename}", dpi=500)

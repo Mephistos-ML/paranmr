@@ -119,7 +119,6 @@ def plot_component(
 
     ax.legend()
     ax.set_ylabel(ylabel)
-    fig.tight_layout()
 
     if save:
         plt.savefig(f"{savename}", dpi=500)
@@ -162,8 +161,6 @@ def plot_normalisation(
     ax.set_xticklabels(norms.keys(), rotation=45)
 
     ax.set_ylabel(r"$A_\mathregular{iso, max}$")
-
-    fig.tight_layout()
 
     if save:
         plt.savefig(f"{savename}", dpi=500)

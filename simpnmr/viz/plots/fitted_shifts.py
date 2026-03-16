@@ -267,13 +267,6 @@ def plot_fitted_shifts(
         susc_units=susc_units,
     )
 
-    fig.subplots_adjust(
-        left=0.12,
-        right=0.97,
-        bottom=0.10,
-        top=0.97,
-        hspace=0.04,
-    )
     fig.canvas.draw()
     plot_pos = ax.get_position()
     header_pos = header_ax.get_position()

@@ -102,7 +102,9 @@ def plot_component(
     """
 
     if None in [fig, ax]:
-        fig, ax = plt.subplots(1, 1, num=figure_title, figsize=[5.5, 3.5])
+        fig, ax = plt.subplots(
+            1, 1, num=figure_title, figsize=(3.15, 3.60), layout="constrained"
+        )
 
     # width of bars, and shift to apply for starting positions
     width = 1 / (len(func_comps) + 1)
@@ -135,8 +137,6 @@ def plot_component(
 
     fig.legend(loc=7, frameon=False)
     ax.set_ylabel(ylabel, fontsize=12)
-    fig.tight_layout()
-    fig.subplots_adjust(right=0.73)
 
     if save:
         plt.savefig(f"{savename}", dpi=500, transparent=True)
@@ -198,8 +198,6 @@ def plot_normalisation(
     ax.set_xticklabels(norms.keys(), rotation=45)
 
     ax.set_ylabel(r"$A_\mathregular{iso, max} (\mathregular{MHz})$", fontsize=12)
-
-    fig.tight_layout()
 
     if save:
         plt.savefig(f"{savename}", dpi=500)

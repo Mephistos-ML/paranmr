@@ -254,9 +254,6 @@ def plot_shift_spread(
     # Violin plots dont support label kwarg
     ax.legend(legend_markers, legend_labels, loc="best")
 
-    fig.tight_layout()
-    fig.subplots_adjust(right=0.950)
-
     render_figure(
         fig,
         save=save,
@@ -485,9 +482,6 @@ def plot_shift_contrib(
 
     ax.legend(loc="best")
 
-    fig.tight_layout()
-    fig.subplots_adjust(right=0.950)
-
     render_figure(
         fig,
         save=save,
@@ -577,8 +571,6 @@ def plot_shift_tdep(
 
     ax.xaxis.set_minor_locator(ticker.AutoMinorLocator())
     ax.yaxis.set_minor_locator(ticker.AutoMinorLocator())
-
-    fig.tight_layout()
 
     render_figure(
         fig,
