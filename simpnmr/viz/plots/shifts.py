@@ -17,6 +17,7 @@ import numpy as np
 
 from simpnmr.core.domain.exp import Experiment
 from simpnmr.core.domain.mol import Molecule
+from simpnmr.viz.layout.canvas import create_canvas
 from simpnmr.viz.layout.export import render_figure
 from simpnmr.viz.layout.violin import set_violin_colours
 from simpnmr.viz.style.theme import PlotSpec
@@ -28,7 +29,8 @@ logger = logging.getLogger(__name__)
 def plot_shift_spread(
     molecule: Molecule,
     experiment: Experiment | None = None,
-    spec: PlotSpec | None = None,
+    *,
+    spec: PlotSpec,
     terms: list[str] = ["pc", "fc", "d"],
     order="ascending",
     save: bool = True,
@@ -36,7 +38,7 @@ def plot_shift_spread(
     save_name: str = "shift_spread.pdf",
     window_title: str = "Shift Spread",
     verbose: bool = True,
-) -> tuple[plt.Figure, list[plt.Axes]]:
+) -> tuple[plt.Figure, plt.Axes]:
     """Plots the spread of theoretical shifts and selected components.
 
     Optionally overlays experimental shift values.
@@ -58,12 +60,16 @@ def plot_shift_spread(
     """
 
     # Make plot
-    fig, ax = plt.subplots(1, 1, num=window_title, figsize=(6.8, 4.6))
-    glyphs = spec.glyphs if spec is not None else None
-    if spec is not None:
-        scale = spec.skin_axes(ax)
-        palette = spec.palette
-        shift_colours = spec.shift_colours
+    fig, ax = create_canvas(
+        spec.profile,
+        variant="standard",
+        window_title=window_title,
+        layout="constrained",
+    )
+    glyphs = spec.glyphs
+    scale = spec.skin_axes(ax)
+    palette = spec.palette
+    shift_colours = spec.shift_colours
 
     unique_chemlabels = {nuc.chem_math_label for nuc in molecule.nuclei}
 
@@ -266,7 +272,7 @@ def plot_shift_spread(
 def plot_shift_contrib(
     molecule: Molecule,
     experiment: Experiment | None,
-    spec: PlotSpec | None = None,
+    spec: PlotSpec,
     terms: list[str] = ["pc", "fc", "d"],
     order="ascending",
     save: bool = True,
@@ -274,7 +280,7 @@ def plot_shift_contrib(
     save_name: str = "shift_components.pdf",
     window_title: str = "Shift components",
     verbose: bool = True,
-) -> tuple[plt.Figure, list[plt.Axes]]:
+) -> tuple[plt.Figure, plt.Axes]:
     """Plots shift components alongside total and optional experimental values.
 
     Args:
@@ -335,12 +341,16 @@ def plot_shift_contrib(
     width = 1 / (len(terms) + 1)
 
     # Make plot
-    fig, ax = plt.subplots(1, 1, num=window_title, figsize=(6.8, 4.6))
-    glyphs = spec.glyphs if spec is not None else None
-    if spec is not None:
-        scale = spec.skin_axes(ax)
-        palette = spec.palette
-        shift_colours = spec.shift_colours
+    fig, ax = create_canvas(
+        spec.profile,
+        variant="standard",
+        window_title=window_title,
+        layout="constrained",
+    )
+    glyphs = spec.glyphs
+    scale = spec.skin_axes(ax)
+    palette = spec.palette
+    shift_colours = spec.shift_colours
 
     # Chemical math label to list of nuclei labels
     cl_to_al = {
@@ -493,7 +503,7 @@ def plot_shift_contrib(
 
 def plot_shift_tdep(
     experiments: list[Experiment],
-    spec: PlotSpec | None = None,
+    spec: PlotSpec,
     tdep: str = "",
     save: bool = True,
     show: bool = True,
@@ -501,7 +511,7 @@ def plot_shift_tdep(
     window_title: str = "ShiftxT vs T",
     verbose: bool = True,
     assignment: bool = True,
-) -> tuple[plt.Figure, tuple[plt.Axes]]:
+) -> tuple[plt.Figure, tuple[plt.Axes,]]:
     """Plots experimental shift temperature dependence.
 
     By default, plots ``shift * T`` versus ``T`` for each assignment label.
@@ -521,20 +531,22 @@ def plot_shift_tdep(
     """
 
     # Plot both together and save limits
-    fig, ax = plt.subplots(1, 1, figsize=(6.8, 4.6), num=window_title)
+    fig, ax = create_canvas(
+        spec.profile,
+        variant="standard",
+        window_title=window_title,
+        layout="constrained",
+    )
 
-    glyphs = spec.glyphs if spec is not None else None
-    if spec is not None:
-        spec.skin_axes(ax)
-        palette = spec.palette
-        colour_cycle = (
-            palette.secondary,
-            palette.highlight,
-            palette.primary,
-            palette.primary,
-        )
-    else:
-        colour_cycle = ("blue", "red", "green", "black")
+    glyphs = spec.glyphs
+    spec.skin_axes(ax)
+    palette = spec.palette
+    colour_cycle = (
+        palette.secondary,
+        palette.highlight,
+        palette.primary,
+        palette.primary,
+    )
 
     # Group signals of each experiment by assignment label
     labels = {signal.assignment for experiment in experiments for signal in experiment}

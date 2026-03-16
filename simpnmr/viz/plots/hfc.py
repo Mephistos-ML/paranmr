@@ -14,6 +14,7 @@ import matplotlib.ticker as ticker
 import numpy as np
 
 from simpnmr.core.domain.mol import Nucleus
+from simpnmr.viz.layout.canvas import create_canvas
 from simpnmr.viz.layout.export import render_figure
 from simpnmr.viz.style.theme import PlotSpec
 from simpnmr.viz.utils.tensor_comp import comp2ind
@@ -24,13 +25,13 @@ logger = logging.getLogger(__name__)
 def plot_hyperfine(
     nuclei: list[Nucleus],
     components: list[str],
-    spec: PlotSpec | None = None,
+    spec: PlotSpec,
     save: bool = False,
     show: bool = True,
     save_name: str = "hyperfines.dat",
     verbose: bool = False,
     window_title: str = "Hyperfine data",
-) -> tuple[plt.Figure, list[plt.Axes]]:
+) -> tuple[plt.Figure, plt.Axes]:
     """Plots selected hyperfine-tensor components for a list of nuclei.
 
     Args:
@@ -80,12 +81,16 @@ def plot_hyperfine(
                 hf_components[component][nuc.label] = nuc.A.sd[comp2ind(component)]
                 complabels[component] = rf"$A_\mathregular{{{component}}}$"
 
-    fig, ax = plt.subplots(1, 1, num=window_title)
+    fig, ax = create_canvas(
+        spec.profile,
+        variant="standard",
+        window_title=window_title,
+        layout="constrained",
+    )
 
-    glyphs = spec.glyphs if spec is not None else None
-    if spec is not None:
-        spec.skin_axes(ax)
-    palette = spec.palette if spec is not None else None
+    glyphs = spec.glyphs
+    spec.skin_axes(ax)
+    palette = spec.palette
 
     n_nuclei = len(nuclei)
 
@@ -134,7 +139,6 @@ def plot_hyperfine(
     ax.legend(loc="best")
 
     ax.set_ylabel(r"Hyperfine Coupling (ppm Å$^\mathregular{-3}$)")
-    fig.tight_layout()
 
     render_figure(
         fig,
@@ -154,7 +158,8 @@ def plot_hyperfine_iso_vs_ax(
     order: list[int],
     fig: plt.Figure = None,
     ax: plt.Axes = None,
-    spec: PlotSpec | None = None,
+    *,
+    spec: PlotSpec,
     symbol="x",
     save: bool = False,
     show: bool = True,
@@ -163,12 +168,16 @@ def plot_hyperfine_iso_vs_ax(
     window_title: str = "hyperfine data",
 ):
     if all([fig is None, ax is None]):
-        fig, ax = plt.subplots(num=window_title)
+        fig, ax = create_canvas(
+            spec.profile,
+            variant="standard",
+            window_title=window_title,
+            layout="constrained",
+        )
 
-    glyphs = spec.glyphs if spec is not None else None
-    if spec is not None:
-        spec.skin_axes(ax)
-    palette = spec.palette if spec is not None else None
+    glyphs = spec.glyphs
+    spec.skin_axes(ax)
+    palette = spec.palette
 
     vals = list(value_dict.values())
 
@@ -203,13 +212,14 @@ def plot_hyperfine_iso_vs_ax(
 def plot_hyperfine_spread(
     nuclei: list[Nucleus],
     components: list[str] | None = None,
-    spec: PlotSpec | None = None,
+    *,
+    spec: PlotSpec,
     save: bool = False,
     show: bool = True,
     save_name: str = "hyperfines.pdf",
     window_title: str = "Hyperfine Components",
     verbose: bool = True,
-) -> tuple[plt.Figure, list[plt.Axes]]:
+) -> tuple[plt.Figure, plt.Axes]:
     """Plots the spread of hyperfine components for each chemical label.
 
     Args:
@@ -273,12 +283,16 @@ def plot_hyperfine_spread(
         if nuc.chem_math_label not in unique_chemlabels:
             unique_chemlabels.append(nuc.chem_math_label)
 
-    fig, ax = plt.subplots(1, 1, num=window_title)
+    fig, ax = create_canvas(
+        spec.profile,
+        variant="standard",
+        window_title=window_title,
+        layout="constrained",
+    )
 
-    glyphs = spec.glyphs if spec is not None else None
-    if spec is not None:
-        spec.skin_axes(ax)
-    palette = spec.palette if spec is not None else None
+    glyphs = spec.glyphs
+    spec.skin_axes(ax)
+    palette = spec.palette
 
     xvals = np.arange(1, len(unique_chemlabels) + 1)
 
@@ -324,7 +338,6 @@ def plot_hyperfine_spread(
     )
 
     ax.set_ylabel(r"Hyperfine Coupling (ppm Å$^\mathregular{-3}$)")
-    fig.tight_layout()
 
     render_figure(
         fig,

@@ -11,6 +11,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 from matplotlib import ticker
 
+from simpnmr.viz.layout.canvas import create_canvas, create_header_plot_canvas
 from simpnmr.viz.layout.export import render_figure
 from simpnmr.viz.style.theme import PlotSpec
 from simpnmr.viz.utils.label_layout import resolve_label_layout
@@ -87,7 +88,7 @@ def plot_corr_time_scatter(
     fix_param: str | None = None,
     tau_R_fit: float | None = None,
     tau_E_fit: float | None = None,
-    spec: PlotSpec | None = None,
+    spec: PlotSpec,
     save: bool = True,
     show: bool = True,
     save_name: str = "experimental_vs_fitted_R1.pdf",
@@ -117,20 +118,17 @@ def plot_corr_time_scatter(
     Returns:
         Tuple of ``(figure, axes)`` for the rendered scatter plot.
     """
-    if spec is None:
-        raise ValueError("plot_corr_time_scatter requires a PlotSpec")
 
     glyphs = spec.glyphs
     palette = spec.palette
 
-    fig = plt.figure(figsize=(3.15, 3.60), layout="constrained")
-    gs = fig.add_gridspec(
-        nrows=2,
-        ncols=1,
-        height_ratios=[0.55, 3.05],
+    fig, summary_ax, ax = create_header_plot_canvas(
+        spec.profile,
+        variant="vertical",
+        layout="constrained",
+        header_ratio=0.55,
+        plot_ratio=3.05,
     )
-    summary_ax = fig.add_subplot(gs[0])
-    ax = fig.add_subplot(gs[1])
     fig.patch.set_facecolor("white")
     ax.set_facecolor("white")
     scale = spec.skin_axes(ax)
@@ -209,7 +207,7 @@ def plot_corr_time_by_label(
     theory_r1: np.ndarray,
     exp_r1: np.ndarray,
     chem_labels: list[str],
-    spec: PlotSpec | None = None,
+    spec: PlotSpec,
     save: bool = True,
     show: bool = True,
     save_name: str = "r1_fit_comparison.pdf",
@@ -233,13 +231,15 @@ def plot_corr_time_by_label(
     Returns:
         Tuple of ``(figure, axes)`` for the rendered per-label comparison plot.
     """
-    if spec is None:
-        raise ValueError("plot_corr_time_by_label requires a PlotSpec")
 
     glyphs = spec.glyphs
     palette = spec.palette
 
-    fig, ax = plt.subplots(figsize=(3.54, 2.40), layout="constrained")
+    fig, ax = create_canvas(
+        spec.profile,
+        variant="standard",
+        layout="constrained",
+    )
     fig.patch.set_facecolor(palette.annotation_bg)
     ax.set_facecolor(palette.annotation_bg)
     scale = spec.skin_axes(ax)

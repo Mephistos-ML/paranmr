@@ -18,6 +18,7 @@ from simpnmr.core.const import ptable
 from simpnmr.core.domain.exp import Experiment
 from simpnmr.core.domain.mol import Molecule
 from simpnmr.core.fitting import models
+from simpnmr.viz.layout.canvas import create_header_plot_canvas
 from simpnmr.viz.layout.export import render_figure
 from simpnmr.viz.style.theme import PlotSpec
 from simpnmr.viz.utils.label_layout import resolve_label_layout
@@ -138,7 +139,7 @@ def plot_fitted_shifts(
     window_title: str = "Fitted Shifts",
     susc_units: str = "A3",
     verbose: bool = True,
-) -> tuple[plt.Figure, list[plt.Axes]]:
+) -> tuple[plt.Figure, plt.Axes]:
     """Plots theoretical vs experimental shifts for a fitted susceptibility model.
 
     Args:
@@ -197,14 +198,18 @@ def plot_fitted_shifts(
             markers[nuc.chem_math_label] = markers.pop(nuc.chem_label)
             exp[nuc.chem_math_label] = exp.pop(nuc.chem_label)
 
-    fig = plt.figure(figsize=(5.6, 6.4), num=window_title)
-    grid = fig.add_gridspec(2, 1, height_ratios=[1.35, 5.05], hspace=0.02)
-    header_ax = fig.add_subplot(grid[0])
-    ax = fig.add_subplot(grid[1])
+    fig, header_ax, ax = create_header_plot_canvas(
+        spec.profile,
+        variant="vertical",
+        window_title=window_title,
+        layout="constrained",
+        header_ratio=1.35,
+        plot_ratio=5.05,
+        hspace=0.02,
+    )
 
     fig.patch.set_facecolor("white")
     header_ax.set_facecolor("white")
-    header_ax.axis("off")
     ax.set_facecolor("white")
     glyphs = spec.glyphs
     palette = spec.palette

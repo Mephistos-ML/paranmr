@@ -9,10 +9,10 @@ inverse temperature, with optional precomputed fit curves and uncertainty bands.
 
 import logging
 
-import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 import numpy as np
 
+from simpnmr.viz.layout.canvas import create_canvas
 from simpnmr.viz.layout.export import render_figure
 from simpnmr.viz.style.theme import PlotSpec
 
@@ -60,7 +60,11 @@ def plot_isoaxrho(
         p = params[component]
         palette = spec.palette
 
-        fig, ax = plt.subplots(1, 1, figsize=(6.8, 4.6))
+        fig, ax = create_canvas(
+            spec.profile,
+            variant="standard",
+            layout="constrained",
+        )
 
         inv_t_plot = inv_t * 1.0e3
 
@@ -212,8 +216,6 @@ def plot_isoaxrho(
 
         ax.legend(loc="upper left", ncol=3)
 
-        fig.tight_layout()
-
         comp_save_name = f"{save_name}_{component}"
 
         render_figure(
@@ -269,7 +271,11 @@ def plot_exp_vs_ab_initio(
     for component in params.keys():
         inv_t_plot = inv_t * 1.0e3
 
-        fig, ax = plt.subplots(1, 1, figsize=(6.8, 4.6))
+        fig, ax = create_canvas(
+            spec.profile,
+            variant="standard",
+            layout="constrained",
+        )
 
         p_exp = params[component]
         fit_y = p_exp.get("fit_y")
@@ -385,8 +391,6 @@ def plot_exp_vs_ab_initio(
         spec.skin_axes(top_ax)
 
         ax.legend(loc="upper left", ncol=4)
-
-        fig.tight_layout()
 
         comp_save_name = f"{save_name}_{component}"
 
