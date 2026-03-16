@@ -28,11 +28,11 @@ class FigureSize:
 _FIGURE_SIZES: dict[PlotProfile, dict[FigureVariant, FigureSize]] = {
     "paper": {
         "standard": FigureSize(width=3.54, height=2.40),  # 9.00 × 6.10 cm
-        "vertical": FigureSize(width=3.15, height=3.60),  # 8.00 × 9.14 cm
+        "vertical": FigureSize(width=3.54, height=4.05),  # 9.00 x 10.28 cm
     },
     "poster": {
         "standard": FigureSize(width=3.54, height=2.40),  # 9.00 × 6.10 cm
-        "vertical": FigureSize(width=3.15, height=3.60),  # 8.00 × 9.14 cm
+        "vertical": FigureSize(width=3.54, height=4.05),  # 9.00 x 10.28 cm
     },
 }
 
