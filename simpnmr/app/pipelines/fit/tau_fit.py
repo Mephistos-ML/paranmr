@@ -57,6 +57,8 @@ def run_fit_corr_time(config, options: FitCorrTimeRunOptions | None = None) -> i
 
     # Build the resolved plotting contract for this run.
     spec = apply_profile(options.runtime.plot_profile)
+    show_plots = options.runtime.show_plots
+    project_dir = config.project_name
 
     tau_R_mode, tau_R_guess = (
         config.fit_corr_time_tau_R[0].lower(),
@@ -438,9 +440,7 @@ def run_fit_corr_time(config, options: FitCorrTimeRunOptions | None = None) -> i
             xdata=xdata,
             exp_r1=exp_r1,
             chem_labels=chem_labels,
-            file_name=os.path.join(
-                config.project_name, "corr_time_fit_diagnostics.csv"
-            ),
+            file_name=os.path.join(project_dir, "corr_time_fit_diagnostics.csv"),
             initial_guess=initial_guess,
             fitted_tau_r=tau_R_fit,
             fitted_tau_e=tau_E_fit,
@@ -461,10 +461,8 @@ def run_fit_corr_time(config, options: FitCorrTimeRunOptions | None = None) -> i
                 tau_E_fit=tau_E_fit,
                 spec=spec,
                 save=True,
-                show=options.runtime.show_plots,
-                save_name=os.path.join(
-                    config.project_name, "experimental_vs_fitted_R1.pdf"
-                ),
+                show=show_plots,
+                save_name=os.path.join(project_dir, "experimental_vs_fitted_R1.pdf"),
                 verbose=True,
             )
             plot_corr_time_by_label(
@@ -473,21 +471,21 @@ def run_fit_corr_time(config, options: FitCorrTimeRunOptions | None = None) -> i
                 chem_labels=list(chem_labels),
                 spec=spec,
                 save=True,
-                show=options.runtime.show_plots,
-                save_name=os.path.join(config.project_name, "r1_fit_comparison.pdf"),
+                show=show_plots,
+                save_name=os.path.join(project_dir, "r1_fit_comparison.pdf"),
                 verbose=True,
             )
 
         if len(config.chem_labels_file):
             xyz_write.save_chemcraft_xyz(
-                file_name=os.path.join(config.project_name, "chemcraft_structure.xyz"),
+                file_name=os.path.join(project_dir, "chemcraft_structure.xyz"),
                 labels=base_molecule.labels,
                 coords=base_molecule.coords,
                 chem_labels={nuc.label: nuc.chem_label for nuc in base_molecule.nuclei},
             )
 
         xyz_write.save_xyz(
-            file_name=os.path.join(config.project_name, "structure.xyz"),
+            file_name=os.path.join(project_dir, "structure.xyz"),
             labels=base_molecule.labels,
             coords=base_molecule.coords,
             comment=f"Structure from {config.hyperfine_file}",
