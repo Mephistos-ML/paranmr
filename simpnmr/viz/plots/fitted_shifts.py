@@ -20,111 +20,11 @@ from simpnmr.core.domain.mol import Molecule
 from simpnmr.core.fitting import models
 from simpnmr.viz.layout.canvas import create_header_plot_canvas
 from simpnmr.viz.layout.export import render_figure
+from simpnmr.viz.layout.label import resolve_label_layout
+from simpnmr.viz.layout.table import render_compact_table
 from simpnmr.viz.style.theme import PlotSpec
-from simpnmr.viz.utils.label_layout import resolve_label_layout
 
 logger = logging.getLogger(__name__)
-
-
-def _render_summary_table(
-    header_ax: plt.Axes,
-    molecule: Molecule,
-    susc_model: models.SusceptibilityModel,
-    *,
-    scale,
-    susc_units: str,
-) -> None:
-    """Build and draw the fitted-shift summary header table.
-
-    Args:
-        header_ax: Header axes used only for the summary table.
-        molecule: Molecule containing the fitted susceptibility.
-        susc_model: Fitted susceptibility model.
-        scale: Plot scale bundle returned by the theme skinning helper.
-        susc_units: Units for reporting susceptibility values in the header.
-            Supported: ``"A3"``, ``"A3 mol-1"``, ``"cm3"``, ``"cm3 mol-1"``.
-    """
-    if susc_units == "A3":
-        conv = 1.0
-        model_unit_label = "Å³"
-    elif susc_units == "A3 mol-1":
-        conv = constants.Avogadro
-        model_unit_label = "Å³ mol⁻¹"
-    elif susc_units == "cm3":
-        conv = 1e-24
-        model_unit_label = "cm³"
-    elif susc_units == "cm3 mol-1":
-        conv = 1e-24 * constants.Avogadro / (4 * np.pi)
-        model_unit_label = "cm³ mol⁻¹"
-
-    fit_lines = [
-        f"R²adj  {susc_model.adj_r2:.4f}",
-        f"MAE    {susc_model.mae:.1f} ppm",
-        f"RMSE   {susc_model.rmse:.1f} ppm",
-    ]
-
-    model_lines = []
-    for name in susc_model.VARNAMES:
-        val = float(susc_model.final_var_values[name]) * conv
-        label = susc_model.VARNAMES_MM[name]
-
-        err = susc_model.fit_stdev.get(name)
-        if name in susc_model.fit_vars and err is not None and err > 0:
-            err_val = float(err) * conv
-            model_lines.append(f"{label}  {val:.3f} ± {err_val:.3f}")
-        else:
-            model_lines.append(f"{label}  {val:.3f}")
-
-    euler_lines = [
-        f"α  {int(round(molecule.susc.alpha))}°",
-        f"β  {int(round(molecule.susc.beta))}°",
-        f"γ  {int(round(molecule.susc.gamma))}°",
-    ]
-
-    n_rows = max(len(fit_lines), len(model_lines), len(euler_lines))
-    fit_lines += [""] * (n_rows - len(fit_lines))
-    model_lines += [""] * (n_rows - len(model_lines))
-    euler_lines += [""] * (n_rows - len(euler_lines))
-
-    header_table = header_ax.table(
-        cellText=[
-            [fit_entry, model_entry, euler_entry]
-            for fit_entry, model_entry, euler_entry in zip(
-                fit_lines,
-                model_lines,
-                euler_lines,
-            )
-        ],
-        colLabels=["Fit", f"Model ({model_unit_label})", "Euler Angles"],
-        cellLoc="left",
-        colLoc="left",
-        loc="center",
-        bbox=[0.0, 0.02, 1.0, 0.96],
-    )
-    header_table.auto_set_font_size(False)
-    header_table.set_fontsize(scale.annotation)
-    max_row = max(row for row, _ in header_table.get_celld().keys())
-    max_col = max(col for _, col in header_table.get_celld().keys())
-
-    for (row, col), cell in header_table.get_celld().items():
-        visible_edges = "LTRB"
-        if row == 0:
-            visible_edges = visible_edges.replace("T", "")
-        if row == max_row:
-            visible_edges = visible_edges.replace("B", "")
-        if col == 0:
-            visible_edges = visible_edges.replace("L", "")
-        if col == max_col:
-            visible_edges = visible_edges.replace("R", "")
-
-        cell.visible_edges = visible_edges
-        cell.set_edgecolor("black")
-        cell.set_linewidth(0.6)
-        cell.set_facecolor("white")
-        cell.PAD = 0.12
-        cell.set_text_props(ha="center", va="center")
-        if row == 0:
-            cell.set_text_props(weight="bold", ha="center", va="center")
 
 
 def plot_fitted_shifts(
@@ -214,6 +114,54 @@ def plot_fitted_shifts(
     glyphs = spec.glyphs
     palette = spec.palette
     scale = spec.skin_axes(ax)
+
+    if susc_units == "A3":
+        conv = 1.0
+        model_unit_label = "Å³"
+    elif susc_units == "A3 mol-1":
+        conv = constants.Avogadro
+        model_unit_label = "Å³ mol⁻¹"
+    elif susc_units == "cm3":
+        conv = 1e-24
+        model_unit_label = "cm³"
+    elif susc_units == "cm3 mol-1":
+        conv = 1e-24 * constants.Avogadro / (4 * np.pi)
+        model_unit_label = "cm³ mol⁻¹"
+    else:
+        raise ValueError(
+            "Unsupported susc_units. Expected one of: A3, A3 mol-1, cm3, cm3 mol-1."
+        )
+
+    fit_lines = [
+        f"R²adj  {susc_model.adj_r2:.4f}",
+        f"MAE    {susc_model.mae:.1f} ppm",
+        f"RMSE   {susc_model.rmse:.1f} ppm",
+    ]
+
+    model_lines: list[str] = []
+    for name in susc_model.VARNAMES:
+        val = float(susc_model.final_var_values[name]) * conv
+        label = susc_model.VARNAMES_MM[name]
+
+        err = susc_model.fit_stdev.get(name)
+        if name in susc_model.fit_vars and err is not None and err > 0:
+            err_val = float(err) * conv
+            model_lines.append(f"{label}  {val:.3f} ± {err_val:.3f}")
+        else:
+            model_lines.append(f"{label}  {val:.3f}")
+
+    euler_lines = [
+        f"α  {int(round(molecule.susc.alpha))}°",
+        f"β  {int(round(molecule.susc.beta))}°",
+        f"γ  {int(round(molecule.susc.gamma))}°",
+    ]
+
+    blocks = [
+        ("Fit", fit_lines),
+        (f"Model ({model_unit_label})", model_lines),
+        ("Euler Angles", euler_lines),
+    ]
+
     ax.grid(True, which="major", color=palette.grid, linewidth=1.0)
     ax.grid(True, which="minor", color=palette.grid, linewidth=0.7, alpha=0.8)
     ax.set_axisbelow(True)
@@ -259,12 +207,13 @@ def plot_fitted_shifts(
             for calc_value, exp_value in zip(calc, expt):
                 label_entries.append((label, float(calc_value), float(exp_value)))
 
-    _render_summary_table(
+    render_compact_table(
         header_ax,
-        molecule,
-        susc_model,
-        scale=scale,
-        susc_units=susc_units,
+        blocks,
+        spec,
+        bbox=[0.0, 0.02, 1.0, 0.96],
+        cell_align="center",
+        remove_outer_frame=True,
     )
 
     fig.canvas.draw()
