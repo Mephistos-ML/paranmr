@@ -13,70 +13,11 @@ from matplotlib import ticker
 
 from simpnmr.viz.layout.canvas import create_canvas, create_header_plot_canvas
 from simpnmr.viz.layout.export import render_figure
+from simpnmr.viz.layout.label import resolve_label_layout
+from simpnmr.viz.layout.table import render_compact_table
 from simpnmr.viz.style.theme import PlotSpec
-from simpnmr.viz.utils.label_layout import resolve_label_layout
 
 logger = logging.getLogger(__name__)
-
-
-def _render_corr_time_summary_table(
-    ax: plt.Axes,
-    *,
-    rsquared: float,
-    fix_param: str | None,
-    tau_R_fit: float | None,
-    tau_E_fit: float | None,
-    fontsize: float,
-) -> None:
-    """Render a compact 2x2 correlation-time summary table.
-
-    Args:
-        ax: Header axes used only for table rendering.
-        rsquared: Coefficient of determination for the fit.
-        fix_param: Optional fit mode. Supported values are ``"tau_r"``,
-            ``"tau_e"``, ``"none"``, ``""``, or ``None``.
-        tau_R_fit: Fitted rotational correlation time.
-        tau_E_fit: Fitted electronic correlation time.
-        fontsize: Font size used for the rendered table text.
-    """
-    ax.axis("off")
-
-    fit_label = r"$R^2$ = " + f"{rsquared:.3f}"
-    model_label = "—"
-    if fix_param == "tau_r" and tau_E_fit is not None:
-        model_label = r"$\tau_{\mathrm{E}}$ = " + f"{tau_E_fit:.3e} s"
-    elif fix_param == "tau_e" and tau_R_fit is not None:
-        model_label = r"$\tau_{\mathrm{R}}$ = " + f"{tau_R_fit:.3e} s"
-    elif fix_param in {None, "", "none"}:
-        tau_parts: list[str] = []
-        if tau_R_fit is not None:
-            tau_parts.append(r"$\tau_{\mathrm{R}}$ = " + f"{tau_R_fit:.3e} s")
-        if tau_E_fit is not None:
-            tau_parts.append(r"$\tau_{\mathrm{E}}$ = " + f"{tau_E_fit:.3e} s")
-        if tau_parts:
-            model_label = "\n".join(tau_parts)
-
-    table = ax.table(
-        cellText=[["Fit", "Model"], [fit_label, model_label]],
-        cellLoc="center",
-        colWidths=[0.5, 0.5],
-        bbox=[0.0, 0.0, 1.0, 1.0],
-    )
-    table.auto_set_font_size(False)
-    table.set_fontsize(fontsize)
-
-    for (row, col), cell in table.get_celld().items():
-        cell.set_linewidth(0.8)
-        if row == 0 and col == 0:
-            cell.visible_edges = "RB"
-        elif row == 0 and col == 1:
-            cell.visible_edges = "LB"
-        elif row == 1 and col == 0:
-            cell.visible_edges = "RT"
-        elif row == 1 and col == 1:
-            cell.visible_edges = "LT"
-        if row == 0:
-            cell.set_text_props(weight="bold")
 
 
 def plot_corr_time_scatter(
@@ -138,14 +79,34 @@ def plot_corr_time_scatter(
     marker_size = glyphs.ms
     annotation_size = scale.annotation
     axis_label_size = scale.axis_label
+    fit_lines = [f"R²  {rsquared:.3f}"]
 
-    _render_corr_time_summary_table(
+    model_lines = ["—"]
+    if fix_param == "tau_r" and tau_E_fit is not None:
+        model_lines = [f"τE  {tau_E_fit:.3e} s"]
+    elif fix_param == "tau_e" and tau_R_fit is not None:
+        model_lines = [f"τR  {tau_R_fit:.3e} s"]
+    elif fix_param in {None, "", "none"}:
+        tau_lines: list[str] = []
+        if tau_R_fit is not None:
+            tau_lines.append(f"τR  {tau_R_fit:.3e} s")
+        if tau_E_fit is not None:
+            tau_lines.append(f"τE  {tau_E_fit:.3e} s")
+        if tau_lines:
+            model_lines = tau_lines
+
+    blocks = [
+        ("Fit", fit_lines),
+        ("Model", model_lines),
+    ]
+
+    render_compact_table(
         summary_ax,
-        rsquared=rsquared,
-        fix_param=fix_param,
-        tau_R_fit=tau_R_fit,
-        tau_E_fit=tau_E_fit,
-        fontsize=annotation_size,
+        blocks,
+        spec,
+        bbox=[0.0, 0.0, 1.0, 1.0],
+        cell_align="center",
+        remove_outer_frame=True,
     )
 
     scatter_color = palette.primary
