@@ -1,0 +1,4 @@
+﻿# This file was generated with SimpNMR v1.6.0 at 10:40:21 16-03-2026 
+# 
+solver_method,spin,g_x,g_y,g_z,g_x_err,g_y_err,g_z_err,D_cm^-1,E_cm^-1,D_err_cm^-1,E_err_cm^-1
+Analytic (zero rhombicity),2.000000,1.612489,1.612489,2.670211,1.020900,1.435627,0.846127,6.623535,-0.000000,216.733915,2.326373
