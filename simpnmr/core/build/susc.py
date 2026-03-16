@@ -129,7 +129,6 @@ def build_chi_iso_spin_only(
             temperature=float(susc.temperature),
         )
     )
-    susc.iso = susc.iso_spin_only
     return susc
 
 
@@ -167,5 +166,4 @@ def build_chi_iso_g_corr(
             total_momentum_J=total_momentum_J,
         )
     )
-    susc.iso = susc.iso_g_corr
     return susc

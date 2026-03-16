@@ -89,9 +89,16 @@ def load_susceptibility_csv(
 
     The CSV loader always constructs the tensor-backed susceptibility object
     first. If a CSV isotropic susceptibility value is present, it is attached
-    directly. Otherwise the loader attempts g-corrected isotropic enrichment,
-    then spin-only isotropic enrichment, and finally logs that isotropic
-    susceptibility was skipped when insufficient data is available.
+    directly as the canonical isotropic susceptibility. Otherwise, when
+    electronic-state data is available, the loader first attaches the spin-only
+    isotropic susceptibility reference channel. If a g-tensor is also
+    available, it then attaches the g-corrected isotropic susceptibility
+    channel and promotes it to the canonical ``susc.iso`` while preserving
+    ``susc.iso_spin_only`` for downstream delta-shift reporting. If only the
+    spin-only channel is available, that channel becomes the canonical
+    ``susc.iso``. If insufficient data is available, the isotropic
+    susceptibility channel is skipped and only the tensor-backed susceptibility
+    object is returned.
 
     Args:
         susceptibility_file: Path to the CSV susceptibility source file.
@@ -115,21 +122,10 @@ def load_susceptibility_csv(
         if chi_iso is not None:
             logger.info("Isotropic susceptibility is loaded directly from CSV")
             susc = build_chi_iso_from_csv(susc, chi_iso=float(chi_iso))
-        elif electronic is not None and g_tensor is not None:
-            logger.info(
-                "Using Ab-initio g-tensor-corrected isotropic magnetic susceptibility"
-            )
-            susc = build_chi_iso_g_corr(
-                susc,
-                spin=electronic.spin_S,
-                orbit=electronic.orbit_L,
-                total_momentum_J=electronic.total_J,
-                g_tensor=g_tensor,
-            )
         elif electronic is not None:
             logger.info(
-                "CSV source does not provide chi_iso; using spin-only "
-                "isotropic magnetic susceptibility"
+                "CSV source does not provide chi_iso; building spin-only "
+                "isotropic susceptibility reference channel"
             )
             susc = build_chi_iso_spin_only(
                 susc,
@@ -137,6 +133,21 @@ def load_susceptibility_csv(
                 orbit=electronic.orbit_L,
                 total_momentum_J=electronic.total_J,
             )
+            if g_tensor is not None:
+                logger.info(
+                    "g-tensor available; building g-tensor-corrected isotropic "
+                    "susceptibility while preserving spin-only reference"
+                )
+                susc = build_chi_iso_g_corr(
+                    susc,
+                    spin=electronic.spin_S,
+                    orbit=electronic.orbit_L,
+                    total_momentum_J=electronic.total_J,
+                    g_tensor=g_tensor,
+                )
+                susc.iso = susc.iso_g_corr
+            else:
+                susc.iso = susc.iso_spin_only
         else:
             logger.info(
                 "CSV source does not provide chi_iso and insufficient "
@@ -159,9 +170,15 @@ def load_susceptibility_orca(
     """Load susceptibility objects from an ORCA output file.
 
     The ORCA loader always constructs the tensor-backed susceptibility object
-    first. It then attempts g-corrected isotropic enrichment, then spin-only
-    isotropic enrichment, and finally logs that isotropic susceptibility was
-    skipped when insufficient data is available.
+    first. When electronic-state data is available, the loader first attaches
+    the spin-only isotropic susceptibility reference channel. If a g-tensor is
+    also available, it then attaches the g-corrected isotropic susceptibility
+    channel and promotes it to the canonical ``susc.iso`` while preserving
+    ``susc.iso_spin_only`` for downstream delta-shift reporting. If only the
+    spin-only channel is available, that channel becomes the canonical
+    ``susc.iso``. If insufficient data is available, the isotropic
+    susceptibility channel is skipped and only the tensor-backed susceptibility
+    object is returned.
 
     Args:
         susceptibility_file: Path to the ORCA output file.
@@ -195,25 +212,29 @@ def load_susceptibility_orca(
             tensor_xt=tensor_xt,
         )
 
-        if electronic is not None and g_tensor is not None:
-            logger.info(
-                "Using Ab-initio g-tensor-corrected isotropic magnetic susceptibility"
-            )
-            susc = build_chi_iso_g_corr(
-                susc,
-                spin=electronic.spin_S,
-                orbit=electronic.orbit_L,
-                total_momentum_J=electronic.total_J,
-                g_tensor=g_tensor,
-            )
-        elif electronic is not None:
-            logger.info("Using spin-only isotropic magnetic susceptibility")
+        if electronic is not None:
+            logger.info("Building spin-only isotropic susceptibility reference channel")
             susc = build_chi_iso_spin_only(
                 susc,
                 spin=electronic.spin_S,
                 orbit=electronic.orbit_L,
                 total_momentum_J=electronic.total_J,
             )
+            if g_tensor is not None:
+                logger.info(
+                    "g-tensor available; building g-tensor-corrected isotropic "
+                    "susceptibility while preserving spin-only reference"
+                )
+                susc = build_chi_iso_g_corr(
+                    susc,
+                    spin=electronic.spin_S,
+                    orbit=electronic.orbit_L,
+                    total_momentum_J=electronic.total_J,
+                    g_tensor=g_tensor,
+                )
+                susc.iso = susc.iso_g_corr
+            else:
+                susc.iso = susc.iso_spin_only
         else:
             logger.info(
                 "Insufficient electronic-state data is available; isotropic "
