@@ -1,6 +1,0 @@
-﻿# This file was generated with SimpNMR v1.6.0 at 15:51:42 16-03-2026 
-# Data reported in Curie-normalised chiT (dimensionless) Units
-type,intercept,slope,intercept_err,slope_err,adj_r2
-iso,3.947276,-41.559725,2.241295,606.864924,0.944571
-ax,4.480395,-99.657841,19.073036,5164.192429,0.546833
-rho,0.000000,0.000000,0.000000,0.000000,-28062.950666

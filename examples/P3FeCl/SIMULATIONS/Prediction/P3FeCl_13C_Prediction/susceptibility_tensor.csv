@@ -1,4 +1,0 @@
-﻿# This file was generated with SimpNMR v1.6.0 at 15:51:45 16-03-2026 
-# Data from P3FeCl_Susceptibility_NEVPT2.out (csv)
-Temperature (K),chi_iso (Å^3),chi_ax (Å^3),chi_rho (Å^3),chi_xx (Å^3),chi_xy (Å^3),chi_xz (Å^3),chi_yy (Å^3),chi_yz (Å^3),chi_zz (Å^3),dchi_xx (Å^3),dchi_xy (Å^3),dchi_xz (Å^3),dchi_yy (Å^3),dchi_yz (Å^3),dchi_zz (Å^3),chi_x (Å^3),chi_y (Å^3),chi_z (Å^3),alpha (degrees),beta (degrees),gamma (degrees)
-298.000000,0.243408,0.196813,0.007548,0.229222,-0.071631,0.011778,0.367123,-0.009973,0.205781,-0.038154,-0.071631,0.011778,0.099748,-0.009973,-0.061595,0.194223,0.209319,0.398584,-145.154603,72.931053,-73.559594
