@@ -28,7 +28,7 @@ from simpnmr.app.loaders.sh_load import (
     load_g_tensor_ab_initio,
     load_g_tensor_dft,
 )
-from simpnmr.app.loaders.susc_load import resolve_susceptibilities
+from simpnmr.app.loaders.susc_load import load_susceptibilities
 from simpnmr.app.params.options import PredictRunOptions
 from simpnmr.app.policies.susc import resolve_susceptibility_source
 
@@ -139,11 +139,10 @@ def run_predict(config, options: PredictRunOptions | None = None) -> int:
                 exc,
             )
 
-    # Load or resolve magnetic susceptibility objects.
-    suscs = resolve_susceptibilities(
+    # Load magnetic susceptibility objects.
+    suscs = load_susceptibilities(
         config.susceptibility_file,
         config.susceptibility_format,
-        temperatures=config.susceptibility_temperatures,
         electronic=base_molecule.electronic,
         g_tensor=base_molecule.sh.g_tensor_ab_initio,
     )
