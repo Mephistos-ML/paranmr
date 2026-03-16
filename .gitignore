@@ -33,7 +33,4 @@ __pycache__/
 #   - `examples/**/X/` matches X at any depth under examples/
 #   - Trailing slash ensures only directories are ignored.
 # ============================================================================
-examples/**/proton/
-examples/**/prediction/
-examples/**/prediction_relaxation/
-examples/**/SIMULATION/
+examples/**/SIMULATIONS/
