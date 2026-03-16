@@ -11,6 +11,7 @@ paramagnetism (TIP) from ab initio susceptibilities.
 import copy
 import logging
 import os
+from typing import Any, Sequence
 
 import numpy as np
 
@@ -18,8 +19,8 @@ import numpy as np
 from simpnmr.app.loaders.susc_load import load_susceptibilities
 
 # Core / domain
-from simpnmr.core.build.susc import build_ab_initio_chit_series
 from simpnmr.core.fitting import vt
+from simpnmr.core.phys.susc import get_g_corr_iso_susc
 
 # IO layer
 from simpnmr.io.csv.fit import save_slope_intercept
@@ -33,13 +34,50 @@ logger = logging.getLogger(__name__)
 
 
 def fit_vt(
-    config,
-    molecules,
-    spin,
-    susc_models,
+    config: Any,
+    molecules: Sequence[Any],
+    spin: float,
+    susc_models: Sequence[Any] | None,
     plot_profile: str,
     show_plots: bool,
 ) -> None:
+    """Fit VT susceptibility-component models to experimental pNMR data.
+
+    This pipeline fits the temperature dependence of the isotropic, axial, and
+    rhombic susceptibility components extracted from the input molecule set. It
+    supports both the high-temperature-limit model and the second-order VT
+    model. When requested, the pipeline also loads an ab initio susceptibility
+    series, derives a fixed temperature-independent paramagnetism (TIP)
+    correction from the ab initio reference point, and overlays the ab initio
+    and analytic chiT curves in the output plots.
+
+    The fitted results are written to disk, and the corresponding chiT plots are
+    generated using the resolved visualisation profile.
+
+    Args:
+        config: Application configuration object containing VT fitting options,
+            susceptibility-model input settings, ab initio file settings, and
+            output paths.
+        molecules: Molecule domain objects providing fitted susceptibility
+            tensors and electronic-state context.
+        spin: Spin quantum number ``S`` used in VT model evaluation and analytic
+            chi(T) construction.
+        susc_models: Optional susceptibility fit-model objects used to extract
+            per-component experimental standard deviations and fixed-variable
+            metadata.
+        plot_profile: Plot-style profile name resolved through the visualisation
+            theme system.
+        show_plots: Whether to display generated plots interactively.
+
+    Returns:
+        None.
+
+    Raises:
+        ValueError: If ``fix_tip_from_ab_initio`` is requested with a non-ORCA
+            ab initio source.
+        ValueError: If no ab initio temperatures fall within the experimental
+            fit window when TIP is fixed from ab initio data.
+    """
     # Define the components to fit
     fit_component = ["iso", "ax", "rho"]
 
@@ -120,7 +158,7 @@ def fit_vt(
         comp_to_attr = {"iso": "iso", "ax": "axiality", "rho": "rhombicity"}
 
         # Build the full ab initio chiT series
-        ab_series_full = build_ab_initio_chit_series(
+        ab_series_full = _build_ab_initio_chit_series(
             suscs_ab_initio,
             g_corr_iso=True,
             spin=spin,
@@ -275,3 +313,98 @@ def fit_vt(
     save_slope_intercept(fits_list, out_file)
 
     return
+
+
+def _build_ab_initio_chit_series(
+    suscs_ab_initio: list,
+    *,
+    g_corr_iso: bool = False,
+    spin: float | None = None,
+    orbit: float | None = None,
+    total_momentum_J: float | None = None,
+    g_tensor: np.ndarray | None = None,
+) -> dict[str, np.ndarray]:
+    """Project susceptibility objects onto a chiT series for VT fitting.
+
+    This helper sorts the ab initio susceptibility objects by temperature,
+    ensures irreducible tensor components are available, and returns chiT
+    component arrays on the ab initio temperature grid. The isotropic channel
+    can be taken either from the stored susceptibility ``iso`` values or
+    recomputed through the g-tensor-corrected isotropic susceptibility model.
+
+    Args:
+        suscs_ab_initio: Susceptibility domain objects to project.
+        g_corr_iso: Whether to recompute the isotropic channel with the
+            g-tensor-corrected isotropic susceptibility model.
+        spin: Spin quantum number ``S`` required when ``g_corr_iso=True``.
+        orbit: Orbital angular momentum quantum number ``L`` used when
+            ``g_corr_iso=True``.
+        total_momentum_J: Total angular momentum quantum number ``J`` used when
+            ``g_corr_iso=True``.
+        g_tensor: g-tensor as a ``(3, 3)`` array required when
+            ``g_corr_iso=True``.
+
+    Returns:
+        Dictionary with sorted temperature grid data:
+            ``temps``: Temperatures in K.
+            ``inv_t``: Inverse temperatures in K^-1.
+            ``iso``: chiT isotropic values in ``Å^3 K``.
+            ``ax``: chiT axial values in ``Å^3 K``.
+            ``rho``: chiT rhombic values in ``Å^3 K``.
+
+    Raises:
+        ValueError: If ``suscs_ab_initio`` is empty.
+        ValueError: If ``g_corr_iso=True`` but ``spin`` or ``g_tensor`` is not
+            provided.
+    """
+    if not suscs_ab_initio:
+        raise ValueError("suscs_ab_initio must be a non-empty list.")
+
+    if g_corr_iso:
+        if spin is None or g_tensor is None:
+            raise ValueError(
+                "g_corr_iso=True requires spin and g_tensor to be provided."
+            )
+
+    # Ensure irreducible components / eigenframes are available
+    for s in suscs_ab_initio:
+        s.calc_irred()
+
+    temps = np.array([float(s.temperature) for s in suscs_ab_initio], dtype=float)
+
+    order = np.argsort(temps)
+    temps = temps[order]
+    suscs_sorted = [suscs_ab_initio[i] for i in order]
+
+    with np.errstate(divide="ignore", invalid="ignore"):
+        inv_t = 1.0 / temps
+
+    if g_corr_iso:
+        iso_vals = []
+        for s in suscs_sorted:
+            iso_vals.append(
+                float(
+                    get_g_corr_iso_susc(
+                        spin=float(spin),
+                        orbit=0.0 if orbit is None else float(orbit),
+                        g_tensor=np.asarray(g_tensor, dtype=float),
+                        chi_tensors=s.tensor,
+                        total_momentum_J=total_momentum_J,
+                    )
+                )
+            )
+        iso_base = np.asarray(iso_vals, dtype=float)
+    else:
+        iso_base = np.array([float(s.iso) for s in suscs_sorted], dtype=float)
+
+    iso = iso_base * temps
+    ax = np.array([float(s.axiality) for s in suscs_sorted], dtype=float) * temps
+    rho = np.array([float(s.rhombicity) for s in suscs_sorted], dtype=float) * temps
+
+    return {
+        "temps": temps,
+        "inv_t": inv_t,
+        "iso": iso,
+        "ax": ax,
+        "rho": rho,
+    }
