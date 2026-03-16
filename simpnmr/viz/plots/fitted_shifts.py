@@ -23,6 +23,7 @@ from simpnmr.viz.layout.export import render_figure
 from simpnmr.viz.layout.label import resolve_label_layout
 from simpnmr.viz.layout.table import render_compact_table
 from simpnmr.viz.style.theme import PlotSpec
+from simpnmr.viz.utils.uncertainty import format_compact_uncertainty
 
 logger = logging.getLogger(__name__)
 
@@ -146,7 +147,8 @@ def plot_fitted_shifts(
         err = susc_model.fit_stdev.get(name)
         if name in susc_model.fit_vars and err is not None and err > 0:
             err_val = float(err) * conv
-            model_lines.append(f"{label}  {val:.3f} ± {err_val:.3f}")
+            compact_value = format_compact_uncertainty(val, err_val)
+            model_lines.append(f"{label}  {compact_value}")
         else:
             model_lines.append(f"{label}  {val:.3f}")
 
