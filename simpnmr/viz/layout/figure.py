@@ -10,7 +10,7 @@ from typing import Literal
 
 from simpnmr.app.params.plot_cfg import PlotProfile
 
-FigureVariant = Literal["standard", "vertical"]
+FigureVariant = Literal["standard", "vertical", "vertical_extended"]
 
 
 @dataclass(frozen=True, slots=True)
@@ -29,10 +29,12 @@ _FIGURE_SIZES: dict[PlotProfile, dict[FigureVariant, FigureSize]] = {
     "paper": {
         "standard": FigureSize(width=3.54, height=2.40),  # 9.00 × 6.10 cm
         "vertical": FigureSize(width=3.54, height=4.05),  # 9.00 x 10.28 cm
+        "vertical_extended": FigureSize(width=3.54, height=4.33),  # 9.00 x 11.00 cm
     },
     "poster": {
         "standard": FigureSize(width=3.54, height=2.40),  # 9.00 × 6.10 cm
         "vertical": FigureSize(width=3.54, height=4.05),  # 9.00 x 10.28 cm
+        "vertical_extended": FigureSize(width=3.54, height=4.33),  # 9.00 x 11.00 cm
     },
 }
 
