@@ -176,8 +176,9 @@ def plot_fitted_shifts(
             marker=markers[label],
             color=palette.primary,
             markersize=glyphs.ms,
-            markerfacecolor="none",
+            markerfacecolor=(0, 0, 0, 0.55),
             markeredgecolor=palette.primary,
+            markeredgewidth=0.8,
         )
 
     x_lim = ax.get_xlim()
