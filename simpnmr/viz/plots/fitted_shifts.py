@@ -99,22 +99,29 @@ def plot_fitted_shifts(
             markers[nuc.chem_math_label] = markers.pop(nuc.chem_label)
             exp[nuc.chem_math_label] = exp.pop(nuc.chem_label)
 
+    figure_variant = "vertical_extended" if len(susc_model.VARNAMES) > 3 else "vertical"
+    # TODO(viz): Move fitted-shift header/plot ratio tuning into PlotSpec so
+    # figure-layout heuristics are configured centrally rather than locally.
+    header_ratio, plot_ratio = (
+        (1.90, 4.50) if figure_variant == "vertical_extended" else (1.35, 5.05)
+    )
     fig, header_ax, ax = create_header_plot_canvas(
         spec.profile,
-        variant="vertical",
+        variant=figure_variant,
         window_title=window_title,
         layout="constrained",
-        header_ratio=1.35,
-        plot_ratio=5.05,
+        header_ratio=header_ratio,
+        plot_ratio=plot_ratio,
         hspace=0.02,
     )
 
-    fig.patch.set_facecolor("white")
-    header_ax.set_facecolor("white")
-    ax.set_facecolor("white")
     glyphs = spec.glyphs
     palette = spec.palette
     scale = spec.skin_axes(ax)
+
+    fig.patch.set_facecolor(palette.annotation_bg)
+    header_ax.set_facecolor(palette.annotation_bg)
+    ax.set_facecolor(palette.annotation_bg)
 
     if susc_units == "A3":
         conv = 1.0
@@ -134,9 +141,9 @@ def plot_fitted_shifts(
         )
 
     fit_lines = [
-        f"R²adj  {susc_model.adj_r2:.4f}",
-        f"MAE    {susc_model.mae:.1f} ppm",
-        f"RMSE   {susc_model.rmse:.1f} ppm",
+        f"R²adj: {susc_model.adj_r2:.4f}",
+        f"MAE: {susc_model.mae:.1f} ppm",
+        f"RMSE: {susc_model.rmse:.1f} ppm",
     ]
 
     model_lines: list[str] = []
@@ -148,19 +155,19 @@ def plot_fitted_shifts(
         if name in susc_model.fit_vars and err is not None and err > 0:
             err_val = float(err) * conv
             compact_value = format_compact_uncertainty(val, err_val)
-            model_lines.append(f"{label}  {compact_value}")
+            model_lines.append(f"{label}: {compact_value}")
         else:
-            model_lines.append(f"{label}  {val:.3f}")
+            model_lines.append(f"{label}: {val:.3f}")
 
     euler_lines = [
-        f"α  {int(round(molecule.susc.alpha))}°",
-        f"β  {int(round(molecule.susc.beta))}°",
-        f"γ  {int(round(molecule.susc.gamma))}°",
+        f"α: {int(round(molecule.susc.alpha))}°",
+        f"β: {int(round(molecule.susc.beta))}°",
+        f"γ: {int(round(molecule.susc.gamma))}°",
     ]
 
     blocks = [
-        ("Fit", fit_lines),
-        (f"Model ({model_unit_label})", model_lines),
+        ("Fit Stats", fit_lines),
+        (f"Mag. Susc.({model_unit_label})", model_lines),
         ("Euler Angles", euler_lines),
     ]
 
