@@ -115,9 +115,9 @@ def plot_corr_time_scatter(
         theory_r1,
         exp_r1,
         marker="o",
-        facecolors="white",
+        facecolors=(0, 0, 0, 0.55),
         edgecolors=scatter_color,
-        linewidths=1.2,
+        linewidths=0.8,
         s=(marker_size**2),
     )
 
