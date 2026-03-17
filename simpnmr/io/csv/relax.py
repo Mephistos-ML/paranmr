@@ -103,64 +103,59 @@ def save_relaxation_decomposition(
 
 
 def save_corr_time_fit_data(
-    xdata: np.ndarray,
     exp_r1: np.ndarray,
+    theory_r1: np.ndarray,
     chem_labels: np.ndarray,
     file_name: str,
-    initial_guess: np.ndarray | list[float] | None = None,
     fitted_tau_r: float | None = None,
     fitted_tau_e: float | None = None,
-    covariance: np.ndarray | None = None,
+    rsquared: float | None = None,
     comment: str = "",
     verbose: bool = True,
 ) -> None:
-    """Writes correlation-time fit data (SBM model) to a CSV file.
+    """Write correlation-time fit diagnostics to a CSV file.
 
-    The file contains per-point data (`xdata`, `chem_label`, and experimental R1)
-    and a header section with optional fit diagnostics (initial guesses, fitted
-    parameters, and covariance).
+    Per-point experimental and theoretical R1 values are written
+    row-wise, while global fit diagnostics are repeated across rows as explicit
+    columns for easier downstream parsing.
 
     Args:
-        xdata: Independent variable used in the fit (e.g. index or distance).
-        exp_r1: Experimental R1 values (s^-1) corresponding to `xdata`.
+        exp_r1: Experimental R1 values (s^-1).
+        theory_r1: Theoretical fitted R1 values (s^-1).
         chem_labels: Chemical labels corresponding to each data point.
         file_name: Output CSV file path.
-        initial_guess: Optional initial guess parameters used in the fit.
-        fitted_tau_r: Optional fitted tau_R value (s).
-        fitted_tau_e: Optional fitted tau_E value (s).
-        covariance: Optional covariance matrix returned by the fit.
+        fitted_tau_r: Optional fitted rotational correlation time ``tau_R`` (s).
+        fitted_tau_e: Optional fitted electronic correlation time ``tau_E`` (s).
+        rsquared: Optional coefficient of determination ``R^2`` for the fit.
         comment: Optional comment line appended to the file header. If provided,
             it must begin with ``#`` (or will be prefixed automatically).
-        verbose: If ``True``, prints the output file path.
+        verbose: If ``True``, logs the output file path.
 
     Returns:
         None.
     """
+    n_rows = len(chem_labels)
 
-    # Tabular data per data point
+    fitted_tau_r_value = (
+        f"{float(fitted_tau_r):.6e}" if fitted_tau_r is not None else np.nan
+    )
+    fitted_tau_e_value = (
+        f"{float(fitted_tau_e):.6e}" if fitted_tau_e is not None else np.nan
+    )
+    rsquared_value = float(rsquared) if rsquared is not None else np.nan
+
     out: dict[str, list] = {
-        "xdata": list(xdata),
         "chem_label": list(chem_labels),
         "R1_exp (s^-1)": list(exp_r1),
+        "R1_theory (s^-1)": list(theory_r1),
+        "R^2": [rsquared_value] * n_rows,
     }
+    if fitted_tau_r is not None:
+        out["fitted_tau_R (s)"] = [fitted_tau_r_value] * n_rows
+    if fitted_tau_e is not None:
+        out["fitted_tau_E (s)"] = [fitted_tau_e_value] * n_rows
 
     df = pd.DataFrame(data=out)
-
-    # Append diagnostic information that is currently printed to the terminal
-    if initial_guess is not None:
-        comment += f"initial_guess: {np.array(initial_guess).tolist()}\n"
-
-    if fitted_tau_r is not None:
-        comment += f"fitted_tau_R (s): {fitted_tau_r:.5e}\n"
-
-    if fitted_tau_e is not None:
-        comment += f"fitted_tau_E (s): {fitted_tau_e:.5e}\n"
-
-    if covariance is not None:
-        cov_array = np.array(covariance)
-        comment += f"covariance_shape: {cov_array.shape}\n"
-        comment += f"covariance_flat: {cov_array.flatten().tolist()}\n"
-
     write_csv_safe(df, file_name, comment)
 
     if verbose:
