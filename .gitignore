@@ -34,3 +34,10 @@ __pycache__/
 #   - Trailing slash ensures only directories are ignored.
 # ============================================================================
 examples/**/SIMULATIONS/
+
+# ============================================================================
+# Generated test artefacts
+# Produced by integration tests; do not version.
+# ============================================================================
+tests/data/pipelines/pcs_isosurface/csv_susceptibility_dyl1/pcs_isosurface_*.cube
+tests/data/pipelines/pcs_isosurface/nevpt2_susceptibility_p3fecl/pcs_isosurface_*.cube
