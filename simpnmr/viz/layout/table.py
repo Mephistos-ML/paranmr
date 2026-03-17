@@ -212,7 +212,7 @@ def render_compact_table(
                 transform=ax.transAxes,
                 ha=ha,
                 va="center",
-                fontsize=scale.table,
+                fontsize=scale.annotation,
                 fontweight="bold" if is_header else "normal",
             )
 
