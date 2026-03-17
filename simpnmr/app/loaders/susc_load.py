@@ -113,6 +113,37 @@ def load_susceptibility_csv(
     rows = read_susceptibilities_csv(susceptibility_file)
     suscs: list[Susceptibility] = []
 
+    has_csv_chi_iso = any(chi_iso is not None for _, _, chi_iso in rows)
+    has_rows_without_csv_chi_iso = any(chi_iso is None for _, _, chi_iso in rows)
+
+    if has_csv_chi_iso:
+        if has_rows_without_csv_chi_iso:
+            logger.info(
+                "CSV source provides chi_iso for some rows; those rows will use "
+                "the isotropic susceptibility read directly from CSV"
+            )
+        else:
+            logger.info("Isotropic susceptibility is loaded directly from CSV")
+
+    if has_rows_without_csv_chi_iso:
+        if electronic is not None:
+            logger.info(
+                "CSV rows without chi_iso will build a spin-only isotropic "
+                "susceptibility reference channel"
+            )
+            if g_tensor is not None:
+                logger.info(
+                    "g-tensor available; CSV rows without chi_iso will also "
+                    "build a g-tensor-corrected isotropic susceptibility while "
+                    "preserving the spin-only reference"
+                )
+        else:
+            logger.info(
+                "CSV rows without chi_iso have insufficient electronic-state "
+                "data; isotropic magnetic susceptibility will be skipped for "
+                "those rows"
+            )
+
     for tensor, temperature, chi_iso in rows:
         susc = build_chi_d_tensor_from_csv(
             temperature=float(temperature),
@@ -120,13 +151,8 @@ def load_susceptibility_csv(
         )
 
         if chi_iso is not None:
-            logger.info("Isotropic susceptibility is loaded directly from CSV")
             susc = build_chi_iso_from_csv(susc, chi_iso=float(chi_iso))
         elif electronic is not None:
-            logger.info(
-                "CSV source does not provide chi_iso; building spin-only "
-                "isotropic susceptibility reference channel"
-            )
             susc = build_chi_iso_spin_only(
                 susc,
                 spin=electronic.spin_S,
@@ -134,10 +160,6 @@ def load_susceptibility_csv(
                 total_momentum_J=electronic.total_J,
             )
             if g_tensor is not None:
-                logger.info(
-                    "g-tensor available; building g-tensor-corrected isotropic "
-                    "susceptibility while preserving spin-only reference"
-                )
                 susc = build_chi_iso_g_corr(
                     susc,
                     spin=electronic.spin_S,
@@ -149,11 +171,7 @@ def load_susceptibility_csv(
             else:
                 susc.iso = susc.iso_spin_only
         else:
-            logger.info(
-                "CSV source does not provide chi_iso and insufficient "
-                "electronic-state data is available; isotropic magnetic "
-                "susceptibility was skipped"
-            )
+            pass
 
         suscs.append(susc)
 
@@ -205,6 +223,19 @@ def load_susceptibility_orca(
     if not tensors:
         raise ValueError("No susceptibility data found in ORCA output")
 
+    if electronic is not None:
+        logger.info("Building spin-only isotropic susceptibility reference channel")
+        if g_tensor is not None:
+            logger.info(
+                "g-tensor available; building g-tensor-corrected isotropic "
+                "susceptibility while preserving spin-only reference"
+            )
+    else:
+        logger.info(
+            "Insufficient electronic-state data is available; isotropic "
+            "magnetic susceptibility was skipped"
+        )
+
     suscs: list[Susceptibility] = []
     for temperature, tensor_xt in tensors.items():
         susc = build_chi_d_tensor_from_orca(
@@ -213,7 +244,6 @@ def load_susceptibility_orca(
         )
 
         if electronic is not None:
-            logger.info("Building spin-only isotropic susceptibility reference channel")
             susc = build_chi_iso_spin_only(
                 susc,
                 spin=electronic.spin_S,
@@ -221,10 +251,6 @@ def load_susceptibility_orca(
                 total_momentum_J=electronic.total_J,
             )
             if g_tensor is not None:
-                logger.info(
-                    "g-tensor available; building g-tensor-corrected isotropic "
-                    "susceptibility while preserving spin-only reference"
-                )
                 susc = build_chi_iso_g_corr(
                     susc,
                     spin=electronic.spin_S,
@@ -236,10 +262,7 @@ def load_susceptibility_orca(
             else:
                 susc.iso = susc.iso_spin_only
         else:
-            logger.info(
-                "Insufficient electronic-state data is available; isotropic "
-                "magnetic susceptibility was skipped"
-            )
+            pass
 
         suscs.append(susc)
 
