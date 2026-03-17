@@ -616,6 +616,12 @@ class Molecule:
 
         self.coords = tfm.rotate_coords(self.coords, rot_arr)
 
+        if self.paramagnetic_centre is not None:
+            self.paramagnetic_centre = tfm.rotate_coords(
+                np.asarray([self.paramagnetic_centre], dtype=float),
+                rot_arr,
+            )[0]
+
         if self.chi_source_coords is not None:
             self.chi_source_coords = tfm.rotate_coords(
                 self.chi_source_coords,
