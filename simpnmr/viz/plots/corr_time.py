@@ -79,25 +79,25 @@ def plot_corr_time_scatter(
     marker_size = glyphs.ms
     annotation_size = scale.annotation
     axis_label_size = scale.axis_label
-    fit_lines = [f"R²  {rsquared:.3f}"]
+    fit_lines = [f"R²: {rsquared:.4f}"]
 
     model_lines = ["—"]
     if fix_param == "tau_r" and tau_E_fit is not None:
-        model_lines = [f"τE  {tau_E_fit:.3e} s"]
+        model_lines = [f"τE: {tau_E_fit:.3e} s"]
     elif fix_param == "tau_e" and tau_R_fit is not None:
-        model_lines = [f"τR  {tau_R_fit:.3e} s"]
+        model_lines = [f"τR: {tau_R_fit:.3e} s"]
     elif fix_param in {None, "", "none"}:
         tau_lines: list[str] = []
         if tau_R_fit is not None:
-            tau_lines.append(f"τR  {tau_R_fit:.3e} s")
+            tau_lines.append(f"τR: {tau_R_fit:.3e} s")
         if tau_E_fit is not None:
-            tau_lines.append(f"τE  {tau_E_fit:.3e} s")
+            tau_lines.append(f"τE: {tau_E_fit:.3e} s")
         if tau_lines:
             model_lines = tau_lines
 
     blocks = [
-        ("Fit", fit_lines),
-        ("Model", model_lines),
+        ("Fit Stats", fit_lines),
+        ("Corr. Time", model_lines),
     ]
 
     render_compact_table(
