@@ -51,7 +51,7 @@ SCALES: dict[PlotProfile, TypographyScale] = {
         tick_label=8,
         legend=8,
         title=10,
-        annotation=8,
+        annotation=7,
         label=8,
     ),
     # For wide figures, posters, and slides.
