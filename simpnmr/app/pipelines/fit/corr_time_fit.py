@@ -95,7 +95,6 @@ def run_fit_corr_time(config, options: FitCorrTimeRunOptions | None = None) -> i
     # Placeholders for fitted parameters and covariance
     tau_R_fit = None
     tau_E_fit = None
-    pcov = None
     initial_guess = None
 
     if (
@@ -115,19 +114,23 @@ def run_fit_corr_time(config, options: FitCorrTimeRunOptions | None = None) -> i
 
         exp_blocks = []
         for experiment in experiments:
-            labels_this = []
-            r1_this = []
+            chem_labels_block = []
+            exp_r1_block = []
             for signal in experiment.signals:
                 if (
                     signal.r1 is not None
                     and np.isfinite(signal.r1)
                     and any(signal.assignment.startswith(e) for e in elements)
                 ):
-                    labels_this.append(signal.assignment)
-                    r1_this.append(signal.r1)
-            if len(labels_this) > 0:
+                    chem_labels_block.append(signal.assignment)
+                    exp_r1_block.append(signal.r1)
+            if len(chem_labels_block) > 0:
                 exp_blocks.append(
-                    (experiment, np.array(labels_this), np.array(r1_this))
+                    (
+                        experiment,
+                        np.array(chem_labels_block),
+                        np.array(exp_r1_block),
+                    )
                 )
 
         if not exp_blocks:
@@ -156,9 +159,6 @@ def run_fit_corr_time(config, options: FitCorrTimeRunOptions | None = None) -> i
         if len(config.chem_labels_file):
             al_to_cl, al_to_cml = load_chem_labels_from_csv(config.chem_labels_file)
             base_molecule.apply_chem_labels(al_to_cl, al_to_cml)
-        label_to_chem_label = {
-            nuc.label: nuc.chem_label for nuc in base_molecule.nuclei
-        }
 
         # Prepare relaxation model inputs
         nuclei_coords = {nuc.label: nuc.coord for nuc in base_molecule.nuclei}
@@ -206,7 +206,7 @@ def run_fit_corr_time(config, options: FitCorrTimeRunOptions | None = None) -> i
 
                 theory_all = []
 
-                for experiment, labels_this, _r1_this in exp_blocks:
+                for experiment, chem_labels_block, _exp_r1_block in exp_blocks:
                     b0 = experiment.magnetic_field
                     temperature = experiment.temperature
                     omega_I_dict = {
@@ -249,8 +249,7 @@ def run_fit_corr_time(config, options: FitCorrTimeRunOptions | None = None) -> i
                         for chem_label, rate_list in r1_by_chem_label.items()
                     }
 
-                    for label in labels_this:
-                        chem_label = label_to_chem_label.get(label, label)
+                    for chem_label in chem_labels_block:
                         theory_all.append(avg_r1_by_chem_label.get(chem_label, np.nan))
 
                 return np.array(theory_all)
@@ -279,7 +278,7 @@ def run_fit_corr_time(config, options: FitCorrTimeRunOptions | None = None) -> i
 
                 theory_all = []
 
-                for experiment, labels_this, _r1_this in exp_blocks:
+                for experiment, chem_labels_block, _exp_r1_block in exp_blocks:
                     b0 = experiment.magnetic_field
                     temperature = experiment.temperature
                     omega_I_dict = {
@@ -322,8 +321,7 @@ def run_fit_corr_time(config, options: FitCorrTimeRunOptions | None = None) -> i
                         for chem_label, rate_list in r1_by_chem_label.items()
                     }
 
-                    for label in labels_this:
-                        chem_label = label_to_chem_label.get(label, label)
+                    for chem_label in chem_labels_block:
                         theory_all.append(avg_r1_by_chem_label.get(chem_label, np.nan))
 
                 return np.array(theory_all)
@@ -360,7 +358,7 @@ def run_fit_corr_time(config, options: FitCorrTimeRunOptions | None = None) -> i
 
                 theory_all = []
 
-                for experiment, labels_this, _r1_this in exp_blocks:
+                for experiment, chem_labels_block, _exp_r1_block in exp_blocks:
                     b0 = experiment.magnetic_field
                     temperature = experiment.temperature
                     omega_I_dict = {
@@ -403,8 +401,7 @@ def run_fit_corr_time(config, options: FitCorrTimeRunOptions | None = None) -> i
                         for chem_label, rate_list in r1_by_chem_label.items()
                     }
 
-                    for label in labels_this:
-                        chem_label = label_to_chem_label.get(label, label)
+                    for chem_label in chem_labels_block:
                         theory_all.append(avg_r1_by_chem_label.get(chem_label, np.nan))
 
                 return np.array(theory_all)
@@ -437,15 +434,14 @@ def run_fit_corr_time(config, options: FitCorrTimeRunOptions | None = None) -> i
 
         # Write fit diagnostics data
         save_corr_time_fit_data(
-            xdata=xdata,
             exp_r1=exp_r1,
+            theory_r1=theory_r1,
             chem_labels=chem_labels,
             file_name=os.path.join(project_dir, "corr_time_fit_diagnostics.csv"),
-            initial_guess=initial_guess,
             fitted_tau_r=tau_R_fit,
             fitted_tau_e=tau_E_fit,
-            covariance=pcov,
-            comment=f"r2: {rsquared:.6f}",
+            rsquared=rsquared,
+            comment="",
             verbose=True,
         )
 
