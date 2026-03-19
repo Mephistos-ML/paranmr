@@ -41,7 +41,7 @@ def format_compact_uncertainty(
     value: float,
     uncertainty: float | None,
     *,
-    sig_digits: int = 2,
+    sig_digits: int = 1,
 ) -> str:
     """Format ``value ± uncertainty`` as compact uncertainty notation.
 
