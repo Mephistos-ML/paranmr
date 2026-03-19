@@ -197,9 +197,12 @@ def run_predict(config, options: PredictRunOptions | None = None) -> int:
             if susc.temperature != exp.temperature:
                 logger.warning(
                     "Mismatch in Susceptibility (%.2f K) and "
-                    "Experimental (%.2f K) temperatures",
+                    "Experimental (%.2f K) temperatures. "
+                    "Proceeding with susceptibility temperature (%.2f K) "
+                    "as the active calculation temperature.",
                     susc.temperature,
                     exp.temperature,
+                    susc.temperature,
                 )
             if re.sub("[0-9]", "", exp.isotope) not in config.nuclei_include:
                 logger.warning(
