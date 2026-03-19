@@ -167,7 +167,7 @@ def plot_fitted_shifts(
 
     blocks = [
         ("Fit Stats", fit_lines),
-        (f"Mag. Susc.({model_unit_label})", model_lines),
+        (f"χ ({model_unit_label})", model_lines),
         ("Euler Angles", euler_lines),
     ]
 
