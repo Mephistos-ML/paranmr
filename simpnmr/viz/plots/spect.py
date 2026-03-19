@@ -308,7 +308,7 @@ def plot_raw_deconv_pred(
         rotation=90,
         va="center",
         ha="right",
-        fontsize=str(spec.typography.annotation),
+        fontsize=str(spec.typography.annotation - 1),
         clip_on=False,
     )
 
@@ -432,7 +432,7 @@ def plot_raw_deconv_pred(
         rotation=90,
         va="center",
         ha="right",
-        fontsize=str(spec.typography.annotation),
+        fontsize=str(spec.typography.annotation - 1),
         clip_on=False,
     )
 
