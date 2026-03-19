@@ -139,6 +139,7 @@ def run_fit_corr_time(config, options: FitCorrTimeRunOptions | None = None) -> i
         chem_labels = np.concatenate([blk[1] for blk in exp_blocks])
         exp_r1 = np.concatenate([blk[2] for blk in exp_blocks])
         xdata = np.arange(len(exp_r1))
+        plot_chem_labels = None
 
         # Load Molecule
         base_molecule = load_base_molecule(config)
@@ -159,6 +160,15 @@ def run_fit_corr_time(config, options: FitCorrTimeRunOptions | None = None) -> i
         if len(config.chem_labels_file):
             al_to_cl, al_to_cml = load_chem_labels_from_csv(config.chem_labels_file)
             base_molecule.apply_chem_labels(al_to_cl, al_to_cml)
+
+        chem_label_to_math_label = {}
+        for nuc in base_molecule.nuclei:
+            if nuc.chem_label and nuc.chem_math_label:
+                chem_label_to_math_label[nuc.chem_label] = nuc.chem_math_label
+
+        plot_chem_labels = [
+            chem_label_to_math_label.get(label, label) for label in chem_labels
+        ]
 
         # Prepare relaxation model inputs
         nuclei_coords = {nuc.label: nuc.coord for nuc in base_molecule.nuclei}
@@ -450,7 +460,7 @@ def run_fit_corr_time(config, options: FitCorrTimeRunOptions | None = None) -> i
             plot_corr_time_scatter(
                 theory_r1=theory_r1,
                 exp_r1=exp_r1,
-                chem_labels=list(chem_labels),
+                chem_labels=plot_chem_labels,
                 rsquared=rsquared,
                 fix_param=fix_param,
                 tau_R_fit=tau_R_fit,
@@ -464,7 +474,7 @@ def run_fit_corr_time(config, options: FitCorrTimeRunOptions | None = None) -> i
             plot_corr_time_by_label(
                 theory_r1=theory_r1,
                 exp_r1=exp_r1,
-                chem_labels=list(chem_labels),
+                chem_labels=plot_chem_labels,
                 spec=spec,
                 save=True,
                 show=show_plots,
