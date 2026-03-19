@@ -127,8 +127,12 @@ def resolve_label_layout(
             ]
 
     # Candidate label offsets are tried from near to far around each anchor point.
+    # Keep an explicit tier index so the scorer always prefers earlier tiers
+    # over later fallback tiers, even when a later offset has a slightly shorter
+    # Euclidean distance (for example, 7 pt axial vs 5 pt diagonal).
     candidate_offset_specs = [
         (
+            "near",
             offset_near,
             [
                 (1.0, 1.0),
@@ -138,6 +142,7 @@ def resolve_label_layout(
             ],
         ),
         (
+            "mid",
             offset_mid,
             [
                 (0.0, 1.0),
@@ -147,6 +152,7 @@ def resolve_label_layout(
             ],
         ),
         (
+            "far",
             offset_far,
             [
                 (1.0, 1.0),
@@ -156,6 +162,7 @@ def resolve_label_layout(
             ],
         ),
         (
+            "outer",
             offset_outer,
             [
                 (0.0, 1.0),
@@ -166,8 +173,8 @@ def resolve_label_layout(
         ),
     ]
     candidate_offsets = [
-        (radius * unit_dx, radius * unit_dy)
-        for radius, directions in candidate_offset_specs
+        (tier_index, radius * unit_dx, radius * unit_dy)
+        for tier_index, (_, radius, directions) in enumerate(candidate_offset_specs)
         for unit_dx, unit_dy in directions
     ]
 
@@ -198,7 +205,7 @@ def resolve_label_layout(
         ) = None
 
         # Evaluate each candidate in screen space and keep the least-penalized one.
-        for dx, dy in candidate_offsets:
+        for tier_index, dx, dy in candidate_offsets:
             ha = "left" if dx > 0 else ("right" if dx < 0 else "center")
             va = "bottom" if dy > 0 else ("top" if dy < 0 else "center")
 
@@ -214,16 +221,14 @@ def resolve_label_layout(
                 bbox.y1 + label_bbox_pad_px,
             )
 
+            label_overlap_count = sum(bbox.overlaps(prev) for prev in placed_bboxes)
+            point_overlap_count = sum(bbox.overlaps(obs) for obs in point_obstacles)
+            line_overlap_count = sum(bbox.overlaps(obs) for obs in line_obstacles)
+
             score = 0.0
-            score += weight_label_overlap * sum(
-                bbox.overlaps(prev) for prev in placed_bboxes
-            )
-            score += weight_point_overlap * sum(
-                bbox.overlaps(obs) for obs in point_obstacles
-            )
-            score += weight_line_overlap * sum(
-                bbox.overlaps(obs) for obs in line_obstacles
-            )
+            score += weight_label_overlap * label_overlap_count
+            score += weight_point_overlap * point_overlap_count
+            score += weight_line_overlap * line_overlap_count
 
             # Penalize labels that leave the visible plotting area.
             out_of_bounds = (
@@ -233,13 +238,19 @@ def resolve_label_layout(
                 + max(bbox.y1 - safe_bbox.y1, 0.0)
             )
             score += weight_out_of_bounds * out_of_bounds
-            score += weight_offset_distance * float(np.hypot(dx, dy))
+            score += weight_offset_distance * float(tier_index)
 
             state = (score, (dx, dy), ha, va, bbox)
             if best_state is None or score < best_state[0]:
                 best_state = state
 
-            if score == 0.0:
+            if (
+                label_overlap_count == 0
+                and point_overlap_count == 0
+                and line_overlap_count == 0
+                and out_of_bounds == 0.0
+                and tier_index == 0
+            ):
                 break
 
         # Commit the best candidate and reserve its screen-space footprint.
