@@ -52,6 +52,7 @@ from simpnmr.io.qc.backends.orca.geom import read_orca5_output_xyz  # TODO: remo
 from simpnmr.io.xyz import xyz_write
 
 # Visualisation
+from simpnmr.viz.plots.orb_dep import plot_orbital_shift_distance_dependence
 from simpnmr.viz.plots.shifts import plot_shift_contrib, plot_shift_spread
 from simpnmr.viz.plots.spect import plot_pred_spectrum, plot_raw_deconv_pred
 from simpnmr.viz.style.theme import apply_profile
@@ -331,6 +332,25 @@ def run_predict(config, options: PredictRunOptions | None = None) -> int:
                 ),
                 order="descending",
             )
+
+            if molecule.metadata.get("hyperfine", {}).get("orbital_contribution") == (
+                "available"
+            ):
+                plot_orbital_shift_distance_dependence(
+                    molecule,
+                    spec=spec,
+                    save=True,
+                    show=options.runtime.show_plots,
+                    save_name=os.path.join(
+                        config.project_name,
+                        f"pred_orbital_distance_dependence_{molecule.susc.temperature:.2f}_K",
+                    ),
+                    verbose=True,
+                    window_title=(
+                        f"Orbital shift distance dependence at {susc.temperature:.2f} K"
+                    ),
+                    order="ascending",
+                )
 
         shift_range = [
             np.min([nuc.shift.avg for nuc in molecule.nuclei]),
