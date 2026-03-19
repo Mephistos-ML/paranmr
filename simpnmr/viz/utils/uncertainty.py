@@ -105,6 +105,5 @@ def format_compact_uncertainty(
     )
 
     uncertainty_digits = f"{scaled_uncertainty:0{sig_digits}d}"
-    uncertainty_digits = uncertainty_digits.rstrip("0") or "0"
 
     return f"{value_str}({uncertainty_digits})"
