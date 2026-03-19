@@ -97,7 +97,7 @@ def plot_corr_time_scatter(
             model_lines = tau_lines
 
     blocks = [
-        ("Fit Stats", fit_lines),
+        ("Fit Statistics", fit_lines),
         ("Corr. Time", model_lines),
     ]
 
