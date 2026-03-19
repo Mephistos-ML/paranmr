@@ -10,6 +10,7 @@ import logging
 import numpy as np
 from matplotlib import pyplot as plt
 from matplotlib import ticker
+from matplotlib.colors import to_rgba
 
 from simpnmr.viz.layout.canvas import create_canvas, create_header_plot_canvas
 from simpnmr.viz.layout.export import render_figure
@@ -115,7 +116,7 @@ def plot_corr_time_scatter(
         theory_r1,
         exp_r1,
         marker="o",
-        facecolors=(0, 0, 0, 0.55),
+        facecolors=to_rgba(scatter_color, alpha=0.55),
         edgecolors=scatter_color,
         linewidths=0.8,
         s=(marker_size**2),
@@ -217,18 +218,25 @@ def plot_corr_time_by_label(
     ax.plot(
         xpos,
         exp_r1,
-        "o",
+        linestyle="none",
+        marker="o",
         label="Experimental $R_1$",
         markersize=marker_size,
-        color=palette.highlight,
+        markerfacecolor=to_rgba(palette.highlight, alpha=0.55),
+        markeredgecolor=palette.highlight,
+        markeredgewidth=0.8,
     )
+
     ax.plot(
         xpos,
         theory_r1,
-        "s",
+        linestyle="none",
+        marker="s",
         label="Fitted Theory $R_1$",
         markersize=marker_size,
-        color=palette.auxiliary,
+        markerfacecolor=to_rgba(palette.auxiliary, alpha=0.55),
+        markeredgecolor=palette.auxiliary,
+        markeredgewidth=0.8,
     )
 
     ax.set_xticks(xpos)
