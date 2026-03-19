@@ -777,8 +777,8 @@ class IsoAxRhoFitter(SusceptibilityModel):
 
     VARNAMES_MM = {
         "iso": r"$\chi_\mathregular{iso}$",
-        "ax": r"$\chi_\mathregular{ax}$",
-        "rho_over_ax": r"$\chi_\mathregular{rho} / \chi_\mathregular{ax}$",
+        "ax": r"$\Delta\chi_\mathregular{ax}$",
+        "rho_over_ax": r"$\rho / \Delta\chi_\mathregular{ax}$",
     }
 
     UNITS_MM = {
