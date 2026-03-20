@@ -16,6 +16,7 @@ from simpnmr.viz.layout.canvas import create_canvas, create_header_plot_canvas
 from simpnmr.viz.layout.export import render_figure
 from simpnmr.viz.layout.table import render_compact_table
 from simpnmr.viz.style.theme import PlotSpec
+from simpnmr.viz.utils.uncertainty import format_compact_uncertainty
 
 logger = logging.getLogger(__name__)
 
@@ -145,15 +146,17 @@ def plot_isoaxrho(
 
         intercept = p.get("intercept")
         intercept_err = p.get("intercept_err")
-        if intercept is not None and intercept_err is not None:
-            model_items.append(f"Intercept: {intercept:.1f} ± {intercept_err:.1f}")
+        if intercept is not None and intercept_err is not None and intercept_err > 0:
+            model_items.append(
+                f"Intercept: {format_compact_uncertainty(intercept, intercept_err)}"
+            )
         elif intercept is not None:
             model_items.append(f"Intercept: {intercept:.1f}")
 
         slope = p.get("slope")
         slope_err = p.get("slope_err")
-        if slope is not None and slope_err is not None:
-            model_items.append(f"Slope: {slope:.1f} ± {slope_err:.1f}")
+        if slope is not None and slope_err is not None and slope_err > 0:
+            model_items.append(f"Slope: {format_compact_uncertainty(slope, slope_err)}")
         elif slope is not None:
             model_items.append(f"Slope: {slope:.1f}")
 
