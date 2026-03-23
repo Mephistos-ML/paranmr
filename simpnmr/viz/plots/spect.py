@@ -106,22 +106,6 @@ def plot_pred_spectrum(
     sorted_labels = [label for label, _ in sorted_shifts_labels]
     sorted_shifts = [shift for _, shift in sorted_shifts_labels]
 
-    # Grid y value closest to peak position
-    closest_y = [y_intensity[find_index_of_nearest(x_grid, sh)] for sh in sorted_shifts]
-
-    ax.plot(
-        sorted_shifts,
-        closest_y,
-        lw=0,
-        marker="o",
-        linestyle="None",
-        markersize=glyphs.ms - 4,
-        markerfacecolor=palette.highlight,
-        markeredgecolor=palette.highlight,
-        markeredgewidth=max(0.9, 0.6 * glyphs.line_lw),
-        zorder=5,
-    )
-
     _annotate_peaks_with_barrier(
         ax,
         x_grid=x_grid,
