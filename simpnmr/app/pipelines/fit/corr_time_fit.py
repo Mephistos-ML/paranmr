@@ -39,7 +39,7 @@ from simpnmr.io.csv.relax import save_corr_time_fit_data
 from simpnmr.io.xyz import xyz_write
 
 # Visualisation
-from simpnmr.viz.plots.corr_time import plot_corr_time_by_label, plot_corr_time_scatter
+from simpnmr.viz.plots.corr_time import plot_corr_time_contrib, plot_corr_time_scatter
 from simpnmr.viz.style.theme import apply_profile
 
 logger = logging.getLogger(__name__)
@@ -555,14 +555,17 @@ def run_fit_corr_time(config, options: FitCorrTimeRunOptions | None = None) -> i
                 save_name=os.path.join(project_dir, "experimental_vs_fitted_R1.pdf"),
                 verbose=True,
             )
-            plot_corr_time_by_label(
+            plot_corr_time_contrib(
                 theory_r1=theory_r1,
                 exp_r1=exp_r1,
+                theory_r1_dipolar=fitted_rows["dipolar"],
+                theory_r1_contact=fitted_rows["contact"],
+                theory_r1_curie=fitted_rows["curie"],
                 chem_labels=plot_chem_labels,
                 spec=spec,
                 save=True,
                 show=show_plots,
-                save_name=os.path.join(project_dir, "r1_fit_comparison.pdf"),
+                save_name=os.path.join(project_dir, "r1_fit_contributions.pdf"),
                 verbose=True,
             )
 
