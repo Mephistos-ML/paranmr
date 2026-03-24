@@ -16,6 +16,7 @@ from collections import defaultdict
 import numpy as np
 from scipy.optimize import curve_fit
 
+# Application layer
 from simpnmr.app.loaders.elstate_load import load_electronic_state
 from simpnmr.app.loaders.exp_load import load_experiments
 from simpnmr.app.loaders.hfc_load import load_hyperfines
@@ -23,13 +24,21 @@ from simpnmr.app.loaders.labels_load import load_chem_labels_from_csv
 from simpnmr.app.loaders.mol_load import load_base_molecule
 from simpnmr.app.loaders.paramag_centre_load import load_paramagnetic_centre
 from simpnmr.app.params.options import FitCorrTimeRunOptions
+
+# Core / domain
 from simpnmr.core.const.gammas import NUCLEAR_GAMMAS
 from simpnmr.core.const.physics import EGAMMA
 from simpnmr.core.conv.ang_to_freq import angstrom_to_mhz
 from simpnmr.core.relaxation.eval import evaluate_relaxation_rates
+
+# Tools
 from simpnmr.core.util.strings import remove_numbers
+
+# IO layer
 from simpnmr.io.csv.relax import save_corr_time_fit_data
 from simpnmr.io.xyz import xyz_write
+
+# Visualisation
 from simpnmr.viz.plots.corr_time import plot_corr_time_by_label, plot_corr_time_scatter
 from simpnmr.viz.style.theme import apply_profile
 
