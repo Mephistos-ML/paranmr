@@ -176,7 +176,7 @@ def plot_isoaxrho(
         # Axis labels/styling
         ax.set_xlabel(r"$1/T\;10^{3}$ (K$^{-1}$)")
         chi_sub = _chiT_label_map.get(component, component)
-        ax.set_ylabel(rf"$\chi T^{{\mathrm{{red}}}}_{{{chi_sub}}}$")
+        ax.set_ylabel(rf"$\Delta\chi T^{{\mathrm{{red}}}}_{{{chi_sub}}}$")
         ax.yaxis.set_minor_locator(ticker.AutoMinorLocator())
         ax.xaxis.set_minor_locator(ticker.AutoMinorLocator())
 
@@ -363,12 +363,13 @@ def plot_exp_vs_ab_initio(
         ax.grid(True, which="major", linestyle="-", linewidth=0.6, alpha=0.25)
         ax.grid(True, which="minor", linestyle=":", linewidth=0.4, alpha=0.15)
 
-        # Add 10% padding on y-axis
+        # Add asymmetric padding on y-axis
         y_min, y_max = ax.get_ylim()
         y_range = y_max - y_min
         if np.isfinite(y_range) and y_range > 0:
-            pad = 0.20 * y_range
-            ax.set_ylim(y_min - pad, y_max + pad)
+            lower_pad = 0.10 * y_range
+            upper_pad = 0.40 * y_range
+            ax.set_ylim(y_min - lower_pad, y_max + upper_pad)
 
         # Secondary top axis: T(K)
         def _inv_to_t(inv_plot: float | np.ndarray) -> float | np.ndarray:
@@ -389,7 +390,7 @@ def plot_exp_vs_ab_initio(
         spec.skin_axes(ax)
         spec.skin_axes(top_ax)
 
-        ax.legend(loc="upper left", ncol=1)
+        ax.legend(loc="upper left", ncol=2)
 
         comp_save_name = f"{save_name}_{component}"
 
