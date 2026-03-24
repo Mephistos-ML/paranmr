@@ -354,7 +354,7 @@ def plot_exp_vs_ab_initio(
         # Axis labels/styling
         ax.set_xlabel(r"$1/T\;10^{3}$ (K$^{-1}$)")
         chi_sub = _chiT_label_map.get(component, component)
-        ax.set_ylabel(rf"$\chi T^{{\mathrm{{red}}}}_{{{chi_sub}}}$")
+        ax.set_ylabel(rf"$\Delta\chi T^{{\mathrm{{red}}}}_{{{chi_sub}}}$")
 
         ax.yaxis.set_minor_locator(ticker.AutoMinorLocator())
         ax.xaxis.set_minor_locator(ticker.AutoMinorLocator())
