@@ -23,38 +23,6 @@ from simpnmr.tools.coords import xyz_fmt as xyzf
 logger = logging.getLogger(__name__)
 
 
-class Relaxation:
-    """Holds calculated relaxation rates for a nucleus.
-
-    Attributes:
-        r1: Longitudinal relaxation rate (s^-1).
-        r2: Transverse relaxation rate (s^-1).
-    """
-
-    def __init__(
-        self,
-        r1: float | None = None,
-        r2: float | None = None,
-        dipolar_r1: float | None = None,
-        contact_r1: float | None = None,
-        curie_r1: float | None = None,
-        dipolar_r2: float | None = None,
-        contact_r2: float | None = None,
-        curie_r2: float | None = None,
-    ) -> None:
-        self.r1 = r1
-        self.r2 = r2
-        self.dipolar_r1 = dipolar_r1
-        self.contact_r1 = contact_r1
-        self.curie_r1 = curie_r1
-        self.dipolar_r2 = dipolar_r2
-        self.contact_r2 = contact_r2
-        self.curie_r2 = curie_r2
-
-
-# Add setters and properties as needed
-
-
 class Nucleus:
     r"""Container for nucleus-specific data.
 
