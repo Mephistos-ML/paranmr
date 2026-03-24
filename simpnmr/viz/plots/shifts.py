@@ -177,7 +177,7 @@ def plot_shift_spread(
         legend_markers.append(
             mpatches.Patch(color=_violin["bodies"][0].get_facecolor().flatten()),
         )
-        legend_labels.append("Fermi")
+        legend_labels.append("FC")
 
     # Pseudo contact shift violin plot
     if "pc" in terms:
@@ -196,7 +196,7 @@ def plot_shift_spread(
         legend_markers.append(
             mpatches.Patch(color=_violin["bodies"][0].get_facecolor().flatten()),
         )
-        legend_labels.append("Pseudo")
+        legend_labels.append("PCS")
 
     # Diamagnetic shift violin plot
     if "d" in terms:
@@ -216,7 +216,7 @@ def plot_shift_spread(
         legend_markers.append(
             mpatches.Patch(color=_violin["bodies"][0].get_facecolor().flatten()),
         )
-        legend_labels.append("Dia")
+        legend_labels.append("Dia.")
 
     # Add zero line to y axis
     ax.hlines(
@@ -405,7 +405,7 @@ def plot_shift_contrib(
             (xvals + width * widthscaler),
             [fc[o] for o in order],
             width,
-            label="Fermi",
+            label="FC",
             color=shift_colours.fc,
         )
         widthscaler += 1
@@ -420,7 +420,7 @@ def plot_shift_contrib(
             (xvals + width * widthscaler),
             [pc[o] for o in order],
             width,
-            label="Pseudo",
+            label="PCS",
             color=shift_colours.pc,
         )
         widthscaler += 1
