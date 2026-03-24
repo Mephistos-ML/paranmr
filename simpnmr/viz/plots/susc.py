@@ -169,7 +169,7 @@ def plot_isoaxrho(
         y_min, y_max = ax.get_ylim()
         y_range = y_max - y_min
         if np.isfinite(y_range) and y_range > 0:
-            y_pad_frac = 0.20
+            y_pad_frac = 0.10
             pad = y_pad_frac * y_range
             ax.set_ylim(y_min - pad, y_max + pad)
 
@@ -213,7 +213,7 @@ def plot_isoaxrho(
             ],
             spec=spec,
         )
-        ax.legend(loc="upper left", ncol=1)
+        ax.legend(loc="best", ncol=1)
 
         comp_save_name = f"{save_name}_{component}"
 
