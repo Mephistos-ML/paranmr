@@ -164,24 +164,33 @@ def plot_corr_time_scatter(
     return fig, ax
 
 
-def plot_corr_time_by_label(
+def plot_corr_time_contrib(
     *,
     theory_r1: np.ndarray,
+    theory_r1_dipolar: np.ndarray | None = None,
+    theory_r1_contact: np.ndarray | None = None,
+    theory_r1_curie: np.ndarray | None = None,
     exp_r1: np.ndarray,
     chem_labels: list[str],
     spec: PlotSpec,
     save: bool = True,
     show: bool = True,
-    save_name: str = "r1_fit_comparison.pdf",
+    save_name: str = "r1_fit_contributions.pdf",
     verbose: bool = True,
 ) -> tuple[plt.Figure, plt.Axes]:
-    """Plot experimental and fitted ``R1`` values by chemical label.
+    """Plot decomposed fitted ``R1`` contributions by chemical label.
 
-    This helper renders a categorical comparison plot that shows experimental
-    and fitted theoretical ``R1`` values for each chemical label.
+    This helper renders a component-style comparison plot for fitted ``R1``
+    values, analogous to the shift-contribution visualisation used elsewhere in
+    the codebase. Experimental and total fitted ``R1`` values are shown as
+    markers, while individual fitted ``R1`` contributions are shown as separate
+    component series by chemical label.
 
     Args:
         theory_r1: Fitted theoretical ``R1`` values.
+        theory_r1_dipolar: Optional fitted dipolar contribution to ``R1``.
+        theory_r1_contact: Optional fitted contact contribution to ``R1``.
+        theory_r1_curie: Optional fitted Curie contribution to ``R1``.
         exp_r1: Experimental ``R1`` values.
         chem_labels: Chemical labels corresponding to the plotted points.
         spec: Optional plot specification used for styling.
@@ -191,63 +200,109 @@ def plot_corr_time_by_label(
         verbose: Whether to emit an info log when the figure is saved.
 
     Returns:
-        Tuple of ``(figure, axes)`` for the rendered per-label comparison plot.
+        Tuple of ``(figure, axes)`` for the rendered contribution plot.
     """
+    xvals = np.arange(len(chem_labels), dtype=float)
 
-    glyphs = spec.glyphs
-    palette = spec.palette
+    order_idx = np.argsort(exp_r1)[::-1]
+    chem_labels_ordered = [chem_labels[idx] for idx in order_idx]
+    theory_r1_ordered = theory_r1[order_idx]
+    exp_r1_ordered = exp_r1[order_idx]
+
+    component_series: list[tuple[str, np.ndarray, str]] = []
+    shift_colours = spec.shift_colours
+
+    if theory_r1_dipolar is not None:
+        component_series.append(
+            ("Dipolar", theory_r1_dipolar[order_idx], shift_colours.pc)
+        )
+    if theory_r1_contact is not None:
+        component_series.append(
+            ("Contact", theory_r1_contact[order_idx], shift_colours.fc)
+        )
+    if theory_r1_curie is not None:
+        component_series.append(
+            ("Curie", theory_r1_curie[order_idx], shift_colours.dia)
+        )
+
+    width = 1 / (len(component_series) + 1) if component_series else 0.8
 
     fig, ax = create_canvas(
         spec.profile,
         variant="standard",
         layout="constrained",
     )
-    fig.patch.set_facecolor(palette.annotation_bg)
-    ax.set_facecolor(palette.annotation_bg)
+    glyphs = spec.glyphs
     scale = spec.skin_axes(ax)
-    ax.grid(axis="x", ls="--", which="minor", color=palette.grid)
-    ax.grid(False, axis="y")
-    ax.set_axisbelow(True)
-    marker_size = glyphs.ms
-    axis_label_size = scale.axis_label
-    title_size = scale.title
+    palette = spec.palette
 
-    xvals = np.arange(len(chem_labels), dtype=float)
-    xpos = xvals + 0.5
+    widthscaler = 1
 
     ax.plot(
-        xpos,
-        exp_r1,
-        linestyle="none",
+        (xvals + 0.5),
+        theory_r1_ordered,
+        label="Total",
+        color=shift_colours.total,
+        lw=0,
+        marker="x",
+        markersize=(glyphs.ms if glyphs is not None else 7),
+        zorder=4,
+    )
+
+    for label, values, color in component_series:
+        ax.bar(
+            (xvals + width * widthscaler),
+            values,
+            width,
+            label=label,
+            color=color,
+            zorder=2,
+        )
+        widthscaler += 1
+
+    y_arrays = [theory_r1_ordered, exp_r1_ordered]
+    y_arrays.extend(values for _, values, _ in component_series)
+    y_concat = np.concatenate(y_arrays)
+    y_min = float(np.min(y_concat))
+    y_max = float(np.max(y_concat))
+    y_span = y_max - y_min
+    y_pad = 0.1 * y_span if y_span > 0 else 0.1 * max(abs(y_max), 1.0)
+
+    ax.plot(
+        (xvals + 0.5),
+        exp_r1_ordered,
+        label="Exp.",
+        color=palette.primary,
+        lw=0,
         marker="o",
-        label="Experimental $R_1$",
-        markersize=marker_size,
-        markerfacecolor=to_rgba(palette.highlight, alpha=0.55),
-        markeredgecolor=palette.highlight,
-        markeredgewidth=0.8,
+        fillstyle="none",
+        markersize=(glyphs.ms if glyphs is not None else 7),
+        zorder=5,
     )
 
-    ax.plot(
-        xpos,
-        theory_r1,
-        linestyle="none",
-        marker="s",
-        label="Fitted Theory $R_1$",
-        markersize=marker_size,
-        markerfacecolor=to_rgba(palette.auxiliary, alpha=0.55),
-        markeredgecolor=palette.auxiliary,
-        markeredgewidth=0.8,
+    ax.hlines(
+        0.0,
+        0,
+        len(chem_labels_ordered),
+        color=palette.primary,
+        lw=(glyphs.line_lw if glyphs is not None else 0.5),
     )
-
-    ax.set_xticks(xpos)
-    ax.set_xticklabels(chem_labels, rotation=45)
+    ax.grid(axis="x", ls="--", which="minor")
     ax.xaxis.set_minor_locator(ticker.MultipleLocator(1))
+
+    ax.set_ylabel(r"$R_1$ (s$^{-1}$)")
+    ax.set_ylim(y_min - y_pad, y_max + y_pad)
+    ax.set_xlim([-0.5, xvals[-1] + 1.5])
+
+    ax.set_xticks(xvals + 0.5)
+    ax.set_xticklabels(chem_labels_ordered, rotation=45)
+    ax.tick_params(axis="x", labelsize=scale.axis_label)
+
+    ax.yaxis.set_major_locator(ticker.AutoLocator())
+    ax.yaxis.set_minor_locator(ticker.AutoMinorLocator())
+
     ax.xaxis.set_tick_params("major", length=0)
-    ax.xaxis.set_tick_params("minor", length=0)
-    ax.xaxis.set_minor_formatter(ticker.NullFormatter())
-    ax.set_xlabel("Chemical Label", fontsize=axis_label_size)
-    ax.set_ylabel("$R_1$ (s$^{-1}$)", fontsize=axis_label_size)
-    ax.set_title("Experimental vs Theoretical $R_1$ (s$^{-1}$)", fontsize=title_size)
+
     ax.legend(loc="best")
 
     render_figure(
@@ -256,6 +311,8 @@ def plot_corr_time_by_label(
         show=show,
         save_name=save_name,
     )
+
     if save and verbose:
-        logger.info("Saved correlation-time per-label plot to %s", save_name)
+        logger.info("Correlation-time contribution plot saved to %s", save_name)
+
     return fig, ax
