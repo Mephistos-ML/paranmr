@@ -7,12 +7,8 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 
+from simpnmr.core.domain.relax import RelaxationChannels, RelaxationEvaluation
 from simpnmr.core.relaxation import gueron, sbm
-
-# TODO(core): Refactor evaluate_relaxation_rates to consume a domain-derived
-# relaxation context/system object for static molecule/electronic/HFC inputs,
-# while keeping only per-calculation conditions (field, temperature, tau values)
-# as explicit call-time arguments.
 
 
 def evaluate_relaxation_rates(
@@ -35,13 +31,14 @@ def evaluate_relaxation_rates(
     tau_e2: float | None = None,
     compute_r1: bool = True,
     compute_r2: bool = False,
-) -> tuple[dict[str, float] | None, dict[str, float] | None]:
+) -> RelaxationEvaluation:
     """Evaluate nucleus-resolved relaxation rates for a selected formalism.
 
     This helper centralizes the one-and-the-same formalism selection logic used
     by both correlation-time fitting and relaxation-aware prediction workflows.
-    It returns raw per-nucleus rates and leaves any chemical-label averaging or
-    linewidth conversion to the caller.
+    It returns a domain-level decomposition of per-nucleus relaxation channels
+    and leaves any chemical-label averaging or linewidth conversion to the
+    caller.
 
     Args:
         relaxation_model: Relaxation model selector. Supported values are
@@ -70,8 +67,9 @@ def evaluate_relaxation_rates(
         compute_r2: Whether to evaluate ``R2`` rates.
 
     Returns:
-        Tuple ``(rates_r1, rates_r2)`` where each entry is either a
-        nucleus-label-to-rate mapping or ``None`` when not requested.
+        A ``RelaxationEvaluation`` containing per-nucleus ``R1`` and ``R2``
+        channel decompositions. Total rates are derived from the stored
+        physical contributions.
 
     Raises:
         ValueError: If the requested formalism lacks required inputs.
@@ -80,7 +78,7 @@ def evaluate_relaxation_rates(
     model = relaxation_model.strip().lower()
 
     if not compute_r1 and not compute_r2:
-        return None, None
+        return RelaxationEvaluation(relaxation_model=relaxation_model)
 
     def _require(name: str, value) -> None:
         if value is None:
@@ -88,8 +86,8 @@ def evaluate_relaxation_rates(
                 f"{name} is required for relaxation_model={relaxation_model!r}"
             )
 
-    rates_r1: dict[str, float] | None = None
-    rates_r2: dict[str, float] | None = None
+    r1_channels: RelaxationChannels | None = None
+    r2_channels: RelaxationChannels | None = None
 
     if model == "sbm":
         _require("A_iso_dict", A_iso_dict)
@@ -119,10 +117,11 @@ def evaluate_relaxation_rates(
                 spin,
                 total_momentum_J,
             )
-            rates_r1 = {
-                label: sbm_dipolar_r1_rates[label] + sbm_contact_r1_rates[label]
-                for label in labels
-            }
+            r1_channels = RelaxationChannels(
+                dipolar=sbm_dipolar_r1_rates,
+                contact=sbm_contact_r1_rates,
+                curie=None,
+            )
         if compute_r2:
             _require("tau_c1", tau_c1)
             _require("tau_c2", tau_c2)
@@ -151,10 +150,11 @@ def evaluate_relaxation_rates(
                 spin,
                 total_momentum_J,
             )
-            rates_r2 = {
-                label: sbm_dipolar_r2_rates[label] + sbm_contact_r2_rates[label]
-                for label in labels
-            }
+            r2_channels = RelaxationChannels(
+                dipolar=sbm_dipolar_r2_rates,
+                contact=sbm_contact_r2_rates,
+                curie=None,
+            )
 
     elif model == "curie":
         _require("temperature", temperature)
@@ -171,7 +171,11 @@ def evaluate_relaxation_rates(
                 orbit,
                 total_momentum_J,
             )
-            rates_r1 = {label: curie_r1_rates[label] for label in labels}
+            r1_channels = RelaxationChannels(
+                dipolar=None,
+                contact=None,
+                curie=curie_r1_rates,
+            )
         if compute_r2:
             curie_r2_rates = gueron.calc_r2_curie(
                 labels,
@@ -184,7 +188,11 @@ def evaluate_relaxation_rates(
                 orbit,
                 total_momentum_J,
             )
-            rates_r2 = {label: curie_r2_rates[label] for label in labels}
+            r2_channels = RelaxationChannels(
+                dipolar=None,
+                contact=None,
+                curie=curie_r2_rates,
+            )
 
     elif model in {"sbm curie", "curie sbm"}:
         _require("A_iso_dict", A_iso_dict)
@@ -227,12 +235,11 @@ def evaluate_relaxation_rates(
                 orbit,
                 total_momentum_J,
             )
-            rates_r1 = {
-                label: sbm_dipolar_r1_rates[label]
-                + sbm_contact_r1_rates[label]
-                + curie_r1_rates[label]
-                for label in labels
-            }
+            r1_channels = RelaxationChannels(
+                dipolar=sbm_dipolar_r1_rates,
+                contact=sbm_contact_r1_rates,
+                curie=curie_r1_rates,
+            )
         if compute_r2:
             _require("tau_c1", tau_c1)
             _require("tau_c2", tau_c2)
@@ -272,14 +279,17 @@ def evaluate_relaxation_rates(
                 orbit,
                 total_momentum_J,
             )
-            rates_r2 = {
-                label: sbm_dipolar_r2_rates[label]
-                + sbm_contact_r2_rates[label]
-                + curie_r2_rates[label]
-                for label in labels
-            }
+            r2_channels = RelaxationChannels(
+                dipolar=sbm_dipolar_r2_rates,
+                contact=sbm_contact_r2_rates,
+                curie=curie_r2_rates,
+            )
 
     else:
         raise ValueError(f"Unknown relaxation model: {relaxation_model!r}")
 
-    return rates_r1, rates_r2
+    return RelaxationEvaluation(
+        relaxation_model=relaxation_model,
+        r1=r1_channels,
+        r2=r2_channels,
+    )

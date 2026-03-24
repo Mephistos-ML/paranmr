@@ -11,7 +11,6 @@ from __future__ import annotations
 
 import logging
 import os
-from collections import defaultdict
 
 import numpy as np
 from scipy.optimize import curve_fit
@@ -24,6 +23,7 @@ from simpnmr.app.loaders.labels_load import load_chem_labels_from_csv
 from simpnmr.app.loaders.mol_load import load_base_molecule
 from simpnmr.app.loaders.paramag_centre_load import load_paramagnetic_centre
 from simpnmr.app.params.options import FitCorrTimeRunOptions
+from simpnmr.app.policies.relax import average_relaxation_rates_by_chem_label
 
 # Core / domain
 from simpnmr.core.const.gammas import NUCLEAR_GAMMAS
@@ -43,6 +43,150 @@ from simpnmr.viz.plots.corr_time import plot_corr_time_by_label, plot_corr_time_
 from simpnmr.viz.style.theme import apply_profile
 
 logger = logging.getLogger(__name__)
+
+
+def _evaluate_relaxation_rows(
+    *,
+    observable: str,
+    exp_blocks,
+    relaxation_model: str,
+    nuclei_coords: dict[str, np.ndarray],
+    electron_coords: np.ndarray,
+    gamma_I_dict: dict[str, float],
+    spin: float,
+    orbit: float,
+    total_momentum_J: float,
+    A_fc_dict: dict[str, float],
+    base_molecule,
+    tau_R: float,
+    tau_E: float,
+) -> dict[str, np.ndarray | None]:
+    """Evaluate row-aligned relaxation outputs for correlation-time workflows.
+
+    This helper evaluates the canonical per-nucleus relaxation decomposition for
+    the supplied correlation times, projects the selected observable onto
+    chemical labels, and returns row-aligned arrays matching the diagnostic and
+    fitting order used by ``exp_blocks``.
+
+    Args:
+        observable: Relaxation observable to evaluate. Supported values are
+            ``"r1"`` and ``"r2"``.
+        exp_blocks: Experimental blocks used by the fitting workflow.
+        relaxation_model: Relaxation model selector passed to the shared
+            evaluator.
+        nuclei_coords: Mapping from atom label to Cartesian coordinates.
+        electron_coords: Paramagnetic-centre coordinates.
+        gamma_I_dict: Mapping from atom label to nuclear gyromagnetic ratio.
+        spin: Electronic spin quantum number.
+        orbit: Electronic orbital angular momentum quantum number.
+        total_momentum_J: Total angular momentum quantum number.
+        A_fc_dict: Mapping from atom label to isotropic hyperfine coupling.
+        base_molecule: Molecule providing chemical-label mappings.
+        tau_R: Rotational correlation time.
+        tau_E: Electronic correlation time.
+
+    Returns:
+        Dictionary with row-aligned arrays for ``total``, ``dipolar``,
+        ``contact``, and ``curie``. Optional channels are returned as ``None``
+        when absent for the selected model.
+
+    Raises:
+        ValueError: If `observable` is not ``"r1"`` or ``"r2"``.
+    """
+    if observable not in {"r1", "r2"}:
+        raise ValueError(
+            f"Unsupported relaxation observable: {observable!r}. Expected 'r1' or 'r2'."
+        )
+    tau_c1 = 1.0 / ((1.0 / tau_R) + (1.0 / tau_E))
+    tau_c2 = tau_c1
+
+    total_all: list[float] = []
+    dipolar_all: list[float] = []
+    contact_all: list[float] = []
+    curie_all: list[float] = []
+
+    has_dipolar = False
+    has_contact = False
+    has_curie = False
+
+    for experiment, chem_labels_block, _exp_r1_block in exp_blocks:
+        b0 = experiment.magnetic_field
+        temperature = experiment.temperature
+        omega_I_dict = {label: -gamma_I_dict[label] * b0 for label in nuclei_coords}
+        omega_S = -EGAMMA * b0 * 2 * np.pi * 1e6
+
+        relaxation_eval = evaluate_relaxation_rates(
+            relaxation_model=relaxation_model,
+            nuclei_coords=nuclei_coords,
+            electron_coords=electron_coords,
+            gamma_I_dict=gamma_I_dict,
+            omega_I_dict=omega_I_dict,
+            omega_S=omega_S,
+            spin=spin,
+            orbit=orbit,
+            total_momentum_J=total_momentum_J,
+            A_iso_dict=A_fc_dict,
+            temperature=temperature,
+            tau_R=tau_R,
+            tau_c1=tau_c1,
+            tau_c2=tau_c2,
+            tau_e2=tau_E,
+            compute_r1=observable == "r1",
+            compute_r2=observable == "r2",
+        )
+        channels = relaxation_eval.r1 if observable == "r1" else relaxation_eval.r2
+        rates_total = channels.total
+
+        if rates_total is None:
+            raise ValueError(
+                "Shared relaxation evaluator returned no total rates for "
+                f"observable={observable!r}"
+            )
+
+        avg_total_by_chem_label = average_relaxation_rates_by_chem_label(
+            base_molecule, rates_total
+        )
+        avg_dipolar_by_chem_label = average_relaxation_rates_by_chem_label(
+            base_molecule, channels.dipolar
+        )
+        avg_contact_by_chem_label = average_relaxation_rates_by_chem_label(
+            base_molecule, channels.contact
+        )
+        avg_curie_by_chem_label = average_relaxation_rates_by_chem_label(
+            base_molecule, channels.curie
+        )
+
+        if avg_dipolar_by_chem_label is not None:
+            has_dipolar = True
+        if avg_contact_by_chem_label is not None:
+            has_contact = True
+        if avg_curie_by_chem_label is not None:
+            has_curie = True
+
+        for chem_label in chem_labels_block:
+            total_all.append(avg_total_by_chem_label.get(chem_label, np.nan))
+            dipolar_all.append(
+                np.nan
+                if avg_dipolar_by_chem_label is None
+                else avg_dipolar_by_chem_label.get(chem_label, np.nan)
+            )
+            contact_all.append(
+                np.nan
+                if avg_contact_by_chem_label is None
+                else avg_contact_by_chem_label.get(chem_label, np.nan)
+            )
+            curie_all.append(
+                np.nan
+                if avg_curie_by_chem_label is None
+                else avg_curie_by_chem_label.get(chem_label, np.nan)
+            )
+
+    return {
+        "total": np.array(total_all),
+        "dipolar": np.array(dipolar_all) if has_dipolar else None,
+        "contact": np.array(contact_all) if has_contact else None,
+        "curie": np.array(curie_all) if has_curie else None,
+    }
 
 
 def run_fit_corr_time(config, options: FitCorrTimeRunOptions | None = None) -> int:
@@ -211,69 +355,28 @@ def run_fit_corr_time(config, options: FitCorrTimeRunOptions | None = None) -> i
         orbit = base_molecule.electronic.orbit_L
         total_momentum_J = base_molecule.electronic.total_J
 
-        # --- Model function for curve_fit ---
-        # TODO(core): Collapse duplicated tau-fit theory evaluation
-        # into a single reusable R1 model function.
         if fix_param == "tau_r":
             tau_R = float(tau_R_guess)
             initial_guess = [float(tau_E_guess)]
 
             def r1_model(_, tau_E):
                 """Compute model R1 values for the current tau_E with tau_R fixed."""
-                tau_c1 = 1.0 / ((1.0 / tau_R) + (1.0 / tau_E))
-                tau_c2 = tau_c1
+                return _evaluate_relaxation_rows(
+                    observable="r1",
+                    exp_blocks=exp_blocks,
+                    relaxation_model=config.relaxation_model,
+                    nuclei_coords=nuclei_coords,
+                    electron_coords=base_molecule.paramagnetic_centre,
+                    gamma_I_dict=gamma_I_dict,
+                    spin=spin,
+                    orbit=orbit,
+                    total_momentum_J=total_momentum_J,
+                    A_fc_dict=A_fc_dict,
+                    base_molecule=base_molecule,
+                    tau_R=tau_R,
+                    tau_E=tau_E,
+                )["total"]
 
-                theory_all = []
-
-                for experiment, chem_labels_block, _exp_r1_block in exp_blocks:
-                    b0 = experiment.magnetic_field
-                    temperature = experiment.temperature
-                    omega_I_dict = {
-                        label: -gamma_I_dict[label] * b0 for label in nuclei_coords
-                    }
-                    omega_S = -EGAMMA * b0 * 2 * np.pi * 1e6
-
-                    rates_r1, _ = evaluate_relaxation_rates(
-                        relaxation_model=config.relaxation_model,
-                        nuclei_coords=nuclei_coords,
-                        electron_coords=base_molecule.paramagnetic_centre,
-                        gamma_I_dict=gamma_I_dict,
-                        omega_I_dict=omega_I_dict,
-                        omega_S=omega_S,
-                        spin=spin,
-                        orbit=orbit,
-                        total_momentum_J=total_momentum_J,
-                        A_iso_dict=A_fc_dict,
-                        temperature=temperature,
-                        tau_R=tau_R,
-                        tau_c1=tau_c1,
-                        tau_c2=tau_c2,
-                        tau_e2=tau_E,
-                        compute_r1=True,
-                        compute_r2=False,
-                    )
-
-                    if rates_r1 is None:
-                        raise ValueError(
-                            "Shared relaxation evaluator returned no R1 rates"
-                        )
-
-                    r1_by_chem_label = defaultdict(list)
-                    for nuc in base_molecule.nuclei:
-                        if nuc.label in rates_r1:
-                            r1_by_chem_label[nuc.chem_label].append(rates_r1[nuc.label])
-
-                    avg_r1_by_chem_label = {
-                        chem_label: np.mean(rate_list)
-                        for chem_label, rate_list in r1_by_chem_label.items()
-                    }
-
-                    for chem_label in chem_labels_block:
-                        theory_all.append(avg_r1_by_chem_label.get(chem_label, np.nan))
-
-                return np.array(theory_all)
-
-            # --- Run the fit ---
             if tau_E_bounds:
                 popt, pcov = curve_fit(
                     r1_model, xdata, exp_r1, p0=initial_guess, bounds=tau_E_bounds
@@ -282,7 +385,22 @@ def run_fit_corr_time(config, options: FitCorrTimeRunOptions | None = None) -> i
                 popt, pcov = curve_fit(r1_model, xdata, exp_r1, p0=initial_guess)
 
             tau_E_fit = popt[0]
-            theory_r1 = r1_model(xdata, tau_E_fit)
+            fitted_rows = _evaluate_relaxation_rows(
+                observable="r1",
+                exp_blocks=exp_blocks,
+                relaxation_model=config.relaxation_model,
+                nuclei_coords=nuclei_coords,
+                electron_coords=base_molecule.paramagnetic_centre,
+                gamma_I_dict=gamma_I_dict,
+                spin=spin,
+                orbit=orbit,
+                total_momentum_J=total_momentum_J,
+                A_fc_dict=A_fc_dict,
+                base_molecule=base_molecule,
+                tau_R=tau_R,
+                tau_E=tau_E_fit,
+            )
+            theory_r1 = fitted_rows["total"]
             if tau_E_fit <= 0:
                 raise ValueError(f"Fitted tau_E is negative: {tau_E_fit:.3e} s.")
 
@@ -292,60 +410,22 @@ def run_fit_corr_time(config, options: FitCorrTimeRunOptions | None = None) -> i
 
             def r1_model(_, tau_R):
                 """Compute model R1 values for the current tau_R with tau_E fixed."""
-                tau_c1 = 1.0 / ((1.0 / tau_R) + (1.0 / tau_E))
-                tau_c2 = tau_c1
+                return _evaluate_relaxation_rows(
+                    observable="r1",
+                    exp_blocks=exp_blocks,
+                    relaxation_model=config.relaxation_model,
+                    nuclei_coords=nuclei_coords,
+                    electron_coords=base_molecule.paramagnetic_centre,
+                    gamma_I_dict=gamma_I_dict,
+                    spin=spin,
+                    orbit=orbit,
+                    total_momentum_J=total_momentum_J,
+                    A_fc_dict=A_fc_dict,
+                    base_molecule=base_molecule,
+                    tau_R=tau_R,
+                    tau_E=tau_E,
+                )["total"]
 
-                theory_all = []
-
-                for experiment, chem_labels_block, _exp_r1_block in exp_blocks:
-                    b0 = experiment.magnetic_field
-                    temperature = experiment.temperature
-                    omega_I_dict = {
-                        label: -gamma_I_dict[label] * b0 for label in nuclei_coords
-                    }
-                    omega_S = -EGAMMA * b0 * 2 * np.pi * 1e6
-
-                    rates_r1, _ = evaluate_relaxation_rates(
-                        relaxation_model=config.relaxation_model,
-                        nuclei_coords=nuclei_coords,
-                        electron_coords=base_molecule.paramagnetic_centre,
-                        gamma_I_dict=gamma_I_dict,
-                        omega_I_dict=omega_I_dict,
-                        omega_S=omega_S,
-                        spin=spin,
-                        orbit=orbit,
-                        total_momentum_J=total_momentum_J,
-                        A_iso_dict=A_fc_dict,
-                        temperature=temperature,
-                        tau_R=tau_R,
-                        tau_c1=tau_c1,
-                        tau_c2=tau_c2,
-                        tau_e2=tau_E,
-                        compute_r1=True,
-                        compute_r2=False,
-                    )
-
-                    if rates_r1 is None:
-                        raise ValueError(
-                            "Shared relaxation evaluator returned no R1 rates"
-                        )
-
-                    r1_by_chem_label = defaultdict(list)
-                    for nuc in base_molecule.nuclei:
-                        if nuc.label in rates_r1:
-                            r1_by_chem_label[nuc.chem_label].append(rates_r1[nuc.label])
-
-                    avg_r1_by_chem_label = {
-                        chem_label: np.mean(rate_list)
-                        for chem_label, rate_list in r1_by_chem_label.items()
-                    }
-
-                    for chem_label in chem_labels_block:
-                        theory_all.append(avg_r1_by_chem_label.get(chem_label, np.nan))
-
-                return np.array(theory_all)
-
-            # --- Run the fit ---
             if tau_R_bounds:
                 popt, pcov = curve_fit(
                     r1_model, xdata, exp_r1, p0=initial_guess, bounds=tau_R_bounds
@@ -354,7 +434,22 @@ def run_fit_corr_time(config, options: FitCorrTimeRunOptions | None = None) -> i
                 popt, pcov = curve_fit(r1_model, xdata, exp_r1, p0=initial_guess)
 
             tau_R_fit = popt[0]
-            theory_r1 = r1_model(xdata, tau_R_fit)
+            fitted_rows = _evaluate_relaxation_rows(
+                observable="r1",
+                exp_blocks=exp_blocks,
+                relaxation_model=config.relaxation_model,
+                nuclei_coords=nuclei_coords,
+                electron_coords=base_molecule.paramagnetic_centre,
+                gamma_I_dict=gamma_I_dict,
+                spin=spin,
+                orbit=orbit,
+                total_momentum_J=total_momentum_J,
+                A_fc_dict=A_fc_dict,
+                base_molecule=base_molecule,
+                tau_R=tau_R_fit,
+                tau_E=tau_E,
+            )
+            theory_r1 = fitted_rows["total"]
             if tau_R_fit <= 0:
                 raise ValueError(f"Fitted tau_R is negative: {tau_R_fit:.3e} s.")
             else:
@@ -372,60 +467,22 @@ def run_fit_corr_time(config, options: FitCorrTimeRunOptions | None = None) -> i
 
             def r1_model(_, tau_R, tau_E):
                 """Compute model R1 values for the current (tau_R, tau_E)."""
-                tau_c1 = 1.0 / ((1.0 / tau_R) + (1.0 / tau_E))
-                tau_c2 = tau_c1
+                return _evaluate_relaxation_rows(
+                    observable="r1",
+                    exp_blocks=exp_blocks,
+                    relaxation_model=config.relaxation_model,
+                    nuclei_coords=nuclei_coords,
+                    electron_coords=base_molecule.paramagnetic_centre,
+                    gamma_I_dict=gamma_I_dict,
+                    spin=spin,
+                    orbit=orbit,
+                    total_momentum_J=total_momentum_J,
+                    A_fc_dict=A_fc_dict,
+                    base_molecule=base_molecule,
+                    tau_R=tau_R,
+                    tau_E=tau_E,
+                )["total"]
 
-                theory_all = []
-
-                for experiment, chem_labels_block, _exp_r1_block in exp_blocks:
-                    b0 = experiment.magnetic_field
-                    temperature = experiment.temperature
-                    omega_I_dict = {
-                        label: -gamma_I_dict[label] * b0 for label in nuclei_coords
-                    }
-                    omega_S = -EGAMMA * b0 * 2 * np.pi * 1e6
-
-                    rates_r1, _ = evaluate_relaxation_rates(
-                        relaxation_model=config.relaxation_model,
-                        nuclei_coords=nuclei_coords,
-                        electron_coords=base_molecule.paramagnetic_centre,
-                        gamma_I_dict=gamma_I_dict,
-                        omega_I_dict=omega_I_dict,
-                        omega_S=omega_S,
-                        spin=spin,
-                        orbit=orbit,
-                        total_momentum_J=total_momentum_J,
-                        A_iso_dict=A_fc_dict,
-                        temperature=temperature,
-                        tau_R=tau_R,
-                        tau_c1=tau_c1,
-                        tau_c2=tau_c2,
-                        tau_e2=tau_E,
-                        compute_r1=True,
-                        compute_r2=False,
-                    )
-
-                    if rates_r1 is None:
-                        raise ValueError(
-                            "Shared relaxation evaluator returned no R1 rates"
-                        )
-
-                    r1_by_chem_label = defaultdict(list)
-                    for nuc in base_molecule.nuclei:
-                        if nuc.label in rates_r1:
-                            r1_by_chem_label[nuc.chem_label].append(rates_r1[nuc.label])
-
-                    avg_r1_by_chem_label = {
-                        chem_label: np.mean(rate_list)
-                        for chem_label, rate_list in r1_by_chem_label.items()
-                    }
-
-                    for chem_label in chem_labels_block:
-                        theory_all.append(avg_r1_by_chem_label.get(chem_label, np.nan))
-
-                return np.array(theory_all)
-
-            # --- Run the fit ---
             if bounds:
                 popt, pcov = curve_fit(
                     r1_model, xdata, exp_r1, p0=initial_guess, bounds=bounds
@@ -434,7 +491,22 @@ def run_fit_corr_time(config, options: FitCorrTimeRunOptions | None = None) -> i
                 popt, pcov = curve_fit(r1_model, xdata, exp_r1, p0=initial_guess)
 
             tau_R_fit, tau_E_fit = popt
-            theory_r1 = r1_model(xdata, tau_R_fit, tau_E_fit)
+            fitted_rows = _evaluate_relaxation_rows(
+                observable="r1",
+                exp_blocks=exp_blocks,
+                relaxation_model=config.relaxation_model,
+                nuclei_coords=nuclei_coords,
+                electron_coords=base_molecule.paramagnetic_centre,
+                gamma_I_dict=gamma_I_dict,
+                spin=spin,
+                orbit=orbit,
+                total_momentum_J=total_momentum_J,
+                A_fc_dict=A_fc_dict,
+                base_molecule=base_molecule,
+                tau_R=tau_R_fit,
+                tau_E=tau_E_fit,
+            )
+            theory_r1 = fitted_rows["total"]
             if tau_R_fit <= 0 and tau_E_fit > 0:
                 raise ValueError(f"tau_R is negative: {tau_R_fit:.3e} s.")
             elif tau_E_fit <= 0 and tau_R_fit > 0:
@@ -460,6 +532,9 @@ def run_fit_corr_time(config, options: FitCorrTimeRunOptions | None = None) -> i
             fitted_tau_r=tau_R_fit,
             fitted_tau_e=tau_E_fit,
             rsquared=rsquared,
+            theory_r1_dipolar=fitted_rows["dipolar"],
+            theory_r1_contact=fitted_rows["contact"],
+            theory_r1_curie=fitted_rows["curie"],
             comment="",
             verbose=True,
         )

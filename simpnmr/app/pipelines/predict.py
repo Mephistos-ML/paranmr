@@ -30,6 +30,7 @@ from simpnmr.app.loaders.sh_load import (
 )
 from simpnmr.app.loaders.susc_load import load_susceptibilities
 from simpnmr.app.params.options import PredictRunOptions
+from simpnmr.app.policies.relax import average_relaxation_rates_by_chem_label
 from simpnmr.app.policies.susc import resolve_susceptibility_source
 
 # Core / domain
@@ -496,7 +497,7 @@ def _apply_relaxation_linewidths(config, base_molecule: Molecule):
     orbit = base_molecule.electronic.orbit_L
     total_momentum_J = base_molecule.electronic.total_J
 
-    rates_r1, rates_r2 = evaluate_relaxation_rates(
+    relaxation_eval = evaluate_relaxation_rates(
         relaxation_model=config.relaxation_model,
         nuclei_coords=nuclei_coords,
         electron_coords=base_molecule.paramagnetic_centre,
@@ -516,6 +517,9 @@ def _apply_relaxation_linewidths(config, base_molecule: Molecule):
         compute_r1=True,
         compute_r2=True,
     )
+
+    rates_r1 = relaxation_eval.r1.total
+    rates_r2 = relaxation_eval.r2.total
 
     if rates_r1 is None or rates_r2 is None:
         raise ValueError("Shared relaxation evaluator returned incomplete R1/R2 rates")
@@ -547,10 +551,16 @@ def _apply_relaxation_linewidths(config, base_molecule: Molecule):
         for chem_label, rate_list in r2_by_chem_label.items()
     }
 
-    # Optional decomposition of R1 into SBM and Curie components
-    avg_dipolar_by_chem_label = None
-    avg_contact_by_chem_label = None
-    avg_curie_by_chem_label = None
+    # Optional decomposition of R1 into dipolar, contact, and Curie channels
+    avg_dipolar_by_chem_label = average_relaxation_rates_by_chem_label(
+        base_molecule, relaxation_eval.r1.dipolar
+    )
+    avg_contact_by_chem_label = average_relaxation_rates_by_chem_label(
+        base_molecule, relaxation_eval.r1.contact
+    )
+    avg_curie_by_chem_label = average_relaxation_rates_by_chem_label(
+        base_molecule, relaxation_eval.r1.curie
+    )
 
     # Save the relaxation data to CSV
     relax.save_relaxation_decomposition(
