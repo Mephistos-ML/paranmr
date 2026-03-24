@@ -202,6 +202,10 @@ def plot_corr_time_contrib(
     Returns:
         Tuple of ``(figure, axes)`` for the rendered contribution plot.
     """
+
+    glyphs = spec.glyphs
+    palette = spec.palette
+
     xvals = np.arange(len(chem_labels), dtype=float)
 
     order_idx = np.argsort(exp_r1)[::-1]
@@ -210,19 +214,18 @@ def plot_corr_time_contrib(
     exp_r1_ordered = exp_r1[order_idx]
 
     component_series: list[tuple[str, np.ndarray, str]] = []
-    shift_colours = spec.shift_colours
 
     if theory_r1_dipolar is not None:
         component_series.append(
-            ("Dipolar", theory_r1_dipolar[order_idx], shift_colours.pc)
+            ("Dipolar", theory_r1_dipolar[order_idx], palette.highlight)
         )
     if theory_r1_contact is not None:
         component_series.append(
-            ("Contact", theory_r1_contact[order_idx], shift_colours.fc)
+            ("Contact", theory_r1_contact[order_idx], palette.secondary)
         )
     if theory_r1_curie is not None:
         component_series.append(
-            ("Curie", theory_r1_curie[order_idx], shift_colours.dia)
+            ("Curie", theory_r1_curie[order_idx], palette.auxiliary)
         )
 
     width = 1 / (len(component_series) + 1) if component_series else 0.8
@@ -232,17 +235,15 @@ def plot_corr_time_contrib(
         variant="standard",
         layout="constrained",
     )
-    glyphs = spec.glyphs
-    scale = spec.skin_axes(ax)
-    palette = spec.palette
 
+    scale = spec.skin_axes(ax)
     widthscaler = 1
 
     ax.plot(
         (xvals + 0.5),
         theory_r1_ordered,
         label="Total",
-        color=shift_colours.total,
+        color=palette.primary,
         lw=0,
         marker="x",
         markersize=(glyphs.ms if glyphs is not None else 7),
@@ -287,7 +288,7 @@ def plot_corr_time_contrib(
         color=palette.primary,
         lw=(glyphs.line_lw if glyphs is not None else 0.5),
     )
-    ax.grid(axis="x", ls="--", which="minor")
+    ax.grid(axis="x", ls="--", which="minor", color=palette.grid)
     ax.xaxis.set_minor_locator(ticker.MultipleLocator(1))
 
     ax.set_ylabel(r"$R_1$ (s$^{-1}$)")
