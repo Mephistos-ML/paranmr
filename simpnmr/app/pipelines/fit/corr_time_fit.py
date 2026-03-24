@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import logging
 import os
+from functools import partial
 
 import numpy as np
 from scipy.optimize import curve_fit
@@ -45,7 +46,7 @@ from simpnmr.viz.style.theme import apply_profile
 logger = logging.getLogger(__name__)
 
 
-def _evaluate_relaxation_rows(
+def _assemble_relaxation_rows(
     *,
     observable: str,
     exp_blocks,
@@ -189,6 +190,172 @@ def _evaluate_relaxation_rows(
     }
 
 
+def _fit_corr_time_from_r1(
+    *,
+    fix_param: str | None,
+    xdata: np.ndarray,
+    exp_r1: np.ndarray,
+    assemble_r1_rows,
+    tau_R_guess: float,
+    tau_E_guess: float,
+    tau_R_bounds,
+    tau_E_bounds,
+) -> tuple[float | None, float | None, np.ndarray, dict[str, np.ndarray | None]]:
+    """Fit correlation-time parameters against experimental ``R1`` values.
+
+    Args:
+        fix_param: Fit-mode selector. Supported values are ``"tau_r"``,
+            ``"tau_e"``, ``None``, ``"none"``, and ``""``.
+        xdata: Dummy x-axis required by ``curve_fit``.
+        exp_r1: Experimental ``R1`` values.
+        assemble_r1_rows: Callable returning row-aligned fitted ``R1`` outputs
+            for supplied ``tau_R`` and ``tau_E``.
+        tau_R_guess: Initial guess for ``tau_R``.
+        tau_E_guess: Initial guess for ``tau_E``.
+        tau_R_bounds: Optional bounds for ``tau_R``.
+        tau_E_bounds: Optional bounds for ``tau_E``.
+
+    Returns:
+        Tuple ``(tau_R_fit, tau_E_fit, theory_r1, fitted_rows)``.
+
+    Raises:
+        ValueError: If fitted correlation times are invalid or the fit mode is
+            unsupported.
+    """
+    tau_R_fit = None
+    tau_E_fit = None
+
+    if fix_param == "tau_r":
+        tau_R = float(tau_R_guess)
+        initial_guess = [float(tau_E_guess)]
+
+        def r1_model(_, tau_E):
+            return assemble_r1_rows(tau_R=tau_R, tau_E=tau_E)["total"]
+
+        if tau_E_bounds:
+            popt, _pcov = curve_fit(
+                r1_model, xdata, exp_r1, p0=initial_guess, bounds=tau_E_bounds
+            )
+        else:
+            popt, _pcov = curve_fit(r1_model, xdata, exp_r1, p0=initial_guess)
+
+        tau_E_fit = popt[0]
+        fitted_rows = assemble_r1_rows(tau_R=tau_R, tau_E=tau_E_fit)
+        theory_r1 = fitted_rows["total"]
+        if tau_E_fit <= 0:
+            raise ValueError(f"Fitted tau_E is negative: {tau_E_fit:.3e} s.")
+        return tau_R_fit, tau_E_fit, theory_r1, fitted_rows
+
+    if fix_param == "tau_e":
+        tau_E = float(tau_E_guess)
+        initial_guess = [float(tau_R_guess)]
+
+        def r1_model(_, tau_R):
+            return assemble_r1_rows(tau_R=tau_R, tau_E=tau_E)["total"]
+
+        if tau_R_bounds:
+            popt, _pcov = curve_fit(
+                r1_model, xdata, exp_r1, p0=initial_guess, bounds=tau_R_bounds
+            )
+        else:
+            popt, _pcov = curve_fit(r1_model, xdata, exp_r1, p0=initial_guess)
+
+        tau_R_fit = popt[0]
+        fitted_rows = assemble_r1_rows(tau_R=tau_R_fit, tau_E=tau_E)
+        theory_r1 = fitted_rows["total"]
+        if tau_R_fit <= 0:
+            raise ValueError(f"Fitted tau_R is negative: {tau_R_fit:.3e} s.")
+        logger.info("Fitted tau_R: %.3e s", tau_R_fit)
+        return tau_R_fit, tau_E_fit, theory_r1, fitted_rows
+
+    if not fix_param or fix_param in ["none", ""]:
+        initial_guess = [float(tau_R_guess), float(tau_E_guess)]
+        bounds = None
+        if tau_R_bounds and tau_E_bounds:
+            bounds = (
+                [tau_R_bounds[0], tau_E_bounds[0]],
+                [tau_R_bounds[1], tau_E_bounds[1]],
+            )
+
+        def r1_model(_, tau_R, tau_E):
+            return assemble_r1_rows(tau_R=tau_R, tau_E=tau_E)["total"]
+
+        if bounds:
+            popt, _pcov = curve_fit(
+                r1_model, xdata, exp_r1, p0=initial_guess, bounds=bounds
+            )
+        else:
+            popt, _pcov = curve_fit(r1_model, xdata, exp_r1, p0=initial_guess)
+
+        tau_R_fit, tau_E_fit = popt
+        fitted_rows = assemble_r1_rows(tau_R=tau_R_fit, tau_E=tau_E_fit)
+        theory_r1 = fitted_rows["total"]
+        if tau_R_fit <= 0 and tau_E_fit > 0:
+            raise ValueError(f"tau_R is negative: {tau_R_fit:.3e} s.")
+        if tau_E_fit <= 0 and tau_R_fit > 0:
+            raise ValueError(f"tau_E is negative: {tau_E_fit:.3e} s.")
+        if tau_R_fit <= 0 and tau_E_fit <= 0:
+            raise ValueError(
+                f"Both tau_R and tau_E are negative: "
+                f"tau_R = {tau_R_fit:.3e} s, tau_E = {tau_E_fit:.3e} s."
+            )
+        return tau_R_fit, tau_E_fit, theory_r1, fitted_rows
+
+    raise ValueError("Correlation times must be 'tau_r' or 'tau_e'.")
+
+
+def _resolve_corr_time_fit_mode(
+    config,
+) -> tuple[str | None, float, float, object, object]:
+    """Resolve correlation-time fit modes, guesses, and optional bounds.
+
+    Args:
+        config: Fit configuration object containing ``fit_corr_time_tau_R`` and
+            ``fit_corr_time_tau_E`` entries.
+
+    Returns:
+        Tuple ``(fix_param, tau_R_guess, tau_E_guess, tau_R_bounds,
+        tau_E_bounds)``.
+
+    Raises:
+        ValueError: If both correlation times are fixed or if the fit-mode
+            syntax is invalid.
+    """
+    tau_R_mode, tau_R_guess = (
+        config.fit_corr_time_tau_R[0].lower(),
+        config.fit_corr_time_tau_R[1],
+    )
+    tau_R_bounds = (
+        config.fit_corr_time_tau_R[2] if len(config.fit_corr_time_tau_R) > 2 else None
+    )
+
+    tau_E_mode, tau_E_guess = (
+        config.fit_corr_time_tau_E[0].lower(),
+        config.fit_corr_time_tau_E[1],
+    )
+    tau_E_bounds = (
+        config.fit_corr_time_tau_E[2] if len(config.fit_corr_time_tau_E) > 2 else None
+    )
+
+    if tau_R_mode == "fix" and tau_E_mode == "fit":
+        fix_param = "tau_r"
+    elif tau_R_mode == "fit" and tau_E_mode == "fix":
+        fix_param = "tau_e"
+    elif tau_R_mode == "fit" and tau_E_mode == "fit":
+        fix_param = None
+    elif tau_R_mode == "fix" and tau_E_mode == "fix":
+        raise ValueError(
+            "Both tau_R and tau_E cannot be fixed. At least one must be set to 'fit'."
+        )
+    else:
+        raise ValueError(
+            "Use syntax 'tau_C: [fit/fix, guess, [upper-bound, lower-bound]]', "
+            "with bounds optional (tau_C refers to tau_R or tau_E)."
+        )
+
+    return fix_param, tau_R_guess, tau_E_guess, tau_R_bounds, tau_E_bounds
+
+
 def run_fit_corr_time(config, options: FitCorrTimeRunOptions | None = None) -> int:
     """Fit correlation-time parameters to experimental R1 values.
 
@@ -213,42 +380,9 @@ def run_fit_corr_time(config, options: FitCorrTimeRunOptions | None = None) -> i
     show_plots = options.runtime.show_plots
     project_dir = config.project_name
 
-    tau_R_mode, tau_R_guess = (
-        config.fit_corr_time_tau_R[0].lower(),
-        config.fit_corr_time_tau_R[1],
+    fix_param, tau_R_guess, tau_E_guess, tau_R_bounds, tau_E_bounds = (
+        _resolve_corr_time_fit_mode(config)
     )
-    tau_R_bounds = (
-        config.fit_corr_time_tau_R[2] if len(config.fit_corr_time_tau_R) > 2 else None
-    )
-
-    tau_E_mode, tau_E_guess = (
-        config.fit_corr_time_tau_E[0].lower(),
-        config.fit_corr_time_tau_E[1],
-    )
-    tau_E_bounds = (
-        config.fit_corr_time_tau_E[2] if len(config.fit_corr_time_tau_E) > 2 else None
-    )
-
-    if tau_R_mode == "fix" and tau_E_mode == "fit":
-        fix_param = "tau_r"
-    elif tau_R_mode == "fit" and tau_E_mode == "fix":
-        fix_param = "tau_e"
-    elif tau_R_mode == "fit" and tau_E_mode == "fit":
-        fix_param = None  # Fit both
-    elif tau_R_mode == "fix" and tau_E_mode == "fix":
-        raise ValueError(
-            "Both tau_R and tau_E cannot be fixed. At least one must be set to 'fit'."
-        )
-    else:
-        raise ValueError(
-            "Use syntax 'tau_C: [fit/fix, guess, [upper-bound, lower-bound]]', "
-            "with bounds optional (tau_C refers to tau_R or tau_E)."
-        )
-
-    # Placeholders for fitted parameters and covariance
-    tau_R_fit = None
-    tau_E_fit = None
-    initial_guess = None
 
     if (
         getattr(config, "fit_corr_time_tau_R", None) is not None
@@ -355,169 +489,31 @@ def run_fit_corr_time(config, options: FitCorrTimeRunOptions | None = None) -> i
         orbit = base_molecule.electronic.orbit_L
         total_momentum_J = base_molecule.electronic.total_J
 
-        if fix_param == "tau_r":
-            tau_R = float(tau_R_guess)
-            initial_guess = [float(tau_E_guess)]
+        assemble_r1_rows = partial(
+            _assemble_relaxation_rows,
+            observable="r1",
+            exp_blocks=exp_blocks,
+            relaxation_model=config.relaxation_model,
+            nuclei_coords=nuclei_coords,
+            electron_coords=base_molecule.paramagnetic_centre,
+            gamma_I_dict=gamma_I_dict,
+            spin=spin,
+            orbit=orbit,
+            total_momentum_J=total_momentum_J,
+            A_fc_dict=A_fc_dict,
+            base_molecule=base_molecule,
+        )
 
-            def r1_model(_, tau_E):
-                """Compute model R1 values for the current tau_E with tau_R fixed."""
-                return _evaluate_relaxation_rows(
-                    observable="r1",
-                    exp_blocks=exp_blocks,
-                    relaxation_model=config.relaxation_model,
-                    nuclei_coords=nuclei_coords,
-                    electron_coords=base_molecule.paramagnetic_centre,
-                    gamma_I_dict=gamma_I_dict,
-                    spin=spin,
-                    orbit=orbit,
-                    total_momentum_J=total_momentum_J,
-                    A_fc_dict=A_fc_dict,
-                    base_molecule=base_molecule,
-                    tau_R=tau_R,
-                    tau_E=tau_E,
-                )["total"]
-
-            if tau_E_bounds:
-                popt, pcov = curve_fit(
-                    r1_model, xdata, exp_r1, p0=initial_guess, bounds=tau_E_bounds
-                )
-            elif tau_E_bounds is None:
-                popt, pcov = curve_fit(r1_model, xdata, exp_r1, p0=initial_guess)
-
-            tau_E_fit = popt[0]
-            fitted_rows = _evaluate_relaxation_rows(
-                observable="r1",
-                exp_blocks=exp_blocks,
-                relaxation_model=config.relaxation_model,
-                nuclei_coords=nuclei_coords,
-                electron_coords=base_molecule.paramagnetic_centre,
-                gamma_I_dict=gamma_I_dict,
-                spin=spin,
-                orbit=orbit,
-                total_momentum_J=total_momentum_J,
-                A_fc_dict=A_fc_dict,
-                base_molecule=base_molecule,
-                tau_R=tau_R,
-                tau_E=tau_E_fit,
-            )
-            theory_r1 = fitted_rows["total"]
-            if tau_E_fit <= 0:
-                raise ValueError(f"Fitted tau_E is negative: {tau_E_fit:.3e} s.")
-
-        elif fix_param == "tau_e":
-            tau_E = float(tau_E_guess)
-            initial_guess = [float(tau_R_guess)]
-
-            def r1_model(_, tau_R):
-                """Compute model R1 values for the current tau_R with tau_E fixed."""
-                return _evaluate_relaxation_rows(
-                    observable="r1",
-                    exp_blocks=exp_blocks,
-                    relaxation_model=config.relaxation_model,
-                    nuclei_coords=nuclei_coords,
-                    electron_coords=base_molecule.paramagnetic_centre,
-                    gamma_I_dict=gamma_I_dict,
-                    spin=spin,
-                    orbit=orbit,
-                    total_momentum_J=total_momentum_J,
-                    A_fc_dict=A_fc_dict,
-                    base_molecule=base_molecule,
-                    tau_R=tau_R,
-                    tau_E=tau_E,
-                )["total"]
-
-            if tau_R_bounds:
-                popt, pcov = curve_fit(
-                    r1_model, xdata, exp_r1, p0=initial_guess, bounds=tau_R_bounds
-                )
-            elif tau_R_bounds is None:
-                popt, pcov = curve_fit(r1_model, xdata, exp_r1, p0=initial_guess)
-
-            tau_R_fit = popt[0]
-            fitted_rows = _evaluate_relaxation_rows(
-                observable="r1",
-                exp_blocks=exp_blocks,
-                relaxation_model=config.relaxation_model,
-                nuclei_coords=nuclei_coords,
-                electron_coords=base_molecule.paramagnetic_centre,
-                gamma_I_dict=gamma_I_dict,
-                spin=spin,
-                orbit=orbit,
-                total_momentum_J=total_momentum_J,
-                A_fc_dict=A_fc_dict,
-                base_molecule=base_molecule,
-                tau_R=tau_R_fit,
-                tau_E=tau_E,
-            )
-            theory_r1 = fitted_rows["total"]
-            if tau_R_fit <= 0:
-                raise ValueError(f"Fitted tau_R is negative: {tau_R_fit:.3e} s.")
-            else:
-                logger.info("Fitted tau_R: %.3e s", tau_R_fit)
-
-        elif not fix_param or fix_param in ["none", ""]:
-            # Fit both tau_R and tau_E
-            initial_guess = [float(tau_R_guess), float(tau_E_guess)]
-            bounds = None
-            if tau_R_bounds and tau_E_bounds:
-                bounds = (
-                    [tau_R_bounds[0], tau_E_bounds[0]],
-                    [tau_R_bounds[1], tau_E_bounds[1]],
-                )
-
-            def r1_model(_, tau_R, tau_E):
-                """Compute model R1 values for the current (tau_R, tau_E)."""
-                return _evaluate_relaxation_rows(
-                    observable="r1",
-                    exp_blocks=exp_blocks,
-                    relaxation_model=config.relaxation_model,
-                    nuclei_coords=nuclei_coords,
-                    electron_coords=base_molecule.paramagnetic_centre,
-                    gamma_I_dict=gamma_I_dict,
-                    spin=spin,
-                    orbit=orbit,
-                    total_momentum_J=total_momentum_J,
-                    A_fc_dict=A_fc_dict,
-                    base_molecule=base_molecule,
-                    tau_R=tau_R,
-                    tau_E=tau_E,
-                )["total"]
-
-            if bounds:
-                popt, pcov = curve_fit(
-                    r1_model, xdata, exp_r1, p0=initial_guess, bounds=bounds
-                )
-            else:
-                popt, pcov = curve_fit(r1_model, xdata, exp_r1, p0=initial_guess)
-
-            tau_R_fit, tau_E_fit = popt
-            fitted_rows = _evaluate_relaxation_rows(
-                observable="r1",
-                exp_blocks=exp_blocks,
-                relaxation_model=config.relaxation_model,
-                nuclei_coords=nuclei_coords,
-                electron_coords=base_molecule.paramagnetic_centre,
-                gamma_I_dict=gamma_I_dict,
-                spin=spin,
-                orbit=orbit,
-                total_momentum_J=total_momentum_J,
-                A_fc_dict=A_fc_dict,
-                base_molecule=base_molecule,
-                tau_R=tau_R_fit,
-                tau_E=tau_E_fit,
-            )
-            theory_r1 = fitted_rows["total"]
-            if tau_R_fit <= 0 and tau_E_fit > 0:
-                raise ValueError(f"tau_R is negative: {tau_R_fit:.3e} s.")
-            elif tau_E_fit <= 0 and tau_R_fit > 0:
-                raise ValueError(f"tau_E is negative: {tau_E_fit:.3e} s.")
-            elif tau_R_fit <= 0 and tau_E_fit <= 0:
-                raise ValueError(
-                    f"Both tau_R and tau_E are negative: "
-                    f"tau_R = {tau_R_fit:.3e} s, tau_E = {tau_E_fit:.3e} s."
-                )
-        else:
-            raise ValueError("Correlation times must be 'tau_r' or 'tau_e'.")
+        tau_R_fit, tau_E_fit, theory_r1, fitted_rows = _fit_corr_time_from_r1(
+            fix_param=fix_param,
+            xdata=xdata,
+            exp_r1=exp_r1,
+            assemble_r1_rows=assemble_r1_rows,
+            tau_R_guess=float(tau_R_guess),
+            tau_E_guess=float(tau_E_guess),
+            tau_R_bounds=tau_R_bounds,
+            tau_E_bounds=tau_E_bounds,
+        )
 
         rsquared = 1 - (
             np.sum((exp_r1 - theory_r1) ** 2) / np.sum((exp_r1 - np.mean(exp_r1)) ** 2)
