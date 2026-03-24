@@ -119,7 +119,7 @@ def plot_isoaxrho(
                 linestyle="-",
                 linewidth=glyphs.fit_lw,
                 color=palette.primary,
-                label="Slope/Intercept Fit",
+                label="Fit.",
             )
 
         if fit_y_low is not None and fit_y_high is not None:
