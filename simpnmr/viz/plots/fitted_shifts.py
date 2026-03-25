@@ -9,6 +9,7 @@ helpers.
 
 import logging
 
+import matplotlib.lines as mlines
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 import numpy as np
@@ -28,12 +29,36 @@ from simpnmr.viz.utils.uncertainty import format_compact_uncertainty
 logger = logging.getLogger(__name__)
 
 
+def _build_element_legend_handles(
+    markers: dict[str, str],
+    palette,
+    glyphs,
+) -> list[mlines.Line2D]:
+    """Build legend handles for the element-to-marker mapping."""
+    return [
+        mlines.Line2D(
+            [],
+            [],
+            lw=0,
+            marker=marker,
+            color=palette.primary,
+            markersize=glyphs.ms,
+            markerfacecolor=(0, 0, 0, 0.55),
+            markeredgecolor=palette.primary,
+            markeredgewidth=0.8,
+            label=element,
+        )
+        for element, marker in markers.items()
+    ]
+
+
 def plot_fitted_shifts(
     molecule: Molecule,
     experiment: Experiment,
     susc_model: models.SusceptibilityModel,
     spec: PlotSpec,
     average: bool = True,
+    show_point_labels: bool = True,
     save: bool = True,
     show: bool = True,
     save_name: str = "nmr_shifts.pdf",
@@ -48,6 +73,8 @@ def plot_fitted_shifts(
         experiment: Experimental shift data.
         susc_model: Fitted susceptibility model.
         average: If ``True``, averages equivalent nuclei (same chemical label).
+        show_point_labels: If ``True``, draws nucleus labels next to markers.
+            If ``False``, draws an element-shape legend instead.
         save: If ``True``, saves the plot to `save_name`.
         show: If ``True``, shows the plot.
         save_name: Output image file name.
@@ -240,13 +267,17 @@ def plot_fitted_shifts(
 
     ax.invert_xaxis()
     ax.invert_yaxis()
-    resolve_label_layout(
-        ax,
-        label_entries,
-        fontsize=scale.annotation,
-        marker_size=glyphs.ms,
-        diag_line=diag_line,
-    )
+    if show_point_labels:
+        resolve_label_layout(
+            ax,
+            label_entries,
+            fontsize=scale.annotation,
+            marker_size=glyphs.ms,
+            diag_line=diag_line,
+        )
+    else:
+        legend_handles = _build_element_legend_handles(_markers, palette, glyphs)
+        ax.legend(handles=legend_handles, loc="best")
 
     render_figure(
         fig,
