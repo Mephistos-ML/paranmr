@@ -439,7 +439,8 @@ def _apply_relaxation_linewidths(
         config (PredictConfig): Prediction configuration containing relaxation
             settings and physical parameters.
         base_molecule (Molecule): Molecule instance to update in-place.
-        experiment: Experiment providing the magnetic field used for relaxation.
+        experiment: Experiment providing the magnetic field and temperature used
+            for relaxation.
 
     Returns:
         None
@@ -512,7 +513,7 @@ def _apply_relaxation_linewidths(
         orbit=orbit,
         total_momentum_J=total_momentum_J,
         A_iso_dict=A_iso_dict,
-        temperature=config.relaxation_temperature,
+        temperature=experiment.temperature,
         tau_R=tau_R,
         tau_c1=tau_c1,
         tau_c2=tau_c2,

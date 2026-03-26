@@ -1182,7 +1182,6 @@ class PredictConfig(FitSuscConfig):
         "susceptibility": ["file", "format", "temperatures"],
         "relaxation": [
             "model",
-            "temperature",
             "T1e",
             "T2e",
             "tR",
@@ -1195,7 +1194,6 @@ class PredictConfig(FitSuscConfig):
         self._susceptibility_temperatures = []
         self._relaxation_model = ""
         self._hyperfine_paramagnetic_centre = None
-        self._relaxation_temperature = None
         self._relaxation_T1e = None
         self._relaxation_T2e = None
         self._relaxation_tR = None
@@ -1282,29 +1280,6 @@ class PredictConfig(FitSuscConfig):
                 ) from exc
             return None
         raise ValueError("hyperfine:paramagnetic_centre must be a list of 3 floats")
-
-    @property
-    def relaxation_temperature(self) -> float | None:
-        return self._relaxation_temperature
-
-    @relaxation_temperature.setter
-    def relaxation_temperature(self, value: float | None):
-        # Only require temperature if 'curie' is in the relaxation model
-        if hasattr(self, "_relaxation_model") and "curie" in self._relaxation_model:
-            if value is None:
-                raise ValueError(
-                    "If 'curie' relaxation is specified, 'temperature' must be set"
-                )
-            try:
-                if float(value) <= 0:
-                    raise ValueError("Temperature must be positive")
-                self._relaxation_temperature = float(value)
-            except Exception:
-                raise ValueError(f"Cannot convert temperature value {value} to float")
-        else:
-            # If 'curie' is not in the model, temperature is not required
-            self._relaxation_temperature = None
-        return None
 
     @property
     def relaxation_T1e(self) -> float | None:

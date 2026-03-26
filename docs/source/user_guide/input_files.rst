@@ -286,9 +286,6 @@ Optional. Used in workflows that include relaxation-based shift broadening or we
         sbm curie # Combined SBM + Curie relaxation
         curie sbm # Equivalent to 'sbm curie' (ordering is ignored)
 
-      # Temperature
-      temperature: 300.0
-
       #Relaxation Parameters
       T1e: 0.2e-12 # Required parameter
       T2e: 0.2e-12 # Required parameter
@@ -301,8 +298,11 @@ Optional. Used in workflows that include relaxation-based shift broadening or we
 
    When a relaxation model is specified, all required relaxation parameters must
    be provided. When relaxation is enabled, ``hyperfine:paramagnetic_centre``
-   must also be provided. Temperature-dependent relaxation models
-   (e.g. Curie-type terms) require an explicit temperature, while other models may not.
+   must also be provided.
+
+   Relaxation evaluation also requires the experimental temperature and magnetic
+   field. These values must therefore be present in the corresponding
+   ``experiment:files`` inputs and should be set correctly for each experiment.
 
 Prediction-only blocks
 ----------------------
