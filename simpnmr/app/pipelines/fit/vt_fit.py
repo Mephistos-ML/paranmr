@@ -310,7 +310,7 @@ def fit_vt(
         chiT_fit_params.get("ax"),
         chiT_fit_params.get("rho"),
     ]
-    save_slope_intercept(fits_list, out_file)
+    save_slope_intercept(fits_list, spin=spin, file_name=out_file)
 
     return
 
