@@ -286,9 +286,6 @@ Optional. Used in workflows that include relaxation-based shift broadening or we
         sbm curie # Combined SBM + Curie relaxation
         curie sbm # Equivalent to 'sbm curie' (ordering is ignored)
 
-      # Magnetic field strength in Tesla
-      magnetic_field_tesla: 9.4 # Required parameter
-
       # Temperature
       temperature: 300.0
 

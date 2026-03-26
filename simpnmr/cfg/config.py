@@ -1182,7 +1182,6 @@ class PredictConfig(FitSuscConfig):
         "susceptibility": ["file", "format", "temperatures"],
         "relaxation": [
             "model",
-            "magnetic_field_tesla",
             "temperature",
             "T1e",
             "T2e",
@@ -1196,7 +1195,6 @@ class PredictConfig(FitSuscConfig):
         self._susceptibility_temperatures = []
         self._relaxation_model = ""
         self._hyperfine_paramagnetic_centre = None
-        self._relaxation_magnetic_field_tesla = None
         self._relaxation_temperature = None
         self._relaxation_T1e = None
         self._relaxation_T2e = None
@@ -1284,34 +1282,6 @@ class PredictConfig(FitSuscConfig):
                 ) from exc
             return None
         raise ValueError("hyperfine:paramagnetic_centre must be a list of 3 floats")
-
-    @property
-    def relaxation_magnetic_field_tesla(self) -> float | None:
-        return self._relaxation_magnetic_field_tesla
-
-    @relaxation_magnetic_field_tesla.setter
-    def relaxation_magnetic_field_tesla(self, value: float | None):
-        # Allow omission: default to 0.0 T (no external field)
-        if value is None:
-            self._relaxation_magnetic_field_tesla = 0.0
-            return None
-
-        # Accept scalar or a single-element list/tuple (YAML sometimes produces lists)
-        if isinstance(value, (list, tuple)):
-            value = value[0]
-
-        try:
-            field = float(value)
-        except (TypeError, ValueError) as e:
-            raise ValueError(
-                f"Cannot convert magnetic_field value {value} to float"
-            ) from e
-
-        if field < 0:
-            raise ValueError("magnetic_field must be zero or positive")
-
-        self._relaxation_magnetic_field_tesla = field
-        return None
 
     @property
     def relaxation_temperature(self) -> float | None:
