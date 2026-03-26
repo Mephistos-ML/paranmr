@@ -214,6 +214,14 @@ def run_predict(config, options: PredictRunOptions | None = None) -> int:
     else:
         experiments = [None] * len(suscs)
 
+    if len(config.experiment_spectrum_files):
+        for experiment, spectrum in zip(experiments, config.experiment_spectrum_files):
+            if experiment is None:
+                continue
+            spectrum_array = read_spectrum(spectrum)
+            experiment.exp_reference = config.experiment_exp_reference
+            experiment.spectrum = spectrum_array
+
     # Rotationally average hyperfines of user selected nuclei:
     if len(config.hyperfine_average):
         base_molecule.average_hyperfine(config.hyperfine_average)
@@ -258,28 +266,6 @@ def run_predict(config, options: PredictRunOptions | None = None) -> int:
                         chi_source_coords=base_molecule.chi_source_coords,
                     )
 
-    # Calculate linewidths using user-specified relaxation model (optional)
-    if not getattr(config, "relaxation_model", None):
-        (
-            logger.warning(
-                "No relaxation model specified — linewidths will be fixed at 1 ppm"
-            )
-        )
-    elif config.relaxation_magnetic_field_tesla is None:
-        logger.warning(
-            "relaxation_magnetic_field_tesla "
-            "not provided — relaxation effects skipped, "
-            "linewidths will be fixed at 1 ppm \n"
-        )
-    else:
-        _apply_relaxation_linewidths(config, base_molecule)
-
-    if len(config.experiment_spectrum_files):
-        for experiment, spectrum in zip(experiments, config.experiment_spectrum_files):
-            spectrum_array = read_spectrum(spectrum)
-            experiment.exp_reference = config.experiment_exp_reference
-            experiment.spectrum = spectrum_array
-
     _terms = ["pc", "fc", "d"]
 
     if config.hyperfine_method == "pdip":
@@ -293,6 +279,19 @@ def run_predict(config, options: PredictRunOptions | None = None) -> int:
     # Update susceptibility tensor of Molecule using model
     for molecule, susc, experiment in zip(molecules, suscs, experiments):
         molecule.susc = susc
+
+        # Calculate linewidths using user-specified relaxation model (optional)
+        if not getattr(config, "relaxation_model", None):
+            logger.warning(
+                "No relaxation model specified — linewidths will be fixed at 1 ppm"
+            )
+        elif experiment is None or experiment.magnetic_field is None:
+            logger.warning(
+                "Experimental magnetic field is unavailable — relaxation effects "
+                "skipped, linewidths will be fixed at 1 ppm"
+            )
+        else:
+            _apply_relaxation_linewidths(config, molecule, experiment)
 
         # Calculate shifts using new susceptibility tensor and rotated hyperfines
         molecule.calculate_shifts()
@@ -425,7 +424,11 @@ def run_predict(config, options: PredictRunOptions | None = None) -> int:
     return 0
 
 
-def _apply_relaxation_linewidths(config, base_molecule: Molecule):
+def _apply_relaxation_linewidths(
+    config,
+    base_molecule: Molecule,
+    experiment,
+):
     """
     Apply linewidths using a user-specified relaxation model.
 
@@ -436,6 +439,7 @@ def _apply_relaxation_linewidths(config, base_molecule: Molecule):
         config (PredictConfig): Prediction configuration containing relaxation
             settings and physical parameters.
         base_molecule (Molecule): Molecule instance to update in-place.
+        experiment: Experiment providing the magnetic field used for relaxation.
 
     Returns:
         None
@@ -454,7 +458,7 @@ def _apply_relaxation_linewidths(config, base_molecule: Molecule):
         for nuc in base_molecule.nuclei
         if remove_numbers(nuc.label) in nuclei_labels
     }
-    B0 = config.relaxation_magnetic_field_tesla
+    B0 = experiment.magnetic_field
 
     # Build Aiso, gamma and omega dictionaries for selected nuclei
     # Converts nuclear gyromagnetic ratios from MHz/T to rad/s/T
