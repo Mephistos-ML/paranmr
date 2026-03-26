@@ -390,25 +390,12 @@ def run_fit_corr_time(config, options: FitCorrTimeRunOptions | None = None) -> i
     ):
         experiments = load_experiments(config.experiment_files)
 
-        # Filter signals to only those with valid R1 values
-        # Only include signals for specified elements (e.g., 'C')
-
-        elements = (
-            config.nuclei_include
-            if isinstance(config.nuclei_include, list)
-            else [config.nuclei_include]
-        )
-
         exp_blocks = []
         for experiment in experiments:
             chem_labels_block = []
             exp_r1_block = []
             for signal in experiment.signals:
-                if (
-                    signal.r1 is not None
-                    and np.isfinite(signal.r1)
-                    and any(signal.assignment.startswith(e) for e in elements)
-                ):
+                if signal.r1 is not None and np.isfinite(signal.r1):
                     chem_labels_block.append(signal.assignment)
                     exp_r1_block.append(signal.r1)
             if len(chem_labels_block) > 0:
