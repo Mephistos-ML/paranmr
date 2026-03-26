@@ -129,7 +129,16 @@ def load_experiments_from_csv(
     r1_col = next(
         (
             c
-            for c in ["R1", "r1", "R1 (s^-1)", "r1 (s^-1)", "1/T1", "1/T1 (s^-1)"]
+            for c in [
+                "R1",
+                "r1 (Hz)",
+                "R1 (Hz)",
+                "r1",
+                "R1 (s^-1)",
+                "r1 (s^-1)",
+                "1/T1",
+                "1/T1 (s^-1)",
+            ]
             if c in table.columns
         ),
         None,
