@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v1.7.1 (2026-03-27)
+
+### Bug Fixes
+
+- **docs**: Update theory formulas and add references section
+  ([`6a5358f`](https://gitlab.com/suturina-group/simpnmr/-/commit/6a5358f7c2bd923130c3a0fc983e4540cd7b9c38))
+
+
 ## v1.7.0 (2026-03-27)
 
 ### Bug Fixes
