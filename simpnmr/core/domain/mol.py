@@ -14,6 +14,7 @@ import numpy as np
 from numpy.typing import ArrayLike, NDArray
 
 from simpnmr.core.const import isotopes, ptable
+from simpnmr.core.domain.relax import RelaxationEvaluation
 from simpnmr.core.domain.tensor import Hyperfine, Shift, Susceptibility
 from simpnmr.core.util import transform as tfm
 from simpnmr.core.util.arrays import flatten
@@ -333,6 +334,9 @@ class Molecule:
         electronic: Electronic state metadata (spin/orbit/J model selection).
         sh: Spin-Hamiltonian parameters (e.g. g-tensor, ZFS),
             shared across the molecule.
+        relaxation: Optional relaxation evaluation results attached during
+            prediction workflows. Defaults to ``None`` when relaxation is not
+            computed.
         metadata: Dictionary for domain-level metadata and model provenance.
             Stores final, effective modelling decisions that affect downstream
             physics (e.g. availability of orbital hyperfine contributions).
@@ -359,6 +363,7 @@ class Molecule:
         # Electronic state and spin Hamiltonian as separate attributes
         self.electronic = ElectronicState()
         self.sh = SpinHamiltonian()
+        self.relaxation: RelaxationEvaluation | None = None
 
         # Domain-level metadata
         self.metadata: dict[str, dict[str, object]] = {}
