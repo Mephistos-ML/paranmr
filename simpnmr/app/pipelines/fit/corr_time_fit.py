@@ -36,7 +36,7 @@ from simpnmr.core.relaxation.eval import evaluate_relaxation_rates
 from simpnmr.core.util.strings import remove_numbers
 
 # IO layer
-from simpnmr.io.csv.relax import save_corr_time_fit_data
+from simpnmr.io.csv.corr_time import save_corr_time_fit_data
 from simpnmr.io.xyz import xyz_write
 
 # Visualisation
