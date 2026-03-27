@@ -312,6 +312,6 @@ def save_peak_data_to_csv(
     write_csv_safe(df, file_name, comment)
 
     if verbose:
-        logger.info("Relaxation decomposition written to %s", file_name)
+        logger.info("pNMR data written to %s", file_name)
 
     return
