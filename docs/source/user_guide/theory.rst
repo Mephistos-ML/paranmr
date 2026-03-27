@@ -10,28 +10,21 @@ Below, we outline the key models and equations implemented in ``simpnmr``.
 Total shift
 -----------
 
-In ``simpnmr``, the FC, PCS, and orbital terms are treated as separate shift
-contributions. The total predicted chemical shift is therefore written as
+In ``simpnmr``, the diamagnetic, spin-dipolar, Fermi-contact,
+Fermi-contact g-correction, and orbital contributions are treated as separate
+components of the total shift. The total
+predicted chemical shift is therefore written as
 
 .. math::
    :label: :eq: total_orb
 
-    \delta^{\mathrm{TOTAL}}=\delta^{\mathrm{DIA}}+\delta^{\mathrm{FC}}+\delta^{\mathrm{PCS}}+\delta^{\mathrm{ORB}}
-
-and as
-
-.. math::
-   :label: :eq: total_no_orb
-
-    \delta^{\mathrm{TOTAL}}=\delta^{\mathrm{DIA}}+\delta^{\mathrm{FC}}+\delta^{\mathrm{PCS}}
-
-when no orbital contribution is available.
+    \delta^{\mathrm{TOTAL}}=\delta^{\mathrm{DIA}}+\delta^{\mathrm{SD}}+\delta^{\mathrm{FC}}+\delta^{\mathrm{FC}}_{\mathrm{g-corr}}+\delta^{\mathrm{ORB}}_{\mathrm{iso}}+\delta^{\mathrm{ORB}}_{\mathrm{aniso}}
 
 .. note::
 
     The calculation without :math:`\delta^{\mathrm{ORB}}` remains physically reasonable
-    because the orbital contribution is small and expected to become negligible at sufficiently
-    large distances from the paramagnetic centre.
+    because the orbital contribution is expected to become negligible at sufficiently
+    large distances from the paramagnetic centre. [Lang2020]_
 
 
 .. _DIA:
@@ -62,14 +55,18 @@ when forming :math:`\delta^{\mathrm{TOTAL}}`.
 
 .. _PCS:
 
-Pseudocontact shift
--------------------
-Pseudocontact shift (PCS) depends on the anisotropic part of the magnetic
-susceptibility tensor and the spin-dipolar part of the hyperfine coupling
-tensor (HFC).
+Spin-dipolar contribution
+-------------------------
 
-1. PCS with hyperfine from DFT 
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+In ``simpnmr``, the contribution arising from the anisotropic magnetic
+susceptibility and the traceless spin-dipolar hyperfine interaction is treated
+as a separate spin-dipolar shift channel, denoted
+:math:`\delta^{\mathrm{SD}}`. This term depends on the anisotropic part of
+the magnetic susceptibility tensor and the spin-dipolar part of the hyperfine
+coupling tensor (HFC).
+
+1. Spin-dipolar contribution with hyperfine from DFT
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 To account for the non-point nature of the paramagnetic centre, the normalised
 traceless spin-dipolar hyperfine contribution can be obtained from a simple
@@ -78,30 +75,30 @@ single-point DFT calculation of :math:`\mathbf{A}^{\mathrm{SD}}`:
 .. math::
    :label: :eq: pcs
 
-   \delta^{\mathrm{PCS}}=\frac{1}{3} \operatorname{tr}\left(\Delta \boldsymbol{\chi} \cdot \mathbf{A}^{\mathrm{SD}}\right)
+   \delta^{\mathrm{SD}}=\frac{1}{3} \operatorname{tr}\left(\Delta \boldsymbol{\chi} \cdot \mathbf{A}^{\mathrm{SD}}\right)
 
-In ``simpnmr``, this defines the PCS contribution independently of any
-isotropic and orbital shift terms.
+In ``simpnmr``, this defines the spin-dipolar contribution independently of
+the FC, FC g-correction, and orbital shift terms.
 
 .. note::
 
    The spin-dipolar hyperfine tensor :math:`\mathbf{A}^{\mathrm{SD}}` is
    always traceless.
 
-2. PCS with point-dipole approximation
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2. Spin-dipolar contribution with point-dipole approximation
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Assuming that a paramagnetic metal centre is at the origin and a nucleus of
-interest has coordinates :math:`(x, y, z)`, the pseudocontact shift
-contribution :math:`\delta^{\mathrm{PCS}}` can be calculated as a third of the
-trace of the magnetic susceptibility tensor :math:`\chi` multiplied by the
-traceless spin-dipolar hyperfine tensor, which in the point-dipole
-approximation is a matrix that depends only on the nuclear coordinates:
+interest has coordinates :math:`(x, y, z)`, the spin-dipolar contribution
+:math:`\delta^{\mathrm{SD}}` can be calculated as a third of the trace of
+the magnetic susceptibility tensor :math:`\chi` multiplied by the traceless
+spin-dipolar hyperfine tensor, which in the point-dipole approximation is a
+matrix that depends only on the nuclear coordinates:
 
 .. math::
    :label: :eq: pcs_pd
 
-    \delta^{\mathrm{PCS}}=\frac{1}{12 \pi r^5} \operatorname{tr}\left[\left(\begin{array}{ccc}
+    \delta^{\mathrm{SD}}=\frac{1}{12 \pi r^5} \operatorname{tr}\left[\left(\begin{array}{ccc}
     \chi_{x x} & \chi_{x y} & \chi_{x z} \\
     \chi_{y x} & \chi_{y y} & \chi_{y z} \\
     \chi_{z x} & \chi_{z y} & \chi_{z z}
@@ -112,16 +109,18 @@ approximation is a matrix that depends only on the nuclear coordinates:
     \end{array}\right)\right]
 
 If the coordinates are specified in Å and :math:`\chi` is in Å\ :sup:`3`,
-then the equation above, multiplied by 10\ :sup:`6`, gives the PCS in ppm.
+then the equation above, multiplied by 10\ :sup:`6`, gives the spin-dipolar
+contribution in ppm.
 
 .. _FC:
 
 Fermi-contact shift
 -------------------
 
-The Fermi-contact shift contribution :math:`\delta^{\mathrm{FC}}` is evaluated
-from the isotropic Fermi-contact hyperfine interaction at the nucleus together
-with the corresponding isotropic magnetic susceptibility term.
+The Fermi-contact contribution is split into a spin-only term
+:math:`\delta^{\mathrm{FC}}` and an additional g-correction term
+:math:`\delta^{\mathrm{FC}}_{\mathrm{g-corr}}`. Both depend on the isotropic
+Fermi-contact hyperfine interaction at the nucleus.
 
 .. note::
 
@@ -155,19 +154,17 @@ magneton, :math:`\mathrm{g}_{\mathrm{e}}` is the free-electron g-factor,
 :math:`S` is the total spin, :math:`k` is the Boltzmann constant, and
 :math:`T` is the temperature.
 
-2. FC with g-corrected magnetic susceptibility
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2. FC g-correction from g-corrected magnetic susceptibility
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 In order to account for the effect of :math:`\mathbf{g}_{\mathrm{ab-initio}}`
-anisotropy on the FC shift, a g-corrected isotropic susceptibility is used.
-The magnetic susceptibility tensor and the corresponding
-:math:`\mathbf{g}_{\mathrm{ab-initio}}` tensor must be calculated at the same
-level of theory (e.g. SOC-NEVPT2):
+anisotropy on the FC term, ``simpnmr`` treats the corresponding correction as
+a separate contribution.
 
 .. math::
     :label: :eq: FC_g
 
-    \delta^{\mathrm{FC}}=\chi^{\mathrm{g-corr}}_{\mathrm{iso}}\,\frac{1}{3}\operatorname{tr}\left(\mathbf{A}^{\mathrm{FC}}\right)
+    \delta^{\mathrm{FC}}_{\mathrm{g-corr}}=\left[\chi^{\mathrm{g-corr}}_{\mathrm{iso}}-\chi^S_{\mathrm{iso}}\right]\,\frac{1}{3}\operatorname{tr}\left(\mathbf{A}^{\mathrm{FC}}\right)
 
 where the g-corrected isotropic susceptibility is
 
@@ -175,6 +172,10 @@ where the g-corrected isotropic susceptibility is
    :label: :eq: chi_g_corr
 
     \chi^{\mathrm{g-corr}}_{\mathrm{iso}}=\frac{g_{\mathrm{e}}}{3}\left(\frac{\chi_x}{g_x}+\frac{\chi_y}{g_y}+\frac{\chi_z}{g_z}\right)
+
+This correction remains proportional to the spin-only Fermi-contact hyperfine
+term and isolates the additional contribution arising from g-tensor
+anisotropy.
 
 .. note::
 
@@ -187,9 +188,11 @@ where the g-corrected isotropic susceptibility is
 Orbital shift contribution
 --------------------------
 
-In ``simpnmr``, the orbital contribution is treated as an additional shift
-channel. It does not modify the definitions of :math:`\delta^{\mathrm{FC}}` or
-:math:`\delta^{\mathrm{PCS}}`.
+In ``simpnmr``, the orbital contribution is treated as two additional shift
+channels, :math:`\delta^{\mathrm{ORB}}_{\mathrm{iso}}` and
+:math:`\delta^{\mathrm{ORB}}_{\mathrm{aniso}}`. These do not modify the
+definitions of :math:`\delta^{\mathrm{SD}}`, :math:`\delta^{\mathrm{FC}}`, or
+:math:`\delta^{\mathrm{FC}}_{\mathrm{g-corr}}`.
 
 .. note::
 
@@ -216,7 +219,7 @@ and the anisotropic orbital contribution is evaluated as
 
     \delta^{\mathrm{ORB}}_{\mathrm{aniso}}=\frac{1}{3}\operatorname{tr}\left[\Delta\boldsymbol{\chi}\frac{g_{\mathrm{e}}}{\mathbf{g}^{\mathrm{T}}_{\mathrm{DFT}}}\left(\mathbf{A}^{\mathrm{SD}}+\mathbf{A}^{\mathrm{ORB}}\right)^{\mathrm{T}}-\Delta\boldsymbol{\chi}\mathbf{A}^{\mathrm{SD}}\right]
 
-The total orbital shift contribution reported by ``simpnmr`` is the sum
+For reporting purposes, the total orbital shift contribution is the sum
 
 .. math::
    :label: :eq: orb_total
@@ -231,11 +234,14 @@ tensor from the same QC source.
 
    Another common source of confusion is the role of
    :math:`\mathbf{A}^{\mathrm{SD}}` in the orbital expressions above. In
-   ``simpnmr``, :math:`\mathbf{A}^{\mathrm{SD}}` still defines the PCS term on
-   its own, while the orbital term is evaluated separately from the transformed
-   combination :math:`\mathbf{A}^{\mathrm{SD}}+\mathbf{A}^{\mathrm{ORB}}`.
+   ``simpnmr``, :math:`\mathbf{A}^{\mathrm{SD}}` still defines the
+   spin-dipolar term on its own, while the orbital term is evaluated separately
+   from the transformed combination
+   :math:`\mathbf{A}^{\mathrm{SD}}+\mathbf{A}^{\mathrm{ORB}}`.
 
-.. _PRE:
+References
+^^^^^^^^^^
 
-Paramagnetic relaxation enhancement
------------------------------------
+.. [Lang2020] Lang, L.; Ravera, E.; Parigi, G.; Luchinat, C.; Neese, F.
+   J. Phys. Chem. Lett. 2020, 11 (20), 8735-8744.
+   DOI: 10.1021/acs.jpclett.0c02462
