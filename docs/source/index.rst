@@ -16,7 +16,7 @@ all input data, model assumptions, and numerical parameters. This design makes
 calculations transparent, reproducible, and suitable for systematic studies.
 
 
-.. grid:: 3
+.. grid:: 4
    :gutter: 3
 
    .. grid-item-card:: Get started
@@ -25,6 +25,13 @@ calculations transparent, reproducible, and suitable for systematic studies.
 
       Installation instructions, workflows, and practical guidance for running
       prediction and fitting calculations with ``simpnmr``.
+
+   .. grid-item-card:: Tutorials
+      :link: tutorials/index
+      :link-type: doc
+
+      Downloadable example materials for the SimpNMR tutorials and workshop,
+      provided as ready-to-use files from the repository.
 
    .. grid-item-card:: Developer Guide
       :link: developer_guide/index
@@ -46,6 +53,13 @@ calculations transparent, reproducible, and suitable for systematic studies.
    :hidden:
 
    user_guide/index
+
+.. toctree::
+   :maxdepth: 1
+   :caption: Tutorials
+   :hidden:
+
+   tutorials/index
 
 .. toctree::
    :maxdepth: 1
