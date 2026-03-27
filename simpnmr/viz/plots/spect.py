@@ -563,6 +563,6 @@ def _annotate_peaks_with_barrier(
             [py, label_barrier, labels_position_y],
             linestyle="--",
             color=palette.primary,
-            linewidth=max(0.8, 0.5 * glyphs.line_lw),
+            linewidth=0.5 * glyphs.line_lw,
             alpha=connector_alpha,
         )
