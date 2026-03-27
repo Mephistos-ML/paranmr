@@ -11,7 +11,6 @@ import copy
 import logging
 import os
 import re
-from collections import defaultdict
 from pathlib import Path
 
 import numpy as np
@@ -30,7 +29,6 @@ from simpnmr.app.loaders.sh_load import (
 )
 from simpnmr.app.loaders.susc_load import load_susceptibilities
 from simpnmr.app.params.options import PredictRunOptions
-from simpnmr.app.policies.relax import average_relaxation_rates_by_chem_label
 from simpnmr.app.policies.susc import resolve_susceptibility_source
 
 # Core / domain
@@ -45,8 +43,8 @@ from simpnmr.core.util import transform as tfm
 from simpnmr.core.util.strings import remove_numbers
 
 # IO layer
-from simpnmr.io.csv import relax
 from simpnmr.io.csv.mol import save_molecule_to_csv
+from simpnmr.io.csv.peaks import save_peak_data_to_csv
 from simpnmr.io.csv.spec import read_spectrum
 from simpnmr.io.csv.susc import save_susc
 from simpnmr.io.qc.backends.orca.geom import read_orca5_output_xyz  # TODO: remove
@@ -280,18 +278,8 @@ def run_predict(config, options: PredictRunOptions | None = None) -> int:
     for molecule, susc, experiment in zip(molecules, suscs, experiments):
         molecule.susc = susc
 
-        # Calculate linewidths using user-specified relaxation model (optional)
-        if not getattr(config, "relaxation_model", None):
-            logger.warning(
-                "No relaxation model specified — linewidths will be fixed at 1 ppm"
-            )
-        elif experiment is None or experiment.magnetic_field is None:
-            logger.warning(
-                "Experimental magnetic field is unavailable — relaxation effects "
-                "skipped, linewidths will be fixed at 1 ppm"
-            )
-        else:
-            _apply_relaxation_linewidths(config, molecule, experiment)
+        # Apply relaxation linewidth (relaxation-aware when inputs are available).
+        _apply_relaxation_linewidths(config, molecule, experiment)
 
         # Calculate shifts using new susceptibility tensor and rotated hyperfines
         molecule.calculate_shifts()
@@ -408,7 +396,7 @@ def run_predict(config, options: PredictRunOptions | None = None) -> int:
         susc_units=getattr(config, "susc_units", "A3"),
     )
 
-    # Write shift data to file
+    # Write shift and peak data to file
     for molecule in molecules:
         save_molecule_to_csv(
             molecule=molecule,
@@ -417,6 +405,16 @@ def run_predict(config, options: PredictRunOptions | None = None) -> int:
                 f"hyperfines_and_shifts_{molecule.susc.temperature:.2f}_K.csv",
             ),
             delimiter=options.runtime.csv_delimiter,
+            comment=f"T = {molecule.susc.temperature:.2f} K",
+            verbose=True,
+        )
+
+        save_peak_data_to_csv(
+            molecule=molecule,
+            file_name=os.path.join(
+                config.project_name,
+                f"peak_data_{molecule.susc.temperature:.2f}_K.csv",
+            ),
             comment=f"T = {molecule.susc.temperature:.2f} K",
             verbose=True,
         )
@@ -432,7 +430,8 @@ def _apply_relaxation_linewidths(
     """
     Apply linewidths using a user-specified relaxation model.
 
-    This function updates `base_molecule.nuclei` in-place by setting `nuc.shift.lw`
+    This function updates `base_molecule` in-place by storing the computed
+    relaxation evaluation in the domain object and by setting `nuc.shift.lw`
     when relaxation inputs are provided in the config.
 
     Args:
@@ -445,6 +444,21 @@ def _apply_relaxation_linewidths(
     Returns:
         None
     """
+
+    if not getattr(config, "relaxation_model", None):
+        logger.warning(
+            "No relaxation model specified — linewidths will be fixed at 1 ppm"
+        )
+        base_molecule.relaxation = None
+        return
+
+    if experiment is None or experiment.magnetic_field is None:
+        logger.warning(
+            "Experimental magnetic field is unavailable — relaxation effects "
+            "skipped, linewidths will be fixed at 1 ppm"
+        )
+        base_molecule.relaxation = None
+        return
 
     # Solomon linewidths if relaxation model is SBM
     nuclei_labels = (
@@ -523,60 +537,29 @@ def _apply_relaxation_linewidths(
         compute_r2=True,
     )
 
-    rates_r1 = relaxation_eval.r1.total
-    rates_r2 = relaxation_eval.r2.total
+    # Persist the computed relaxation evaluation on the molecule domain object.
+    base_molecule.relaxation = relaxation_eval
+
+    rates_r1 = base_molecule.relaxation.r1.total
+    rates_r2 = base_molecule.relaxation.r2.total
 
     if rates_r1 is None or rates_r2 is None:
         raise ValueError("Shared relaxation evaluator returned incomplete R1/R2 rates")
 
-    # Group rates by chemical label
-    r1_by_chem_label = defaultdict(list)
+    # Group R2 rates by chemical label for linewidth averaging in Hz.
+    r2_by_chem_label = {}
     for nuc in base_molecule.nuclei:
-        if nuc.label in rates_r1:
-            r1_by_chem_label[nuc.chem_label].append(rates_r1[nuc.label])
+        if nuc.label not in rates_r2:
+            continue
+        if nuc.chem_label not in r2_by_chem_label:
+            r2_by_chem_label[nuc.chem_label] = []
+        r2_by_chem_label[nuc.chem_label].append(rates_r2[nuc.label])
 
-    r2_by_chem_label = defaultdict(list)
-    for nuc in base_molecule.nuclei:
-        if nuc.label in rates_r2:
-            r2_by_chem_label[nuc.chem_label].append(rates_r2[nuc.label])
-
-    # Calculate average R1 rates for each chemical label
-    avg_r1_by_chem_label = {
-        chem_label: np.mean(rate_list)
-        for chem_label, rate_list in r1_by_chem_label.items()
-    }
-    # Calculate average R2 rates for each chemical label
-    avg_r2_by_chem_label = {
-        chem_label: np.mean(rate_list)
-        for chem_label, rate_list in r2_by_chem_label.items()
-    }
     # Calculate average linewidths for each chemical label (Hz)
     avg_lw_by_chem_label = {
         chem_label: np.mean([rate / np.pi for rate in rate_list])
         for chem_label, rate_list in r2_by_chem_label.items()
     }
-
-    # Optional decomposition of R1 into dipolar, contact, and Curie channels
-    avg_dipolar_by_chem_label = average_relaxation_rates_by_chem_label(
-        base_molecule, relaxation_eval.r1.dipolar
-    )
-    avg_contact_by_chem_label = average_relaxation_rates_by_chem_label(
-        base_molecule, relaxation_eval.r1.contact
-    )
-    avg_curie_by_chem_label = average_relaxation_rates_by_chem_label(
-        base_molecule, relaxation_eval.r1.curie
-    )
-
-    # Save the relaxation data to CSV
-    relax.save_relaxation_decomposition(
-        file_name=os.path.join(config.project_name, "relaxation_decomposition.csv"),
-        avg_r1_by_chem_label=avg_r1_by_chem_label,
-        avg_r2_by_chem_label=avg_r2_by_chem_label,
-        avg_lw_by_chem_label=avg_lw_by_chem_label,
-        avg_dipolar_by_chem_label=avg_dipolar_by_chem_label,
-        avg_contact_by_chem_label=avg_contact_by_chem_label,
-        avg_curie_by_chem_label=avg_curie_by_chem_label,
-    )
 
     for nuc in base_molecule.nuclei:
         if nuc.chem_label in avg_lw_by_chem_label:
