@@ -50,7 +50,7 @@ def fit_corr_time_cli(uargs: argparse.Namespace, runtime: RuntimeSettings) -> in
     """Thin CLI wrapper for the fit_corr_time pipeline."""
 
     from simpnmr.app.params.options import FitCorrTimeRunOptions
-    from simpnmr.app.pipelines.fit.tau_fit import run_fit_corr_time
+    from simpnmr.app.pipelines.fit.corr_time_fit import run_fit_corr_time
 
     config = cfg.FitCorrTimeConfig.from_file(uargs.input_file)
     options = FitCorrTimeRunOptions.from_namespace(uargs)

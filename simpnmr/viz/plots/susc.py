@@ -9,12 +9,14 @@ inverse temperature, with optional precomputed fit curves and uncertainty bands.
 
 import logging
 
-import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 import numpy as np
 
+from simpnmr.viz.layout.canvas import create_canvas, create_header_plot_canvas
 from simpnmr.viz.layout.export import render_figure
+from simpnmr.viz.layout.table import render_compact_table
 from simpnmr.viz.style.theme import PlotSpec
+from simpnmr.viz.utils.uncertainty import format_compact_uncertainty
 
 logger = logging.getLogger(__name__)
 
@@ -60,7 +62,17 @@ def plot_isoaxrho(
         p = params[component]
         palette = spec.palette
 
-        fig, ax = plt.subplots(1, 1, figsize=(6.8, 4.6))
+        fig, header_ax, ax = create_header_plot_canvas(
+            spec.profile,
+            variant="vertical",
+            layout="constrained",
+            header_ratio=0.90,
+            plot_ratio=3.10,
+            hspace=0.02,
+        )
+        fig.patch.set_facecolor("white")
+        header_ax.set_facecolor("white")
+        ax.set_facecolor("white")
 
         inv_t_plot = inv_t * 1.0e3
 
@@ -97,7 +109,6 @@ def plot_isoaxrho(
             )
 
         # Precomputed fit curve + precomputed uncertainty band
-        caption_lines = []
         fit_y = p.get("fit_y")
         fit_y_low = p.get("fit_y_low")
         fit_y_high = p.get("fit_y_high")
@@ -108,7 +119,7 @@ def plot_isoaxrho(
                 linestyle="-",
                 linewidth=glyphs.fit_lw,
                 color=palette.primary,
-                label="Slope/Intercept Fit",
+                label="Fit.",
             )
 
         if fit_y_low is not None and fit_y_high is not None:
@@ -121,50 +132,51 @@ def plot_isoaxrho(
                 linewidth=glyphs.band_lw,
             )
 
-        # Caption panel: only display values already present in params
+        # Compact summary strip: flatten all display items into the current
+        # two-column table contract.
         _adj_r2 = p.get("adj_r2")
         if _adj_r2 is None or np.isnan(_adj_r2):
             _adj_r2_txt = "N/A"
         else:
             _adj_r2_txt = f"{_adj_r2:.3f}"
 
-        caption_lines = [rf"$\mathrm{{adj.}}\ R^{{2}} = {_adj_r2_txt}$"]
+        fit_quality_items = [rf"adj. $R^{{2}}$: {_adj_r2_txt}"]
+
+        model_items: list[str] = []
 
         intercept = p.get("intercept")
         intercept_err = p.get("intercept_err")
-        if intercept is not None and intercept_err is not None:
-            caption_lines.append(
-                rf"$\mathrm{{Intercept}} = {intercept:.1f} \pm {intercept_err:.1f}$"
+        if intercept is not None and intercept_err is not None and intercept_err > 0:
+            model_items.append(
+                f"Intercept: {format_compact_uncertainty(intercept, intercept_err)}"
             )
         elif intercept is not None:
-            caption_lines.append(rf"$\mathrm{{Intercept}} = {intercept:.1f}$")
+            model_items.append(f"Intercept: {intercept:.1f}")
 
         slope = p.get("slope")
         slope_err = p.get("slope_err")
-        if slope is not None and slope_err is not None:
-            caption_lines.append(
-                rf"$\mathrm{{Slope}} = {slope:.1f} \pm {slope_err:.1f}$"
-            )
+        if slope is not None and slope_err is not None and slope_err > 0:
+            model_items.append(f"Slope: {format_compact_uncertainty(slope, slope_err)}")
         elif slope is not None:
-            caption_lines.append(rf"$\mathrm{{Slope}} = {slope:.1f}$")
+            model_items.append(f"Slope: {slope:.1f}")
 
         tip_val = p.get("tip")
         if tip_val is not None and tip_val != 0.0:
             exp = int(np.floor(np.log10(abs(tip_val))))
             mant = tip_val / 10**exp
-            caption_lines.append(rf"$\mathrm{{TIP}} = {mant:.1f}\times 10^{{{exp}}}$")
+            model_items.append(rf"TIP: {mant:.1f} × 10^{{{exp}}}")
 
         y_min, y_max = ax.get_ylim()
         y_range = y_max - y_min
         if np.isfinite(y_range) and y_range > 0:
-            y_pad_frac = 0.20
+            y_pad_frac = 0.10
             pad = y_pad_frac * y_range
             ax.set_ylim(y_min - pad, y_max + pad)
 
         # Axis labels/styling
         ax.set_xlabel(r"$1/T\;10^{3}$ (K$^{-1}$)")
         chi_sub = _chiT_label_map.get(component, component)
-        ax.set_ylabel(rf"$\chi T^{{\mathrm{{red}}}}_{{{chi_sub}}}$")
+        ax.set_ylabel(rf"$\Delta\chi T^{{\mathrm{{red}}}}_{{{chi_sub}}}$")
         ax.yaxis.set_minor_locator(ticker.AutoMinorLocator())
         ax.xaxis.set_minor_locator(ticker.AutoMinorLocator())
 
@@ -190,29 +202,18 @@ def plot_isoaxrho(
         top_ax.xaxis.set_minor_locator(ticker.AutoMinorLocator())
 
         # Typography (centralised): apply after axes + secondary axes exist.
-        scale = spec.skin_axes(ax)
+        spec.skin_axes(ax)
         spec.skin_axes(top_ax)
 
-        # Move the caption annotation inside the main axis
-        if caption_lines:
-            ax.annotate(
-                " ".join(str(s) for s in caption_lines if s),
-                xy=(0.98, 0.03),
-                xycoords="axes fraction",
-                ha="right",
-                va="bottom",
-                fontsize=scale.annotation,
-                bbox=dict(
-                    boxstyle="round,pad=0.3",
-                    fc=palette.annotation_bg,
-                    ec=palette.primary,
-                    lw=1.0,
-                ),
-            )
-
-        ax.legend(loc="upper left", ncol=3)
-
-        fig.tight_layout()
+        render_compact_table(
+            header_ax,
+            blocks=[
+                ("Fit", fit_quality_items),
+                ("Model", model_items),
+            ],
+            spec=spec,
+        )
+        ax.legend(loc="best", ncol=1)
 
         comp_save_name = f"{save_name}_{component}"
 
@@ -269,7 +270,11 @@ def plot_exp_vs_ab_initio(
     for component in params.keys():
         inv_t_plot = inv_t * 1.0e3
 
-        fig, ax = plt.subplots(1, 1, figsize=(6.8, 4.6))
+        fig, ax = create_canvas(
+            spec.profile,
+            variant="standard",
+            layout="constrained",
+        )
 
         p_exp = params[component]
         fit_y = p_exp.get("fit_y")
@@ -349,7 +354,7 @@ def plot_exp_vs_ab_initio(
         # Axis labels/styling
         ax.set_xlabel(r"$1/T\;10^{3}$ (K$^{-1}$)")
         chi_sub = _chiT_label_map.get(component, component)
-        ax.set_ylabel(rf"$\chi T^{{\mathrm{{red}}}}_{{{chi_sub}}}$")
+        ax.set_ylabel(rf"$\Delta\chi T^{{\mathrm{{red}}}}_{{{chi_sub}}}$")
 
         ax.yaxis.set_minor_locator(ticker.AutoMinorLocator())
         ax.xaxis.set_minor_locator(ticker.AutoMinorLocator())
@@ -358,12 +363,13 @@ def plot_exp_vs_ab_initio(
         ax.grid(True, which="major", linestyle="-", linewidth=0.6, alpha=0.25)
         ax.grid(True, which="minor", linestyle=":", linewidth=0.4, alpha=0.15)
 
-        # Add 10% padding on y-axis
+        # Add asymmetric padding on y-axis
         y_min, y_max = ax.get_ylim()
         y_range = y_max - y_min
         if np.isfinite(y_range) and y_range > 0:
-            pad = 0.20 * y_range
-            ax.set_ylim(y_min - pad, y_max + pad)
+            lower_pad = 0.10 * y_range
+            upper_pad = 0.40 * y_range
+            ax.set_ylim(y_min - lower_pad, y_max + upper_pad)
 
         # Secondary top axis: T(K)
         def _inv_to_t(inv_plot: float | np.ndarray) -> float | np.ndarray:
@@ -384,9 +390,7 @@ def plot_exp_vs_ab_initio(
         spec.skin_axes(ax)
         spec.skin_axes(top_ax)
 
-        ax.legend(loc="upper left", ncol=4)
-
-        fig.tight_layout()
+        ax.legend(loc="upper left", ncol=2)
 
         comp_save_name = f"{save_name}_{component}"
 

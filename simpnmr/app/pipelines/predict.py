@@ -11,7 +11,6 @@ import copy
 import logging
 import os
 import re
-from collections import defaultdict
 from pathlib import Path
 
 import numpy as np
@@ -23,6 +22,7 @@ from simpnmr.app.loaders.exp_load import load_experiments
 from simpnmr.app.loaders.hfc_load import load_hyperfines
 from simpnmr.app.loaders.labels_load import load_chem_labels_from_csv
 from simpnmr.app.loaders.mol_load import load_base_molecule
+from simpnmr.app.loaders.paramag_centre_load import load_paramagnetic_centre
 from simpnmr.app.loaders.sh_load import (
     load_g_tensor_ab_initio,
     load_g_tensor_dft,
@@ -36,20 +36,22 @@ from simpnmr.core.const.gammas import NUCLEAR_GAMMAS
 from simpnmr.core.const.physics import EGAMMA
 from simpnmr.core.conv.ang_to_freq import angstrom_to_mhz
 from simpnmr.core.domain.mol import Molecule
-from simpnmr.core.relaxation import gueron, sbm
+from simpnmr.core.relaxation.eval import evaluate_relaxation_rates
+
+# Tools
+from simpnmr.core.util import transform as tfm
 from simpnmr.core.util.strings import remove_numbers
 
 # IO layer
-from simpnmr.io.csv import relax
 from simpnmr.io.csv.mol import save_molecule_to_csv
+from simpnmr.io.csv.peaks import save_peak_data_to_csv
 from simpnmr.io.csv.spec import read_spectrum
 from simpnmr.io.csv.susc import save_susc
+from simpnmr.io.qc.backends.orca.geom import read_orca5_output_xyz  # TODO: remove
 from simpnmr.io.xyz import xyz_write
 
-# Tools
-from simpnmr.tools.coords import transform as tfm
-
 # Visualisation
+from simpnmr.viz.plots.orb_dep import plot_orbital_shift_distance_dependence
 from simpnmr.viz.plots.shifts import plot_shift_contrib, plot_shift_spread
 from simpnmr.viz.plots.spect import plot_pred_spectrum, plot_raw_deconv_pred
 from simpnmr.viz.style.theme import apply_profile
@@ -83,6 +85,12 @@ def run_predict(config, options: PredictRunOptions | None = None) -> int:
     # Load Molecule
     base_molecule = load_base_molecule(config)
 
+    # Load canonical paramagnetic centre into the molecule domain container
+    base_molecule = load_paramagnetic_centre(
+        molecule=base_molecule,
+        paramagnetic_centre=config.hyperfine_paramagnetic_centre,
+    )
+
     # Load DFT g-tensor (if available)
     base_molecule.sh.g_tensor_dft = load_g_tensor_dft(
         config=config,
@@ -108,13 +116,30 @@ def run_predict(config, options: PredictRunOptions | None = None) -> int:
         hyperfine_method=config.hyperfine_method if config.spin_S is None else None,
     )
 
-    # Resolve susceptibility source for downstream operations
-    backend, section = resolve_susceptibility_source(
-        config.susceptibility_file,
-        config.susceptibility_format,
-    )
+    # Resolve susceptibility source for downstream operations when an explicit
+    # susceptibility file is available.
+    backend, section = None, None
+    if config.susceptibility_file is not None:
+        backend, section = resolve_susceptibility_source(
+            config.susceptibility_file,
+            config.susceptibility_format,
+        )
 
-    # Load Magnetic Susceptibility
+    # TODO(app): Temporary ORCA-only chi-source geometry load for prediction.
+    # Move this into the appropriate loader/builder layer once the chi-source
+    # geometry flow is formalized outside the pipeline.
+    if backend == "orca":
+        try:
+            base_molecule.chi_source_labels, base_molecule.chi_source_coords = (
+                read_orca5_output_xyz(config.susceptibility_file)
+            )
+        except Exception as exc:
+            logger.warning(
+                "Failed to read chi-source geometry from ORCA susceptibility file: %s",
+                exc,
+            )
+
+    # Load magnetic susceptibility objects.
     suscs = load_susceptibilities(
         config.susceptibility_file,
         config.susceptibility_format,
@@ -171,9 +196,12 @@ def run_predict(config, options: PredictRunOptions | None = None) -> int:
             if susc.temperature != exp.temperature:
                 logger.warning(
                     "Mismatch in Susceptibility (%.2f K) and "
-                    "Experimental (%.2f K) temperatures",
+                    "Experimental (%.2f K) temperatures. "
+                    "Proceeding with susceptibility temperature (%.2f K) "
+                    "as the active calculation temperature.",
                     susc.temperature,
                     exp.temperature,
+                    susc.temperature,
                 )
             if re.sub("[0-9]", "", exp.isotope) not in config.nuclei_include:
                 logger.warning(
@@ -184,53 +212,57 @@ def run_predict(config, options: PredictRunOptions | None = None) -> int:
     else:
         experiments = [None] * len(suscs)
 
+    if len(config.experiment_spectrum_files):
+        for experiment, spectrum in zip(experiments, config.experiment_spectrum_files):
+            if experiment is None:
+                continue
+            spectrum_array = read_spectrum(spectrum)
+            experiment.exp_reference = config.experiment_exp_reference
+            experiment.spectrum = spectrum_array
+
     # Rotationally average hyperfines of user selected nuclei:
     if len(config.hyperfine_average):
         base_molecule.average_hyperfine(config.hyperfine_average)
 
+    # TODO(app): Temporary ORCA-specific chi-frame wiring.
+    # Move chi-source geometry loading, alignment susceptibility selection, and
+    # frame preparation out of predict.py into the appropriate loader/builder
+    # layer once chi-frame domain flow is formalized.
+
+    # Use the first loaded susceptibility for chi-frame rotation
+    rotation_susc = suscs[0]
+
     # Rotate hyperfine tensors from DFT frame into chi eigenframe (if provided)
     if backend == "orca":
-        if (
-            "dft" in config.hyperfine_method
-        ):  # TODO: remove condition and remove config from tf.
-            rot_mat, _ = tfm.get_rotation_and_transformation(
-                config,
-                dft_coords=base_molecule.coords,
-            )
-            base_molecule.rotate_hyperfines(rot_mat)
-
-            # Rotate DFT g-tensor into chi frame
-            if base_molecule.sh.g_tensor_dft is not None:
-                base_molecule.sh.g_tensor_dft = (
-                    rot_mat @ base_molecule.sh.g_tensor_dft @ rot_mat.T
+        if "dft" in config.hyperfine_method:
+            if base_molecule.chi_source_coords is None:
+                logger.warning(
+                    "Chi-source geometry is unavailable; skipping chi-frame rotation"
                 )
+            else:
+                rot_mat, _ = tfm.get_rotation_and_transformation(
+                    chi_tensor=rotation_susc.tensor,
+                    temperature=rotation_susc.temperature,
+                    chi_source_coords=base_molecule.chi_source_coords,
+                    dft_coords=base_molecule.coords,
+                )
+                base_molecule.apply_frame_rotation(rot_mat)
 
-            # Rotate HFC coords frame into chi eigenframe and save the transformed coords
-            tfm.rotate_coords_to_chi_frame(
-                config.project_name, config, dft_coords=base_molecule.coords
-            )
+                # Rotate DFT g-tensor into chi frame
+                if base_molecule.sh.g_tensor_dft is not None:
+                    base_molecule.sh.g_tensor_dft = (
+                        rot_mat @ base_molecule.sh.g_tensor_dft @ rot_mat.T
+                    )
 
-    # Calculate linewidths using user-specified relaxation model (optional)
-    if not getattr(config, "relaxation_model", None):
-        (
-            logger.warning(
-                "No relaxation model specified — linewidths will be fixed at 1 ppm"
-            )
-        )
-    elif config.relaxation_magnetic_field_tesla is None:
-        logger.warning(
-            "relaxation_magnetic_field_tesla "
-            "not provided — relaxation effects skipped, "
-            "linewidths will be fixed at 1 ppm \n"
-        )
-    else:
-        _apply_relaxation_linewidths(config, base_molecule)
-
-    if len(config.experiment_spectrum_files):
-        for experiment, spectrum in zip(experiments, config.experiment_spectrum_files):
-            spectrum_array = read_spectrum(spectrum)
-            experiment.exp_reference = config.experiment_exp_reference
-            experiment.spectrum = spectrum_array
+                # Rotate chi-source coords into chi eigenframe and save the
+                # transformed susceptibility-source structure.
+                if base_molecule.chi_source_labels is not None:
+                    tfm.rotate_coords_to_chi_frame(
+                        config.project_name,
+                        chi_tensor=rotation_susc.tensor,
+                        chi_source_labels=base_molecule.chi_source_labels,
+                        chi_source_coords=base_molecule.chi_source_coords,
+                    )
 
     _terms = ["pc", "fc", "d"]
 
@@ -245,6 +277,9 @@ def run_predict(config, options: PredictRunOptions | None = None) -> int:
     # Update susceptibility tensor of Molecule using model
     for molecule, susc, experiment in zip(molecules, suscs, experiments):
         molecule.susc = susc
+
+        # Apply relaxation linewidth (relaxation-aware when inputs are available).
+        _apply_relaxation_linewidths(config, molecule, experiment)
 
         # Calculate shifts using new susceptibility tensor and rotated hyperfines
         molecule.calculate_shifts()
@@ -289,6 +324,25 @@ def run_predict(config, options: PredictRunOptions | None = None) -> int:
                 order="descending",
             )
 
+            if molecule.metadata.get("hyperfine", {}).get("orbital_contribution") == (
+                "available"
+            ):
+                plot_orbital_shift_distance_dependence(
+                    molecule,
+                    spec=spec,
+                    save=True,
+                    show=options.runtime.show_plots,
+                    save_name=os.path.join(
+                        config.project_name,
+                        f"pred_orbital_distance_dependence_{molecule.susc.temperature:.2f}_K",
+                    ),
+                    verbose=True,
+                    window_title=(
+                        f"Orbital shift distance dependence at {susc.temperature:.2f} K"
+                    ),
+                    order="ascending",
+                )
+
         shift_range = [
             np.min([nuc.shift.avg for nuc in molecule.nuclei]),
             np.max([nuc.shift.avg for nuc in molecule.nuclei]),
@@ -329,16 +383,20 @@ def run_predict(config, options: PredictRunOptions | None = None) -> int:
     save_susc(
         molecules,
         os.path.join(config.project_name, "susceptibility_tensor.csv"),
-        comment="Data from {} ({})".format(
-            Path(config.susceptibility_file).name,
-            config.susceptibility_format
-            if config.susceptibility_format is not None
-            else (f"orca_{section}" if backend == "orca" else backend),
+        comment=(
+            "Data from spin-only fallback (no susceptibility file)"
+            if config.susceptibility_file is None
+            else "Data from {} ({})".format(
+                Path(config.susceptibility_file).name,
+                config.susceptibility_format
+                if config.susceptibility_format is not None
+                else (f"orca_{section}" if backend == "orca" else backend),
+            )
         ),
         susc_units=getattr(config, "susc_units", "A3"),
     )
 
-    # Write shift data to file
+    # Write shift and peak data to file
     for molecule in molecules:
         save_molecule_to_csv(
             molecule=molecule,
@@ -351,24 +409,56 @@ def run_predict(config, options: PredictRunOptions | None = None) -> int:
             verbose=True,
         )
 
+        save_peak_data_to_csv(
+            molecule=molecule,
+            file_name=os.path.join(
+                config.project_name,
+                f"peak_data_{molecule.susc.temperature:.2f}_K.csv",
+            ),
+            comment=f"T = {molecule.susc.temperature:.2f} K",
+            verbose=True,
+        )
+
     return 0
 
 
-def _apply_relaxation_linewidths(config, base_molecule: Molecule):
+def _apply_relaxation_linewidths(
+    config,
+    base_molecule: Molecule,
+    experiment,
+):
     """
     Apply linewidths using a user-specified relaxation model.
 
-    This function updates `base_molecule.nuclei` in-place by setting `nuc.shift.lw`
+    This function updates `base_molecule` in-place by storing the computed
+    relaxation evaluation in the domain object and by setting `nuc.shift.lw`
     when relaxation inputs are provided in the config.
 
     Args:
         config (PredictConfig): Prediction configuration containing relaxation
             settings and physical parameters.
         base_molecule (Molecule): Molecule instance to update in-place.
+        experiment: Experiment providing the magnetic field and temperature used
+            for relaxation.
 
     Returns:
         None
     """
+
+    if not getattr(config, "relaxation_model", None):
+        logger.warning(
+            "No relaxation model specified — linewidths will be fixed at 1 ppm"
+        )
+        base_molecule.relaxation = None
+        return
+
+    if experiment is None or experiment.magnetic_field is None:
+        logger.warning(
+            "Experimental magnetic field is unavailable — relaxation effects "
+            "skipped, linewidths will be fixed at 1 ppm"
+        )
+        base_molecule.relaxation = None
+        return
 
     # Solomon linewidths if relaxation model is SBM
     nuclei_labels = (
@@ -383,8 +473,7 @@ def _apply_relaxation_linewidths(config, base_molecule: Molecule):
         for nuc in base_molecule.nuclei
         if remove_numbers(nuc.label) in nuclei_labels
     }
-    electron_coords = config.relaxation_electron_coords
-    B0 = config.relaxation_magnetic_field_tesla
+    B0 = experiment.magnetic_field
 
     # Build Aiso, gamma and omega dictionaries for selected nuclei
     # Converts nuclear gyromagnetic ratios from MHz/T to rad/s/T
@@ -427,253 +516,50 @@ def _apply_relaxation_linewidths(config, base_molecule: Molecule):
     orbit = base_molecule.electronic.orbit_L
     total_momentum_J = base_molecule.electronic.total_J
 
-    if config.relaxation_model == "sbm":
-        # Calculate SBM dipolar rates (R1)
-        sbm_dipolar_r1_rates = sbm.calc_r1_dipolar(
-            list(nuclei_coords.keys()),
-            nuclei_coords,
-            electron_coords,
-            gamma_I_dict,
-            omega_I_dict,
-            omega_S,
-            tau_c1,
-            tau_c2,
-            spin,
-            orbit,
-            total_momentum_J,
-        )
-        # Calculate SBM contact rates (R1)
-        sbm_contact_r1_rates = sbm.calc_r1_contact(
-            list(nuclei_coords.keys()),
-            A_iso_dict,
-            omega_I_dict,
-            omega_S,
-            tau_e2,
-            spin,
-            total_momentum_J,
-        )
-        # Calculate SBM dipolar rates (R2)
-        sbm_dipolar_r2_rates = sbm.calc_r2_dipolar(
-            list(nuclei_coords.keys()),
-            nuclei_coords,
-            electron_coords,
-            gamma_I_dict,
-            omega_I_dict,
-            omega_S,
-            tau_c1,
-            tau_c2,
-            spin,
-            orbit,
-            total_momentum_J,
-        )
-        # Calculate SBM contact rates (R2)
-        sbm_contact_r2_rates = sbm.calc_r2_contact(
-            list(nuclei_coords.keys()),
-            A_iso_dict,
-            omega_I_dict,
-            omega_S,
-            tau_e1,
-            tau_e2,
-            spin,
-            total_momentum_J,
-        )
-        # Combine rates into a single dictionary
-        rates_r1 = {
-            label: sbm_dipolar_r1_rates[label] + sbm_contact_r1_rates[label]
-            for label in nuclei_coords
-        }
-        rates_r2 = {
-            label: sbm_dipolar_r2_rates[label] + sbm_contact_r2_rates[label]
-            for label in nuclei_coords
-        }
-    # Curie mechanism only (R1 and R2)
-    elif config.relaxation_model == "curie":
-        curie_r1_rates = gueron.calc_r1_curie(
-            list(nuclei_coords.keys()),
-            nuclei_coords,
-            electron_coords,
-            omega_I_dict,
-            config.relaxation_temperature,
-            tau_R,
-            spin,
-            orbit,
-            total_momentum_J,
-        )
-        curie_r2_rates = gueron.calc_r2_curie(
-            list(nuclei_coords.keys()),
-            nuclei_coords,
-            electron_coords,
-            omega_I_dict,
-            config.relaxation_temperature,
-            tau_R,
-            spin,
-            orbit,
-            total_momentum_J,
-        )
-        rates_r1 = {label: curie_r1_rates[label] for label in nuclei_coords}
-        rates_r2 = {label: curie_r2_rates[label] for label in nuclei_coords}
+    relaxation_eval = evaluate_relaxation_rates(
+        relaxation_model=config.relaxation_model,
+        nuclei_coords=nuclei_coords,
+        electron_coords=base_molecule.paramagnetic_centre,
+        gamma_I_dict=gamma_I_dict,
+        omega_I_dict=omega_I_dict,
+        omega_S=omega_S,
+        spin=spin,
+        orbit=orbit,
+        total_momentum_J=total_momentum_J,
+        A_iso_dict=A_iso_dict,
+        temperature=experiment.temperature,
+        tau_R=tau_R,
+        tau_c1=tau_c1,
+        tau_c2=tau_c2,
+        tau_e1=tau_e1,
+        tau_e2=tau_e2,
+        compute_r1=True,
+        compute_r2=True,
+    )
 
-    # Combined SBM and Curie mechanisms
-    elif (
-        config.relaxation_model == "sbm curie" or config.relaxation_model == "curie sbm"
-    ):
-        sbm_dipolar_r1_rates = sbm.calc_r1_dipolar(
-            list(nuclei_coords.keys()),
-            nuclei_coords,
-            electron_coords,
-            gamma_I_dict,
-            omega_I_dict,
-            omega_S,
-            tau_c1,
-            tau_c2,
-            spin,
-            orbit,
-            total_momentum_J,
-        )
-        sbm_contact_r1_rates = sbm.calc_r1_contact(
-            list(nuclei_coords.keys()),
-            A_iso_dict,
-            omega_I_dict,
-            omega_S,
-            tau_e1,
-            spin,
-            total_momentum_J,
-        )
-        sbm_dipolar_r2_rates = sbm.calc_r2_dipolar(
-            list(nuclei_coords.keys()),
-            nuclei_coords,
-            electron_coords,
-            gamma_I_dict,
-            omega_I_dict,
-            omega_S,
-            tau_c1,
-            tau_c2,
-            spin,
-            orbit,
-            total_momentum_J,
-        )
+    # Persist the computed relaxation evaluation on the molecule domain object.
+    base_molecule.relaxation = relaxation_eval
 
-        # Calculate SBM contact rates
-        sbm_contact_r2_rates = sbm.calc_r2_contact(
-            list(nuclei_coords.keys()),
-            A_iso_dict,
-            omega_I_dict,
-            omega_S,
-            tau_e1,
-            tau_e2,
-            spin,
-            total_momentum_J,
-        )
+    rates_r1 = base_molecule.relaxation.r1.total
+    rates_r2 = base_molecule.relaxation.r2.total
 
-        curie_r1_rates = gueron.calc_r1_curie(
-            list(nuclei_coords.keys()),
-            nuclei_coords,
-            electron_coords,
-            omega_I_dict,
-            config.relaxation_temperature,
-            tau_R,
-            spin,
-            orbit,
-            total_momentum_J,
-        )
-        curie_r2_rates = gueron.calc_r2_curie(
-            list(nuclei_coords.keys()),
-            nuclei_coords,
-            electron_coords,
-            omega_I_dict,
-            config.relaxation_temperature,
-            tau_R,
-            spin,
-            orbit,
-            total_momentum_J,
-        )
+    if rates_r1 is None or rates_r2 is None:
+        raise ValueError("Shared relaxation evaluator returned incomplete R1/R2 rates")
 
-        rates_r1 = {
-            label: sbm_dipolar_r1_rates[label]
-            + sbm_contact_r1_rates[label]
-            + curie_r1_rates[label]
-            for label in nuclei_coords
-        }
-        rates_r2 = {
-            label: sbm_dipolar_r2_rates[label]
-            + sbm_contact_r2_rates[label]
-            + curie_r2_rates[label]
-            for label in nuclei_coords
-        }
-
-    # Group rates by chemical label
-    r1_by_chem_label = defaultdict(list)
+    # Group R2 rates by chemical label for linewidth averaging in Hz.
+    r2_by_chem_label = {}
     for nuc in base_molecule.nuclei:
-        if nuc.label in rates_r1:
-            r1_by_chem_label[nuc.chem_label].append(rates_r1[nuc.label])
+        if nuc.label not in rates_r2:
+            continue
+        if nuc.chem_label not in r2_by_chem_label:
+            r2_by_chem_label[nuc.chem_label] = []
+        r2_by_chem_label[nuc.chem_label].append(rates_r2[nuc.label])
 
-    r2_by_chem_label = defaultdict(list)
-    for nuc in base_molecule.nuclei:
-        if nuc.label in rates_r2:
-            r2_by_chem_label[nuc.chem_label].append(rates_r2[nuc.label])
-
-    # Calculate average R1 rates for each chemical label
-    avg_r1_by_chem_label = {
-        chem_label: np.mean(rate_list)
-        for chem_label, rate_list in r1_by_chem_label.items()
-    }
-    # Calculate average R2 rates for each chemical label
-    avg_r2_by_chem_label = {
-        chem_label: np.mean(rate_list)
-        for chem_label, rate_list in r2_by_chem_label.items()
-    }
     # Calculate average linewidths for each chemical label (Hz)
     avg_lw_by_chem_label = {
         chem_label: np.mean([rate / np.pi for rate in rate_list])
         for chem_label, rate_list in r2_by_chem_label.items()
     }
-
-    # Optional decomposition of R1 into SBM and Curie components
-    avg_dipolar_by_chem_label = None
-    avg_contact_by_chem_label = None
-    avg_curie_by_chem_label = None
-
-    if "sbm" in config.relaxation_model:
-        dipolar_by_chem_label = defaultdict(list)
-        contact_by_chem_label = defaultdict(list)
-        for nuc in base_molecule.nuclei:
-            if "sbm_dipolar_r1_rates" in locals() and nuc.label in sbm_dipolar_r1_rates:
-                dipolar_by_chem_label[nuc.chem_label].append(
-                    sbm_dipolar_r1_rates[nuc.label]
-                )
-            if "sbm_contact_r1_rates" in locals() and nuc.label in sbm_contact_r1_rates:
-                contact_by_chem_label[nuc.chem_label].append(
-                    sbm_contact_r1_rates[nuc.label]
-                )
-        avg_dipolar_by_chem_label = {
-            chem_label: np.mean(rate_list)
-            for chem_label, rate_list in dipolar_by_chem_label.items()
-        }
-        avg_contact_by_chem_label = {
-            chem_label: np.mean(rate_list)
-            for chem_label, rate_list in contact_by_chem_label.items()
-        }
-
-    if "curie" in config.relaxation_model:
-        curie_by_chem_label = defaultdict(list)
-        for nuc in base_molecule.nuclei:
-            if "curie_r1_rates" in locals() and nuc.label in curie_r1_rates:
-                curie_by_chem_label[nuc.chem_label].append(curie_r1_rates[nuc.label])
-        avg_curie_by_chem_label = {
-            chem_label: np.mean(rate_list)
-            for chem_label, rate_list in curie_by_chem_label.items()
-        }
-
-    # Save the relaxation data to CSV
-    relax.save_relaxation_decomposition(
-        file_name=os.path.join(config.project_name, "relaxation_decomposition.csv"),
-        avg_r1_by_chem_label=avg_r1_by_chem_label,
-        avg_r2_by_chem_label=avg_r2_by_chem_label,
-        avg_lw_by_chem_label=avg_lw_by_chem_label,
-        avg_dipolar_by_chem_label=avg_dipolar_by_chem_label,
-        avg_contact_by_chem_label=avg_contact_by_chem_label,
-        avg_curie_by_chem_label=avg_curie_by_chem_label,
-    )
 
     for nuc in base_molecule.nuclei:
         if nuc.chem_label in avg_lw_by_chem_label:

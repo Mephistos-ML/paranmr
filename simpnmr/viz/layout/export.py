@@ -14,12 +14,14 @@ from typing import Any
 
 import matplotlib.figure
 
+_PREVIEW_SCALE = 2.0
+
 
 def save_figure_pdf(
     fig: matplotlib.figure.Figure,
     save_name: str | Path,
     *,
-    bbox_inches: str = "tight",
+    bbox_inches: str | None = None,
     pad_inches: float = 0.02,
     transparent: bool = False,
     facecolor: str = "white",
@@ -37,7 +39,7 @@ def save_figure_pdf(
         fig: Matplotlib figure to export.
         save_name: Output path or base name. If an extension is provided
             (e.g., ".png"), it will be replaced with ".pdf".
-        bbox_inches: Matplotlib savefig bbox setting. Default: "tight".
+        bbox_inches: Matplotlib savefig bbox setting. Default: "None".
         pad_inches: Padding (inches) around the tight bounding box.
         transparent: Whether to export with transparent background.
         facecolor: Figure facecolor for export (commonly "white").
@@ -124,6 +126,8 @@ def render_figure(
     if show:
         import matplotlib.pyplot as plt
 
+        if _PREVIEW_SCALE != 1.0:
+            fig.set_dpi(fig.get_dpi() * _PREVIEW_SCALE)
         plt.show()
     else:
         # Batch / non-interactive mode: always close to avoid memory growth

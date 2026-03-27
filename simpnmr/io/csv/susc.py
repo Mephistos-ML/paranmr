@@ -21,7 +21,35 @@ from simpnmr.io.csv.csv_util import read_csv_safe, write_csv_safe
 logger = logging.getLogger(__name__)
 
 
-def read_susceptibilities_csv(file_name: str) -> List[Tuple[np.ndarray, float]]:
+def read_susceptibilities_csv(
+    file_name: str,
+) -> List[Tuple[np.ndarray, float, float | None]]:
+    """Read susceptibility tensors from a CSV file.
+
+    The reader loads full susceptibility tensors and temperature values from a
+    CSV table, normalizes supported unit variants to ``Å^3``, and optionally
+    reads an isotropic susceptibility value when a ``chi_iso ...`` column is
+    present. If no isotropic column is available, ``chi_iso`` is returned as
+    ``None`` for that row.
+
+    The returned tensor is reconstructed as a symmetric ``3x3`` matrix from the
+    ``chi_xx``, ``chi_xy``, ``chi_xz``, ``chi_yy``, ``chi_yz``, and ``chi_zz``
+    columns.
+
+    Args:
+        file_name: Path to the susceptibility CSV file.
+
+    Returns:
+        A list of tuples ``(tensor, temperature, chi_iso)``, where ``tensor`` is
+        a ``3x3`` susceptibility tensor in ``Å^3``, ``temperature`` is in
+        kelvin, and ``chi_iso`` is the optional isotropic susceptibility value
+        read from the CSV file when present.
+
+    Raises:
+        KeyError: If required tensor or temperature columns are missing.
+        ValueError: If a value required for tensor or temperature construction
+            cannot be converted to ``float``.
+    """
     data = read_csv_safe(file_name)
 
     # Forward conversion, A^3 --> Key (same mapping as old domain code)
@@ -43,7 +71,7 @@ def read_susceptibilities_csv(file_name: str) -> List[Tuple[np.ndarray, float]]:
     if renamer:
         data.rename(renamer, inplace=True, axis=1)
 
-    out: List[Tuple[np.ndarray, float]] = []
+    out: List[Tuple[np.ndarray, float, float | None]] = []
     for _, row in data.iterrows():
         tensor = np.array(
             [
@@ -53,7 +81,12 @@ def read_susceptibilities_csv(file_name: str) -> List[Tuple[np.ndarray, float]]:
             ],
             dtype=float,
         )
-        out.append((tensor, float(row["Temperature (K)"])))
+        chi_iso = None
+        if "chi_iso (Å^3)" in row.index:
+            value = row["chi_iso (Å^3)"]
+            if not pd.isna(value):
+                chi_iso = float(value)
+        out.append((tensor, float(row["Temperature (K)"]), chi_iso))
 
     return out
 

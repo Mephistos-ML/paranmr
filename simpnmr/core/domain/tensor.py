@@ -246,6 +246,8 @@ class Susceptibility:
     ) -> None:
         self._dtensor = None
         self._iso = None
+        self._iso_spin_only = None
+        self._iso_g_corr = None
         self._eigvals = None
         self._eigvecs = None
         self._axiality = None
@@ -272,8 +274,6 @@ class Susceptibility:
             raise TypeError("Chi must be np.array (3x3) of floats")
         self._tensor = intensor
 
-        # Recalculate isotropic susceptibility
-        self.calc_iso()
         # and delta susceptibility
         self.calc_dtensor()
 
@@ -296,6 +296,34 @@ class Susceptibility:
     @iso.setter
     def iso(self, val: float):
         self._iso = val
+        return
+
+    @property
+    def iso_spin_only(self) -> float | None:
+        """Spin-only isotropic susceptibility (Å³), if available."""
+        return self._iso_spin_only
+
+    @iso_spin_only.setter
+    def iso_spin_only(self, val: float | None):
+        if val is not None and not isinstance(val, (float, np.floating)):
+            raise TypeError(
+                "Spin-only isotropic susceptibility must be a float or None"
+            )
+        self._iso_spin_only = None if val is None else float(val)
+        return
+
+    @property
+    def iso_g_corr(self) -> float | None:
+        """g-corrected isotropic susceptibility (Å³), if available."""
+        return self._iso_g_corr
+
+    @iso_g_corr.setter
+    def iso_g_corr(self, val: float | None):
+        if val is not None and not isinstance(val, (float, np.floating)):
+            raise TypeError(
+                "g-corrected isotropic susceptibility must be a float or None"
+            )
+        self._iso_g_corr = None if val is None else float(val)
         return
 
     def calc_iso(self):
@@ -585,6 +613,9 @@ class Shift:
     Attributes:
         dia: Diamagnetic chemical shift (ppm).
         fc: Fermi contact chemical shift (ppm).
+        fc_spin_only: Spin-only Fermi contact chemical shift reference (ppm).
+        fc_delta_g_corr: Difference between canonical and spin-only Fermi
+            contact shifts (ppm).
         orb_iso: Orbital isotropic shift contribution (ppm).
         orb_aniso: Orbital anisotropic shift contribution (ppm).
         orb: Total orbital shift contribution (ppm), equal to ``orb_iso + orb_aniso``.
@@ -603,12 +634,16 @@ class Shift:
         dia: float = 0.0,
         pc: float = 0.0,
         fc: float = 0.0,
+        fc_spin_only: float | None = None,
+        fc_delta_g_corr: float | None = None,
         orb_iso: float = 0.0,
         orb_aniso: float = 0.0,
         lw: float = 1.0,
     ) -> None:
         self._pc = pc  # Pseudocontact
         self._fc = fc  # Fermi Contact
+        self._fc_spin_only = fc_spin_only  # Spin-only Fermi Contact reference
+        self._fc_delta_g_corr = fc_delta_g_corr  # Canonical minus spin-only FC
         self._orb_iso = orb_iso  # Orbital isotropic
         self._orb_aniso = orb_aniso  # Orbital anisotropic
         self._dia = dia  # Diamagnetic
@@ -661,6 +696,30 @@ class Shift:
             raise TypeError("Chemical shift must be a float")
         self._fc = float(val)
         self.avg = copy.copy(self.total)
+        return
+
+    @property
+    def fc_spin_only(self) -> float | None:
+        """Spin-only Fermi contact chemical shift reference (ppm)."""
+        return self._fc_spin_only
+
+    @fc_spin_only.setter
+    def fc_spin_only(self, val: float | None):
+        if val is not None and not isinstance(val, (float, np.floating)):
+            raise TypeError("Chemical shift must be a float or None")
+        self._fc_spin_only = None if val is None else float(val)
+        return
+
+    @property
+    def fc_delta_g_corr(self) -> float | None:
+        """Canonical minus spin-only Fermi contact shift difference (ppm)."""
+        return self._fc_delta_g_corr
+
+    @fc_delta_g_corr.setter
+    def fc_delta_g_corr(self, val: float | None):
+        if val is not None and not isinstance(val, (float, np.floating)):
+            raise TypeError("Chemical shift must be a float or None")
+        self._fc_delta_g_corr = None if val is None else float(val)
         return
 
     @property
@@ -816,7 +875,6 @@ class Shift:
         A: Hyperfine, chi: "Susceptibility", g_tensor_dft: NDArray
     ) -> float:
         """Compute the total paramagnetic shift (FC + PCS + orbital)."""
-        print("check")
         return (
             Shift.calc_fcs(A, chi)
             + Shift.calc_pcs(A, chi)

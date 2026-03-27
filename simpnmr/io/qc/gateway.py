@@ -828,19 +828,21 @@ class GaussianLogA(QCA):
         # Read raw data
         labels, coords = read_gaussian_log_xyz(file_name)
         labels = np.array(xyzf.add_label_indices(labels))
-        a_iso_raw, a_dtensor_raw = read_gaussian_log_a_tensors(file_name)
+        a_fc_raw, a_sd_raw = read_gaussian_log_a_tensors(file_name)
 
         mult = read_gaussian_log_spin(file_name)
         n_unpaired = mult - 1
 
-        # Legacy Gaussian parser provides isotropic + traceless total hyperfine tensor.
-        # Map this into the new component contract using A(SD) as the total available
-        # tensor and leaving A(FC)/A(ORB) unavailable as zero/None placeholders.
-        zero = np.zeros((3, 3), dtype=float)
-        a_fc = {label: zero.copy() for label in labels}
+        # Gaussian provides isotropic Fermi-contact values and traceless dipolar
+        # tensors separately. Adapt these raw quantities to the canonical QCA
+        # component contract expected downstream: A(FC) as an isotropic 3x3 tensor
+        # and A(SD) as the traceless spin-dipolar tensor.
+        a_fc = {
+            label: np.eye(3, dtype=float) * float(fc_iso)
+            for label, fc_iso in zip(labels, a_fc_raw)
+        }
         a_sd = {
-            label: (tensor * 1.0 / n_unpaired) + np.eye(3) * float(a_iso)
-            for label, a_iso, tensor in zip(labels, a_iso_raw, a_dtensor_raw)
+            label: tensor * 1.0 / n_unpaired for label, tensor in zip(labels, a_sd_raw)
         }
         a_orb = {label: None for label in labels}
 

@@ -1,10 +1,10 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (C) 2026 Suturina Group
 
-"""Plot chemical shifts and shift components.
+"""Plot chemical shifts, shift components, and shift-temperature trends.
 
 Provides plotting utilities for fitted shifts, shift component contributions,
-shift spreads, and temperature-dependent shift trends.
+shift spreads, and temperature-dependent experimental shift trends.
 """
 
 import logging
@@ -14,12 +14,10 @@ import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 import numpy as np
-import scipy.constants as constants
 
-from simpnmr.core.const import ptable
 from simpnmr.core.domain.exp import Experiment
 from simpnmr.core.domain.mol import Molecule
-from simpnmr.core.fitting import models
+from simpnmr.viz.layout.canvas import create_canvas
 from simpnmr.viz.layout.export import render_figure
 from simpnmr.viz.layout.violin import set_violin_colours
 from simpnmr.viz.style.theme import PlotSpec
@@ -28,210 +26,11 @@ from simpnmr.viz.utils.fmt import isotope_format
 logger = logging.getLogger(__name__)
 
 
-def plot_fitted_shifts(
-    molecule: Molecule,
-    experiment: Experiment,
-    susc_model: models.SusceptibilityModel,
-    spec: PlotSpec,
-    average: bool = True,
-    save: bool = True,
-    show: bool = True,
-    save_name: str = "nmr_shifts.pdf",
-    window_title: str = "Fitted Shifts",
-    susc_units: str = "A3",
-    verbose: bool = True,
-) -> tuple[plt.Figure, list[plt.Axes]]:
-    """Plots theoretical vs experimental shifts for a fitted susceptibility model.
-
-    Args:
-        molecule: Molecule containing theoretical shift data.
-        experiment: Experimental shift data.
-        susc_model: Fitted susceptibility model.
-        average: If ``True``, averages equivalent nuclei (same chemical label).
-        save: If ``True``, saves the plot to `save_name`.
-        show: If ``True``, shows the plot.
-        save_name: Output image file name.
-        window_title: Figure window title.
-        susc_units: Units for reporting susceptibility values in the annotation.
-            Supported: ``"A3"``, ``"A3 mol-1"``, ``"cm3"``, ``"cm3 mol-1"``.
-        verbose: If ``True``, prints the output file name when saving.
-
-    Returns:
-        A tuple ``(fig, ax)``.
-    """
-
-    seen = set()
-    unique_nuclei = [
-        seen.add(nuc.chem_label) or nuc
-        for nuc in molecule.nuclei
-        if nuc.chem_label not in seen
-    ]
-
-    if average:
-        # Theoretical shifts, averaged over equivalent nuclei
-        calc_shifts = {nuc.chem_label: nuc.shift.avg for nuc in unique_nuclei}
-        # Experimental shifts, same order as theoretical
-        exp = {label: experiment[label].shift for label in calc_shifts.keys()}
-    else:
-        # One signal per nucleus
-        calc_shifts = {nuc.chem_label: [] for nuc in unique_nuclei}
-        for nuc in molecule.nuclei:
-            calc_shifts[nuc.chem_label].append(nuc.shift.total)
-
-        # Experimental shifts, same order as theoretical
-        exp = {
-            label: [experiment[label].shift] * len(calc_shifts[label])
-            for label in calc_shifts.keys()
-        }
-
-    # Element specific markers with consistent order
-    _unique_elements = [
-        ele for ele in ptable.elements if ele in [nuc.label_nn for nuc in unique_nuclei]
-    ]
-    _markers = {
-        ele: mrkr for (ele, mrkr) in zip(_unique_elements, ["x", "o", "v", "s", "*"])
-    }
-
-    markers = {nuc.chem_label: _markers[nuc.label_nn] for nuc in molecule.nuclei}
-
-    # if math labels are present then use these instead
-    if all([len(nuc.chem_math_label) for nuc in molecule.nuclei]):
-        for nuc in unique_nuclei:
-            calc_shifts[nuc.chem_math_label] = calc_shifts.pop(nuc.chem_label)
-            markers[nuc.chem_math_label] = markers.pop(nuc.chem_label)
-            exp[nuc.chem_math_label] = exp.pop(nuc.chem_label)
-
-    fig, ax = plt.subplots(1, 1, figsize=(5.6, 6.4), num=window_title)
-    glyphs = spec.glyphs
-    palette = spec.palette
-    scale = spec.skin_axes(ax)
-
-    for (label, calc), expt in zip(calc_shifts.items(), exp.values()):
-        ax.plot(
-            calc,
-            expt,
-            lw=0,
-            marker=markers[label],
-            color=palette.primary,
-            markersize=glyphs.ms,
-        )
-        if average:
-            ax.text(calc, expt, label)
-        else:
-            for ca, ex in zip(calc, expt):
-                ax.text(ca, ex, label)
-
-    ax.set_xlabel("Theoretical Shift (ppm)")
-    ax.set_ylabel("Experimental Shift (ppm)")
-
-    ax.plot([0, 1], [0, 1], transform=ax.transAxes, color=palette.primary, lw=0.75)
-
-    x_lim = ax.get_xlim()
-    y_lim = ax.get_ylim()
-
-    ax.yaxis.set_minor_locator(ticker.AutoMinorLocator())
-    ax.yaxis.set_major_locator(ticker.AutoLocator())
-    ax.xaxis.set_minor_locator(ticker.AutoMinorLocator())
-    ax.xaxis.set_major_locator(ticker.AutoLocator())
-
-    ax.set_xlim([np.min([x_lim, y_lim]), np.max([x_lim, y_lim])])
-    ax.set_ylim([np.min([x_lim, y_lim]), np.max([x_lim, y_lim])])
-
-    if susc_units == "A3":
-        conv = 1.0
-        unit_label = r"$\mathregular{\AA^3}$"
-        per_line = 3
-    elif susc_units == "A3 mol-1":
-        conv = constants.Avogadro
-        unit_label = r"$\mathregular{\AA^3 \ mol^{-1}}$"
-        per_line = 2
-    elif susc_units == "cm3":
-        conv = 1e-24
-        unit_label = r"$\mathregular{cm^3}$"
-        per_line = 3
-    elif susc_units == "cm3 mol-1":
-        conv = 1e-24 * constants.Avogadro / (4 * np.pi)
-        unit_label = r"$\mathregular{cm^3 \ mol^{-1}}$"
-        per_line = 2
-
-    # Add fitted and fixed parameters to top of plot
-    expression = ""
-    for it, name in enumerate(susc_model.VARNAMES):
-        val = float(susc_model.final_var_values[name]) * conv
-        label = susc_model.VARNAMES_MM[name]
-
-        if name in susc_model.fit_vars:
-            err = susc_model.fit_stdev.get(name)
-            if err is not None and err > 0:
-                err_val = float(err) * conv
-                par = int(round(err_val * 1000))
-                expression += f"{label} = {val:.3f}({par}) "
-            else:
-                expression += f"{label} = {val:.3f} "
-        else:
-            expression += f"{label} = {val:.3f} "
-
-        expression += unit_label + "     "
-        if (
-            not (it + 1) % per_line
-            and len(susc_model.final_var_values.keys()) > 2
-            and it != len(susc_model.VARNAMES) - 1
-        ):
-            expression += "\n"
-
-    expression += "\n"
-
-    expression += rf"$R^2_\mathregular{{adj.}}$ = {susc_model.adj_r2:.4f}       "
-    expression += rf"$\mathrm{{MAE}} = {susc_model.mae:.3f}\ \mathrm{{ppm}}$       "
-    expression += rf"$\mathrm{{RMSE}} = {susc_model.rmse:.3f}\ \mathrm{{ppm}}$"
-
-    expression += f"\n{'-' * 50}\n"
-
-    if not any(["ax" in susc_model.VARNAMES]):
-        expression += (
-            rf"$\Delta\chi_\mathregular{{ax}}$ = "
-            f"{molecule.susc.axiality * conv:.3f} {unit_label}"
-        )
-        expression += (
-            rf"  $\Delta\chi_\mathregular{{rh}}$ = "
-            f"{molecule.susc.rhombicity * conv:.3f} {unit_label}"
-        )
-        expression += "\n"
-    expression += rf"$\alpha$ = {molecule.susc.alpha:.2f}"
-    expression += rf"  $\beta$ = {molecule.susc.beta:.2f}"
-    expression += rf"  $\gamma$ = {molecule.susc.gamma:.2f}"
-
-    ax.text(
-        0.0,
-        1.02,
-        s=expression,
-        fontsize=scale.annotation,
-        transform=ax.transAxes,
-    )
-
-    fig.tight_layout()
-
-    for ax in fig.get_axes():
-        ax.invert_xaxis()
-        ax.invert_yaxis()
-
-    render_figure(
-        fig,
-        save=save,
-        show=show,
-        save_name=save_name,
-    )
-
-    if save and verbose:
-        logger.info("Chemical shift plot saved to %s", f"{save_name}.pdf")
-
-    return fig, ax
-
-
 def plot_shift_spread(
     molecule: Molecule,
     experiment: Experiment | None = None,
-    spec: PlotSpec | None = None,
+    *,
+    spec: PlotSpec,
     terms: list[str] = ["pc", "fc", "d"],
     order="ascending",
     save: bool = True,
@@ -239,7 +38,7 @@ def plot_shift_spread(
     save_name: str = "shift_spread.pdf",
     window_title: str = "Shift Spread",
     verbose: bool = True,
-) -> tuple[plt.Figure, list[plt.Axes]]:
+) -> tuple[plt.Figure, plt.Axes]:
     """Plots the spread of theoretical shifts and selected components.
 
     Optionally overlays experimental shift values.
@@ -261,12 +60,16 @@ def plot_shift_spread(
     """
 
     # Make plot
-    fig, ax = plt.subplots(1, 1, num=window_title, figsize=(6.8, 4.6))
-    glyphs = spec.glyphs if spec is not None else None
-    if spec is not None:
-        scale = spec.skin_axes(ax)
-        palette = spec.palette
-        shift_colours = spec.shift_colours
+    fig, ax = create_canvas(
+        spec.profile,
+        variant="standard",
+        window_title=window_title,
+        layout="constrained",
+    )
+    glyphs = spec.glyphs
+    scale = spec.skin_axes(ax)
+    palette = spec.palette
+    shift_colours = spec.shift_colours
 
     unique_chemlabels = {nuc.chem_math_label for nuc in molecule.nuclei}
 
@@ -374,7 +177,7 @@ def plot_shift_spread(
         legend_markers.append(
             mpatches.Patch(color=_violin["bodies"][0].get_facecolor().flatten()),
         )
-        legend_labels.append("Fermi")
+        legend_labels.append("FC")
 
     # Pseudo contact shift violin plot
     if "pc" in terms:
@@ -393,7 +196,7 @@ def plot_shift_spread(
         legend_markers.append(
             mpatches.Patch(color=_violin["bodies"][0].get_facecolor().flatten()),
         )
-        legend_labels.append("Pseudo")
+        legend_labels.append("PCS")
 
     # Diamagnetic shift violin plot
     if "d" in terms:
@@ -413,7 +216,7 @@ def plot_shift_spread(
         legend_markers.append(
             mpatches.Patch(color=_violin["bodies"][0].get_facecolor().flatten()),
         )
-        legend_labels.append("Dia")
+        legend_labels.append("Dia.")
 
     # Add zero line to y axis
     ax.hlines(
@@ -451,9 +254,6 @@ def plot_shift_spread(
     # Violin plots dont support label kwarg
     ax.legend(legend_markers, legend_labels, loc="best")
 
-    fig.tight_layout()
-    fig.subplots_adjust(right=0.950)
-
     render_figure(
         fig,
         save=save,
@@ -469,7 +269,7 @@ def plot_shift_spread(
 def plot_shift_contrib(
     molecule: Molecule,
     experiment: Experiment | None,
-    spec: PlotSpec | None = None,
+    spec: PlotSpec,
     terms: list[str] = ["pc", "fc", "d"],
     order="ascending",
     save: bool = True,
@@ -477,7 +277,7 @@ def plot_shift_contrib(
     save_name: str = "shift_components.pdf",
     window_title: str = "Shift components",
     verbose: bool = True,
-) -> tuple[plt.Figure, list[plt.Axes]]:
+) -> tuple[plt.Figure, plt.Axes]:
     """Plots shift components alongside total and optional experimental values.
 
     Args:
@@ -538,12 +338,16 @@ def plot_shift_contrib(
     width = 1 / (len(terms) + 1)
 
     # Make plot
-    fig, ax = plt.subplots(1, 1, num=window_title, figsize=(6.8, 4.6))
-    glyphs = spec.glyphs if spec is not None else None
-    if spec is not None:
-        scale = spec.skin_axes(ax)
-        palette = spec.palette
-        shift_colours = spec.shift_colours
+    fig, ax = create_canvas(
+        spec.profile,
+        variant="standard",
+        window_title=window_title,
+        layout="constrained",
+    )
+    glyphs = spec.glyphs
+    scale = spec.skin_axes(ax)
+    palette = spec.palette
+    shift_colours = spec.shift_colours
 
     # Chemical math label to list of nuclei labels
     cl_to_al = {
@@ -601,7 +405,7 @@ def plot_shift_contrib(
             (xvals + width * widthscaler),
             [fc[o] for o in order],
             width,
-            label="Fermi",
+            label="FC",
             color=shift_colours.fc,
         )
         widthscaler += 1
@@ -616,7 +420,7 @@ def plot_shift_contrib(
             (xvals + width * widthscaler),
             [pc[o] for o in order],
             width,
-            label="Pseudo",
+            label="PCS",
             color=shift_colours.pc,
         )
         widthscaler += 1
@@ -678,9 +482,6 @@ def plot_shift_contrib(
 
     ax.legend(loc="best")
 
-    fig.tight_layout()
-    fig.subplots_adjust(right=0.950)
-
     render_figure(
         fig,
         save=save,
@@ -696,7 +497,7 @@ def plot_shift_contrib(
 
 def plot_shift_tdep(
     experiments: list[Experiment],
-    spec: PlotSpec | None = None,
+    spec: PlotSpec,
     tdep: str = "",
     save: bool = True,
     show: bool = True,
@@ -704,7 +505,7 @@ def plot_shift_tdep(
     window_title: str = "ShiftxT vs T",
     verbose: bool = True,
     assignment: bool = True,
-) -> tuple[plt.Figure, tuple[plt.Axes]]:
+) -> tuple[plt.Figure, tuple[plt.Axes,]]:
     """Plots experimental shift temperature dependence.
 
     By default, plots ``shift * T`` versus ``T`` for each assignment label.
@@ -724,20 +525,22 @@ def plot_shift_tdep(
     """
 
     # Plot both together and save limits
-    fig, ax = plt.subplots(1, 1, figsize=(6.8, 4.6), num=window_title)
+    fig, ax = create_canvas(
+        spec.profile,
+        variant="standard",
+        window_title=window_title,
+        layout="constrained",
+    )
 
-    glyphs = spec.glyphs if spec is not None else None
-    if spec is not None:
-        spec.skin_axes(ax)
-        palette = spec.palette
-        colour_cycle = (
-            palette.secondary,
-            palette.highlight,
-            palette.primary,
-            palette.primary,
-        )
-    else:
-        colour_cycle = ("blue", "red", "green", "black")
+    glyphs = spec.glyphs
+    spec.skin_axes(ax)
+    palette = spec.palette
+    colour_cycle = (
+        palette.secondary,
+        palette.highlight,
+        palette.primary,
+        palette.primary,
+    )
 
     # Group signals of each experiment by assignment label
     labels = {signal.assignment for experiment in experiments for signal in experiment}
@@ -768,8 +571,6 @@ def plot_shift_tdep(
 
     ax.xaxis.set_minor_locator(ticker.AutoMinorLocator())
     ax.yaxis.set_minor_locator(ticker.AutoMinorLocator())
-
-    fig.tight_layout()
 
     render_figure(
         fig,

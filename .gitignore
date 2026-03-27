@@ -33,7 +33,12 @@ __pycache__/
 #   - `examples/**/X/` matches X at any depth under examples/
 #   - Trailing slash ensures only directories are ignored.
 # ============================================================================
-examples/**/proton/
-examples/**/prediction/
-examples/**/prediction_relaxation/
-examples/**/SIMULATION/
+examples/**/SIMULATIONS/
+
+# ============================================================================
+# Generated test artefacts
+# Produced by integration tests; do not version.
+# ============================================================================
+tests/data/pipelines/pcs_isosurface/csv_susceptibility_dyl1/pcs_isosurface_*.cube
+tests/data/pipelines/pcs_isosurface/nevpt2_susceptibility_p3fecl/pcs_isosurface_*.cube
+tests/data/pipelines/spinham/spin_hamiltonian_from_chiT.csv

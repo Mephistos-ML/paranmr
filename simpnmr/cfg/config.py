@@ -151,11 +151,11 @@ class FitSuscConfig(Config):
             "method",
             "file",
             "average",
-            "pdip_centres",
             "spin",
             "orbit",
             "total_momentum_J",
             "orbital_contribution",
+            "paramagnetic_centre",
         ],
         "experiment": ["files", "spectrum_files", "exp_reference"],
         "assignment": [
@@ -197,7 +197,6 @@ class FitSuscConfig(Config):
         self._hyperfine_method = ""
         self._hyperfine_file = ""
         self._hyperfine_average = []
-        self._hyperfine_pdip_centres = []
         self._hyperfine_rotate = []
         self._project_name = ""
         self._experiment_files = []
@@ -225,6 +224,7 @@ class FitSuscConfig(Config):
         self._orbit = None
         self._total_momentum_J = None
         self._hyperfine_orbital_contribution = "auto"
+        self._hyperfine_paramagnetic_centre = None
         self._susc_vt_method = None
         self._susc_vt_tip_type = None
         self._susc_vt_variables = None
@@ -237,6 +237,30 @@ class FitSuscConfig(Config):
         self._resolve_nuclei_include_groups()
 
         pass
+
+    @property
+    def hyperfine_paramagnetic_centre(self) -> list[float] | None:
+        return self._hyperfine_paramagnetic_centre
+
+    @hyperfine_paramagnetic_centre.setter
+    def hyperfine_paramagnetic_centre(
+        self, value: list[float] | tuple[float, float, float] | None
+    ):
+        if value is None or value == "":
+            self._hyperfine_paramagnetic_centre = None
+            return None
+        if isinstance(value, str):
+            value = yaml.safe_load(value)
+        if isinstance(value, (list, tuple)) and len(value) == 3:
+            try:
+                self._hyperfine_paramagnetic_centre = [float(val) for val in value]
+            except Exception as exc:
+                raise ValueError(
+                    f"Cannot convert hyperfine:paramagnetic_centre={value} to "
+                    "list of 3 floats"
+                ) from exc
+            return None
+        raise ValueError("hyperfine:paramagnetic_centre must be a list of 3 floats")
 
     @property
     def hyperfine_orbital_contribution(self) -> str:
@@ -428,14 +452,6 @@ class FitSuscConfig(Config):
     def hyperfine_average(self, values: list[list[str]]):
         self._hyperfine_average = values
         return
-
-    @property
-    def hyperfine_pdip_centres(self) -> list[str]:
-        return self._hyperfine_pdip_centres
-
-    @hyperfine_pdip_centres.setter
-    def hyperfine_pdip_centres(self, value: list[str]):
-        self._hyperfine_pdip_centres = value
 
     @property
     def susc_fit_type(self) -> bool:
@@ -1139,7 +1155,7 @@ class PredictConfig(FitSuscConfig):
         "nuclei": [
             "include",
         ],
-        "susceptibility": ["file", "temperatures"],
+        "susceptibility": ["temperatures"],
         "project": ["name"],
     }
 
@@ -1148,11 +1164,11 @@ class PredictConfig(FitSuscConfig):
             "method",
             "file",
             "average",
-            "pdip_centres",
             "spin",
             "orbit",
             "total_momentum_J",
             "orbital_contribution",
+            "paramagnetic_centre",
         ],
         "experiment": ["files", "spectrum_files", "exp_reference"],
         "nuclei": ["include"],
@@ -1166,9 +1182,6 @@ class PredictConfig(FitSuscConfig):
         "susceptibility": ["file", "format", "temperatures"],
         "relaxation": [
             "model",
-            "electron_coords",
-            "magnetic_field_tesla",
-            "temperature",
             "T1e",
             "T2e",
             "tR",
@@ -1176,13 +1189,11 @@ class PredictConfig(FitSuscConfig):
     }
 
     def __init__(self, **kwargs):
-        self._susceptibility_file = ""
+        self._susceptibility_file = None
         self._susceptibility_format = None
         self._susceptibility_temperatures = []
         self._relaxation_model = ""
-        self._relaxation_electron_coords = None
-        self._relaxation_magnetic_field_tesla = None
-        self._relaxation_temperature = None
+        self._hyperfine_paramagnetic_centre = None
         self._relaxation_T1e = None
         self._relaxation_T2e = None
         self._relaxation_tR = None
@@ -1190,11 +1201,16 @@ class PredictConfig(FitSuscConfig):
         super().__init__(**kwargs)
 
     @property
-    def susceptibility_file(self) -> str:
+    def susceptibility_file(self) -> str | None:
         return self._susceptibility_file
 
     @susceptibility_file.setter
-    def susceptibility_file(self, value: str):
+    def susceptibility_file(self, value: str | None):
+        if value is None or value == "":
+            self._susceptibility_file = None
+            return None
+        if not isinstance(value, str):
+            raise ValueError("susceptibility:file must be a string or None")
         self._susceptibility_file = os.path.abspath(value)
         return None
 
@@ -1242,78 +1258,28 @@ class PredictConfig(FitSuscConfig):
         return None
 
     @property
-    def relaxation_electron_coords(self) -> list[float]:
-        return self._relaxation_electron_coords
+    def hyperfine_paramagnetic_centre(self) -> list[float] | None:
+        return self._hyperfine_paramagnetic_centre
 
-    # Relaxation electron coordinates are a list of floats
-
-    @relaxation_electron_coords.setter
-    def relaxation_electron_coords(self, value: list[float] | float):
-        if value is None:
-            raise ValueError(
-                "If 'relaxation' is specified, Cartesian 'electron_coords' must be set"
-            )
+    @hyperfine_paramagnetic_centre.setter
+    def hyperfine_paramagnetic_centre(
+        self, value: list[float] | tuple[float, float, float] | None
+    ):
+        if value is None or value == "":
+            self._hyperfine_paramagnetic_centre = None
+            return None
+        if isinstance(value, str):
+            value = yaml.safe_load(value)
         if isinstance(value, (list, tuple)) and len(value) == 3:
             try:
-                self._relaxation_electron_coords = [float(val) for val in value]
-            except Exception:
+                self._hyperfine_paramagnetic_centre = [float(val) for val in value]
+            except Exception as exc:
                 raise ValueError(
-                    f"Cannot convert electron coordinates {value} to list of floats"
-                )
-        else:
-            raise ValueError("Electron coordinates must be a list of 3 floats")
-        return None
-
-    @property
-    def relaxation_magnetic_field_tesla(self) -> float | None:
-        return self._relaxation_magnetic_field_tesla
-
-    @relaxation_magnetic_field_tesla.setter
-    def relaxation_magnetic_field_tesla(self, value: float | None):
-        # Allow omission: default to 0.0 T (no external field)
-        if value is None:
-            self._relaxation_magnetic_field_tesla = 0.0
+                    f"Cannot convert hyperfine:paramagnetic_centre={value} to "
+                    "list of 3 floats"
+                ) from exc
             return None
-
-        # Accept scalar or a single-element list/tuple (YAML sometimes produces lists)
-        if isinstance(value, (list, tuple)):
-            value = value[0]
-
-        try:
-            field = float(value)
-        except (TypeError, ValueError) as e:
-            raise ValueError(
-                f"Cannot convert magnetic_field value {value} to float"
-            ) from e
-
-        if field < 0:
-            raise ValueError("magnetic_field must be zero or positive")
-
-        self._relaxation_magnetic_field_tesla = field
-        return None
-
-    @property
-    def relaxation_temperature(self) -> float | None:
-        return self._relaxation_temperature
-
-    @relaxation_temperature.setter
-    def relaxation_temperature(self, value: float | None):
-        # Only require temperature if 'curie' is in the relaxation model
-        if hasattr(self, "_relaxation_model") and "curie" in self._relaxation_model:
-            if value is None:
-                raise ValueError(
-                    "If 'curie' relaxation is specified, 'temperature' must be set"
-                )
-            try:
-                if float(value) <= 0:
-                    raise ValueError("Temperature must be positive")
-                self._relaxation_temperature = float(value)
-            except Exception:
-                raise ValueError(f"Cannot convert temperature value {value} to float")
-        else:
-            # If 'curie' is not in the model, temperature is not required
-            self._relaxation_temperature = None
-        return None
+        raise ValueError("hyperfine:paramagnetic_centre must be a list of 3 floats")
 
     @property
     def relaxation_T1e(self) -> float | None:
@@ -1373,8 +1339,21 @@ class PredictConfig(FitSuscConfig):
         Returns:
             A populated `PredictConfig` instance.
         """
-        cls: PredictConfig = super().from_file(file_name)
-        return cls
+        config: PredictConfig = super().from_file(file_name)
+
+        if config.relaxation_model and config.hyperfine_paramagnetic_centre is None:
+            raise ValueError(
+                "If 'relaxation' is specified, 'hyperfine:paramagnetic_centre' "
+                "must be set"
+            )
+
+        if config.susceptibility_format and not config.susceptibility_file:
+            logger.warning(
+                "Ignoring susceptibility:format because no susceptibility:file was "
+                "provided."
+            )
+
+        return config
 
 
 class FitCorrTimeConfig(FitSuscConfig):
@@ -1390,15 +1369,22 @@ class FitCorrTimeConfig(FitSuscConfig):
         ],
         "relaxation": [
             "model",
-            "electron_coords",
         ],
         "project": ["name"],
         "chem_labels": ["file"],
     }
 
     KEYWORDS = {
-        "hyperfine": ["method", "file", "average", "pdip_centre"],
-        "nuclei": ["include"],
+        "hyperfine": [
+            "method",
+            "file",
+            "average",
+            "spin",
+            "orbit",
+            "total_momentum_J",
+            "paramagnetic_centre",
+        ],
+        "nuclei": ["include", "include_groups"],
         "experiment": ["files"],
         "fit_corr_time": [
             "tau_R",
@@ -1406,7 +1392,6 @@ class FitCorrTimeConfig(FitSuscConfig):
         ],
         "relaxation": [
             "model",
-            "electron_coords",
         ],
         "project": ["name"],
         "chem_labels": ["file"],
@@ -1417,7 +1402,7 @@ class FitCorrTimeConfig(FitSuscConfig):
         self._fit_corr_time_tau_E = None
         self._fit_corr_time_fix = ""
         self._relaxation_model = ""
-        self._relaxation_electron_coords = None
+        self._hyperfine_paramagnetic_centre = None
 
         super().__init__(**kwargs)
 
@@ -1530,25 +1515,28 @@ class FitCorrTimeConfig(FitSuscConfig):
         return None
 
     @property
-    def relaxation_electron_coords(self) -> list[float]:
-        return self._relaxation_electron_coords
+    def hyperfine_paramagnetic_centre(self) -> list[float] | None:
+        return self._hyperfine_paramagnetic_centre
 
-    @relaxation_electron_coords.setter
-    def relaxation_electron_coords(self, value: list[float] | float):
-        if value is None:
-            raise ValueError(
-                "If 'relaxation' is specified, Cartesian 'electron_coords' must be set"
-            )
+    @hyperfine_paramagnetic_centre.setter
+    def hyperfine_paramagnetic_centre(
+        self, value: list[float] | tuple[float, float, float] | None
+    ):
+        if value is None or value == "":
+            self._hyperfine_paramagnetic_centre = None
+            return None
+        if isinstance(value, str):
+            value = yaml.safe_load(value)
         if isinstance(value, (list, tuple)) and len(value) == 3:
             try:
-                self._relaxation_electron_coords = [float(val) for val in value]
-            except Exception:
+                self._hyperfine_paramagnetic_centre = [float(val) for val in value]
+            except Exception as exc:
                 raise ValueError(
-                    f"Cannot convert electron coordinates {value} to list of floats"
-                )
-        else:
-            raise ValueError("Electron coordinates must be a list of 3 floats")
-        return None
+                    f"Cannot convert hyperfine:paramagnetic_centre={value} "
+                    "to list of 3 floats"
+                ) from exc
+            return None
+        raise ValueError("hyperfine:paramagnetic_centre must be a list of 3 floats")
 
     @classmethod
     def from_file(cls, file_name: str) -> "FitCorrTimeConfig":
@@ -1561,6 +1549,11 @@ class FitCorrTimeConfig(FitSuscConfig):
             A populated `FitCorrTimeConfig` instance.
         """
         cls: FitCorrTimeConfig = super().from_file(file_name)
+        if cls.relaxation_model and cls.hyperfine_paramagnetic_centre is None:
+            raise ValueError(
+                "If 'relaxation' is specified, 'hyperfine:paramagnetic_centre' "
+                "must be set"
+            )
         return cls
 
 
@@ -1578,7 +1571,6 @@ class PlotHFCConfig(FitSuscConfig):
             "method",
             "file",
             "average",
-            "pdip_centres",
             "orbital_contribution",
         ],
         "nuclei": ["include", "include_groups"],
@@ -1642,14 +1634,6 @@ class PlotHFCConfig(FitSuscConfig):
     def hyperfine_average(self, values: list[list[str]]):
         self._hyperfine_average = values
         return
-
-    @property
-    def hyperfine_pdip_centres(self) -> list[str]:
-        return self._hyperfine_pdip_centres
-
-    @hyperfine_pdip_centres.setter
-    def hyperfine_pdip_centres(self, value: list[str]):
-        self._hyperfine_pdip_centres = value
 
     @property
     def nuclei_include(self) -> list | str:

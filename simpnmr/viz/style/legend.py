@@ -56,28 +56,28 @@ def get_legend_style(profile: PlotProfile) -> LegendStyle:
 
     if profile == "paper":
         return LegendStyle(
-            handlelength=1.6,
-            handletextpad=0.5,
-            columnspacing=1.0,
-            borderpad=0.3,
-            labelspacing=0.4,
+            handlelength=1.2,
+            handletextpad=0.35,
+            columnspacing=0.7,
+            borderpad=0.22,
+            labelspacing=0.25,
             frameon=True,
             fancybox=True,
             framealpha=1.0,
-            markerscale=1.0,
+            markerscale=0.9,
         )
 
     if profile == "poster":
         return LegendStyle(
-            handlelength=2.4,
-            handletextpad=0.9,
-            columnspacing=1.6,
-            borderpad=0.5,
-            labelspacing=0.8,
+            handlelength=2.0,
+            handletextpad=0.75,
+            columnspacing=1.3,
+            borderpad=0.4,
+            labelspacing=0.6,
             frameon=True,
             fancybox=True,
             framealpha=0.95,
-            markerscale=1.4,
+            markerscale=1.25,
         )
 
     raise ValueError(f"Unsupported PlotProfile: {profile}")

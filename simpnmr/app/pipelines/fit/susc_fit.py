@@ -20,6 +20,8 @@ from simpnmr.app.loaders.exp_load import load_experiments, save_experiment
 from simpnmr.app.loaders.hfc_load import load_hyperfines
 from simpnmr.app.loaders.labels_load import load_chem_labels_from_csv
 from simpnmr.app.loaders.mol_load import load_base_molecule
+from simpnmr.app.loaders.paramag_centre_load import load_paramagnetic_centre
+from simpnmr.app.loaders.sh_load import load_g_tensor_dft
 from simpnmr.app.params.options import FitSuscRunOptions
 from simpnmr.app.pipelines.fit.vt_fit import fit_vt
 from simpnmr.app.policies.assignment import resolve_assignment_search_settings
@@ -40,13 +42,10 @@ from simpnmr.io.csv.mol import save_molecule_to_csv
 from simpnmr.io.csv.susc import save_susc
 from simpnmr.io.cube.pcs_iso_write import write_pcs_cube
 from simpnmr.io.xyz import xyz_write
+from simpnmr.viz.plots.fitted_shifts import plot_fitted_shifts
 
 # Visualisation
-from simpnmr.viz.plots.shifts import (
-    plot_fitted_shifts,
-    plot_shift_contrib,
-    plot_shift_spread,
-)
+from simpnmr.viz.plots.shifts import plot_shift_contrib, plot_shift_spread
 from simpnmr.viz.plots.spect import plot_pred_spectrum
 from simpnmr.viz.style.theme import apply_profile
 
@@ -80,6 +79,17 @@ def run_fit_susc(config, options: FitSuscRunOptions | None = None) -> int:
 
     # Load Molecule
     base_molecule = load_base_molecule(config)
+
+    # Load canonical paramagnetic centre into the molecule domain container
+    base_molecule = load_paramagnetic_centre(
+        molecule=base_molecule,
+        paramagnetic_centre=config.hyperfine_paramagnetic_centre,
+    )
+
+    # Load DFT g-tensor (if available)
+    base_molecule.sh.g_tensor_dft = load_g_tensor_dft(
+        config=config,
+    )
 
     # Load Hyperfines
     base_molecule = load_hyperfines(

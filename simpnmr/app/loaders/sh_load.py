@@ -36,6 +36,12 @@ def load_g_tensor_ab_initio(config: Any) -> NDArray[np.floating] | None:
         Ab initio g-tensor as a (3, 3) ndarray, or None if not available
         for the backend.
     """
+    if config.susceptibility_file is None:
+        logger.info(
+            "No susceptibility file provided; skipping ab initio g-tensor load."
+        )
+        return None
+
     backend, section = resolve_susceptibility_source(
         config.susceptibility_file,
         config.susceptibility_format,
@@ -79,10 +85,15 @@ def load_g_tensor_dft(config: Any) -> NDArray[np.floating] | None:
 
     g_rmc, g_dso, g_pso = g_components
 
-    logger.info("DFT g-tensor loaded from ORCA susceptibility output.")
-
-    return build_g_tensor_from_dft_components(
+    g_tensor = build_g_tensor_from_dft_components(
         g_rmc=g_rmc,
         g_dso=g_dso,
         g_pso=g_pso,
     )
+
+    g_tensor = np.asarray(g_tensor, dtype=float)
+    if g_tensor.shape != (3, 3):
+        raise ValueError("Invalid DFT g-tensor: expected a (3, 3) matrix.")
+
+    logger.info("DFT g-tensor loaded from hyperfine QC output.")
+    return g_tensor

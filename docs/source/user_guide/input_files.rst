@@ -5,7 +5,7 @@ Input YAML Files
 
 The input file is a declarative description of a calculation. Each top-level block
 maps to a specific subsystem (hyperfine source, susceptibility source, experiment,
-assignment, and fitting model). Values are used exactly as supplied.
+assignment, and fitting model). Values are validated against the workflow configuration contract.
 
 .. rubric:: Important Conventions
 
@@ -75,7 +75,6 @@ Defines how hyperfine coupling (HFC) tensors are obtained.
 Used in workflows that require hyperfine tensor information, including:
 - pNMR prediction
 - Susceptibility fitting
-- Hyperfine analysis and export workflows
 
 
 .. code-block:: yaml
@@ -97,8 +96,8 @@ Used in workflows that require hyperfine tensor information, including:
         # Define whether HFC averaging is needed [Optional]
         average: ['Me1', 'Me2'] # Chemical labels over which hyperfine tensors are averaged
         
-        # Define pdip centre [Required for pdip method only]
-        pdip_centres: ['Dy1'] # Atomic label(s) of the paramagnetic centre (including indexing)
+        # Define paramagnetic centre [Required for pdip and when relaxation is enabled]
+        paramagnetic_centre: [0.0, 0.0, 0.0] # Three Cartesian coordinates [x, y, z] in the same frame/units as the structure or HFC input
 
         # Define Quantum Numbers [Required for csv and pdip methods only]
         spin: 2.5 # Spin quantum number S
@@ -119,13 +118,16 @@ Used in workflows that require hyperfine tensor information, including:
 
    The interpretation of the hyperfine tensors depends on the selected method.
    For ``pdip`` and ``csv`` methods, explicit spin and angular momentum quantum
-   numbers must be provided.
+   numbers must be provided. For ``pdip``, ``hyperfine:paramagnetic_centre``
+   must also be provided explicitly as three Cartesian coordinates ``[x, y, z]``.
 
    The availability of individual hyperfine contributions depends on the
    selected method and backend support. If ``orbital_contribution`` is set to
-   ``on``, the hyperfine QC file must provide the required orbital data and the
-   associated DFT g tensor needed to evaluate the orbital shift contribution.
-   At present, this pathway is implemented only for ORCA 5 and ORCA 6 outputs.
+   ``on``, the hyperfine QC file must provide the required orbital data and a
+   compatible DFT g tensor needed to evaluate the orbital shift contribution.
+   This pathway applies only to QC-derived hyperfine routes for which these
+   quantities are available. At present, this pathway is implemented only for
+   ORCA 5 and ORCA 6 outputs.
 
 Chemical Labels
 ^^^^^^^^^^^^^^^
@@ -207,15 +209,17 @@ Used in fitting workflows that require experimental shift data.
    experimental peak files are also provided. Supplying spectrum files without
    experimental peak data is not supported.
 
-An experimental spectrum reference (``exp_reference``) may be provided to define
-an absolute chemical shift reference (in ppm) for experimental spectrum files.
-The reference peak is recognised within a tolerance of ±1 ppm.
+.. note::
 
-If ``exp_reference`` is specified, ``spectrum_files`` must also be provided.
-Supplying ``exp_reference`` without experimental spectrum data is not supported
-and will result in a configuration error.
+   An experimental spectrum reference (``exp_reference``) may be provided to
+   define an absolute chemical shift reference (in ppm) for experimental
+   spectrum files. The reference peak is recognised within a tolerance of ±1 ppm.
 
-If omitted or set to ``null``, no experimental spectrum referencing is applied.
+   If ``exp_reference`` is specified, ``spectrum_files`` must also be provided.
+   Supplying ``exp_reference`` without experimental spectrum data is not
+   supported and will result in a configuration error.
+
+   If omitted or set to ``null``, no experimental spectrum referencing is applied.
 
 Diamagnetic Shifts
 ^^^^^^^^^^^^^^^^^^^^^
@@ -282,15 +286,6 @@ Optional. Used in workflows that include relaxation-based shift broadening or we
         sbm curie # Combined SBM + Curie relaxation
         curie sbm # Equivalent to 'sbm curie' (ordering is ignored)
 
-      # Coordinates of paramagnetic centre
-      electron_coords: [0.0, 0.0, 0.0] # Required parameter
-
-      # Magnetic field strength in Tesla
-      magnetic_field_tesla: 9.4 # Required parameter
-
-      # Temperature
-      temperature: 300.0
-
       #Relaxation Parameters
       T1e: 0.2e-12 # Required parameter
       T2e: 0.2e-12 # Required parameter
@@ -302,18 +297,21 @@ Optional. Used in workflows that include relaxation-based shift broadening or we
    not alter the underlying susceptibility or hyperfine tensors.
 
    When a relaxation model is specified, all required relaxation parameters must
-   be provided. Temperature-dependent relaxation models (e.g. Curie-type terms)
-   require an explicit temperature, while other models may not.
+   be provided. When relaxation is enabled, ``hyperfine:paramagnetic_centre``
+   must also be provided.
+
+   Relaxation evaluation also requires the experimental temperature and magnetic
+   field. These values must therefore be present in the corresponding
+   ``experiment:files`` inputs and should be set correctly for each experiment.
 
 Prediction-only blocks
 ----------------------
 
 .. note::
 
-   In prediction workflows, inputs provided as lists (e.g. susceptibility tensors,
-   experimental data, or spectrum files) are processed positionally. The order of
-   files must therefore be consistent across inputs, and matching is not performed
-   automatically based on temperature or metadata.
+   In prediction workflows, list-valued inputs are processed positionally. The
+   order of files must therefore be consistent across inputs, and matching is not
+   performed automatically based on temperature or metadata.
 
 Blocks used exclusively for pNMR prediction workflows.
 
@@ -336,13 +334,13 @@ Used in workflows involving pNMR prediction.
                 orca_cas # CASSCF-derived susceptibility data from ORCA output
                 csv # User-supplied susceptibility tensor data in CSV format
 
-        # Temperatures to extract (K) [Required]
-        temperatures: [100, 200, 300]
+        # Temperature to extract (K) [Required]
+        temperature: [298.00]
 
 .. note::
 
    Susceptibility data are selected based on exact matching of the specified
-   temperatures. Temperatures are compared numerically and must match the values
+   temperature. The temperature is compared numerically and must match the value
    provided in the input configuration.
 
 .. note::

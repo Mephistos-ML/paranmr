@@ -14,44 +14,14 @@ import numpy as np
 from numpy.typing import ArrayLike, NDArray
 
 from simpnmr.core.const import isotopes, ptable
+from simpnmr.core.domain.relax import RelaxationEvaluation
 from simpnmr.core.domain.tensor import Hyperfine, Shift, Susceptibility
+from simpnmr.core.util import transform as tfm
 from simpnmr.core.util.arrays import flatten
 from simpnmr.core.util.text import subtitle, title
 from simpnmr.tools.coords import xyz_fmt as xyzf
 
 logger = logging.getLogger(__name__)
-
-
-class Relaxation:
-    """Holds calculated relaxation rates for a nucleus.
-
-    Attributes:
-        r1: Longitudinal relaxation rate (s^-1).
-        r2: Transverse relaxation rate (s^-1).
-    """
-
-    def __init__(
-        self,
-        r1: float | None = None,
-        r2: float | None = None,
-        dipolar_r1: float | None = None,
-        contact_r1: float | None = None,
-        curie_r1: float | None = None,
-        dipolar_r2: float | None = None,
-        contact_r2: float | None = None,
-        curie_r2: float | None = None,
-    ) -> None:
-        self.r1 = r1
-        self.r2 = r2
-        self.dipolar_r1 = dipolar_r1
-        self.contact_r1 = contact_r1
-        self.curie_r1 = curie_r1
-        self.dipolar_r2 = dipolar_r2
-        self.contact_r2 = contact_r2
-        self.curie_r2 = curie_r2
-
-
-# Add setters and properties as needed
 
 
 class Nucleus:
@@ -314,22 +284,59 @@ class SpinHamiltonian:
 
 
 class Molecule:
-    """Molecular container holding structure and NMR-active nuclei.
+    def _calculate_fc_gcorr_delta(self) -> None:
+        """Compute spin-only FC reference and g-correction delta for all nuclei.
+
+        This diagnostic is only available when the canonical susceptibility was
+        built with both a stored spin-only isotropic susceptibility baseline and
+        a stored g-corrected isotropic susceptibility.
+
+        The canonical molecule state is preserved. Spin-only FC values are
+        evaluated using a copied susceptibility object with ``chi.iso`` replaced
+        by ``chi.iso_spin_only``.
+        """
+        if self.susc.iso_g_corr is None or self.susc.iso_spin_only is None:
+            return
+
+        chi_spin_only = copy.deepcopy(self.susc)
+        chi_spin_only.iso = chi_spin_only.iso_spin_only
+
+        for nuc in self.nuclei:
+            fc_spin_only = Shift.calc_fcs(nuc.A, chi_spin_only)
+            nuc.shift.fc_spin_only = fc_spin_only
+            nuc.shift.fc_delta_g_corr = nuc.shift.fc - fc_spin_only
+
+        return
+
+    """Molecular container holding structure, available HFC data, and runtime nuclei.
 
     Args:
-        labels: Atomic labels (no indices).
-        coords: Atomic coordinates as an ``(n_atoms, 3)`` array in Å.
-        nuclei: List of NMR-active `Nucleus` objects.
+        labels: Atomic labels for the full structure (no indices).
+        coords: Atomic coordinates for the full structure as an ``(n_atoms, 3)``
+            array in Å.
+        nuclei: List of runtime `Nucleus` objects used by magnetic workflows.
 
     Attributes:
-        labels: Atomic labels with indices.
-        coords: Atomic coordinates as an ``(n_atoms, 3)`` array in Å.
-        n_atoms: Number of atoms.
-        nuclei: NMR-active nuclei.
+        labels: Full atomic labels with indices for the whole structure.
+        coords: Full atomic coordinates as an ``(n_atoms, 3)`` array in Å.
+        paramagnetic_centre: Optional Cartesian coordinates of the canonical
+            paramagnetic centre as a length-3 array in Å.
+        chi_source_labels: Optional full atomic labels from the
+            susceptibility/chi source geometry.
+        chi_source_coords: Optional full atomic coordinates from the
+            susceptibility/chi source geometry, stored as an ``(n_atoms, 3)``
+            array in Å.
+        n_atoms: Number of atoms in the full structure.
+        available_hfc_by_label: Canonical hyperfine payload store keyed by atom
+            label for all HFC data available from the source.
+        nuclei: Runtime nuclei used by downstream magnetic workflows.
         susc: Magnetic susceptibility tensor for the molecule.
         electronic: Electronic state metadata (spin/orbit/J model selection).
         sh: Spin-Hamiltonian parameters (e.g. g-tensor, ZFS),
-        shared across the molecule.
+            shared across the molecule.
+        relaxation: Optional relaxation evaluation results attached during
+            prediction workflows. Defaults to ``None`` when relaxation is not
+            computed.
         metadata: Dictionary for domain-level metadata and model provenance.
             Stores final, effective modelling decisions that affect downstream
             physics (e.g. availability of orbital hyperfine contributions).
@@ -340,9 +347,15 @@ class Molecule:
     ) -> None:
         self.labels = xyzf.add_label_indices(labels)
         self.coords = coords
+        self.paramagnetic_centre = None
+        self.chi_source_labels = None
+        self.chi_source_coords = None
 
         # List of Nucleus objects
         self.nuclei = nuclei
+
+        # Canonical HFC store for all source-available hyperfine data.
+        self.available_hfc_by_label: dict[str, Hyperfine] = {}
 
         # Susceptibility object
         self.susc = copy.deepcopy(Susceptibility())
@@ -350,6 +363,7 @@ class Molecule:
         # Electronic state and spin Hamiltonian as separate attributes
         self.electronic = ElectronicState()
         self.sh = SpinHamiltonian()
+        self.relaxation: RelaxationEvaluation | None = None
 
         # Domain-level metadata
         self.metadata: dict[str, dict[str, object]] = {}
@@ -357,6 +371,86 @@ class Molecule:
     @property
     def n_atoms(self):
         return len(self.labels)
+
+    @property
+    def paramagnetic_centre(self) -> NDArray | None:
+        return self._paramagnetic_centre
+
+    @paramagnetic_centre.setter
+    def paramagnetic_centre(self, value: ArrayLike | None) -> None:
+        if value is None:
+            self._paramagnetic_centre = None
+            return
+
+        arr = np.asarray(value, dtype=float)
+        if len(arr.shape) != 1 or arr.shape[0] != 3:
+            raise ValueError("paramagnetic_centre must be a length-3 array")
+        self._paramagnetic_centre = arr
+        return
+
+    @property
+    def chi_source_labels(self) -> NDArray[np.str_] | None:
+        return self._chi_source_labels
+
+    @chi_source_labels.setter
+    def chi_source_labels(self, value: ArrayLike | None) -> None:
+        if value is None:
+            self._chi_source_labels = None
+            return
+
+        arr = np.asarray(value)
+        if len(arr.shape) != 1:
+            raise ValueError("chi_source_labels must be a 1D array")
+        self._chi_source_labels = np.asarray([str(label) for label in arr])
+        self._validate_chi_source_geometry()
+        return
+
+    @property
+    def chi_source_coords(self) -> NDArray | None:
+        return self._chi_source_coords
+
+    @chi_source_coords.setter
+    def chi_source_coords(self, value: ArrayLike | None) -> None:
+        if value is None:
+            self._chi_source_coords = None
+            return
+
+        arr = np.asarray(value, dtype=float)
+        if len(arr.shape) != 2 or arr.shape[1] != 3:
+            raise ValueError("chi_source_coords must be an (n_atoms, 3) array")
+        self._chi_source_coords = arr
+        self._validate_chi_source_geometry()
+        return
+
+    def _validate_chi_source_geometry(self) -> None:
+        """Validate the optional chi-source geometry stored on the molecule.
+
+        Raises:
+            ValueError: If chi-source labels/coordinates disagree in length or
+                do not match the full molecule atom count.
+        """
+        if self.chi_source_labels is None or self.chi_source_coords is None:
+            return
+
+        if len(self.chi_source_labels) != len(self.chi_source_coords):
+            raise ValueError(
+                "chi_source_labels and chi_source_coords must have matching lengths"
+            )
+
+        if len(self.chi_source_labels) != self.n_atoms:
+            raise ValueError(
+                "chi-source geometry must match the full molecule atom count"
+            )
+
+        # TODO(domain): Support automatic chi-source label alignment when the
+        # susceptibility-source geometry contains the same atoms but arrives in
+        # a different order. For now, require the indexed label order to match
+        # Molecule.labels exactly.
+        indexed_chi_labels = xyzf.add_label_indices(self.chi_source_labels)
+        if list(indexed_chi_labels) != list(self.labels):
+            raise ValueError(
+                "chi_source_labels must match Molecule.labels in the same order"
+            )
 
     def __str__(self):
         string = ""
@@ -455,6 +549,83 @@ class Molecule:
             raise TypeError("Molecule.susc must be of type Susceptibility")
         self._susc = new_susc
         return
+
+    def set_available_hfc_by_label(
+        self,
+        hfc_by_label: dict[str, Hyperfine],
+    ) -> None:
+        """Set canonical available HFC payload and project it onto runtime nuclei.
+
+        Args:
+            hfc_by_label: Hyperfine payload keyed by atom label for all HFC data
+                available from the source.
+        """
+        self.available_hfc_by_label = {
+            str(label): copy.deepcopy(hfc) for label, hfc in hfc_by_label.items()
+        }
+
+        for nuc in self.nuclei:
+            label = str(nuc.label)
+            if label not in self.available_hfc_by_label:
+                continue
+            nuc.A = copy.deepcopy(self.available_hfc_by_label[label])
+
+    def apply_frame_rotation(self, rot_mat: ArrayLike) -> None:
+        """Apply a frame rotation to canonical molecule state.
+
+        The canonical coordinate set and canonical available HFC store are
+        rotated first. Runtime nucleus coordinates and runtime hyperfine payload
+        are then re-projected from the rotated canonical state.
+
+        Args:
+            rot_mat: Rotation matrix with shape ``(3, 3)``.
+
+        Raises:
+            ValueError: If the rotation matrix does not have shape ``(3, 3)``.
+        """
+        rot_arr = np.asarray(rot_mat, dtype=float)
+        if rot_arr.shape != (3, 3):
+            raise ValueError("rot_mat must be a (3, 3) matrix")
+
+        self.coords = tfm.rotate_coords(self.coords, rot_arr)
+
+        if self.paramagnetic_centre is not None:
+            self.paramagnetic_centre = tfm.rotate_coords(
+                np.asarray([self.paramagnetic_centre], dtype=float),
+                rot_arr,
+            )[0]
+
+        if self.chi_source_coords is not None:
+            self.chi_source_coords = tfm.rotate_coords(
+                self.chi_source_coords,
+                rot_arr,
+            )
+
+        rotated_hfc_by_label: dict[str, Hyperfine] = {}
+        for label, hfc in self.available_hfc_by_label.items():
+            rotated_hfc = copy.deepcopy(hfc)
+            rotated_hfc.fc = tfm.rotate_tensor(rotated_hfc.fc, rot_arr)
+            rotated_hfc.sd = tfm.rotate_tensor(rotated_hfc.sd, rot_arr)
+            rotated_hfc.orb = tfm.rotate_tensor(rotated_hfc.orb, rot_arr)
+            if rotated_hfc.tensor_full is not None:
+                rotated_hfc.tensor_full = tfm.rotate_tensor(
+                    rotated_hfc.tensor_full,
+                    rot_arr,
+                )
+            rotated_hfc_by_label[str(label)] = rotated_hfc
+
+        self.set_available_hfc_by_label(rotated_hfc_by_label)
+
+        coord_by_label = {
+            str(label): np.asarray(coord, dtype=float)
+            for label, coord in zip(self.labels, self.coords)
+        }
+        for nuc in self.nuclei:
+            label = str(nuc.label)
+            if label in coord_by_label:
+                nuc.coord = coord_by_label[label]
+
+        self.metadata["frame"] = "chi"
 
     def average_shifts(self):
         """Average total shifts over nuclei sharing the same chemical label.
@@ -569,39 +740,32 @@ class Molecule:
 
         return
 
-    def calc_pdip(self, centre_labels: list[str]):
-        """Add point-dipole dipolar hyperfine contributions for all nuclei.
-
-        Args:
-            centre_labels: Labels of paramagnetic centers.
+    def calc_pdip(self) -> None:
+        """Add point-dipole dipolar hyperfine contributions to canonical HFC state.
 
         Raises:
-            ValueError: If `centre_labels` is empty, if multiple matches are
-                found for a center label, or if a center label is not found.
+            ValueError: If `Molecule.paramagnetic_centre` is not set.
         """
+        if self.paramagnetic_centre is None:
+            raise ValueError("Molecule.paramagnetic_centre must be set")
 
-        if not len(centre_labels):
-            raise ValueError(
-                "Error: No paramagnetic centres specified for point dipole"
-            )
+        centre_coord = np.asarray(self.paramagnetic_centre, dtype=float)
 
-        # Find user specified centre(s)
-        for centre in centre_labels:
-            it = [i for i, x in enumerate(self.labels) if x == centre]
+        updated_hfc_by_label = {
+            str(label): copy.deepcopy(hfc)
+            for label, hfc in self.available_hfc_by_label.items()
+        }
 
-            if len(it) > 1:
-                raise ValueError("Error: More than one of specified label found")
-            elif not len(it):
-                raise ValueError(f"Cant find {centre} in labels")
+        for nuc in self.nuclei:
+            label = str(nuc.label)
+            hfc = copy.deepcopy(updated_hfc_by_label.get(label, Hyperfine()))
+            val = Hyperfine.calc_pdip(nuc.coord, centre_coord)
+            val *= 1e6
+            hfc.sd = hfc.sd + val
+            hfc.tensor_full = hfc.fc + hfc.sd + hfc.orb
+            updated_hfc_by_label[label] = hfc
 
-            for nuc in self.nuclei:
-                if nuc.label in centre_labels:
-                    continue
-                val = Hyperfine.calc_pdip(nuc.coord, self.coords[it[0]])
-                val *= 1e6 / len(centre_labels)
-                nuc.A.sd = nuc.A.sd + val
-                if nuc.A.tensor_full is not None:
-                    nuc.A.tensor_full = nuc.A.tensor_full + val
+        self.set_available_hfc_by_label(updated_hfc_by_label)
         return
 
     def calculate_shifts(self):
@@ -609,7 +773,11 @@ class Molecule:
 
         This method computes all standard shift contributions that are available
         from the current molecule domain state. Fermi-contact and pseudocontact
-        contributions are always evaluated. Orbital contributions are evaluated
+        contributions are always evaluated.
+        When both spin-only and g-corrected isotropic susceptibility values are
+        available, the method also stores spin-only FC reference values and the
+        corresponding FC g-correction deltas.
+        Orbital contributions are evaluated
         only when the hyperfine metadata reports orbital contribution as
         available and a DFT-derived g-tensor is present in the spin-Hamiltonian
         container.
@@ -644,6 +812,7 @@ class Molecule:
                 nuc.shift.orb_iso = 0.0
                 nuc.shift.orb_aniso = 0.0
 
+        self._calculate_fc_gcorr_delta()
         return
 
     def apply_diamagnetic_shifts(

@@ -23,6 +23,7 @@ from simpnmr.core.spectrum.kernels import gaussian, lorentzian
 from simpnmr.core.util.arrays import find_index_of_nearest
 from simpnmr.core.util.strings import remove_numbers
 from simpnmr.io.csv.spec import write_spectrum
+from simpnmr.viz.layout.canvas import create_canvas, create_stacked_canvas
 from simpnmr.viz.layout.export import render_figure
 from simpnmr.viz.style.theme import PlotSpec
 from simpnmr.viz.utils.fmt import isotope_format
@@ -40,7 +41,7 @@ def plot_pred_spectrum(
     save_name: str = "predicted_spectrum.pdf",
     window_title: str = "Predicted Spectrum",
     verbose: bool = True,
-) -> tuple[plt.Figure, list[plt.Axes]]:
+) -> tuple[plt.Figure, plt.Axes]:
     """Plots a predicted 1D spectrum from simulated shifts.
 
     Args:
@@ -81,8 +82,13 @@ def plot_pred_spectrum(
     glyphs = spec.glyphs
     palette = spec.palette
 
-    # Make plot§
-    fig, ax = plt.subplots(1, 1, num=window_title, figsize=(6.8, 4.6))
+    # Make plot
+    fig, ax = create_canvas(
+        spec.profile,
+        variant="standard",
+        window_title=window_title,
+        layout="constrained",
+    )
     spec.skin_axes(ax)
 
     # Spectrum trace
@@ -99,22 +105,6 @@ def plot_pred_spectrum(
     sorted_shifts_labels = sorted(avg_shifts.items(), key=lambda x: x[1])
     sorted_labels = [label for label, _ in sorted_shifts_labels]
     sorted_shifts = [shift for _, shift in sorted_shifts_labels]
-
-    # Grid y value closest to peak position
-    closest_y = [y_intensity[find_index_of_nearest(x_grid, sh)] for sh in sorted_shifts]
-
-    ax.plot(
-        sorted_shifts,
-        closest_y,
-        lw=0,
-        marker="o",
-        linestyle="None",
-        markersize=glyphs.ms - 4,
-        markerfacecolor=palette.highlight,
-        markeredgecolor=palette.highlight,
-        markeredgewidth=max(0.9, 0.6 * glyphs.line_lw),
-        zorder=5,
-    )
 
     _annotate_peaks_with_barrier(
         ax,
@@ -142,8 +132,6 @@ def plot_pred_spectrum(
     ax.xaxis.set_minor_locator(ticker.AutoMinorLocator())
 
     ax.set_xlim([np.max(shift_range), np.min(shift_range)])
-
-    fig.tight_layout()
 
     render_figure(
         fig,
@@ -177,7 +165,7 @@ def plot_raw_deconv_pred(
     save_name: str = "pred_and_exp_spectrum.pdf",
     window_title: str = "Raw, Deconvoluted, and Predicted Spectra",
     verbose: bool = True,
-) -> tuple[plt.Figure, tuple[plt.Axes]]:
+) -> tuple[plt.Figure, np.ndarray]:
     """Plots raw, deconvoluted, and predicted spectra.
 
     Args:
@@ -260,8 +248,13 @@ def plot_raw_deconv_pred(
     palette = spec.palette
 
     # Define plot space
-    fig, ax = plt.subplots(
-        n_subplots, 1, figsize=(6.8, 4.6), num=window_title, sharex=True
+    fig, ax = create_stacked_canvas(
+        spec.profile,
+        nrows=n_subplots,
+        variant="standard",
+        window_title=window_title,
+        layout="constrained",
+        sharex=True,
     )
     for axis in ax:
         spec.skin_axes(axis)
@@ -299,7 +292,7 @@ def plot_raw_deconv_pred(
         rotation=90,
         va="center",
         ha="right",
-        fontsize=str(spec.typography.annotation),
+        fontsize=str(spec.typography.annotation - 1),
         clip_on=False,
     )
 
@@ -423,7 +416,7 @@ def plot_raw_deconv_pred(
         rotation=90,
         va="center",
         ha="right",
-        fontsize=str(spec.typography.annotation),
+        fontsize=str(spec.typography.annotation - 1),
         clip_on=False,
     )
 
@@ -436,8 +429,6 @@ def plot_raw_deconv_pred(
         axis.set_yticks([])
         axis.set_yticklabels([])
         axis.spines[["right", "top", "left"]].set_visible(False)
-
-    fig.tight_layout()
 
     render_figure(
         fig,
@@ -572,6 +563,6 @@ def _annotate_peaks_with_barrier(
             [py, label_barrier, labels_position_y],
             linestyle="--",
             color=palette.primary,
-            linewidth=max(0.8, 0.5 * glyphs.line_lw),
+            linewidth=0.5 * glyphs.line_lw,
             alpha=connector_alpha,
         )

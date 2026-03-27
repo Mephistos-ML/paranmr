@@ -19,8 +19,8 @@ logger = logging.getLogger(__name__)
 
 def save_slope_intercept(
     fits,
+    spin: float | None = None,
     file_name: str = "isoaxrho_fit.csv",
-    delimiter: str = ",",
     verbose: bool = True,
 ) -> None:
     """Writes slope/intercept results for chiT fits to a CSV file.
@@ -28,8 +28,8 @@ def save_slope_intercept(
     Args:
         fits: Fit results for each component. Each entry is expected to be a mapping
             containing values such as ``slope``, ``intercept``, and associated errors.
+        spin: Spin value from the domain model to serialize in the CSV comments.
         file_name: Output CSV file path.
-        delimiter: CSV delimiter.
         verbose: If ``True``, prints the output file path.
 
     Returns:
@@ -68,12 +68,13 @@ def save_slope_intercept(
         "slope_err": slope_errs,
         "adj_r2": adj_r2s,
     }
-
-    df = pd.DataFrame(data=out)
-
     comment = [
         "Data reported in Curie-normalised chiT (dimensionless) Units",
     ]
+    if spin is not None:
+        comment.append(f"spin {spin}")
+
+    df = pd.DataFrame(data=out)
 
     write_csv_safe(df, file_name, comment)
 
