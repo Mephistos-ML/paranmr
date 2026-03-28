@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v1.7.2 (2026-03-28)
+
+### Bug Fixes
+
+- **predict,cfg,docs**: Add relaxation condition override policy with experiment fallback
+  ([`047e3a0`](https://gitlab.com/suturina-group/simpnmr/-/commit/047e3a05318dd35ba5cecf2cbe4903f3bceeb069))
+
+
 ## v1.7.1 (2026-03-27)
 
 ### Bug Fixes
