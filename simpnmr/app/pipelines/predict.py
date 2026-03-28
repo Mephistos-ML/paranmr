@@ -29,6 +29,7 @@ from simpnmr.app.loaders.sh_load import (
 )
 from simpnmr.app.loaders.susc_load import load_susceptibilities
 from simpnmr.app.params.options import PredictRunOptions
+from simpnmr.app.policies.relax import resolve_relaxation_conditions
 from simpnmr.app.policies.susc import resolve_susceptibility_source
 
 # Core / domain
@@ -438,8 +439,9 @@ def _apply_relaxation_linewidths(
         config (PredictConfig): Prediction configuration containing relaxation
             settings and physical parameters.
         base_molecule (Molecule): Molecule instance to update in-place.
-        experiment: Experiment providing the magnetic field and temperature used
-            for relaxation.
+        experiment: Optional experiment object used as fallback when relaxation
+            temperature and magnetic field are not explicitly overridden in the
+            config.
 
     Returns:
         None
@@ -452,11 +454,12 @@ def _apply_relaxation_linewidths(
         base_molecule.relaxation = None
         return
 
-    if experiment is None or experiment.magnetic_field is None:
-        logger.warning(
-            "Experimental magnetic field is unavailable — relaxation effects "
-            "skipped, linewidths will be fixed at 1 ppm"
-        )
+    temperature, magnetic_field_tesla = resolve_relaxation_conditions(
+        config,
+        experiment,
+    )
+
+    if magnetic_field_tesla is None or temperature is None:
         base_molecule.relaxation = None
         return
 
@@ -473,7 +476,7 @@ def _apply_relaxation_linewidths(
         for nuc in base_molecule.nuclei
         if remove_numbers(nuc.label) in nuclei_labels
     }
-    B0 = experiment.magnetic_field
+    B0 = magnetic_field_tesla
 
     # Build Aiso, gamma and omega dictionaries for selected nuclei
     # Converts nuclear gyromagnetic ratios from MHz/T to rad/s/T
@@ -527,7 +530,7 @@ def _apply_relaxation_linewidths(
         orbit=orbit,
         total_momentum_J=total_momentum_J,
         A_iso_dict=A_iso_dict,
-        temperature=experiment.temperature,
+        temperature=temperature,
         tau_R=tau_R,
         tau_c1=tau_c1,
         tau_c2=tau_c2,

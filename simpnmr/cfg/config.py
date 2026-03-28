@@ -1182,6 +1182,8 @@ class PredictConfig(FitSuscConfig):
         "susceptibility": ["file", "format", "temperatures"],
         "relaxation": [
             "model",
+            "temperature",
+            "magnetic_field_tesla",
             "T1e",
             "T2e",
             "tR",
@@ -1194,6 +1196,8 @@ class PredictConfig(FitSuscConfig):
         self._susceptibility_temperatures = []
         self._relaxation_model = ""
         self._hyperfine_paramagnetic_centre = None
+        self._relaxation_temperature = None
+        self._relaxation_magnetic_field_tesla = None
         self._relaxation_T1e = None
         self._relaxation_T2e = None
         self._relaxation_tR = None
@@ -1280,6 +1284,50 @@ class PredictConfig(FitSuscConfig):
                 ) from exc
             return None
         raise ValueError("hyperfine:paramagnetic_centre must be a list of 3 floats")
+
+    @property
+    def relaxation_temperature(self) -> float | None:
+        return self._relaxation_temperature
+
+    @relaxation_temperature.setter
+    def relaxation_temperature(self, value: float | None):
+        if value is None or value == "":
+            self._relaxation_temperature = None
+            return None
+        if isinstance(value, (list, tuple)):
+            value = value[0]
+        try:
+            temperature = float(value)
+        except (TypeError, ValueError) as exc:
+            raise ValueError(
+                f"Cannot convert relaxation:temperature value {value} to float"
+            ) from exc
+        if temperature <= 0:
+            raise ValueError("relaxation:temperature must be positive")
+        self._relaxation_temperature = temperature
+        return None
+
+    @property
+    def relaxation_magnetic_field_tesla(self) -> float | None:
+        return self._relaxation_magnetic_field_tesla
+
+    @relaxation_magnetic_field_tesla.setter
+    def relaxation_magnetic_field_tesla(self, value: float | None):
+        if value is None or value == "":
+            self._relaxation_magnetic_field_tesla = None
+            return None
+        if isinstance(value, (list, tuple)):
+            value = value[0]
+        try:
+            field = float(value)
+        except (TypeError, ValueError) as exc:
+            raise ValueError(
+                f"Cannot convert relaxation:magnetic_field_tesla value {value} to float"
+            ) from exc
+        if field < 0:
+            raise ValueError("relaxation:magnetic_field_tesla must be zero or positive")
+        self._relaxation_magnetic_field_tesla = field
+        return None
 
     @property
     def relaxation_T1e(self) -> float | None:

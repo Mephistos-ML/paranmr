@@ -49,3 +49,35 @@ def average_relaxation_rates_by_chem_label(
         chem_label: np.mean(rate_list)
         for chem_label, rate_list in grouped_rates.items()
     }
+
+
+def resolve_relaxation_conditions(
+    config,
+    experiment,
+) -> tuple[float | None, float | None]:
+    """Resolve workflow-level relaxation temperature and magnetic field.
+
+    Application workflows may provide optional relaxation overrides in the
+    config. When present, these values take precedence. Otherwise, the values
+    are taken from the paired experiment object when available.
+
+    Args:
+        config: Workflow config object that may define
+            ``relaxation_temperature`` and
+            ``relaxation_magnetic_field_tesla`` overrides.
+        experiment: Optional experiment object that may provide
+            ``temperature`` and ``magnetic_field`` values.
+
+    Returns:
+        Tuple ``(temperature, magnetic_field_tesla)`` resolved using the
+        precedence ``config override > experiment value > None``.
+    """
+    temperature = getattr(config, "relaxation_temperature", None)
+    magnetic_field_tesla = getattr(config, "relaxation_magnetic_field_tesla", None)
+
+    if temperature is None and experiment is not None:
+        temperature = experiment.temperature
+    if magnetic_field_tesla is None and experiment is not None:
+        magnetic_field_tesla = experiment.magnetic_field
+
+    return temperature, magnetic_field_tesla

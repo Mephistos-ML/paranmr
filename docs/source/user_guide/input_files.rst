@@ -205,6 +205,10 @@ Used in fitting workflows that require experimental shift data.
 
    Experimental peak files are required for susceptibility fitting workflows.
 
+   For prediction workflows that enable relaxation, experiment files may also
+   supply the temperature and magnetic field metadata used for relaxation when
+   these values are not explicitly overridden in the ``relaxation`` block.
+   
    Spectrum files are auxiliary inputs and may only be used when corresponding
    experimental peak files are also provided. Supplying spectrum files without
    experimental peak data is not supported.
@@ -286,6 +290,10 @@ Optional. Used in workflows that include relaxation-based shift broadening or we
         sbm curie # Combined SBM + Curie relaxation
         curie sbm # Equivalent to 'sbm curie' (ordering is ignored)
 
+      # Optional workflow-level overrides for relaxation conditions
+      temperature: 298.15 # Optional override; otherwise taken from experiment metadata
+      magnetic_field_tesla: 11.75 # Optional override; otherwise taken from experiment metadata
+
       #Relaxation Parameters
       T1e: 0.2e-12 # Required parameter
       T2e: 0.2e-12 # Required parameter
@@ -300,9 +308,13 @@ Optional. Used in workflows that include relaxation-based shift broadening or we
    be provided. When relaxation is enabled, ``hyperfine:paramagnetic_centre``
    must also be provided.
 
-   Relaxation evaluation also requires the experimental temperature and magnetic
-   field. These values must therefore be present in the corresponding
-   ``experiment:files`` inputs and should be set correctly for each experiment.
+   Relaxation evaluation also requires temperature and magnetic field values.
+   These may be provided explicitly as ``relaxation:temperature`` and
+   ``relaxation:magnetic_field_tesla``. If these overrides are omitted, the
+   workflow falls back to the temperature and magnetic field read from the
+   corresponding ``experiment:files`` inputs. Experimental metadata should
+   therefore be set correctly for each experiment whenever workflow-level
+   overrides are not used.
 
 Prediction-only blocks
 ----------------------
