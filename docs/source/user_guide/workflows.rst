@@ -100,6 +100,7 @@ Minimal input example
 
    susc_fit:
      type: isoaxrho
+     input_units: A3
      variables:
        iso: [fit, 0.0]
        ax: [fit, 0.0]
@@ -111,6 +112,8 @@ Optional additions
 - ``susc_vt``: temperature-dependent susceptibility fitting (optional and model-dependent).
 - ``diamagnetic`` / ``diamagnetic_ref``: include diamagnetic corrections.
 - ``assignment`` with ``permute``: explore assignments within user-defined groups.
+- ``susc_fit:input_units``: optionally specify YAML fit-variable units as ``A3``,
+  ``cm3 mol-1``, or Curie-normalised ``reduced`` values.
 
 Notes
 ^^^^^
