@@ -164,7 +164,7 @@ def plot_isoaxrho(
         if tip_val is not None and tip_val != 0.0:
             exp = int(np.floor(np.log10(abs(tip_val))))
             mant = tip_val / 10**exp
-            model_items.append(rf"TIP: {mant:.1f} × 10^{{{exp}}}")
+            model_items.append(rf"TIP: ${mant:.1f} \times 10^{{{exp}}}$")
 
         y_min, y_max = ax.get_ylim()
         y_range = y_max - y_min
