@@ -164,7 +164,7 @@ class FitSuscConfig(Config):
             "search",
         ],
         "nuclei": ["include", "include_groups"],
-        "susc_fit": ["type", "variables", "average_shifts"],
+        "susc_fit": ["type", "variables", "input_units", "average_shifts"],
         "project": ["name"],
         "chem_labels": ["file"],
         "diamagnetic": [
@@ -216,6 +216,7 @@ class FitSuscConfig(Config):
         self._nuclei_include_groups = []
         self._susc_fit_type = ""
         self._susc_fit_variables = ""
+        self._susc_fit_input_units = "A3"
         self._susc_fit_average_shifts = []
         self._chem_labels_file = ""
         self._spin_S = None
@@ -639,6 +640,22 @@ class FitSuscConfig(Config):
     @susc_fit_variables.setter
     def susc_fit_variables(self, value):
         self._susc_fit_variables = value
+        return
+
+    @property
+    def susc_fit_input_units(self) -> str:
+        return self._susc_fit_input_units
+
+    @susc_fit_input_units.setter
+    def susc_fit_input_units(self, value):
+        if value is None or value == "":
+            self._susc_fit_input_units = "A3"
+            return
+        if isinstance(value, (list, tuple)):
+            value = value[0] if value else "A3"
+        if not isinstance(value, str):
+            raise ValueError("susc_fit:input_units must be a string")
+        self._susc_fit_input_units = value
         return
 
     @property

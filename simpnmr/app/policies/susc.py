@@ -21,6 +21,9 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Final, Literal
 
+import numpy as np
+
+from simpnmr.core.const.physics import KB, MU0, MUB, NA
 from simpnmr.io.qc.backends.orca.detect import detect_susc_methods
 from simpnmr.io.qc.detect import detect_backend
 
@@ -36,6 +39,27 @@ ORCA_SUSC_PRIORITY: Final[tuple[str, ...]] = (
     "nevpt2",
     "casscf",
 )
+
+SuscFitInputUnits = Literal["A3", "cm3 mol-1", "reduced"]
+
+_DEFAULT_SUSC_FIT_INPUT_UNITS: Final[SuscFitInputUnits] = "A3"
+_SUSC_FIT_INPUT_UNIT_ALIASES: Final[dict[str, SuscFitInputUnits]] = {
+    "a3": "A3",
+    "a^3": "A3",
+    "angstrom3": "A3",
+    "angstrom^3": "A3",
+    "ang3": "A3",
+    "ang^3": "A3",
+    "å^3": "A3",
+    "å3": "A3",
+    "Å^3": "A3",
+    "Å3": "A3",
+    "cm3 mol-1": "cm3 mol-1",
+    "cm^3 mol^-1": "cm3 mol-1",
+    "cm3/mol": "cm3 mol-1",
+    "reduced": "reduced",
+}
+_DIMENSIONLESS_SUSC_FIT_VARIABLES: Final[frozenset[str]] = frozenset({"rho_over_ax"})
 
 
 def resolve_susceptibility_backend(susceptibility_file: str) -> SusceptibilityBackend:
@@ -67,6 +91,109 @@ def resolve_susceptibility_backend(susceptibility_file: str) -> SusceptibilityBa
         "Unsupported QC backend for "
         f"susceptibility_file='{susceptibility_file}': {backend}"
     )
+
+
+def normalize_susc_fit_input_units(value: str | None) -> SuscFitInputUnits:
+    """Normalize user-facing susceptibility-fit input units.
+
+    Args:
+        value: Optional YAML value from ``susc_fit:input_units``.
+
+    Returns:
+        Canonical input-unit label used by the application layer.
+
+    Raises:
+        ValueError: If the unit label is unsupported.
+    """
+
+    if value is None or value == "":
+        return _DEFAULT_SUSC_FIT_INPUT_UNITS
+
+    if isinstance(value, (list, tuple)):
+        value = value[0] if value else _DEFAULT_SUSC_FIT_INPUT_UNITS
+
+    if not isinstance(value, str):
+        raise ValueError("susc_fit:input_units must be a string")
+
+    normalized = _SUSC_FIT_INPUT_UNIT_ALIASES.get(value.strip().lower())
+    if normalized is None:
+        raise ValueError(
+            "Unknown susc_fit:input_units "
+            f"{value!r}. Supported values are: 'A3', 'cm3 mol-1', 'reduced'."
+        )
+
+    return normalized
+
+
+def resolve_susc_fit_variables(
+    *,
+    raw_variables: dict[str, list[object] | tuple[object, object]],
+    input_units: str | None,
+    temperature: float,
+    spin: float,
+) -> tuple[dict[str, float], dict[str, float]]:
+    """Convert YAML susceptibility-fit variables into canonical internal units.
+
+    The fitting models operate in internal ``Å^3`` units. This helper converts
+    user-facing YAML values into those canonical units while preserving
+    dimensionless parameters such as ``rho_over_ax``.
+
+    Args:
+        raw_variables: Mapping from variable name to ``[mode, value]`` pair.
+        input_units: Optional unit label from ``susc_fit:input_units``.
+        temperature: Experiment temperature in kelvin. Used for ``reduced`` input.
+        spin: Electronic spin quantum number. Used for ``reduced`` input.
+
+    Returns:
+        Tuple ``(fit_vars, fix_vars)`` with canonical values in ``Å^3``.
+
+    Raises:
+        ValueError: If the variable schema or input units are invalid.
+    """
+
+    units = normalize_susc_fit_input_units(input_units)
+    scale_to_a3 = _get_susc_fit_input_scale_to_a3(
+        input_units=units,
+        temperature=temperature,
+        spin=spin,
+    )
+
+    fit_vars: dict[str, float] = {}
+    fix_vars: dict[str, float] = {}
+
+    for key, raw_value in raw_variables.items():
+        if not isinstance(raw_value, (list, tuple)) or len(raw_value) != 2:
+            raise ValueError(
+                "Each susc_fit:variables entry must be a [mode, value] pair. "
+                f"Got {key}={raw_value!r}."
+            )
+
+        mode, value = raw_value
+        if not isinstance(mode, str):
+            raise ValueError(
+                f"susc_fit:variables:{key} mode must be 'fit' or 'fix', got {mode!r}."
+            )
+
+        mode_normalized = mode.strip().lower()
+        if mode_normalized not in {"fit", "fix"}:
+            raise ValueError(
+                f"susc_fit:variables:{key} mode must be 'fit' or 'fix', got {mode!r}."
+            )
+
+        try:
+            numeric_value = float(value)
+        except Exception as exc:
+            raise ValueError(
+                f"susc_fit:variables:{key} value must be numeric, got {value!r}."
+            ) from exc
+
+        if key not in _DIMENSIONLESS_SUSC_FIT_VARIABLES:
+            numeric_value *= scale_to_a3
+
+        target = fit_vars if mode_normalized == "fit" else fix_vars
+        target[key] = numeric_value
+
+    return fit_vars, fix_vars
 
 
 def resolve_orca_section(
@@ -176,3 +303,37 @@ def _resolve_orca_section_autodetect(
         "No supported ORCA susceptibility methods found. "
         f"Detected methods: {sorted(method_set)}"
     )
+
+
+def _get_susc_fit_input_scale_to_a3(
+    *,
+    input_units: SuscFitInputUnits,
+    temperature: float,
+    spin: float,
+) -> float:
+    """Return the multiplicative factor that converts input values to ``Å^3``."""
+
+    if input_units == "A3":
+        return 1.0
+
+    if input_units == "cm3 mol-1":
+        return 1.0 / (1e-24 * NA / (4 * np.pi))
+
+    if spin is None:
+        raise ValueError(
+            "susc_fit:input_units='reduced' requires hyperfine:spin or an "
+            "inferable spin from the hyperfine QC file"
+        )
+
+    if temperature <= 0:
+        raise ValueError(
+            "susc_fit:input_units='reduced' requires a positive experiment temperature"
+        )
+
+    return _compute_curie_prefactor(spin) / float(temperature)
+
+
+def _compute_curie_prefactor(spin: float) -> float:
+    """Return the Curie prefactor in ``Å^3 K`` used by reduced susceptibility units."""
+
+    return (MU0 * MUB**2 * float(spin) * (float(spin) + 1.0)) / (3.0 * KB) * 1e30

@@ -25,6 +25,7 @@ from simpnmr.app.loaders.sh_load import load_g_tensor_dft
 from simpnmr.app.params.options import FitSuscRunOptions
 from simpnmr.app.pipelines.fit.vt_fit import fit_vt
 from simpnmr.app.policies.assignment import resolve_assignment_search_settings
+from simpnmr.app.policies.susc import resolve_susc_fit_variables
 
 # Core / domain
 from simpnmr.core.domain.exp import Experiment
@@ -169,19 +170,6 @@ def run_fit_susc(config, options: FitSuscRunOptions | None = None) -> int:
     # Create a molecule object to accompany each experiment object
     molecules = [copy.deepcopy(base_molecule) for _ in range(len(experiments))]
 
-    # Obtain fitted and fixed variables
-    fit_vars = {
-        key: value[1]
-        for key, value in config.susc_fit_variables.items()
-        if value[0] == "fit"
-    }
-
-    fix_vars = {
-        key: value[1]
-        for key, value in config.susc_fit_variables.items()
-        if value[0] == "fix"
-    }
-
     name_to_susc_fit: dict[str, models.SusceptibilityModel] = {
         "full": models.FullSuscFitter,
         "split": models.SplitFitter,
@@ -192,10 +180,18 @@ def run_fit_susc(config, options: FitSuscRunOptions | None = None) -> int:
 
     model_to_use = name_to_susc_fit[config.susc_fit_type]
 
-    # Create one susceptibility model per molecule/experiment pair
-    susc_models: list[models.SusceptibilityModel] = [
-        copy.deepcopy(model_to_use(fit_vars, fix_vars)) for _ in molecules
-    ]
+    # Create one susceptibility model per molecule/experiment pair. Reduced
+    # input units depend on experiment temperature, so normalization happens
+    # per experiment here rather than once at config-load time.
+    susc_models: list[models.SusceptibilityModel] = []
+    for experiment in experiments:
+        fit_vars, fix_vars = resolve_susc_fit_variables(
+            raw_variables=config.susc_fit_variables,
+            input_units=config.susc_fit_input_units,
+            temperature=experiment.temperature,
+            spin=spin,
+        )
+        susc_models.append(model_to_use(fit_vars, fix_vars))
 
     if options.dry_run:
         logger.info("Dry run successful — no computations executed")

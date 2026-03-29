@@ -208,7 +208,7 @@ Used in fitting workflows that require experimental shift data.
    For prediction workflows that enable relaxation, experiment files may also
    supply the temperature and magnetic field metadata used for relaxation when
    these values are not explicitly overridden in the ``relaxation`` block.
-   
+
    Spectrum files are auxiliary inputs and may only be used when corresponding
    experimental peak files are also provided. Supplying spectrum files without
    experimental peak data is not supported.
@@ -469,6 +469,11 @@ Used in susceptibility fitting workflows.
               eigen # Eigenvalue-based susceptibility model
               isoeigen # Isotropic susceptibility in the eigenframe
 
+        # Optional input units for the susceptibility fit variables
+        # Default: A3
+        # Supported: A3, cm3 mol-1, reduced
+        input_units: reduced
+
         # Fit variables definition [Required for type: isoaxrho]
         variables:
           iso: [fit, 0.2]
@@ -513,6 +518,13 @@ Used in susceptibility fitting workflows.
    The required fit variables depend on the selected susceptibility model type.
    No automatic consistency checks are performed between the chosen model and the
    provided variable definitions.
+
+.. note::
+
+   ``susc_fit:input_units: reduced`` uses the Curie-normalised convention already. Each susceptibility component is interpreted as
+   ``chi_reduced = chi * T / Curie_prefactor(S)`` and is converted internally to
+    ``Å^3`` units for the actual fit. Dimensionless parameters such as
+   ``rho_over_ax`` are not rescaled.
 
 Temperature Dependence of Magnetic Susceptibility Fitting
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

@@ -92,7 +92,7 @@ def plot_pred_spectrum(
     spec.skin_axes(ax)
 
     # Spectrum trace
-    ax.plot(x_grid, y_intensity, color=palette.primary, lw=glyphs.line_lw)
+    ax.plot(x_grid, y_intensity, color=palette.primary, lw=glyphs.line_lw * 0.75)
 
     # Labels
     avg_shifts = {

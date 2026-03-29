@@ -164,7 +164,7 @@ def save_molecule_to_csv(
 
     The exported table includes coordinates, available chemical labels,
     canonical split hyperfine columns, optional orbital hyperfine columns,
-    and available shift-related columns derived from the molecule payload.
+    and atom-resolved shift-related columns derived from the molecule payload.
 
     Args:
         molecule: Molecule-like domain object to serialize.
@@ -304,10 +304,6 @@ def _build_molecule_df(molecule):
             else []
         ),
         (
-            "δ_total_avg (ppm)",
-            lambda ctx: ctx["nuc"].shift.avg if ctx["nuc"] is not None else np.nan,
-        ),
-        (
             "δ_total (ppm)",
             lambda ctx: ctx["nuc"].shift.total if ctx["nuc"] is not None else np.nan,
         ),
@@ -364,19 +360,9 @@ def _build_molecule_df(molecule):
         ),
     ]
 
-    tail_specs = [
-        (
-            "linewidth (ppm)",
-            lambda ctx: ctx["nuc"].shift.lw
-            if ctx["nuc"] is not None and hasattr(ctx["nuc"].shift, "lw")
-            else np.nan,
-        ),
-    ]
-
     spec_groups = [
         base_specs,
         orb_specs if has_orb else [],
-        tail_specs,
     ]
     specs = [spec for group in spec_groups for spec in group]
 
