@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v1.8.1 (2026-03-29)
+
+### Bug Fixes
+
+- **viz**: Render TIP annotation with mathtext
+  ([`ad7f0f0`](https://gitlab.com/suturina-group/simpnmr/-/commit/ad7f0f072fb7f721246d9ae7193eaee3f6259de3))
+
+
 ## v1.8.0 (2026-03-29)
 
 ### Chores
