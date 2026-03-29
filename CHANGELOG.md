@@ -2,6 +2,27 @@
 
 <!-- version list -->
 
+## v1.8.0 (2026-03-29)
+
+### Chores
+
+- **viz**: Reduce paper profile line width
+  ([`cf3167c`](https://gitlab.com/suturina-group/simpnmr/-/commit/cf3167c48a6d0ce3149a83c6ce38641b5979702d))
+
+- **viz**: Scale spectrum line width by 0.75
+  ([`48cdc53`](https://gitlab.com/suturina-group/simpnmr/-/commit/48cdc532dcca614b82d4f36fe01986b6958611d4))
+
+### Features
+
+- **app**: Add susceptibility fit input units normalization
+  ([`b3a710f`](https://gitlab.com/suturina-group/simpnmr/-/commit/b3a710f07ff2dd4d8cd3d3b2b2d4dad99d93b551))
+
+### Refactoring
+
+- **io**: Remove peak-level duplicate columns from molecule CSV export
+  ([`91b3eac`](https://gitlab.com/suturina-group/simpnmr/-/commit/91b3eac79075459b4c12d327a783daf08f8c5f47))
+
+
 ## v1.7.2 (2026-03-28)
 
 ### Bug Fixes
