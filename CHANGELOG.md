@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v1.8.2 (2026-03-30)
+
+### Bug Fixes
+
+- Bump version to trigger package rebuild
+  ([`a145fad`](https://gitlab.com/suturina-group/simpnmr/-/commit/a145fada2223c9d1dd6738d1333583dd3fd0abed))
+
+
 ## v1.8.1 (2026-03-29)
 
 ### Bug Fixes
