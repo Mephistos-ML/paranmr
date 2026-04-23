@@ -225,10 +225,18 @@ def solve_g_principals_axial_only(
     g_iso = iso_intercept / GE
     g_sq_ax_val = ax_intercept
 
-    try:
-        gx_val = -np.sqrt(g_sq_ax_val / 3.0 + g_iso**2) + 2.0 * g_iso
-    except ValueError:
+    radicand = g_sq_ax_val / 3.0 + g_iso**2
+
+    if radicand < -1e-10:
+        logger.warning(
+            "Could not extract g-tensor values: the input iso/ax parameters "
+            "do not produce a physically valid solution "
+        )
         gx_val = float("nan")
+    else:
+        if radicand < 0.0:
+            radicand = 0.0
+        gx_val = -np.sqrt(radicand) + 2.0 * g_iso
 
     gz_val = 3.0 * g_iso - 2.0 * gx_val
     gy_val = gx_val
