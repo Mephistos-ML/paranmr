@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v1.8.3 (2026-04-23)
+
+### Bug Fixes
+
+- Guard axial-only g solve against unphysical radicand
+  ([`cfceae8`](https://gitlab.com/suturina-group/simpnmr/-/commit/cfceae84f146dbc91b437cfdcc326b9eb3e2ae3d))
+
+
 ## v1.8.2 (2026-03-30)
 
 ### Bug Fixes
