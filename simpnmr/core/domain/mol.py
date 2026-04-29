@@ -216,7 +216,10 @@ class SpinHamiltonian:
     from `ElectronicState`, which stores quantum-number metadata.
 
     Attributes:
-        g_tensor: 3x3 spin-Hamiltonian g-tensor matrix, if available.
+        g_tensor_ab_initio: Optional 3x3 ab-initio g-tensor matrix.
+        g_tensor_ab_initio_iso: Optional isotropic ab-initio g component.
+        g_tensor_ab_initio_ax: Optional axial ab-initio g component.
+        g_tensor_ab_initio_rho: Optional rhombic ab-initio g component.
         g_tensor_dft: Optional 3x3 DFT-derived g-tensor matrix.
         D_tensor: Optional 3x3 zero-field splitting (ZFS) D tensor.
         E: Optional scalar E parameter (alternative ZFS representation).
@@ -225,29 +228,73 @@ class SpinHamiltonian:
     def __init__(
         self,
         g_tensor_ab_initio: ArrayLike | None = None,
+        g_tensor_ab_initio_iso: float | None = None,
+        g_tensor_ab_initio_ax: float | None = None,
+        g_tensor_ab_initio_rho: float | None = None,
         g_tensor_dft: ArrayLike | None = None,
         D_tensor: ArrayLike | None = None,
         E: float | None = None,
     ) -> None:
         self.g_tensor_ab_initio = g_tensor_ab_initio
+        self.g_tensor_ab_initio_iso = g_tensor_ab_initio_iso
+        self.g_tensor_ab_initio_ax = g_tensor_ab_initio_ax
+        self.g_tensor_ab_initio_rho = g_tensor_ab_initio_rho
         self.g_tensor_dft = g_tensor_dft
         self.D_tensor = D_tensor
         self.E = E
 
     @property
     def g_tensor_ab_initio(self) -> NDArray | None:
-        return self._g_tensor
+        return self._g_tensor_ab_initio
 
     @g_tensor_ab_initio.setter
     def g_tensor_ab_initio(self, value: ArrayLike | None) -> None:
         if value is None:
-            self._g_tensor = None
+            self._g_tensor_ab_initio = None
             return
 
         arr = np.asarray(value, dtype=float)
         if arr.shape != (3, 3):
-            raise ValueError("SpinHamiltonian.g_tensor must be a (3, 3) matrix")
-        self._g_tensor = arr
+            raise ValueError(
+                "SpinHamiltonian.g_tensor_ab_initio must be a (3, 3) matrix"
+            )
+        self._g_tensor_ab_initio = arr
+        return
+
+    @property
+    def g_tensor_ab_initio_iso(self) -> float | None:
+        return self._g_tensor_ab_initio_iso
+
+    @g_tensor_ab_initio_iso.setter
+    def g_tensor_ab_initio_iso(self, value: float | None) -> None:
+        if value is None:
+            self._g_tensor_ab_initio_iso = None
+            return
+        self._g_tensor_ab_initio_iso = float(value)
+        return
+
+    @property
+    def g_tensor_ab_initio_ax(self) -> float | None:
+        return self._g_tensor_ab_initio_ax
+
+    @g_tensor_ab_initio_ax.setter
+    def g_tensor_ab_initio_ax(self, value: float | None) -> None:
+        if value is None:
+            self._g_tensor_ab_initio_ax = None
+            return
+        self._g_tensor_ab_initio_ax = float(value)
+        return
+
+    @property
+    def g_tensor_ab_initio_rho(self) -> float | None:
+        return self._g_tensor_ab_initio_rho
+
+    @g_tensor_ab_initio_rho.setter
+    def g_tensor_ab_initio_rho(self, value: float | None) -> None:
+        if value is None:
+            self._g_tensor_ab_initio_rho = None
+            return
+        self._g_tensor_ab_initio_rho = float(value)
         return
 
     @property

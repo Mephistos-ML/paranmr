@@ -16,7 +16,9 @@ from typing import Any, Sequence
 import numpy as np
 
 # Application layer
+from simpnmr.app.loaders.sh_load import load_g_tensor_ab_initio
 from simpnmr.app.loaders.susc_load import load_susceptibilities
+from simpnmr.app.policies.susc import resolve_susceptibility_source
 
 # Core / domain
 from simpnmr.core.fitting import vt
@@ -109,18 +111,26 @@ def fit_vt(
     analytic_chi_vt: dict[str, np.ndarray] | None = None
 
     if tip_type == "fix_tip_from_ab_initio" and method == "vt_2nd_order":
-        if (
-            config.susc_vt_ab_initio_format is None
-            or "orca" not in config.susc_vt_ab_initio_format
-        ):
-            raise ValueError("Only Orca is currently supported")
-        # TODO: use new functionality for an auto method detection here
-        section = config.susc_vt_ab_initio_format.split("orca_", 1)[1]
-
-        g_tensor = rdrs.read_g_tensor_ab_initio(
+        backend, section = resolve_susceptibility_source(
             config.susc_vt_ab_initio_file,
-            section=section,
+            config.susc_vt_ab_initio_format,
         )
+        if backend != "orca" or section is None:
+            raise ValueError("Only Orca is currently supported")
+
+        load_g_tensor_ab_initio(
+            molecule=molecules[0],
+            susceptibility_file=config.susc_vt_ab_initio_file,
+            susceptibility_format=config.susc_vt_ab_initio_format,
+        )
+        g_tensor = molecules[0].sh.g_tensor_ab_initio
+        g_components = {
+            "g_iso": molecules[0].sh.g_tensor_ab_initio_iso,
+            "g_ax": molecules[0].sh.g_tensor_ab_initio_ax,
+            "g_rho": molecules[0].sh.g_tensor_ab_initio_rho,
+        }
+        if g_tensor is None or any(value is None for value in g_components.values()):
+            raise ValueError("Ab initio g-tensor components could not be loaded.")
 
         suscs_ab_initio = load_susceptibilities(
             config.susc_vt_ab_initio_file,
@@ -149,13 +159,13 @@ def fit_vt(
         )
 
         # Precompute g^2 invariants in the chi eigenframe for analytic chi(T) evaluation
-        g_sq = vt.compute_g_sq_components(g_rot_diag)
+        g_components_sq = vt.compute_g_sq_components(g_rot_diag)
 
         # Compute the axial and rhombic parts of the effective Hamiltonian tensor (J)
         D_J, E_J = vt.calculate_E_D_components(eff_H_rot)
 
-        # Map VT component identifiers to Susceptibility attribute names
-        comp_to_attr = {"iso": "iso", "ax": "axiality", "rho": "rhombicity"}
+        # Map VT component identifiers to explicit Susceptibility attribute names
+        comp_to_attr = {"iso": "iso_g_corr", "ax": "axiality", "rho": "rhombicity"}
 
         # Build the full ab initio chiT series
         ab_series_full = _build_ab_initio_chit_series(
@@ -187,7 +197,15 @@ def fit_vt(
         analytic_chi_vt = {}
         for comp in fit_component:
             analytic_chi_vt[comp] = np.asarray(
-                vt.compute_analytic_component(comp, t_grid, g_sq, D_J, E_J, spin),
+                vt.compute_analytic_component(
+                    comp,
+                    t_grid,
+                    g_components_sq,
+                    g_components,
+                    D_J,
+                    E_J,
+                    spin,
+                ),
                 dtype=float,
             )
 
@@ -198,8 +216,13 @@ def fit_vt(
 
         for comp in fit_component:
             analytic_val_ref = float(analytic_chi_vt[comp][idx_ref])
+            ab_initio_value = getattr(susc_ab_initio, comp_to_attr[comp])
+            if ab_initio_value is None:
+                raise ValueError(
+                    f"Missing ab initio susceptibility component: {comp_to_attr[comp]}"
+                )
             tip_ref = vt.compute_tip_correction(
-                getattr(susc_ab_initio, comp_to_attr[comp]),
+                ab_initio_value,
                 analytic_val_ref,
                 spin,
             )
@@ -276,7 +299,7 @@ def fit_vt(
         with spec.context():
             plot_exp_vs_ab_initio(
                 params=chiT_fit_params,
-                g_sq=g_sq,
+                g_sq=g_components_sq,
                 inv_t=inv_temps_fit,
                 ab_series=ab_series,
                 analytic_chi_vt=analytic_chi_vt,

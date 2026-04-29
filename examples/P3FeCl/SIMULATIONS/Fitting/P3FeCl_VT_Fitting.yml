@@ -1,0 +1,57 @@
+project:
+  name: P3FeCl_VT_Fitting
+
+hyperfine:
+  method: dft
+  file: ../../DATA/HFC/P3FeCl_HFC.out
+  paramagnetic_centre: [9.122358, 5.108520, 11.946464]
+    
+diamagnetic:
+  method: csv
+  file: ../../DATA/DIA/P3FeCl_Diamagnetic_Shifts_13C.csv
+  
+chem_labels:
+  file: ../../DATA/LABELS/P3FeCl_Chemical_Labels_13C.csv
+  
+experiment:
+  files: [../../DATA/PARA/*csv]
+  spectrum_files: ../../DATA/PARA/SPECTRUM/P3FeCl_DReaM_13C_298K.csv
+  exp_reference: 1000.56
+          
+nuclei:
+  include: C
+  
+assignment:
+  method: hungarian
+  search:
+    mode: custom
+    n_attempts: 10
+    max_iter: 100
+    r2_threshold: 0.99
+  
+susc_vt:
+    method: vt_2nd_order
+    tip_type: fix_tip_from_ab_initio
+    ab_initio_file: ../../DATA/CHI/P3FeCl_Susceptibility_NEVPT2.out
+    ab_initio_format: orca_nev
+    variables:
+      iso:
+        intercept: [fit, 0.0]
+        slope: [fit, 0.0]
+      ax:
+        intercept: [fit, 0.0]
+        slope: [fit, 0.0]
+      rho:
+        intercept: [fix, 0.0]
+        slope: [fix, 0.0]
+        
+susc_fit:
+  type: split
+  variables:
+    iso: [fit, 0.1]
+    dxx: [fit, 0.1]
+    dxy: [fit, 0.1]
+    dxz: [fit, 0.1]
+    dyy: [fit, 0.1]
+    dyz: [fit, 0.1]
+  average_shifts: 'all'

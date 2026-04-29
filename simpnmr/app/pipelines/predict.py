@@ -97,9 +97,11 @@ def run_predict(config, options: PredictRunOptions | None = None) -> int:
         config=config,
     )
 
-    # Load ab-initio g-tensor (if available)
-    base_molecule.sh.g_tensor_ab_initio = load_g_tensor_ab_initio(
-        config=config,
+    # Load ab-initio g-tensor and derived scalar components (if available)
+    base_molecule = load_g_tensor_ab_initio(
+        molecule=base_molecule,
+        susceptibility_file=config.susceptibility_file,
+        susceptibility_format=config.susceptibility_format,
     )
 
     # Load Hyperfines

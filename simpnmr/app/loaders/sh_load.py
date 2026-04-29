@@ -1,70 +1,62 @@
 from __future__ import annotations
 
 import logging
-from typing import Any
 
 import numpy as np
 from numpy.typing import NDArray
 
 from simpnmr.app.policies.susc import resolve_susceptibility_source
-from simpnmr.core.build.gtensor import build_g_tensor_from_dft_components
+from simpnmr.core.build.gtensor import (
+    build_g_tensor_ab_initio,
+    build_g_tensor_from_dft_components,
+)
+from simpnmr.core.domain.mol import Molecule
 from simpnmr.io.qc import gateway as rdrs
 
 logger = logging.getLogger(__name__)
 
 
-def load_g_tensor_ab_initio(config: Any) -> NDArray[np.floating] | None:
-    """Load the ab initio spin-Hamiltonian g-tensor according to susceptibility policy.
+def load_g_tensor_ab_initio(
+    molecule: Molecule,
+    susceptibility_file: str | None,
+    susceptibility_format: str | None = None,
+) -> Molecule:
+    """Load the ab-initio spin-Hamiltonian g-tensor into the molecule domain.
 
-    This loader is intentionally narrow: it only resolves and reads the
-    ab initio g-tensor from the configured susceptibility source. The calling
-    pipeline is responsible for attaching it to the domain, e.g.
-    `molecule.sh.g_tensor_ab_initio = g_tensor`.
-
-    The `ab initio` qualifier is important here: this tensor is the
-    spin-Hamiltonian g-tensor obtained from an electronic-structure
-    calculation and should remain distinct from any DFT-derived g-tensor
-    that may also be loaded elsewhere in the workflow. These tensors may
-    have different physical meanings and must not be conflated.
-
-    Args:
-        config: Runtime config with at least:
-            - susceptibility_file
-            - susceptibility_format
-
-    Returns:
-        Ab initio g-tensor as a (3, 3) ndarray, or None if not available
-        for the backend.
+    This loader resolves and reads the ab-initio g-tensor from the configured
+    susceptibility source, then delegates domain population to the builder layer.
     """
-    if config.susceptibility_file is None:
+    if susceptibility_file is None:
         logger.info(
             "No susceptibility file provided; skipping ab initio g-tensor load."
         )
-        return None
+        return build_g_tensor_ab_initio(molecule, g_tensor=None)
 
     backend, section = resolve_susceptibility_source(
-        config.susceptibility_file,
-        config.susceptibility_format,
+        susceptibility_file,
+        susceptibility_format,
     )
 
     if backend != "orca":
         logger.info("g-tensor not loaded: susceptibility backend is %s.", backend)
-        return None
+        return build_g_tensor_ab_initio(molecule, g_tensor=None)
 
     g_tensor = rdrs.read_g_tensor_ab_initio(
-        config.susceptibility_file,
+        susceptibility_file,
         section=section,
     )
 
-    g_tensor = np.asarray(g_tensor, dtype=float)
-    if g_tensor.shape != (3, 3):
-        raise ValueError("Invalid g-tensor: expected a (3, 3) matrix.")
+    if g_tensor is None:
+        logger.info("No ab-initio g-tensor found in ORCA susceptibility output.")
+        return build_g_tensor_ab_initio(molecule, g_tensor=None)
+
+    molecule = build_g_tensor_ab_initio(molecule, g_tensor=g_tensor)
 
     logger.info("Ab-initio g-tensor loaded from ORCA susceptibility output.")
-    return g_tensor
+    return molecule
 
 
-def load_g_tensor_dft(config: Any) -> NDArray[np.floating] | None:
+def load_g_tensor_dft(config: object) -> NDArray[np.floating] | None:
     """Load the DFT-derived g-tensor.
 
     This loader reads decomposed DFT g-tensor contribution tensors from the
