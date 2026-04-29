@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v1.8.4 (2026-04-29)
+
+### Bug Fixes
+
+- **vt**: Use analytic iso from ab initio g components
+  ([`5cd77ab`](https://gitlab.com/suturina-group/simpnmr/-/commit/5cd77ab0fd022bdf08ed2ef4527816fd17b290c2))
+
+
 ## v1.8.3 (2026-04-23)
 
 ### Bug Fixes
