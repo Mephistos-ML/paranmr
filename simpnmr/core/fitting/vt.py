@@ -10,7 +10,7 @@ with an optional TIP term.
 import numpy as np
 from scipy.optimize import curve_fit
 
-from simpnmr.core.const.physics import KB, MU0, MUB, C, H
+from simpnmr.core.const.physics import GE, KB, MU0, MUB, C, H  # noqa
 
 
 def fit_chit_linear_model(
@@ -326,14 +326,18 @@ def compute_chit_high_t_limit(
 def compute_analytic_component(
     chi_component: str,
     temperature: np.ndarray,
-    g_sq: dict[str, float],
+    g_components_sq: dict[str, float],
+    g_components: dict[str, float],
     D_J: float,
     E_J: float,
     spin: float,
 ) -> np.ndarray:
-    g_sq_iso = float(g_sq["g_sq_iso"])
-    g_sq_ax = float(g_sq["g_sq_ax"])
-    g_sq_rh = float(g_sq["g_sq_rh"])
+    g_sq_iso = float(g_components_sq["g_sq_iso"])
+    g_sq_ax = float(g_components_sq["g_sq_ax"])
+    g_sq_rh = float(g_components_sq["g_sq_rh"])
+    g_iso = float(g_components["g_iso"])
+    g_ax = float(g_components["g_ax"])
+    g_rho = float(g_components["g_rho"])
 
     # Accept both scalar and array temperatures.
     t = np.asarray(temperature, dtype=float)
@@ -344,7 +348,8 @@ def compute_analytic_component(
     # Calculate chi component in reduced (Curie) units
     if chi_component == "iso":
         analytic = (
-            g_sq_iso - (f_S / (45 * KB * t)) * (D_J * g_sq_ax + 3 * E_J * g_sq_rh)
+            GE * g_iso
+            - (f_S / (45 * KB * t)) * (D_J * GE * g_ax + 3 * E_J * GE * g_rho)
         ) / t
     elif chi_component == "ax":
         analytic = (
