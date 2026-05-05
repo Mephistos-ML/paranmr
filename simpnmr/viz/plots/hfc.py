@@ -83,7 +83,7 @@ def plot_hyperfine(
 
     fig, ax = create_canvas(
         spec.profile,
-        variant="standard",
+        variant="horizontal",
         window_title=window_title,
         layout="constrained",
     )
@@ -170,7 +170,7 @@ def plot_hyperfine_iso_vs_ax(
     if all([fig is None, ax is None]):
         fig, ax = create_canvas(
             spec.profile,
-            variant="standard",
+            variant="horizontal",
             window_title=window_title,
             layout="constrained",
         )
@@ -285,7 +285,7 @@ def plot_hyperfine_spread(
 
     fig, ax = create_canvas(
         spec.profile,
-        variant="standard",
+        variant="horizontal",
         window_title=window_title,
         layout="constrained",
     )

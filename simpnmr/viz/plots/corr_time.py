@@ -232,7 +232,7 @@ def plot_corr_time_contrib(
 
     fig, ax = create_canvas(
         spec.profile,
-        variant="standard",
+        variant="horizontal",
         layout="constrained",
     )
 

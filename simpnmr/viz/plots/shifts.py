@@ -62,7 +62,7 @@ def plot_shift_spread(
     # Make plot
     fig, ax = create_canvas(
         spec.profile,
-        variant="standard",
+        variant="horizontal",
         window_title=window_title,
         layout="constrained",
     )
@@ -340,7 +340,7 @@ def plot_shift_contrib(
     # Make plot
     fig, ax = create_canvas(
         spec.profile,
-        variant="standard",
+        variant="horizontal",
         window_title=window_title,
         layout="constrained",
     )
@@ -527,7 +527,7 @@ def plot_shift_tdep(
     # Plot both together and save limits
     fig, ax = create_canvas(
         spec.profile,
-        variant="standard",
+        variant="horizontal",
         window_title=window_title,
         layout="constrained",
     )

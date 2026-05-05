@@ -272,7 +272,7 @@ def plot_exp_vs_ab_initio(
 
         fig, ax = create_canvas(
             spec.profile,
-            variant="standard",
+            variant="horizontal",
             layout="constrained",
         )
 

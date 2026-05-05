@@ -103,7 +103,7 @@ def plot_pred_spectrum(
     # Make plot
     fig, ax = create_canvas(
         spec.profile,
-        variant="standard",
+        variant="horizontal",
         window_title=window_title,
         layout="constrained",
     )
@@ -276,7 +276,7 @@ def plot_raw_deconv_pred(
     fig, ax = create_stacked_canvas(
         spec.profile,
         nrows=n_subplots,
-        variant="standard",
+        variant="horizontal",
         window_title=window_title,
         layout="constrained",
         sharex=True,

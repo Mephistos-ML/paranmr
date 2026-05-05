@@ -17,7 +17,7 @@ from simpnmr.viz.layout.figure import FigureVariant, get_figsize
 def create_canvas(
     profile: PlotProfile,
     *,
-    variant: FigureVariant = "standard",
+    variant: FigureVariant = "horizontal",
     window_title: str | None = None,
     layout: str = "constrained",
 ) -> tuple[Figure, Axes]:
@@ -46,7 +46,7 @@ def create_stacked_canvas(
     profile: PlotProfile,
     *,
     nrows: int,
-    variant: FigureVariant = "standard",
+    variant: FigureVariant = "horizontal",
     window_title: str | None = None,
     layout: str = "constrained",
     sharex: bool = False,
