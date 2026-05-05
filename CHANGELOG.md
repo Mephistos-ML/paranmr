@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v1.9.1 (2026-05-05)
+
+### Bug Fixes
+
+- **setup**: Render README on PyPI project page
+  ([`ed27db0`](https://gitlab.com/suturina-group/simpnmr/-/commit/ed27db08c609131f58857a0f6cefc4cdb93a88ef))
+
+
 ## v1.9.0 (2026-05-05)
 
 ### Bug Fixes
