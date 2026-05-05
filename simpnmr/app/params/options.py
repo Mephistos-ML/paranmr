@@ -175,7 +175,7 @@ class BenchmarkAfcRunOptions:
 
     @classmethod
     def from_namespace(cls, ns) -> "BenchmarkAfcRunOptions":
-        return cls(runtime=ns.runtime, dry_run=ns.dry_run)
+        return cls(runtime=ns.runtime, dry_run=bool(getattr(ns, "dry_run", False)))
 
 
 @dataclass(frozen=True)
@@ -187,7 +187,7 @@ class BenchmarkAsdRunOptions:
 
     @classmethod
     def from_namespace(cls, ns) -> "BenchmarkAsdRunOptions":
-        return cls(runtime=ns.runtime, dry_run=ns.dry_run)
+        return cls(runtime=ns.runtime, dry_run=bool(getattr(ns, "dry_run", False)))
 
 
 @dataclass(frozen=True)
