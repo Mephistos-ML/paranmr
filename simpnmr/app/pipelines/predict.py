@@ -29,6 +29,8 @@ from simpnmr.app.loaders.sh_load import (
 )
 from simpnmr.app.loaders.susc_load import load_susceptibilities
 from simpnmr.app.params.options import PredictRunOptions
+from simpnmr.app.policies.hfc import has_missing_selected_chem_labels
+from simpnmr.app.policies.linewidth import resolve_output_linewidths
 from simpnmr.app.policies.relax import resolve_relaxation_conditions
 from simpnmr.app.policies.susc import resolve_susceptibility_source
 
@@ -160,6 +162,11 @@ def run_predict(config, options: PredictRunOptions | None = None) -> int:
     # Load chemical labels
     if len(config.chem_labels_file):
         al_to_cl, al_to_cml = load_chem_labels_from_csv(config.chem_labels_file)
+        if has_missing_selected_chem_labels(base_molecule, al_to_cl):
+            logger.warning(
+                "Chemical labels file does not define labels for all selected nuclei; "
+                "missing labels will use atom labels."
+            )
         base_molecule.apply_chem_labels(al_to_cl, al_to_cml)
 
         # Save xyz file with chemical labels for chemcraft
@@ -276,6 +283,7 @@ def run_predict(config, options: PredictRunOptions | None = None) -> int:
 
     # Create a molecule object which accompanies each experiment object
     molecules = [copy.deepcopy(base_molecule) for _ in range(len(experiments))]
+    linewidth_outputs = []
 
     # Update susceptibility tensor of Molecule using model
     for molecule, susc, experiment in zip(molecules, suscs, experiments):
@@ -350,6 +358,8 @@ def run_predict(config, options: PredictRunOptions | None = None) -> int:
             np.min([nuc.shift.avg for nuc in molecule.nuclei]),
             np.max([nuc.shift.avg for nuc in molecule.nuclei]),
         ]
+        linewidth_output = resolve_output_linewidths(molecule, shift_range)
+        linewidth_outputs.append(linewidth_output)
 
         with spec.context():
             if len(config.experiment_files):
@@ -359,6 +369,7 @@ def run_predict(config, options: PredictRunOptions | None = None) -> int:
                     shift_range=shift_range,
                     experiment=experiment,
                     spec=spec,
+                    effective_linewidths_by_label=linewidth_output.values_by_label,
                     save=True,
                     show=options.runtime.show_plots,
                     save_name=os.path.join(
@@ -372,6 +383,7 @@ def run_predict(config, options: PredictRunOptions | None = None) -> int:
                 isotope=molecule.nuclei[0].isotope,
                 shift_range=shift_range,
                 spec=spec,
+                effective_linewidths_by_label=linewidth_output.values_by_label,
                 save=True,
                 show=options.runtime.show_plots,
                 save_name=os.path.join(
@@ -400,7 +412,7 @@ def run_predict(config, options: PredictRunOptions | None = None) -> int:
     )
 
     # Write shift and peak data to file
-    for molecule in molecules:
+    for molecule, linewidth_output in zip(molecules, linewidth_outputs):
         save_molecule_to_csv(
             molecule=molecule,
             file_name=os.path.join(
@@ -418,6 +430,8 @@ def run_predict(config, options: PredictRunOptions | None = None) -> int:
                 config.project_name,
                 f"peak_data_{molecule.susc.temperature:.2f}_K.csv",
             ),
+            linewidth_by_label=linewidth_output.values_by_label,
+            linewidth_column_name=linewidth_output.column_name,
             comment=f"T = {molecule.susc.temperature:.2f} K",
             verbose=True,
         )
@@ -451,7 +465,8 @@ def _apply_relaxation_linewidths(
 
     if not getattr(config, "relaxation_model", None):
         logger.warning(
-            "No relaxation model specified — linewidths will be fixed at 1 ppm"
+            "No relaxation model specified; linewidths will be scaled "
+            "automatically for plotting and CSV output"
         )
         base_molecule.relaxation = None
         return

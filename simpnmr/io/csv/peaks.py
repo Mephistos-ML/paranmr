@@ -7,6 +7,7 @@ Provides helpers to export relaxation decompositions and correlation-time fit da
 """
 
 import logging
+from collections.abc import Mapping
 
 import numpy as np
 import pandas as pd
@@ -40,12 +41,15 @@ def save_peak_data_to_csv(
     file_name: str,
     comment: str = "",
     verbose: bool = True,
+    *,
+    linewidth_by_label: Mapping[str, float] | None = None,
+    linewidth_column_name: str = "linewidth_avg (ppm)",
 ) -> None:
     """Write peak linewidth and optional relaxation data to a CSV file.
 
-    The function reads linewidths and optional relaxation data directly from the
-    molecule domain object, groups values by chemical label, and writes the
-    resulting averages to CSV.
+    The function groups linewidths by chemical label and writes the resulting
+    averages to CSV. Linewidths may be provided explicitly by the application
+    pipeline or read from the molecule domain object.
 
     Args:
         molecule: Molecule domain object containing nuclei, linewidths, and
@@ -54,14 +58,22 @@ def save_peak_data_to_csv(
         comment: Optional comment line appended to the file header. If provided,
             it must begin with ``#`` (or will be prefixed automatically).
         verbose: If ``True``, prints the output file path.
+        linewidth_by_label: Optional per-nucleus linewidth values in ppm to
+            write instead of reading `nuc.shift.lw`.
+        linewidth_column_name: Output column name for linewidth values.
 
     Returns:
         None.
     """
     label_to_chem_label = {nuc.label: nuc.chem_label for nuc in molecule.nuclei}
-    lw_by_label = {
-        nuc.label: nuc.shift.lw for nuc in molecule.nuclei if nuc.shift.lw is not None
-    }
+    if linewidth_by_label is None:
+        lw_by_label = {
+            nuc.label: nuc.shift.lw
+            for nuc in molecule.nuclei
+            if nuc.shift.lw is not None
+        }
+    else:
+        lw_by_label = dict(linewidth_by_label)
 
     relaxation = getattr(molecule, "relaxation", None)
     r1_by_label = relaxation.r1.total if relaxation is not None else None
@@ -280,7 +292,7 @@ def save_peak_data_to_csv(
             avg_delta_orb_aniso_by_chem_label.get(lbl, np.nan) for lbl in chem_labels
         ]
 
-    out["linewidth_avg (ppm)"] = [
+    out[linewidth_column_name] = [
         avg_lw_by_chem_label.get(lbl, np.nan) for lbl in chem_labels
     ]
 

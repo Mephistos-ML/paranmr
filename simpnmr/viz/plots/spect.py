@@ -10,6 +10,7 @@ predicted spectra with deconvoluted and raw experimental spectra.
 import copy
 import logging
 import os
+from collections.abc import Mapping
 
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
@@ -31,11 +32,20 @@ from simpnmr.viz.utils.fmt import isotope_format
 logger = logging.getLogger(__name__)
 
 
+def _get_plot_linewidth(nucleus, linewidths_by_label):
+    if linewidths_by_label is not None and nucleus.label in linewidths_by_label:
+        return linewidths_by_label[nucleus.label]
+    if nucleus.shift.lw is None:
+        raise ValueError("Spectrum plotting requires linewidth values")
+    return nucleus.shift.lw
+
+
 def plot_pred_spectrum(
     molecule: Molecule,
     isotope: str,
     shift_range: ArrayLike,
     spec: PlotSpec,
+    effective_linewidths_by_label: Mapping[str, float] | None = None,
     save: bool = True,
     show: bool = True,
     save_name: str = "predicted_spectrum.pdf",
@@ -48,6 +58,9 @@ def plot_pred_spectrum(
         molecule: Molecule containing shift data.
         isotope: Isotope to plot (e.g. ``"1H"``).
         shift_range: Two-element sequence specifying min/max ppm.
+        spec: Plot styling contract.
+        effective_linewidths_by_label: Optional per-nucleus linewidths in ppm
+            resolved by the application pipeline.
         save: If ``True``, saves the plot to `save_name`.
         show: If ``True``, shows the plot.
         save_name: Output image file name.
@@ -74,7 +87,12 @@ def plot_pred_spectrum(
 
     for nuc in molecule.nuclei:
         if nuc.isotope == isotope:
-            y_intensity += lorentzian(x_grid, nuc.shift.lw, nuc.shift.avg, 1)
+            y_intensity += lorentzian(
+                x_grid,
+                _get_plot_linewidth(nuc, effective_linewidths_by_label),
+                nuc.shift.avg,
+                1,
+            )
 
     # Normalise spectrum
     y_intensity /= np.max(y_intensity)
@@ -160,6 +178,7 @@ def plot_raw_deconv_pred(
     shift_range: ArrayLike,
     experiment: Experiment,
     spec: PlotSpec,
+    effective_linewidths_by_label: Mapping[str, float] | None = None,
     save: bool = True,
     show: bool = True,
     save_name: str = "pred_and_exp_spectrum.pdf",
@@ -175,6 +194,9 @@ def plot_raw_deconv_pred(
             The final plotting window is expanded to include the experimental
             peak range with additional padding.
         experiment: Experiment containing the raw spectrum and deconvolution results.
+        spec: Plot styling contract.
+        effective_linewidths_by_label: Optional per-nucleus linewidths in ppm
+            resolved by the application pipeline.
         save: If ``True``, saves the plot to `save_name`.
         show: If ``True``, shows the plot.
         save_name: Output image file name.
@@ -206,7 +228,10 @@ def plot_raw_deconv_pred(
     for nucleus in molecule.nuclei:
         if nucleus.isotope == isotope:
             y_sim_intensity += lorentzian(
-                x_grid, nucleus.shift.lw, nucleus.shift.avg, 1
+                x_grid,
+                _get_plot_linewidth(nucleus, effective_linewidths_by_label),
+                nucleus.shift.avg,
+                1,
             )
 
     # Map each nucleus text-label to its simulated (predicted) peak position

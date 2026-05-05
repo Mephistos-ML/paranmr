@@ -46,6 +46,11 @@ def load_electronic_state(
     )
 
     resolved_spin = spin_S if spin_S is not None else spin_guess
+    if hyperfine_method == "pdip" and resolved_spin is None:
+        raise ValueError(
+            "Point-dipole HFC requires spin to be set in the config, "
+            "for example spin: 2.5."
+        )
 
     return build_electronic_state(
         spin_S=resolved_spin,
