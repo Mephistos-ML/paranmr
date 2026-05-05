@@ -167,6 +167,18 @@ class ExtractDiaRunOptions:
 
 
 @dataclass(frozen=True)
+class BenchmarkAfcRunOptions:
+    """Run options for the A_fc benchmark pipeline."""
+
+    runtime: RuntimeSettings
+    dry_run: bool = False
+
+    @classmethod
+    def from_namespace(cls, ns) -> "BenchmarkAfcRunOptions":
+        return cls(runtime=ns.runtime, dry_run=ns.dry_run)
+
+
+@dataclass(frozen=True)
 class GetSHRunOptions:
     """Run options for the get_sh CLI-driven workflow."""
 

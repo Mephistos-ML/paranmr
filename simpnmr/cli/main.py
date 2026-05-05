@@ -170,6 +170,18 @@ def get_sh_cli(uargs: argparse.Namespace, runtime: RuntimeSettings) -> int:
     return run_get_sh(options)
 
 
+def benchmark_a_fc_cli(uargs: argparse.Namespace, runtime: RuntimeSettings) -> int:
+    """Thin CLI wrapper for the A_fc benchmark pipeline."""
+
+    from simpnmr.app.params.options import BenchmarkAfcRunOptions
+    from simpnmr.app.pipelines.benchmarks.a_fc import run_benchmark_a_fc
+
+    config = cfg.AfcBenchmarkConfig.from_file(uargs.input_file)
+    options = BenchmarkAfcRunOptions.from_namespace(uargs)
+
+    return run_benchmark_a_fc(config, options)
+
+
 def read_args(arg_list=None):
     """
     Parse CLI arguments and dispatch to the selected subcommand handler.
@@ -290,6 +302,27 @@ def read_args(arg_list=None):
         "chiT_regression_csv",
         type=str,
         help="CSV file produced by chiT regression (slope/intercept and uncertainties)",
+    )
+
+    benchmark = subparsers.add_parser(
+        "benchmark",
+        description="Run benchmark workflows",
+        formatter_class=argparse.RawTextHelpFormatter,
+    )
+    benchmark.set_defaults(func=lambda args, runtime: benchmark.print_help())
+    benchmark_subparsers = benchmark.add_subparsers(dest="benchmark_prog")
+
+    benchmark_a_fc = benchmark_subparsers.add_parser(
+        "a_fc",
+        description="Benchmark A_fc data from configured hyperfine sources",
+        formatter_class=argparse.RawTextHelpFormatter,
+    )
+    benchmark_a_fc.set_defaults(func=benchmark_a_fc_cli)
+
+    benchmark_a_fc.add_argument(
+        "input_file",
+        type=str,
+        help="Input file for benchmark a_fc -- see documentation for format",
     )
 
     fit_susc = subparsers.add_parser(
