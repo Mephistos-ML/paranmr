@@ -2,6 +2,31 @@
 
 <!-- version list -->
 
+## v1.9.0 (2026-05-05)
+
+### Bug Fixes
+
+- **app**: Validate point-dipole HFC inputs
+  ([`6933797`](https://gitlab.com/suturina-group/simpnmr/-/commit/6933797ed5f39ff31585d8d45da231793fd9ec1b))
+
+- **app**: Warn about incomplete chemical labels
+  ([`eac8f85`](https://gitlab.com/suturina-group/simpnmr/-/commit/eac8f85a7e548fba9355ba1bcf287b3cb63182e6))
+
+- **core**: Remove implicit default linewidth
+  ([`2115dcf`](https://gitlab.com/suturina-group/simpnmr/-/commit/2115dcfb01670d2e46beb6cf47735b158af7ae95))
+
+### Features
+
+- **app**: Resolve automatic output linewidths
+  ([`bde17ee`](https://gitlab.com/suturina-group/simpnmr/-/commit/bde17ee536820fcf0e56b09c49c99139d8068dc1))
+
+- **io**: Label peak linewidth output mode
+  ([`691159c`](https://gitlab.com/suturina-group/simpnmr/-/commit/691159c6b20806fb836a9075323a0a6e35d17454))
+
+- **viz**: Use resolved linewidths for spectra
+  ([`bc5a2e2`](https://gitlab.com/suturina-group/simpnmr/-/commit/bc5a2e206ff1accec899359b3f87bfb5d28a0a28))
+
+
 ## v1.8.4 (2026-04-29)
 
 ### Bug Fixes
