@@ -174,12 +174,24 @@ def benchmark_a_fc_cli(uargs: argparse.Namespace, runtime: RuntimeSettings) -> i
     """Thin CLI wrapper for the A_fc benchmark pipeline."""
 
     from simpnmr.app.params.options import BenchmarkAfcRunOptions
-    from simpnmr.app.pipelines.benchmarks.a_fc import run_benchmark_a_fc
+    from simpnmr.app.pipelines.benchmarks.hyperfine.a_fc import run_benchmark_a_fc
 
     config = cfg.AfcBenchmarkConfig.from_file(uargs.input_file)
     options = BenchmarkAfcRunOptions.from_namespace(uargs)
 
     return run_benchmark_a_fc(config, options)
+
+
+def benchmark_a_sd_cli(uargs: argparse.Namespace, runtime: RuntimeSettings) -> int:
+    """Thin CLI wrapper for the A_sd benchmark pipeline."""
+
+    from simpnmr.app.params.options import BenchmarkAsdRunOptions
+    from simpnmr.app.pipelines.benchmarks.hyperfine.a_sd import run_benchmark_a_sd
+
+    config = cfg.AsdBenchmarkConfig.from_file(uargs.input_file)
+    options = BenchmarkAsdRunOptions.from_namespace(uargs)
+
+    return run_benchmark_a_sd(config, options)
 
 
 def read_args(arg_list=None):
@@ -323,6 +335,19 @@ def read_args(arg_list=None):
         "input_file",
         type=str,
         help="Input file for benchmark a_fc -- see documentation for format",
+    )
+
+    benchmark_a_sd = benchmark_subparsers.add_parser(
+        "a_sd",
+        description="Benchmark axial A_sd data from configured hyperfine sources",
+        formatter_class=argparse.RawTextHelpFormatter,
+    )
+    benchmark_a_sd.set_defaults(func=benchmark_a_sd_cli)
+
+    benchmark_a_sd.add_argument(
+        "input_file",
+        type=str,
+        help="Input file for benchmark a_sd -- see documentation for format",
     )
 
     fit_susc = subparsers.add_parser(

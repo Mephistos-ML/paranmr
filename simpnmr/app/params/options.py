@@ -179,6 +179,18 @@ class BenchmarkAfcRunOptions:
 
 
 @dataclass(frozen=True)
+class BenchmarkAsdRunOptions:
+    """Run options for the A_sd benchmark pipeline."""
+
+    runtime: RuntimeSettings
+    dry_run: bool = False
+
+    @classmethod
+    def from_namespace(cls, ns) -> "BenchmarkAsdRunOptions":
+        return cls(runtime=ns.runtime, dry_run=ns.dry_run)
+
+
+@dataclass(frozen=True)
 class GetSHRunOptions:
     """Run options for the get_sh CLI-driven workflow."""
 
