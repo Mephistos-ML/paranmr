@@ -7,12 +7,17 @@ version = {}
 with open("simpnmr/__version__.py", "r", encoding="utf-8") as f:
     exec(f.read(), version)
 
+with open("README.md", "r", encoding="utf-8") as f:
+    long_description = f.read()
+
 setuptools.setup(
     name="simpnmr",
     version=version["__version__"],
     author="Suturina Group",
     author_email="",
     description="A package for working with paramagnetic NMR spectra",
+    long_description=long_description,
+    long_description_content_type="text/markdown",
     url="https://gitlab.com/suturina-group/simpnmr",
     classifiers=[
         "Programming Language :: Python :: 3",

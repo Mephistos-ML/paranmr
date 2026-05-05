@@ -1,6 +1,6 @@
 # SimpNMR
 
-<img src="docs/source/_static/simpnmg-full-logo.png" width="300">
+<img src="https://gitlab.com/suturina-group/simpnmr/-/raw/main/docs/source/_static/simpnmg-full-logo.png" width="300">
 
 [![Docs](https://img.shields.io/badge/docs-simpnmr.org-blue)](https://simpnmr.org/)
 [![PyPI](https://img.shields.io/pypi/v/simpnmr.svg)](https://pypi.org/project/simpnmr/)
