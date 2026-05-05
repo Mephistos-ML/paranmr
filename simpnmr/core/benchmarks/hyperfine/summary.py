@@ -1,32 +1,26 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (C) 2026 Suturina Group
 
-"""Summaries for A_fc benchmark data."""
+"""Generic summaries for hyperfine benchmark metrics."""
 
 from __future__ import annotations
 
 from collections import Counter
+from collections.abc import Callable
+from typing import Any
 
 import numpy as np
 
 from simpnmr.core.domain.mol import Molecule
 
 
-def summarize_a_fc_ranges_by_functional_and_nucleus(
+def summarize_hyperfine_metric_ranges_by_functional_and_nucleus(
     functional_sources: dict[str, list[tuple[str, Molecule]]],
+    *,
+    metric_key: str,
+    metric_getter: Callable[[Any], float],
 ) -> dict[str, dict[str, dict[str, dict[str, object]]]]:
-    """Summarize A_fc values by functional, nucleus, and chemical label.
-
-    Args:
-        functional_sources: Mapping from functional name to source-labelled
-            molecules. Source labels are caller-defined identifiers used only
-            for diagnostics.
-
-    Returns:
-        Nested mapping ``functional -> nucleus -> chem_label -> summary``. Each
-        summary contains ``min``, ``max``, ``mean``, ``count``, and
-        source-resolved ``values``.
-    """
+    """Summarize a scalar hyperfine metric by functional, nucleus, and label."""
     grouped_values: dict[str, dict[str, dict[str, list[dict[str, object]]]]] = {}
 
     for functional, sources in functional_sources.items():
@@ -35,7 +29,7 @@ def summarize_a_fc_ranges_by_functional_and_nucleus(
             for nucleus in molecule.nuclei:
                 nucleus_label = nucleus.label_nn
                 chem_label = nucleus.chem_label
-                a_fc = float(np.trace(nucleus.A.fc) / 3.0)
+                metric_value = float(metric_getter(nucleus))
                 grouped_values[functional].setdefault(nucleus_label, {})
                 grouped_values[functional][nucleus_label].setdefault(
                     chem_label, []
@@ -44,7 +38,7 @@ def summarize_a_fc_ranges_by_functional_and_nucleus(
                         "source_id": source_id,
                         "atom_label": nucleus.label,
                         "chem_math_label": nucleus.chem_math_label,
-                        "a_fc": a_fc,
+                        metric_key: metric_value,
                     }
                 )
 
@@ -54,12 +48,12 @@ def summarize_a_fc_ranges_by_functional_and_nucleus(
         for nucleus_label, chem_label_values in nucleus_values.items():
             summary[functional][nucleus_label] = {}
             for chem_label, values in chem_label_values.items():
-                a_fc_values = [float(entry["a_fc"]) for entry in values]
+                metric_values = [float(entry[metric_key]) for entry in values]
                 summary[functional][nucleus_label][chem_label] = {
-                    "min": min(a_fc_values),
-                    "max": max(a_fc_values),
-                    "mean": float(np.mean(a_fc_values)),
-                    "count": len(a_fc_values),
+                    "min": min(metric_values),
+                    "max": max(metric_values),
+                    "mean": float(np.mean(metric_values)),
+                    "count": len(metric_values),
                     "chem_math_label": values[0]["chem_math_label"],
                     "values": values,
                 }
@@ -67,24 +61,12 @@ def summarize_a_fc_ranges_by_functional_and_nucleus(
     return summary
 
 
-def summarize_a_fc_max_by_nucleus(
+def summarize_hyperfine_metric_max_by_nucleus(
     summary: dict[str, dict[str, dict[str, dict[str, object]]]],
     *,
     max_label_tolerance: float = 0.0,
 ) -> dict[str, list[dict[str, object]]]:
-    """Summarize maximum A_fc values by nucleus across functionals.
-
-    Args:
-        summary: Nested A_fc summary produced by
-            ``summarize_a_fc_ranges_by_functional_and_nucleus``.
-        max_label_tolerance: Relative tolerance used to replace a raw maximum
-            label with the majority maximum label for that nucleus.
-
-    Returns:
-        Mapping from nucleus label to sorted rows. Each row contains
-        ``functional`` and the maximum A_fc value observed for that functional
-        and nucleus. Rows are sorted by descending maximum A_fc.
-    """
+    """Summarize maximum scalar hyperfine metric values by nucleus."""
     raw_rows_by_nucleus: dict[str, list[dict[str, object]]] = {}
 
     for functional, nucleus_summary in summary.items():
@@ -152,7 +134,7 @@ def _get_chem_label_max(
     nucleus_label: str,
     chem_label: str,
 ) -> float | None:
-    """Return a chem-label maximum from nested A_fc summary."""
+    """Return a chem-label maximum from nested benchmark summary."""
     try:
         return float(summary[functional][nucleus_label][chem_label]["max"])
     except KeyError:
