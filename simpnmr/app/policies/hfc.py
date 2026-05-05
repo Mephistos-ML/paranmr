@@ -14,7 +14,10 @@ Key notes:
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from enum import Enum
+
+from simpnmr.core.domain.mol import Molecule
 
 
 class OrbitalContribution(str, Enum):
@@ -57,3 +60,36 @@ def is_orbital_hyperfine_used(mode: OrbitalContribution) -> bool:
     """
 
     return mode is not OrbitalContribution.OFF
+
+
+def validate_pdip_xyz_labels(labels: list[str]) -> None:
+    """Validate XYZ labels required by point-dipole HFC.
+
+    Args:
+        labels: Atomic labels read from the XYZ structure file.
+
+    Raises:
+        ValueError: If any atomic label is missing an index suffix.
+    """
+
+    if any(not any(char.isdigit() for char in label) for label in labels):
+        raise ValueError(
+            "Point-dipole HFC requires indexed XYZ atom labels such as Fe1, H1, H2, C1."
+        )
+
+
+def has_missing_selected_chem_labels(
+    molecule: Molecule,
+    labels_by_atom_label: Mapping[str, str],
+) -> bool:
+    """Return whether selected nuclei are missing chemical labels.
+
+    Args:
+        molecule: Molecule containing selected runtime nuclei.
+        labels_by_atom_label: Mapping from atom labels to chemical labels.
+
+    Returns:
+        True if any selected nucleus is absent from `labels_by_atom_label`.
+    """
+
+    return any(nuc.label not in labels_by_atom_label for nuc in molecule.nuclei)

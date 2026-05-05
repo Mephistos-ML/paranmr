@@ -17,6 +17,7 @@ import logging
 import os
 from typing import Any
 
+from simpnmr.app.policies.hfc import validate_pdip_xyz_labels
 from simpnmr.core.build import mol
 from simpnmr.core.domain.mol import Molecule
 from simpnmr.io.csv.mol import read_molecule_csv
@@ -60,6 +61,7 @@ def load_base_molecule(config: Any) -> Molecule:
 
         if ext == ".xyz":
             labels, coords = xyzf.load_xyz(config.hyperfine_file)
+            validate_pdip_xyz_labels(labels)
         elif ext in [".log", ".out"]:
             qcs = rdrs.QCStructure.guess_from_file(config.hyperfine_file)
             labels = qcs.labels
