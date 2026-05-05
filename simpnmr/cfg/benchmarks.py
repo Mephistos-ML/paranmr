@@ -3,7 +3,7 @@
 
 """Define YAML-backed configuration schemas for benchmark workflows.
 
-The A_fc benchmark configuration is intentionally separate from the main
+The hyperfine benchmark configuration is intentionally separate from the main
 workflow configuration module. It accepts a project block and an explicit list
 of hyperfine input blocks:
 
@@ -382,3 +382,7 @@ class AfcBenchmarkConfig:
     def hyperfine_files(self) -> list[str]:
         """Hyperfine files in config order."""
         return [block.file for block in self.hyperfine]
+
+
+class AsdBenchmarkConfig(AfcBenchmarkConfig):
+    """Configuration for the ``simpnmr benchmark a_sd`` workflow."""
