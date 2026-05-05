@@ -18,6 +18,8 @@ import numpy as np
 import yaml
 import yaml_include
 
+from simpnmr.cfg.benchmarks import AfcBenchmarkConfig as AfcBenchmarkConfig
+
 logger = logging.getLogger(__name__)
 
 

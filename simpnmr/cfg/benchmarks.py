@@ -8,17 +8,7 @@ workflow configuration module. It accepts a project block and an explicit list
 of hyperfine input blocks:
 
 ```
-project:
-  name: benchmark_output
-chem_labels:
-  file: path/to/chemical_labels.csv
-nuclei:
-  include: [H, C]
-hyperfine:
-  - method: dft
-    file: path/to/orca.out
-  - method: csv
-    file: path/to/hfc.csv
+
 ```
 """
 
@@ -37,18 +27,22 @@ class HyperfineBenchmarkBlock:
     """Input source for an A_fc benchmark run.
 
     Args:
-        method: Hyperfine source type. Supported values are ``"dft"`` and
-            ``"csv"``.
+        functional: Functional name associated with the benchmark source.
         file: Path to the hyperfine source file.
+        method: Hyperfine source type. Supported values are ``"dft"`` and
+            ``"csv"``. Defaults to ``"dft"``.
 
     Raises:
-        ValueError: If `method` or `file` is invalid.
+        ValueError: If `functional`, `file`, or `method` is invalid.
     """
 
-    method: str
+    functional: str
     file: str
+    method: str = "dft"
 
     def __post_init__(self) -> None:
+        if not isinstance(self.functional, str) or not self.functional:
+            raise ValueError("hyperfine:functional must be a non-empty string")
         if self.method not in {"dft", "csv"}:
             raise ValueError(
                 "Unknown hyperfine:method "
@@ -67,6 +61,8 @@ class AfcBenchmarkConfig:
         project_name: Output project directory name.
         chem_labels_file: Path to the chemical-label mapping file.
         nuclei_include: Nuclei selected for the benchmark.
+        max_label_tolerance: Relative tolerance for replacing one-off max labels
+            with the majority max label in functional max plots.
         hyperfine: Hyperfine input blocks to parse and benchmark.
 
     Raises:
@@ -77,13 +73,14 @@ class AfcBenchmarkConfig:
         "project": ["name"],
         "chem_labels": ["file"],
         "nuclei": ["include"],
-        "hyperfine": ["method", "file"],
+        "benchmark": ["max_label_tolerance"],
+        "hyperfine": ["functional", "method", "file"],
     }
     REQ_KEYWORDS = {
         "project": ["name"],
         "chem_labels": ["file"],
         "nuclei": ["include"],
-        "hyperfine": ["method", "file"],
+        "hyperfine": ["functional", "file"],
     }
 
     def __init__(
@@ -91,11 +88,13 @@ class AfcBenchmarkConfig:
         project_name: str,
         chem_labels_file: str,
         nuclei_include: list[str] | str,
+        max_label_tolerance: float,
         hyperfine: list[HyperfineBenchmarkBlock],
     ) -> None:
         self.project_name = project_name
         self.chem_labels_file = chem_labels_file
         self.nuclei_include = nuclei_include
+        self.max_label_tolerance = max_label_tolerance
         self.hyperfine = hyperfine
 
     @classmethod
@@ -134,12 +133,16 @@ class AfcBenchmarkConfig:
         project_name = cls._parse_project_name(parsed["project"])
         chem_labels_file = cls._parse_chem_labels_file(parsed["chem_labels"])
         nuclei_include = cls._parse_nuclei_include(parsed["nuclei"])
+        max_label_tolerance = cls._parse_max_label_tolerance(
+            parsed.get("benchmark", {})
+        )
         hyperfine_blocks = cls._parse_hyperfine_blocks(parsed["hyperfine"])
 
         return cls(
             project_name=project_name,
             chem_labels_file=chem_labels_file,
             nuclei_include=nuclei_include,
+            max_label_tolerance=max_label_tolerance,
             hyperfine=hyperfine_blocks,
         )
 
@@ -224,12 +227,33 @@ class AfcBenchmarkConfig:
             if not all(
                 isinstance(nucleus, str) and nucleus for nucleus in nuclei_include
             ):
-                raise ValueError(
-                    "nuclei:include must contain only non-empty strings"
-                )
+                raise ValueError("nuclei:include must contain only non-empty strings")
             return nuclei_include
 
         raise ValueError("nuclei:include must be a non-empty string or list")
+
+    @classmethod
+    def _parse_max_label_tolerance(cls, benchmark_block: Any) -> float:
+        """Parse and validate ``benchmark:max_label_tolerance``."""
+        if benchmark_block is None:
+            return 0.0
+        if not isinstance(benchmark_block, dict):
+            raise ValueError("benchmark block must be a mapping")
+
+        cls._validate_block_keys("benchmark", benchmark_block)
+
+        value = benchmark_block.get("max_label_tolerance", 0.0)
+        try:
+            tolerance = float(value)
+        except (TypeError, ValueError) as exc:
+            raise ValueError(
+                "benchmark:max_label_tolerance must be numeric"
+            ) from exc
+
+        if tolerance < 0:
+            raise ValueError("benchmark:max_label_tolerance must be non-negative")
+
+        return tolerance
 
     @classmethod
     def _parse_hyperfine_blocks(
@@ -245,9 +269,7 @@ class AfcBenchmarkConfig:
         parsed_blocks: list[HyperfineBenchmarkBlock] = []
         for index, block in enumerate(hyperfine_blocks):
             if not isinstance(block, dict):
-                raise ValueError(
-                    f"hyperfine entry at index {index} must be a mapping"
-                )
+                raise ValueError(f"hyperfine entry at index {index} must be a mapping")
             cls._validate_block_keys("hyperfine", block)
 
             for subkeyword in cls.REQ_KEYWORDS["hyperfine"]:
@@ -258,8 +280,9 @@ class AfcBenchmarkConfig:
 
             parsed_blocks.append(
                 HyperfineBenchmarkBlock(
-                    method=block["method"],
+                    functional=block["functional"],
                     file=block["file"],
+                    method=block.get("method", "dft"),
                 )
             )
 
@@ -314,13 +337,26 @@ class AfcBenchmarkConfig:
             if not value:
                 raise ValueError("nuclei_include must contain at least one nucleus")
             if not all(isinstance(nucleus, str) and nucleus for nucleus in value):
-                raise ValueError(
-                    "nuclei_include must contain only non-empty strings"
-                )
+                raise ValueError("nuclei_include must contain only non-empty strings")
             self._nuclei_include = value
             return
 
         raise ValueError("nuclei_include must be a non-empty string or list")
+
+    @property
+    def max_label_tolerance(self) -> float:
+        """Relative tolerance for majority-label max replacement."""
+        return self._max_label_tolerance
+
+    @max_label_tolerance.setter
+    def max_label_tolerance(self, value: float) -> None:
+        try:
+            tolerance = float(value)
+        except (TypeError, ValueError) as exc:
+            raise ValueError("max_label_tolerance must be numeric") from exc
+        if tolerance < 0:
+            raise ValueError("max_label_tolerance must be non-negative")
+        self._max_label_tolerance = tolerance
 
     @property
     def hyperfine(self) -> list[HyperfineBenchmarkBlock]:
