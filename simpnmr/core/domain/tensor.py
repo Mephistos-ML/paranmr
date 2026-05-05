@@ -626,7 +626,8 @@ class Shift:
         total: Total chemical shift (ppm), equal to ``dia + paramag``.
         avg: Averaged total shift (ppm). Defaults to ``total`` and is reset to
             ``total`` whenever any component is modified.
-        lw: Linewidth of the signal.
+        lw: Linewidth of the signal, or None when no linewidth model has
+            assigned a value.
     """
 
     def __init__(
@@ -638,7 +639,7 @@ class Shift:
         fc_delta_g_corr: float | None = None,
         orb_iso: float = 0.0,
         orb_aniso: float = 0.0,
-        lw: float = 1.0,
+        lw: float | None = None,
     ) -> None:
         self._pc = pc  # Pseudocontact
         self._fc = fc  # Fermi Contact
@@ -763,11 +764,14 @@ class Shift:
         return
 
     @property
-    def lw(self) -> float:
+    def lw(self) -> float | None:
         return self._lw
 
     @lw.setter
-    def lw(self, val: float):
+    def lw(self, val: float | None):
+        if val is None:
+            self._lw = None
+            return
         if not isinstance(val, (float, np.floating)):
             raise TypeError("Linewidth must be a float")
         self._lw = float(val)

@@ -35,6 +35,8 @@ logger = logging.getLogger(__name__)
 def _get_plot_linewidth(nucleus, linewidths_by_label):
     if linewidths_by_label is not None and nucleus.label in linewidths_by_label:
         return linewidths_by_label[nucleus.label]
+    if nucleus.shift.lw is None:
+        raise ValueError("Spectrum plotting requires linewidth values")
     return nucleus.shift.lw
 
 

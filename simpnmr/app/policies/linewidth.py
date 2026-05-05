@@ -45,6 +45,9 @@ def resolve_output_linewidths(
     """
     relaxation = getattr(molecule, "relaxation", None)
     if relaxation is not None:
+        missing = [nuc.label for nuc in molecule.nuclei if nuc.shift.lw is None]
+        if missing:
+            raise ValueError("Relaxation linewidths are incomplete")
         return LinewidthOutput(
             mode="relax",
             column_name="linewidth_avg_relax (ppm)",

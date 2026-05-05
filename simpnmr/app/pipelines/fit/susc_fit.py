@@ -26,6 +26,7 @@ from simpnmr.app.params.options import FitSuscRunOptions
 from simpnmr.app.pipelines.fit.vt_fit import fit_vt
 from simpnmr.app.policies.assignment import resolve_assignment_search_settings
 from simpnmr.app.policies.hfc import has_missing_selected_chem_labels
+from simpnmr.app.policies.linewidth import resolve_output_linewidths
 from simpnmr.app.policies.susc import resolve_susc_fit_variables
 
 # Core / domain
@@ -503,6 +504,7 @@ def run_fit_susc(config, options: FitSuscRunOptions | None = None) -> int:
         shift_range[0] + np.negative(np.max(extras)),
         shift_range[1] + np.positive(np.max(extras)),
     ]
+    linewidth_output = resolve_output_linewidths(mol, shift_range)
 
     if spin is not None:
         temps_fit = np.array([mol.susc.temperature for mol in molecules], dtype=float)
@@ -518,10 +520,11 @@ def run_fit_susc(config, options: FitSuscRunOptions | None = None) -> int:
 
     with spec.context():
         plot_pred_spectrum(
-            molecule,
+            mol,
             isotope=mol.nuclei[0].isotope,
             shift_range=shift_range,
             spec=spec,
+            effective_linewidths_by_label=linewidth_output.values_by_label,
             save=True,
             show=options.runtime.show_plots,
             save_name=os.path.join(
