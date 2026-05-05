@@ -14,6 +14,7 @@ import numpy as np
 
 from simpnmr.app.loaders.labels_load import load_chem_labels_from_csv
 from simpnmr.app.params.options import CalcPdipRunOptions
+from simpnmr.app.policies.hfc import has_missing_selected_chem_labels
 from simpnmr.core.domain.mol import Molecule
 from simpnmr.io.qc import gateway as rdrs
 from simpnmr.tools.coords import xyz_fmt as xyzf
@@ -57,6 +58,11 @@ def run_calc_pdip(
 
     if chem_labels is not None:
         al_to_cl, al_to_cml = load_chem_labels_from_csv(chem_labels)
+        if has_missing_selected_chem_labels(molecule, al_to_cl):
+            logger.warning(
+                "Chemical labels file does not define labels for all selected nuclei; "
+                "missing labels will use atom labels."
+            )
         molecule.apply_chem_labels(al_to_cl, al_to_cml)
 
     # Save hyperfine data to file

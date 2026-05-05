@@ -25,6 +25,7 @@ from simpnmr.app.loaders.sh_load import load_g_tensor_dft
 from simpnmr.app.params.options import FitSuscRunOptions
 from simpnmr.app.pipelines.fit.vt_fit import fit_vt
 from simpnmr.app.policies.assignment import resolve_assignment_search_settings
+from simpnmr.app.policies.hfc import has_missing_selected_chem_labels
 from simpnmr.app.policies.susc import resolve_susc_fit_variables
 
 # Core / domain
@@ -112,6 +113,11 @@ def run_fit_susc(config, options: FitSuscRunOptions | None = None) -> int:
     if len(config.chem_labels_file):
         try:
             al_to_cl, al_to_cml = load_chem_labels_from_csv(config.chem_labels_file)
+            if has_missing_selected_chem_labels(base_molecule, al_to_cl):
+                logger.warning(
+                    "Chemical labels file does not define labels for all selected "
+                    "nuclei; missing labels will use atom labels."
+                )
             base_molecule.apply_chem_labels(al_to_cl, al_to_cml)
         except ValueError as err:
             raise ValueError(f"{err}\nCheck chem_labels and hyperfine files.")

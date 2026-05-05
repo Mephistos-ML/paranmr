@@ -24,6 +24,7 @@ from simpnmr.app.loaders.labels_load import load_chem_labels_from_csv
 from simpnmr.app.loaders.mol_load import load_base_molecule
 from simpnmr.app.loaders.paramag_centre_load import load_paramagnetic_centre
 from simpnmr.app.params.options import FitCorrTimeRunOptions
+from simpnmr.app.policies.hfc import has_missing_selected_chem_labels
 from simpnmr.app.policies.relax import average_relaxation_rates_by_chem_label
 
 # Core / domain
@@ -433,6 +434,11 @@ def run_fit_corr_time(config, options: FitCorrTimeRunOptions | None = None) -> i
         # Add chemical labels if provided
         if len(config.chem_labels_file):
             al_to_cl, al_to_cml = load_chem_labels_from_csv(config.chem_labels_file)
+            if has_missing_selected_chem_labels(base_molecule, al_to_cl):
+                logger.warning(
+                    "Chemical labels file does not define labels for all selected "
+                    "nuclei; missing labels will use atom labels."
+                )
             base_molecule.apply_chem_labels(al_to_cl, al_to_cml)
 
         chem_label_to_math_label = {}
