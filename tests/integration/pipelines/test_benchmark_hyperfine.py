@@ -9,6 +9,8 @@ from pathlib import Path
 
 import pytest
 
+from simpnmr.io.csv.csv_util import read_csv_safe
+
 DATA_DIR = Path("tests/data/sources/hfc/qc/orca/version_6")
 HFC_FILE = DATA_DIR / "P3FeCl_HFC.out"
 CHEM_LABELS_FILE = DATA_DIR / "P3FeCl_Chemical_Labels_13C.csv"
@@ -72,6 +74,23 @@ def test_benchmark_a_fc_with_orca6_hfc(tmp_path: Path):
     )
     assert (project_dir / "B3LYP_C_A_FC_benchmark_spread.pdf").exists()
     assert (project_dir / "C_A_FC_benchmark_max_curve.pdf").exists()
+
+    report = read_csv_safe(project_dir / "A_FC_benchmark_max.csv")
+    assert list(report.columns) == [
+        "chem_label",
+        "nucleus",
+        "functional",
+        "max (ppm A-3)",
+        "min (ppm A-3)",
+        "range",
+    ]
+    assert len(report) == 1
+    row = report.iloc[0]
+    assert row["nucleus"] == "C"
+    assert row["functional"] == "B3LYP"
+    assert row["range"] == pytest.approx(
+        (row["max (ppm A-3)"] - row["min (ppm A-3)"]) / row["max (ppm A-3)"]
+    )
 
 
 @pytest.mark.integration

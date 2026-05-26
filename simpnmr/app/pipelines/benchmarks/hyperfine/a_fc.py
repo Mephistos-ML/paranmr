@@ -16,8 +16,10 @@ from simpnmr.app.pipelines.benchmarks.hyperfine.sources import (
 )
 from simpnmr.core.benchmarks.hyperfine.a_fc import (
     summarize_a_fc_max_by_nucleus,
+    summarize_a_fc_max_report_rows,
     summarize_a_fc_ranges_by_functional_and_nucleus,
 )
+from simpnmr.io.csv.benchmarks.a_fc import save_a_fc_benchmark_max_csv
 from simpnmr.viz.plots.benchmarks import (
     plot_a_fc_functional_max_curve,
     plot_a_fc_spread,
@@ -41,6 +43,14 @@ def run_benchmark_a_fc(config, options: BenchmarkAfcRunOptions | None = None) ->
     a_fc_summary = summarize_a_fc_ranges_by_functional_and_nucleus(
         group_loaded_sources_by_functional(signals)
     )
+    a_fc_max_by_nucleus = summarize_a_fc_max_by_nucleus(
+        a_fc_summary,
+        max_label_tolerance=config.max_label_tolerance,
+    )
+    save_a_fc_benchmark_max_csv(
+        summarize_a_fc_max_report_rows(a_fc_summary, a_fc_max_by_nucleus),
+        os.path.join(config.project_name, "A_FC_benchmark_max.csv"),
+    )
     plot_hyperfine_benchmark_summary(
         a_fc_summary,
         output_dir=config.project_name,
@@ -51,10 +61,7 @@ def run_benchmark_a_fc(config, options: BenchmarkAfcRunOptions | None = None) ->
         window_metric="A_fc",
     )
     plot_hyperfine_functional_max_summary(
-        summarize_a_fc_max_by_nucleus(
-            a_fc_summary,
-            max_label_tolerance=config.max_label_tolerance,
-        ),
+        a_fc_max_by_nucleus,
         output_dir=config.project_name,
         spec=spec,
         show=options.runtime.show_plots,
@@ -65,6 +72,5 @@ def run_benchmark_a_fc(config, options: BenchmarkAfcRunOptions | None = None) ->
     )
 
     return 0
-
 
 
