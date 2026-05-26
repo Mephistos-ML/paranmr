@@ -18,7 +18,11 @@ setuptools.setup(
     description="A package for working with paramagnetic NMR spectra",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://gitlab.com/suturina-group/paranmr",
+    url="https://github.com/Mephistos-ML/paranmr",
+    project_urls={
+        "Source": "https://github.com/Mephistos-ML/paranmr",
+        "Tracker": "https://github.com/Mephistos-ML/paranmr/issues",
+    },
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",

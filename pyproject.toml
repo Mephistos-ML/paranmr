@@ -13,7 +13,7 @@ changelog_file = "CHANGELOG.md"
 commit_message = "chore(release): {version}"
 
 [tool.semantic_release.remote]
-type = "gitlab"
+type = "github"
 
 [tool.ruff]
 line-length = 88
