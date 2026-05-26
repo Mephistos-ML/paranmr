@@ -18,6 +18,8 @@ from simpnmr.core.domain.mol import Molecule
 
 logger = logging.getLogger(__name__)
 
+_COORD_MATCH_ATOL = 1e-6
+
 
 def load_paramagnetic_centre(
     molecule: Molecule,
@@ -27,8 +29,9 @@ def load_paramagnetic_centre(
 
     The loader accepts a canonical paramagnetic-centre coordinate and first
     validates that it matches exactly one coordinate already present in the
-    molecule geometry. If no match or multiple matches are found, the loader
-    raises an error and does not mutate the domain object.
+    molecule geometry within a small absolute coordinate tolerance. If no match
+    or multiple matches are found, the loader raises an error and does not
+    mutate the domain object.
 
     Args:
         molecule: Molecule domain object to enrich.
@@ -40,17 +43,23 @@ def load_paramagnetic_centre(
 
     Raises:
         ValueError: If the provided centre does not match exactly one molecule
-            coordinate.
+            coordinate within the configured tolerance.
     """
     if paramagnetic_centre is None:
         logger.info("No paramagnetic centre provided; skipping load.")
         return molecule
 
     centre = np.asarray(paramagnetic_centre, dtype=float)
+
     matches = [
         coord
         for coord in molecule.coords
-        if np.allclose(np.asarray(coord, dtype=float), centre, atol=1e-8)
+        if np.allclose(
+            np.asarray(coord, dtype=float),
+            centre,
+            atol=_COORD_MATCH_ATOL,
+            rtol=0.0,
+        )
     ]
 
     if len(matches) == 0:
