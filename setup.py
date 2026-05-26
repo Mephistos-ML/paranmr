@@ -13,13 +13,16 @@ with open("README.md", "r", encoding="utf-8") as f:
 setuptools.setup(
     name="paranmr",
     version=version["__version__"],
-    author="Suturina Group",
+    author="Suturina Group (original)",
     author_email="",
+    maintainer="Ernest Borysenko",
+    maintainer_email="eb2819@bath.ac.uk",
     description="A package for working with paramagnetic NMR spectra",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/Mephistos-ML/paranmr",
     project_urls={
+        "Original Source": "https://gitlab.com/suturina-group/simpnmr",
         "Source": "https://github.com/Mephistos-ML/paranmr",
         "Tracker": "https://github.com/Mephistos-ML/paranmr/issues",
     },

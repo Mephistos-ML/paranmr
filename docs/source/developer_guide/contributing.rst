@@ -2,7 +2,7 @@ Contributing
 ============
 
 We welcome contributions to ``ParaNMR``. If you would like to add functionality or improve the code or the documentation,
-please start by creating an `Issue <https://gitlab.com/suturina-group/paranmr/-/issues>`_ on GitLab (using the relevant template)
+please start by creating an `Issue <https://github.com/Mephistos-ML/paranmr/issues>`_ on GitHub (using the relevant template)
 to describe the change you propose.
 
 When contributing, you **must** follow the rules below. These define the required development standards and help keep the project maintainable over time.

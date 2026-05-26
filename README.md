@@ -1,10 +1,10 @@
 # ParaNMR
 
-<img src="https://gitlab.com/suturina-group/paranmr/-/raw/main/docs/source/_static/simpnmg-full-logo.png" width="300">
+> Fork of the original [suturina-group/simpnmr](https://gitlab.com/suturina-group/simpnmr). The original work is maintained by Suturina Group; this repository is a fork under the new `paranmr` name.
 
 [![Docs](https://img.shields.io/badge/docs-paranmr.org-blue)](https://paranmr.org/)
 [![PyPI](https://img.shields.io/pypi/v/paranmr.svg)](https://pypi.org/project/paranmr/)
-[![License](https://img.shields.io/badge/license-GPL--3.0--or--later-green)](https://gitlab.com/suturina-group/paranmr/-/blob/main/LICENSE)
+[![License](https://img.shields.io/badge/license-GPL--3.0--or--later-green)](LICENSE)
 
 **ParaNMR** is an open-source Python toolkit for prediction, fitting, and analysis
 of paramagnetic NMR spectra based on experimental data and ab initio calculations.
@@ -39,7 +39,7 @@ breaking changes are coordinated with maintainers and documented in the changelo
 
 ## Support
 
-Please use GitLab Issues for bug reports and feature requests.
+Please use GitHub Issues for bug reports and feature requests.
 
 ## Contributing
 

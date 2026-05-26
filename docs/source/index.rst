@@ -15,6 +15,11 @@ Workflows are controlled via explicit YAML configuration files, which define
 all input data, model assumptions, and numerical parameters. This design makes
 calculations transparent, reproducible, and suitable for systematic studies.
 
+This repository is a fork of the original
+`suturina-group/simpnmr <https://gitlab.com/suturina-group/simpnmr>`_. The
+project continues upstream ideas under the new `ParaNMR` name while preserving
+GPL-3.0-or-later compatibility.
+
 
 .. grid:: 4
    :gutter: 3

@@ -75,9 +75,9 @@ html_theme_options = {
     },
     "icon_links": [
         {
-            "name": "GitLab",
-            "url": "https://gitlab.com/suturina-group/paranmr",
-            "icon": "fa-brands fa-gitlab",
+            "name": "GitHub",
+            "url": "https://github.com/Mephistos-ML/paranmr",
+            "icon": "fa-brands fa-github",
         },
         {
             "name": "PyPI",

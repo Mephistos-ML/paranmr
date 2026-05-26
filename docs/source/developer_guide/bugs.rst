@@ -20,7 +20,7 @@ Before reporting a bug, please ensure that:
 
 2. Check the :ref:`faq` page to see whether the issue has already been described, is caused by an input configuration error, or has a known workaround.
 
-If the problem persists and is not addressed in the FAQ, please open a `GitLab Issue <https://gitlab.com/suturina-group/paranmr/-/work_items>`_
+If the problem persists and is not addressed in the FAQ, please open a `GitHub Issue <https://github.com/Mephistos-ML/paranmr/issues>`_
 **instead of emailing individual developers**. Using the issue tracker makes it easier for us to keep track of problems and their fixes.
 
 To make it easier to investigate and reproduce the issue, please **use the issue template** provided on the "Create new issue" page and include as much of the following information as possible:

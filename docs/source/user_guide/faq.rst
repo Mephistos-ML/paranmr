@@ -3,7 +3,10 @@
 FAQ
 ---
 
-This page contains some frequently asked questions. Please consult this page before raising a GitLab issue.
+This page contains some frequently asked questions. Please consult this page before opening a GitHub issue.
+
+This documentation describes the `ParaNMR` fork of the original
+`suturina-group/simpnmr <https://gitlab.com/suturina-group/simpnmr>`_ project.
 
 Errors
 ^^^^^^
