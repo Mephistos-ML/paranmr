@@ -12,11 +12,11 @@ import numpy as np
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 
-from simpnmr.core.domain.mol import Molecule
-from simpnmr.viz.layout.canvas import create_canvas
-from simpnmr.viz.layout.export import render_figure
-from simpnmr.viz.style.theme import PlotSpec
-from simpnmr.viz.utils.fmt import isotope_format
+from paranmr.core.domain.mol import Molecule
+from paranmr.viz.layout.canvas import create_canvas
+from paranmr.viz.layout.export import render_figure
+from paranmr.viz.style.theme import PlotSpec
+from paranmr.viz.utils.fmt import isotope_format
 
 logger = logging.getLogger(__name__)
 

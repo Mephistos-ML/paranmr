@@ -10,7 +10,7 @@ import csv
 
 import pandas as pd
 
-from simpnmr.io.csv.csv_util import read_csv_safe, write_csv_safe
+from paranmr.io.csv.csv_util import read_csv_safe, write_csv_safe
 
 
 def read_spectrum(file_name: str):

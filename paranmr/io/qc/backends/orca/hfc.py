@@ -12,7 +12,7 @@ import logging
 import numpy as np
 import numpy.typing as npt
 
-from simpnmr.core.util.strings import remove_letters, remove_numbers
+from paranmr.core.util.strings import remove_letters, remove_numbers
 
 logger = logging.getLogger(__name__)
 

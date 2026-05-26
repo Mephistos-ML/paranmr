@@ -16,48 +16,48 @@ from pathlib import Path
 import numpy as np
 
 # Application layer
-from simpnmr.app.loaders.dia_load import load_diamagnetic_shifts
-from simpnmr.app.loaders.elstate_load import load_electronic_state
-from simpnmr.app.loaders.exp_load import load_experiments
-from simpnmr.app.loaders.hfc_load import load_hyperfines
-from simpnmr.app.loaders.labels_load import load_chem_labels_from_csv
-from simpnmr.app.loaders.mol_load import load_base_molecule
-from simpnmr.app.loaders.paramag_centre_load import load_paramagnetic_centre
-from simpnmr.app.loaders.sh_load import (
+from paranmr.app.loaders.dia_load import load_diamagnetic_shifts
+from paranmr.app.loaders.elstate_load import load_electronic_state
+from paranmr.app.loaders.exp_load import load_experiments
+from paranmr.app.loaders.hfc_load import load_hyperfines
+from paranmr.app.loaders.labels_load import load_chem_labels_from_csv
+from paranmr.app.loaders.mol_load import load_base_molecule
+from paranmr.app.loaders.paramag_centre_load import load_paramagnetic_centre
+from paranmr.app.loaders.sh_load import (
     load_g_tensor_ab_initio,
     load_g_tensor_dft,
 )
-from simpnmr.app.loaders.susc_load import load_susceptibilities
-from simpnmr.app.params.options import PredictRunOptions
-from simpnmr.app.policies.hfc import has_missing_selected_chem_labels
-from simpnmr.app.policies.linewidth import resolve_output_linewidths
-from simpnmr.app.policies.relax import resolve_relaxation_conditions
-from simpnmr.app.policies.susc import resolve_susceptibility_source
+from paranmr.app.loaders.susc_load import load_susceptibilities
+from paranmr.app.params.options import PredictRunOptions
+from paranmr.app.policies.hfc import has_missing_selected_chem_labels
+from paranmr.app.policies.linewidth import resolve_output_linewidths
+from paranmr.app.policies.relax import resolve_relaxation_conditions
+from paranmr.app.policies.susc import resolve_susceptibility_source
 
 # Core / domain
-from simpnmr.core.const.gammas import NUCLEAR_GAMMAS
-from simpnmr.core.const.physics import EGAMMA
-from simpnmr.core.conv.ang_to_freq import angstrom_to_mhz
-from simpnmr.core.domain.mol import Molecule
-from simpnmr.core.relaxation.eval import evaluate_relaxation_rates
+from paranmr.core.const.gammas import NUCLEAR_GAMMAS
+from paranmr.core.const.physics import EGAMMA
+from paranmr.core.conv.ang_to_freq import angstrom_to_mhz
+from paranmr.core.domain.mol import Molecule
+from paranmr.core.relaxation.eval import evaluate_relaxation_rates
 
 # Tools
-from simpnmr.core.util import transform as tfm
-from simpnmr.core.util.strings import remove_numbers
+from paranmr.core.util import transform as tfm
+from paranmr.core.util.strings import remove_numbers
 
 # IO layer
-from simpnmr.io.csv.mol import save_molecule_to_csv
-from simpnmr.io.csv.peaks import save_peak_data_to_csv
-from simpnmr.io.csv.spec import read_spectrum
-from simpnmr.io.csv.susc import save_susc
-from simpnmr.io.qc.backends.orca.geom import read_orca5_output_xyz  # TODO: remove
-from simpnmr.io.xyz import xyz_write
+from paranmr.io.csv.mol import save_molecule_to_csv
+from paranmr.io.csv.peaks import save_peak_data_to_csv
+from paranmr.io.csv.spec import read_spectrum
+from paranmr.io.csv.susc import save_susc
+from paranmr.io.qc.backends.orca.geom import read_orca5_output_xyz  # TODO: remove
+from paranmr.io.xyz import xyz_write
 
 # Visualisation
-from simpnmr.viz.plots.orb_dep import plot_orbital_shift_distance_dependence
-from simpnmr.viz.plots.shifts import plot_shift_contrib, plot_shift_spread
-from simpnmr.viz.plots.spect import plot_pred_spectrum, plot_raw_deconv_pred
-from simpnmr.viz.style.theme import apply_profile
+from paranmr.viz.plots.orb_dep import plot_orbital_shift_distance_dependence
+from paranmr.viz.plots.shifts import plot_shift_contrib, plot_shift_spread
+from paranmr.viz.plots.spect import plot_pred_spectrum, plot_raw_deconv_pred
+from paranmr.viz.style.theme import apply_profile
 
 logger = logging.getLogger(__name__)
 

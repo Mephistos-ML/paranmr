@@ -26,8 +26,8 @@ pages:
   - pip install -U anybadge
   - make html
   - mv build/html ../public
-  - echo "simpnmr.org" > ../public/CNAME
-  - export VERSION=$(grep -oP '__version__ = "\K[^"]+' ../simpnmr/__version__.py)
+  - echo "paranmr.org" > ../public/CNAME
+  - export VERSION=$(grep -oP '__version__ = "\K[^"]+' ../paranmr/__version__.py)
   - rm -f ../public/docs.svg
   - anybadge -l Documentation -v $VERSION -f ../public/docs.svg --color green -o
   artifacts:

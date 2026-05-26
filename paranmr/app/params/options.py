@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from simpnmr.app.params.plot_cfg import PlotMode, PlotProfile
+from paranmr.app.params.plot_cfg import PlotMode, PlotProfile
 
 
 # Shared runtime context passed from CLI into all pipelines

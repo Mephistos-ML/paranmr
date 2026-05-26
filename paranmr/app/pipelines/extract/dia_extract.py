@@ -11,9 +11,9 @@ import logging
 
 import numpy as np
 
-from simpnmr.app.params.options import ExtractDiaRunOptions
-from simpnmr.io.qc import gateway as rdrs
-from simpnmr.tools.coords import xyz_fmt as xyzf
+from paranmr.app.params.options import ExtractDiaRunOptions
+from paranmr.io.qc import gateway as rdrs
+from paranmr.tools.coords import xyz_fmt as xyzf
 
 logger = logging.getLogger(__name__)
 

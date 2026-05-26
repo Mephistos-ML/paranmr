@@ -55,7 +55,7 @@ class HyperfineBenchmarkBlock:
 
 
 class AfcBenchmarkConfig:
-    """Configuration for the ``simpnmr benchmark a_fc`` workflow.
+    """Configuration for the ``paranmr benchmark a_fc`` workflow.
 
     Args:
         project_name: Output project directory name.
@@ -385,4 +385,4 @@ class AfcBenchmarkConfig:
 
 
 class AsdBenchmarkConfig(AfcBenchmarkConfig):
-    """Configuration for the ``simpnmr benchmark a_sd`` workflow."""
+    """Configuration for the ``paranmr benchmark a_sd`` workflow."""

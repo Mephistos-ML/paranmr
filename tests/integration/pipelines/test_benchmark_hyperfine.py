@@ -9,7 +9,7 @@ from pathlib import Path
 
 import pytest
 
-from simpnmr.io.csv.csv_util import read_csv_safe
+from paranmr.io.csv.csv_util import read_csv_safe
 
 DATA_DIR = Path("tests/data/sources/hfc/qc/orca/version_6")
 HFC_FILE = DATA_DIR / "P3FeCl_HFC.out"
@@ -62,7 +62,7 @@ def test_benchmark_a_fc_with_orca6_hfc(tmp_path: Path):
     input_file = _write_benchmark_input(tmp_path, project_dir=project_dir)
 
     result = subprocess.run(
-        ["simpnmr", "--hide", "benchmark", "a_fc", str(input_file)],
+        ["paranmr", "--hide", "benchmark", "a_fc", str(input_file)],
         capture_output=True,
         text=True,
         env=_cli_env(tmp_path),
@@ -100,7 +100,7 @@ def test_benchmark_a_sd_with_orca6_hfc(tmp_path: Path):
     input_file = _write_benchmark_input(tmp_path, project_dir=project_dir)
 
     result = subprocess.run(
-        ["simpnmr", "--hide", "benchmark", "a_sd", str(input_file)],
+        ["paranmr", "--hide", "benchmark", "a_sd", str(input_file)],
         capture_output=True,
         text=True,
         env=_cli_env(tmp_path),

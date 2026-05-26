@@ -23,9 +23,9 @@ from typing import Final, Literal
 
 import numpy as np
 
-from simpnmr.core.const.physics import KB, MU0, MUB, NA
-from simpnmr.io.qc.backends.orca.detect import detect_susc_methods
-from simpnmr.io.qc.detect import detect_backend
+from paranmr.core.const.physics import KB, MU0, MUB, NA
+from paranmr.io.qc.backends.orca.detect import detect_susc_methods
+from paranmr.io.qc.detect import detect_backend
 
 logger = logging.getLogger(__name__)
 

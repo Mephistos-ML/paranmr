@@ -16,19 +16,19 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from simpnmr.app.policies.hfc import (
+from paranmr.app.policies.hfc import (
     OrbitalContribution,
     normalise_orbital_contribution,
 )
-from simpnmr.core.build.hfc import (
+from paranmr.core.build.hfc import (
     build_hfc_from_csv,
     build_hfc_from_pdip,
     build_hfc_from_qca,
 )
-from simpnmr.core.domain.mol import Molecule
-from simpnmr.io.csv.mol import read_molecule_csv
-from simpnmr.io.qc import gateway as rdrs
-from simpnmr.io.qc.backends.orca.detect import detect_hfc_has_orb
+from paranmr.core.domain.mol import Molecule
+from paranmr.io.csv.mol import read_molecule_csv
+from paranmr.io.qc import gateway as rdrs
+from paranmr.io.qc.backends.orca.detect import detect_hfc_has_orb
 
 logger = logging.getLogger(__name__)
 

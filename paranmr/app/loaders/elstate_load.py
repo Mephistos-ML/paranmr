@@ -11,8 +11,8 @@ from __future__ import annotations
 import os
 from typing import Optional
 
-from simpnmr.core.build.elstate import build_electronic_state
-from simpnmr.io.qc import gateway as rdrs
+from paranmr.core.build.elstate import build_electronic_state
+from paranmr.io.qc import gateway as rdrs
 
 
 def load_electronic_state(

@@ -1,7 +1,7 @@
 import numpy as np
 import numpy.typing as npt
 
-from simpnmr.tools.coords import xyz_fmt as xyzf
+from paranmr.tools.coords import xyz_fmt as xyzf
 
 
 def read_gaussian_log_xyz(file_name: str) -> tuple[npt.NDArray[np.str_], npt.NDArray]:

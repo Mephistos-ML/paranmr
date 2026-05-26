@@ -12,9 +12,9 @@ from typing import Optional
 
 import numpy as np
 
-from simpnmr.io.csv.csv_util import read_csv_safe
-from simpnmr.io.qc import gateway as rdrs
-from simpnmr.tools.coords import xyz_fmt as xyzf
+from paranmr.io.csv.csv_util import read_csv_safe
+from paranmr.io.qc import gateway as rdrs
+from paranmr.tools.coords import xyz_fmt as xyzf
 
 
 def load_diamagnetic_shifts(

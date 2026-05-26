@@ -1,4 +1,4 @@
-# simpnmr/viz/style/theme.py
+# paranmr/viz/style/theme.py
 from __future__ import annotations
 
 from contextlib import contextmanager
@@ -8,9 +8,9 @@ from typing import Generator
 import matplotlib as mpl
 from matplotlib.axes import Axes
 
-from simpnmr.app.params.plot_cfg import PlotProfile
-from simpnmr.viz.style import glyphs, legend, palette, patterns, typography
-from simpnmr.viz.style.patterns import AccessibilityMode
+from paranmr.app.params.plot_cfg import PlotProfile
+from paranmr.viz.style import glyphs, legend, palette, patterns, typography
+from paranmr.viz.style.patterns import AccessibilityMode
 
 
 @dataclass(frozen=True)
@@ -54,7 +54,7 @@ class PlotSpec:
         """Apply per-Axes typography tweaks for the current profile.
 
         This is intentionally a thin wrapper so plot modules do not import
-        `simpnmr.viz.style.typography` directly.
+        `paranmr.viz.style.typography` directly.
 
         Args:
             ax: Matplotlib Axes to style.

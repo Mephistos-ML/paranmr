@@ -18,7 +18,7 @@ from dataclasses import dataclass
 import matplotlib as mpl
 import matplotlib.axes
 
-from simpnmr.app.params.plot_cfg import PlotProfile
+from paranmr.app.params.plot_cfg import PlotProfile
 
 
 @dataclass(frozen=True, slots=True)

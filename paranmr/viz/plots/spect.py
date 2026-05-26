@@ -17,17 +17,17 @@ import matplotlib.ticker as ticker
 import numpy as np
 from numpy.typing import ArrayLike
 
-from simpnmr.core.const.gammas import NUCLEAR_GAMMAS
-from simpnmr.core.domain.exp import Experiment
-from simpnmr.core.domain.mol import Molecule
-from simpnmr.core.spectrum.kernels import gaussian, lorentzian
-from simpnmr.core.util.arrays import find_index_of_nearest
-from simpnmr.core.util.strings import remove_numbers
-from simpnmr.io.csv.spec import write_spectrum
-from simpnmr.viz.layout.canvas import create_canvas, create_stacked_canvas
-from simpnmr.viz.layout.export import render_figure
-from simpnmr.viz.style.theme import PlotSpec
-from simpnmr.viz.utils.fmt import isotope_format
+from paranmr.core.const.gammas import NUCLEAR_GAMMAS
+from paranmr.core.domain.exp import Experiment
+from paranmr.core.domain.mol import Molecule
+from paranmr.core.spectrum.kernels import gaussian, lorentzian
+from paranmr.core.util.arrays import find_index_of_nearest
+from paranmr.core.util.strings import remove_numbers
+from paranmr.io.csv.spec import write_spectrum
+from paranmr.viz.layout.canvas import create_canvas, create_stacked_canvas
+from paranmr.viz.layout.export import render_figure
+from paranmr.viz.style.theme import PlotSpec
+from paranmr.viz.utils.fmt import isotope_format
 
 logger = logging.getLogger(__name__)
 

@@ -9,7 +9,7 @@ deficiency).
 
 Patterns are intentionally defined by *semantic role* and keyed by the global
 plotting profile and accessibility mode. Plotting code must consume patterns
-through the PlotSpec contract (constructed by :mod:`simpnmr.viz.style.theme`).
+through the PlotSpec contract (constructed by :mod:`paranmr.viz.style.theme`).
 
 At present, only hatch patterns for shift components are provided. Future
 extensions can add linestyles/markers for line/scatter artists.
@@ -20,7 +20,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Literal
 
-from simpnmr.app.params.plot_cfg import PlotProfile
+from paranmr.app.params.plot_cfg import PlotProfile
 
 AccessibilityMode = Literal["default", "colorblind"]
 

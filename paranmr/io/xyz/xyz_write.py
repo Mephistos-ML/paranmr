@@ -13,9 +13,9 @@ import logging
 import numpy as np
 from numpy.typing import ArrayLike
 
-from simpnmr.__version__ import __version__
-from simpnmr.tools.coords import xyz_fmt
-from simpnmr.tools.coords import xyz_fmt as xyzf
+from paranmr.__version__ import __version__
+from paranmr.tools.coords import xyz_fmt
+from paranmr.tools.coords import xyz_fmt as xyzf
 
 logger = logging.getLogger(__name__)
 
@@ -53,7 +53,7 @@ def save_xyz(
     coords = np.asarray(coords)
     mask = mask or []
 
-    _comment = f"This file was generated with SimpNMR v{__version__} at {{}}. ".format(
+    _comment = f"This file was generated with ParaNMR v{__version__} at {{}}. ".format(
         datetime.datetime.now().strftime("%H:%M:%S %d-%m-%Y")
     )
     _comment += comment

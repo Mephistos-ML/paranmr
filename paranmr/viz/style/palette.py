@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from simpnmr.app.params.plot_cfg import PlotProfile
+from paranmr.app.params.plot_cfg import PlotProfile
 
 
 @dataclass(frozen=True, slots=True)

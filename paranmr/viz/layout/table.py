@@ -9,7 +9,7 @@ from matplotlib.axes import Axes
 from matplotlib.lines import Line2D
 from matplotlib.patches import Rectangle
 
-from simpnmr.viz.style.theme import PlotSpec
+from paranmr.viz.style.theme import PlotSpec
 
 
 def _validate_bbox(bbox: Sequence[float]) -> None:

@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from typing import Iterable
 
-from simpnmr.core.domain.exp import Experiment
+from paranmr.core.domain.exp import Experiment
 
 
 def load_experiments(file_names: str | Iterable[str]) -> list[Experiment]:
@@ -27,7 +27,7 @@ def load_experiments(file_names: str | Iterable[str]) -> list[Experiment]:
     Returns:
         List of Experiment objects.
     """
-    from simpnmr.io.csv.exp import load_experiments_from_csv
+    from paranmr.io.csv.exp import load_experiments_from_csv
 
     return load_experiments_from_csv(file_names)
 
@@ -48,7 +48,7 @@ def save_experiment(
         delimiter: CSV delimiter.
         comment: Optional comment written to the file header.
     """
-    from simpnmr.io.csv.exp import write_experiment_to_csv
+    from paranmr.io.csv.exp import write_experiment_to_csv
 
     write_experiment_to_csv(
         experiment,

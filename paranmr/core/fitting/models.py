@@ -17,10 +17,10 @@ from numpy.typing import NDArray
 from scipy.optimize import least_squares, lsq_linear
 from scipy.optimize._optimize import OptimizeResult
 
-from simpnmr.core.domain.exp import Experiment
-from simpnmr.core.domain.mol import Molecule, Nucleus
-from simpnmr.core.domain.tensor import Susceptibility
-from simpnmr.core.util.uncertainty import delta_method_sigma
+from paranmr.core.domain.exp import Experiment
+from paranmr.core.domain.mol import Molecule, Nucleus
+from paranmr.core.domain.tensor import Susceptibility
+from paranmr.core.util.uncertainty import delta_method_sigma
 
 logger = logging.getLogger(__name__)
 

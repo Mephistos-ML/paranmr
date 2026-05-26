@@ -1,6 +1,6 @@
 # read electornic state data
 
-from simpnmr.io.qc.errors import DataNotFoundError
+from paranmr.io.qc.errors import DataNotFoundError
 
 
 def read_orca_spin(file_name: str) -> float:

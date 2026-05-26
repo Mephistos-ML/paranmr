@@ -13,8 +13,8 @@ import logging
 import numpy as np
 import pandas as pd
 
-from simpnmr.__version__ import __version__
-from simpnmr.io.csv.csv_util import write_csv_safe
+from paranmr.__version__ import __version__
+from paranmr.io.csv.csv_util import write_csv_safe
 
 logger = logging.getLogger(__name__)
 
@@ -50,7 +50,7 @@ def save_to_csv(
     )
 
     _comments = (
-        f"#This file was generated with SimpNMR v{__version__} on {{}}\n".format(
+        f"#This file was generated with ParaNMR v{__version__} on {{}}\n".format(
             datetime.datetime.now().strftime("%H:%M:%S %d-%m-%Y ")
         )
     )

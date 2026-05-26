@@ -7,8 +7,8 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 
-from simpnmr.core.domain.relax import RelaxationChannels, RelaxationEvaluation
-from simpnmr.core.relaxation import gueron, sbm
+from paranmr.core.domain.relax import RelaxationChannels, RelaxationEvaluation
+from paranmr.core.relaxation import gueron, sbm
 
 
 def evaluate_relaxation_rates(

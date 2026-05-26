@@ -7,11 +7,11 @@ from __future__ import annotations
 
 import numpy as np
 
-from simpnmr.core.benchmarks.hyperfine.summary import (
+from paranmr.core.benchmarks.hyperfine.summary import (
     summarize_hyperfine_metric_max_by_nucleus,
     summarize_hyperfine_metric_ranges_by_functional_and_nucleus,
 )
-from simpnmr.core.domain.mol import Molecule
+from paranmr.core.domain.mol import Molecule
 
 
 def summarize_a_fc_ranges_by_functional_and_nucleus(

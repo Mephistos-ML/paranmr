@@ -5,13 +5,13 @@ import logging
 import numpy as np
 from numpy.typing import NDArray
 
-from simpnmr.app.policies.susc import resolve_susceptibility_source
-from simpnmr.core.build.gtensor import (
+from paranmr.app.policies.susc import resolve_susceptibility_source
+from paranmr.core.build.gtensor import (
     build_g_tensor_ab_initio,
     build_g_tensor_from_dft_components,
 )
-from simpnmr.core.domain.mol import Molecule
-from simpnmr.io.qc import gateway as rdrs
+from paranmr.core.domain.mol import Molecule
+from paranmr.io.qc import gateway as rdrs
 
 logger = logging.getLogger(__name__)
 

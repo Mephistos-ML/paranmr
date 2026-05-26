@@ -5,9 +5,9 @@
 
 from types import SimpleNamespace
 
-from simpnmr.app.loaders.hfc_load import load_hyperfines
-from simpnmr.app.loaders.labels_load import load_chem_labels_from_csv
-from simpnmr.app.loaders.mol_load import load_base_molecule
+from paranmr.app.loaders.hfc_load import load_hyperfines
+from paranmr.app.loaders.labels_load import load_chem_labels_from_csv
+from paranmr.app.loaders.mol_load import load_base_molecule
 
 
 def load_hyperfine_benchmark_sources(config) -> list[dict[str, object]]:

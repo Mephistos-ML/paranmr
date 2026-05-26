@@ -1,8 +1,8 @@
 Contributing
 ============
 
-We welcome contributions to ``SimpNMR``. If you would like to add functionality or improve the code or the documentation,
-please start by creating an `Issue <https://gitlab.com/suturina-group/simpnmr/-/issues>`_ on GitLab (using the relevant template)
+We welcome contributions to ``ParaNMR``. If you would like to add functionality or improve the code or the documentation,
+please start by creating an `Issue <https://gitlab.com/suturina-group/paranmr/-/issues>`_ on GitLab (using the relevant template)
 to describe the change you propose.
 
 When contributing, you **must** follow the rules below. These define the required development standards and help keep the project maintainable over time.
@@ -14,7 +14,7 @@ Source Code
    using an imperative, present-tense subject line (for example: ``feat: add new fitting routine``).
    Commit scopes are encouraged and should reflect the affected subsystem (for example: ``feat(application): add new fitting routine`` or ``fix(io): handle malformed CSV input``).
 
-   These commit messages are not just a style requirement: SimpNMR uses an automated semantic release workflow in CI.
+   These commit messages are not just a style requirement: ParaNMR uses an automated semantic release workflow in CI.
    Commit types and optional breaking-change markers determine the version bump (major/minor/patch) and are used to
    generate release notes / changelog entries.
 
@@ -85,7 +85,7 @@ Documentation
 -------------
 
 Our documentation is written in `Sphinx <https://www.sphinx-doc.org/en/master/>`_ and uses
-the PyData Sphinx theme. The source code for the docs is available at ``simpnmr/docs/source``.
+the PyData Sphinx theme. The source code for the docs is available at ``paranmr/docs/source``.
 
 To build the documentation locally, ensure the project is installed with developer
 dependencies (see :ref:`local development setup <local-development-setup>`), then
@@ -104,7 +104,7 @@ Makefile wrapper:
 
     make clean html
 
-The compiled HTML pages will be available at ``simpnmr/docs/build/html``.
+The compiled HTML pages will be available at ``paranmr/docs/build/html``.
 
 Please ensure the documentation builds successfully prior to committing/merging.
 

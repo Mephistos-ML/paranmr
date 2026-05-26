@@ -1,10 +1,10 @@
-# simpnmr/io/qc/detect.py
+# paranmr/io/qc/detect.py
 from __future__ import annotations
 
 from typing import Literal
 
-from simpnmr.io.qc.backends.gaussian.detect import is_gaussian_log
-from simpnmr.io.qc.backends.orca.detect import is_orca_output
+from paranmr.io.qc.backends.gaussian.detect import is_gaussian_log
+from paranmr.io.qc.backends.orca.detect import is_orca_output
 
 Backend = Literal["orca", "gaussian"]
 

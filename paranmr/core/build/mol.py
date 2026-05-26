@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import numpy as np
 
-from simpnmr.core.domain.mol import Molecule
+from paranmr.core.domain.mol import Molecule
 
 
 def build_molecule_from_qca(

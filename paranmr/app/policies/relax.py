@@ -16,7 +16,7 @@ from collections import defaultdict
 
 import numpy as np
 
-from simpnmr.core.domain.mol import Molecule
+from paranmr.core.domain.mol import Molecule
 
 
 def average_relaxation_rates_by_chem_label(

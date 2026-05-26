@@ -37,7 +37,7 @@ def test_fit_susc_with_pdip_hfc_isoaxrho_and_permutation_assignment(tmp_path: Pa
     permutation-based assignment.
     """
     cwd = Path("examples/DyL1/SIMULATIONS/Fitting")
-    cmd = ["simpnmr", "--hide", "fit_susc", "DyL1_1H_Fitting.yml"]
+    cmd = ["paranmr", "--hide", "fit_susc", "DyL1_1H_Fitting.yml"]
     result = subprocess.run(
         cmd, capture_output=True, text=True, cwd=cwd, env=_cli_env(tmp_path)
     )
@@ -65,7 +65,7 @@ def test_fit_susc_with_qc_hfc_split_model_and_hungarian_assignment(tmp_path: Pat
     different temperatures.
     """
     cwd = Path("examples/P3FeCl/SIMULATIONS/Fitting")
-    cmd = ["simpnmr", "--hide", "fit_susc", "P3FeCl_VT_Fitting.yml"]
+    cmd = ["paranmr", "--hide", "fit_susc", "P3FeCl_VT_Fitting.yml"]
     result = subprocess.run(
         cmd, capture_output=True, text=True, cwd=cwd, env=_cli_env(tmp_path)
     )

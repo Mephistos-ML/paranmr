@@ -1,7 +1,7 @@
 Workflows
 =========
 
-This section describes the main command-line workflows provided by ``simpnmr``.
+This section describes the main command-line workflows provided by ``paranmr``.
 Each workflow is configured using a strict YAML input file: unknown keys are not
 allowed and will result in a configuration error.
 
@@ -26,7 +26,7 @@ Run
 
 .. code-block:: console
 
-   simpnmr predict <input.yml>
+   paranmr predict <input.yml>
 
 Minimal Input Example
 ^^^^^^^^^^^^^^^^^^^^^
@@ -72,7 +72,7 @@ Run
 
 .. code-block:: console
 
-   simpnmr fit_susc <input.yml>
+   paranmr fit_susc <input.yml>
 
 Minimal input example
 ^^^^^^^^^^^^^^^^^^^^^

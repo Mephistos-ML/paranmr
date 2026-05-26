@@ -17,12 +17,12 @@ import logging
 import os
 from typing import Any
 
-from simpnmr.app.policies.hfc import validate_pdip_xyz_labels
-from simpnmr.core.build import mol
-from simpnmr.core.domain.mol import Molecule
-from simpnmr.io.csv.mol import read_molecule_csv
-from simpnmr.io.qc import gateway as rdrs
-from simpnmr.tools.coords import xyz_fmt as xyzf
+from paranmr.app.policies.hfc import validate_pdip_xyz_labels
+from paranmr.core.build import mol
+from paranmr.core.domain.mol import Molecule
+from paranmr.io.csv.mol import read_molecule_csv
+from paranmr.io.qc import gateway as rdrs
+from paranmr.tools.coords import xyz_fmt as xyzf
 
 logger = logging.getLogger(__name__)
 

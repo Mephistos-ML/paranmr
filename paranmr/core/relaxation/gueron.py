@@ -8,8 +8,8 @@ Provides helpers to evaluate point-dipole Curie R1 and R2 rates for labelled nuc
 
 import numpy as np
 
-from simpnmr.core.build.eff_factors import calc_g_eff, choose_S_eff
-from simpnmr.core.const.physics import KB, MU0, MUB
+from paranmr.core.build.eff_factors import calc_g_eff, choose_S_eff
+from paranmr.core.const.physics import KB, MU0, MUB
 
 
 def calc_r1_curie(

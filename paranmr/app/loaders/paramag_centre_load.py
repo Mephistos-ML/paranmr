@@ -14,7 +14,7 @@ import logging
 
 import numpy as np
 
-from simpnmr.core.domain.mol import Molecule
+from paranmr.core.domain.mol import Molecule
 
 logger = logging.getLogger(__name__)
 

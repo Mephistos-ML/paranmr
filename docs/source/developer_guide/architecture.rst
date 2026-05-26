@@ -2,7 +2,7 @@ Architecture
 ============
 
 This page provides a high-level overview of the internal architecture of
-``simpnmr``. It is intended for developers who want to understand how the
+``paranmr``. It is intended for developers who want to understand how the
 codebase is structured, how data flows through the system, and where new
 functionality should be added.
 
@@ -12,7 +12,7 @@ reproducibility over maximal abstraction.
 Design goals
 ------------
 
-The architecture of ``simpnmr`` is guided by the following principles:
+The architecture of ``paranmr`` is guided by the following principles:
 
 - **Explicit workflows**: all calculations are driven by user-supplied YAML
   configuration files and CLI entry points.
@@ -29,11 +29,11 @@ High-level layering
 
 At a conceptual level, the codebase is organised into the following layers:
 
-1. **CLI layer** (``simpnmr.cli``)
-2. **Application layer** (``simpnmr.app``: pipelines, loaders, policies)
-3. **Domain / core layer** (``simpnmr.core``)
-4. **IO layer** (``simpnmr.io``)
-5. **Visualisation layer** (``simpnmr.viz``)
+1. **CLI layer** (``paranmr.cli``)
+2. **Application layer** (``paranmr.app``: pipelines, loaders, policies)
+3. **Domain / core layer** (``paranmr.core``)
+4. **IO layer** (``paranmr.io``)
+5. **Visualisation layer** (``paranmr.viz``)
 
 The CLI layer is responsible for user interaction. The application layer
 orchestrates workflows. The core layer contains all scientific and numerical
@@ -50,20 +50,20 @@ Top-level repository structure:
    .
    ├── docs/                # Sphinx documentation
    ├── examples/            # End-to-end usage examples
-   ├── simpnmr/             # Python package source
+   ├── paranmr/             # Python package source
    └── tests/               # Test suite
 
-The remainder of this page focuses on the ``simpnmr`` package itself.
+The remainder of this page focuses on the ``paranmr`` package itself.
 
 
 Package overview
 ----------------
 
-``simpnmr`` is organised as follows:
+``paranmr`` is organised as follows:
 
 .. code-block:: text
 
-   simpnmr/
+   paranmr/
    ├── app/                 # Workflow orchestration (pipelines, loaders, settings)
    ├── cfg/                 # Configuration loading and validation
    ├── cli/                 # Command-line entry points
@@ -75,7 +75,7 @@ Package overview
 Each top-level module has a clearly defined responsibility, described below.
 
 
-CLI layer (``simpnmr.cli``)
+CLI layer (``paranmr.cli``)
 ---------------------------
 
 The CLI layer defines user-facing commands such as ``predict`` and
@@ -89,7 +89,7 @@ The CLI layer must not contain scientific logic, numerical routines, or file
 parsing beyond trivial argument handling.
 
 
-Application layer (``simpnmr.app``)
+Application layer (``paranmr.app``)
 -----------------------------------
 
 The application layer orchestrates complete workflows. It connects user
@@ -109,8 +109,8 @@ Submodules:
 - ``loaders``: application-layer adapters that translate user configuration into
   domain-ready data or enriched domain objects. Loaders select the appropriate
   IO backend (e.g. CSV, quantum chemistry outputs) based on configuration
-  options, delegate file parsing to ``simpnmr.io``, and delegate scientific
-  assembly to ``simpnmr.core.build``.
+  options, delegate file parsing to ``paranmr.io``, and delegate scientific
+  assembly to ``paranmr.core.build``.
 - ``policies``: application-level decision logic that defines *how* workflows resolve ambiguities or defaults (e.g. backend routing, method prioritisation, legacy overrides). Policies act as a single source of truth for such decisions and are consumed by loaders and pipelines.
 - ``pipelines``: end-to-end workflow orchestration (e.g. prediction, fitting).
   Pipelines wire together loaders, core computations, output writers, and
@@ -119,12 +119,12 @@ Submodules:
 - ``params``: typed application settings and plotting/runtime options used by
   pipelines and CLI wiring.
 
-**Constraint:** numerical algorithms must not be implemented in ``simpnmr.app``.
+**Constraint:** numerical algorithms must not be implemented in ``paranmr.app``.
 Any scientific formulas, optimisation logic, scoring/metrics that affect results,
-or numerical kernels belong in ``simpnmr.core``.
+or numerical kernels belong in ``paranmr.core``.
 
 
-Core domain layer (``simpnmr.core``)
+Core domain layer (``paranmr.core``)
 ------------------------------------
 
 The core layer contains all scientific and numerical logic. It is intentionally
@@ -146,7 +146,7 @@ All domain rules, builder logic, and mathematical assumptions must live in this
 layer.
 
 
-IO layer (``simpnmr.io``)
+IO layer (``paranmr.io``)
 -------------------------
 
 The IO layer is responsible for reading and writing data in external formats.
@@ -161,10 +161,10 @@ It includes parsers for:
 
 The IO layer may not implement scientific logic or application policy; it only
 translates external representations into parsed internal representations (and
-vice versa), leaving scientific assembly to ``simpnmr.core.build``.
+vice versa), leaving scientific assembly to ``paranmr.core.build``.
 
 
-Visualisation layer (``simpnmr.viz``)
+Visualisation layer (``paranmr.viz``)
 -------------------------------------
 
 The visualisation layer generates plots and figures for predicted and fitted
@@ -174,7 +174,7 @@ The visualisation layer uses a unified plotting system that centralises styling,
 layout, colour palettes, typography, and export behaviour.
 
 New plots **must** be implemented using the existing visualisation
-infrastructure (``simpnmr.viz``) rather than ad-hoc Matplotlib code.
+infrastructure (``paranmr.viz``) rather than ad-hoc Matplotlib code.
 
 Responsibilities:
 
@@ -206,9 +206,9 @@ Extension points
 
 Common extension scenarios include:
 
-- adding support for a new QC output format → ``simpnmr.io``
-- introducing a new susceptibility model → ``simpnmr.core``
-- adding a new workflow or CLI command → ``simpnmr.app`` and ``simpnmr.cli``
+- adding support for a new QC output format → ``paranmr.io``
+- introducing a new susceptibility model → ``paranmr.core``
+- adding a new workflow or CLI command → ``paranmr.app`` and ``paranmr.cli``
 
 Developers should avoid cross-layer dependencies and keep extensions confined
 to the appropriate layer.
@@ -217,9 +217,9 @@ to the appropriate layer.
 Conventions and constraints
 ---------------------------
 
-- Application policy (e.g. default selection rules, priority ordering, legacy overrides) must live in ``simpnmr.app.policies`` and must not be duplicated across loaders or pipelines.
+- Application policy (e.g. default selection rules, priority ordering, legacy overrides) must live in ``paranmr.app.policies`` and must not be duplicated across loaders or pipelines.
 - Scientific assembly of parsed data into canonical domain entities must live in
-  ``simpnmr.core.build``. Loaders and pipelines may orchestrate builder calls
+  ``paranmr.core.build``. Loaders and pipelines may orchestrate builder calls
   but must not duplicate builder logic.
 - Domain logic and builders must not depend on IO or CLI modules.
 
@@ -238,14 +238,14 @@ Conventions and constraints
   structure, column names, units, ordering, or interpretation must be
   backward-compatible or declared as breaking changes.
 
-- Numerical algorithms must not be implemented in ``simpnmr.app``. Scientific
+- Numerical algorithms must not be implemented in ``paranmr.app``. Scientific
   formulas, optimisation logic, scoring/metrics that affect results, or
-  numerical kernels belong in ``simpnmr.core``.
+  numerical kernels belong in ``paranmr.core``.
 
-- All new plots must use the unified visualisation system in ``simpnmr.viz``.
+- All new plots must use the unified visualisation system in ``paranmr.viz``.
   Ad-hoc plotting logic in pipelines or tools is not permitted.
 
-- Experimental or exploratory code must live in ``simpnmr.tools`` (or in
+- Experimental or exploratory code must live in ``paranmr.tools`` (or in
   ``examples``) and must not be merged into core workflows without explicit
   review and justification.
 
@@ -255,7 +255,7 @@ Conventions and constraints
 
 - Dependency boundaries must be respected. The core layer should not introduce
   convenience or plotting-related dependencies; heavyweight dependencies must be
-  scientifically justified and kept out of ``simpnmr.core`` whenever possible.
+  scientifically justified and kept out of ``paranmr.core`` whenever possible.
 
 - Backward-incompatible changes must be reflected in the changelog.
 

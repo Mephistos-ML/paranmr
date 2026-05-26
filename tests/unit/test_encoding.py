@@ -1,7 +1,7 @@
 import pandas as pd
 import pytest
 
-from simpnmr.io.csv.csv_util import read_csv_safe, write_csv_safe
+from paranmr.io.csv.csv_util import read_csv_safe, write_csv_safe
 
 
 def _non_comment_lines(text: str) -> list[str]:
@@ -46,7 +46,7 @@ def test_write_csv_safe_emits_utf8_sig_csv(tmp_path):
     text = raw.decode("utf-8-sig")
 
     # Ensure we wrote at least the generator comment.
-    assert text.lstrip().startswith("# This file was generated with SimpNMR")
+    assert text.lstrip().startswith("# This file was generated with ParaNMR")
 
     # Ensure LF-only output (no CR characters).
     assert "\r" not in text

@@ -11,9 +11,9 @@ physical models or direct source values.
 import numpy as np
 from numpy.typing import NDArray
 
-from simpnmr.core.const.physics import NA
-from simpnmr.core.domain.tensor import Susceptibility
-from simpnmr.core.phys.susc import get_g_corr_iso_susc, get_spin_only_susc
+from paranmr.core.const.physics import NA
+from paranmr.core.domain.tensor import Susceptibility
+from paranmr.core.phys.susc import get_g_corr_iso_susc, get_spin_only_susc
 
 
 def build_chi_d_tensor_from_orca(

@@ -25,8 +25,8 @@ If any box is unchecked, explain why and reference prior discussion.
 ## Architecture Compliance
 
 - [ ] No cross-layer imports
-- [ ] No scientific or numerical logic outside `simpnmr.core`
-- [ ] No ad-hoc plotting outside `simpnmr.viz`
+- [ ] No scientific or numerical logic outside `paranmr.core`
+- [ ] No ad-hoc plotting outside `paranmr.viz`
 - [ ] No hidden defaults or implicit behaviour
 
 ---

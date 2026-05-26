@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import numpy as np
 
-from simpnmr.tools.coords import xyz_fmt as xyzf
+from paranmr.tools.coords import xyz_fmt as xyzf
 
 
 def write_pcs_cube(

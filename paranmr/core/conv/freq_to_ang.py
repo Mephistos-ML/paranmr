@@ -10,9 +10,9 @@ nuclear gyromagnetic ratios.
 import numpy as np
 from numpy.typing import NDArray
 
-from simpnmr.core.const.gammas import NUCLEAR_GAMMAS
-from simpnmr.core.const.physics import EGAMMA, MU0, H
-from simpnmr.core.util.strings import remove_numbers
+from paranmr.core.const.gammas import NUCLEAR_GAMMAS
+from paranmr.core.const.physics import EGAMMA, MU0, H
+from paranmr.core.util.strings import remove_numbers
 
 
 def a_tensor_mhz_to_ang(a_tensors: dict[str, NDArray]) -> dict[str, NDArray]:

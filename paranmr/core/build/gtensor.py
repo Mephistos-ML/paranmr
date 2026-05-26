@@ -8,8 +8,8 @@ from __future__ import annotations
 import numpy as np
 from numpy.typing import NDArray
 
-from simpnmr.core.const.physics import GE
-from simpnmr.core.domain.mol import Molecule
+from paranmr.core.const.physics import GE
+from paranmr.core.domain.mol import Molecule
 
 
 def build_g_tensor_ab_initio(

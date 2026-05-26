@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from typing import Dict, Optional, Tuple
 
-from simpnmr.io.csv.csv_util import read_csv_safe
+from paranmr.io.csv.csv_util import read_csv_safe
 
 
 def load_chem_labels_from_csv(

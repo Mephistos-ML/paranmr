@@ -9,9 +9,9 @@ hyperfine data to CSV.
 
 import os
 
-from simpnmr.app.loaders.mol_load import load_molecule_from_qca
-from simpnmr.app.params.options import ExtractHFCRunOptions
-from simpnmr.io.csv.mol import save_molecule_to_csv
+from paranmr.app.loaders.mol_load import load_molecule_from_qca
+from paranmr.app.params.options import ExtractHFCRunOptions
+from paranmr.io.csv.mol import save_molecule_to_csv
 
 
 def run_extract_hfc(

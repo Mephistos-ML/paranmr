@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from typing import Optional
 
-from simpnmr.core.domain.mol import ElectronicState
+from paranmr.core.domain.mol import ElectronicState
 
 
 def build_electronic_state(

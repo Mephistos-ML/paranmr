@@ -5,26 +5,26 @@
 
 import os
 
-from simpnmr.app.params.options import BenchmarkAfcRunOptions
-from simpnmr.app.pipelines.benchmarks.hyperfine.runner import (
+from paranmr.app.params.options import BenchmarkAfcRunOptions
+from paranmr.app.pipelines.benchmarks.hyperfine.runner import (
     plot_hyperfine_benchmark_summary,
     plot_hyperfine_functional_max_summary,
 )
-from simpnmr.app.pipelines.benchmarks.hyperfine.sources import (
+from paranmr.app.pipelines.benchmarks.hyperfine.sources import (
     group_loaded_sources_by_functional,
     load_hyperfine_benchmark_sources,
 )
-from simpnmr.core.benchmarks.hyperfine.a_fc import (
+from paranmr.core.benchmarks.hyperfine.a_fc import (
     summarize_a_fc_max_by_nucleus,
     summarize_a_fc_max_report_rows,
     summarize_a_fc_ranges_by_functional_and_nucleus,
 )
-from simpnmr.io.csv.benchmarks.a_fc import save_a_fc_benchmark_max_csv
-from simpnmr.viz.plots.benchmarks import (
+from paranmr.io.csv.benchmarks.a_fc import save_a_fc_benchmark_max_csv
+from paranmr.viz.plots.benchmarks import (
     plot_a_fc_functional_max_curve,
     plot_a_fc_spread,
 )
-from simpnmr.viz.style.theme import apply_profile
+from paranmr.viz.style.theme import apply_profile
 
 
 def run_benchmark_a_fc(config, options: BenchmarkAfcRunOptions | None = None) -> int:

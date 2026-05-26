@@ -14,9 +14,9 @@ from itertools import chain, permutations, product
 import numpy as np
 from scipy.optimize import linear_sum_assignment
 
-from simpnmr.core.domain.exp import Experiment
-from simpnmr.core.domain.mol import Molecule
-from simpnmr.core.fitting import models
+from paranmr.core.domain.exp import Experiment
+from paranmr.core.domain.mol import Molecule
+from paranmr.core.fitting import models
 
 logger = logging.getLogger(__name__)
 

@@ -1,7 +1,7 @@
 """QC IO error hierarchy.
 
 This module defines a small set of typed exceptions used by the QC I/O subsystem.
-All exceptions raised from `simpnmr.io.qc` should derive from `QCError`.
+All exceptions raised from `paranmr.io.qc` should derive from `QCError`.
 
 The intent is to make error handling predictable across backends (ORCA, Gaussian etc.)
 while keeping error semantics explicit:

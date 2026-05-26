@@ -12,14 +12,14 @@ import os
 
 import numpy as np
 
-from simpnmr.app.loaders.labels_load import load_chem_labels_from_csv
-from simpnmr.app.params.options import CalcPdipRunOptions
-from simpnmr.app.policies.hfc import has_missing_selected_chem_labels
-from simpnmr.core.domain.mol import Molecule
-from simpnmr.io.qc import gateway as rdrs
-from simpnmr.tools.coords import xyz_fmt as xyzf
-from simpnmr.viz.plots.hfc import plot_hyperfine, plot_hyperfine_spread
-from simpnmr.viz.style.theme import apply_profile
+from paranmr.app.loaders.labels_load import load_chem_labels_from_csv
+from paranmr.app.params.options import CalcPdipRunOptions
+from paranmr.app.policies.hfc import has_missing_selected_chem_labels
+from paranmr.core.domain.mol import Molecule
+from paranmr.io.qc import gateway as rdrs
+from paranmr.tools.coords import xyz_fmt as xyzf
+from paranmr.viz.plots.hfc import plot_hyperfine, plot_hyperfine_spread
+from paranmr.viz.style.theme import apply_profile
 
 logger = logging.getLogger(__name__)
 

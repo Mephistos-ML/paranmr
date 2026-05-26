@@ -10,7 +10,7 @@ with an optional TIP term.
 import numpy as np
 from scipy.optimize import curve_fit
 
-from simpnmr.core.const.physics import GE, KB, MU0, MUB, C, H  # noqa
+from paranmr.core.const.physics import GE, KB, MU0, MUB, C, H  # noqa
 
 
 def fit_chit_linear_model(

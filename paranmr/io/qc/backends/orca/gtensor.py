@@ -9,7 +9,7 @@ calculation files.
 
 import numpy as np
 
-from simpnmr.io.qc.errors import ParseError
+from paranmr.io.qc.errors import ParseError
 
 
 def read_g_tensor_ab_initio(file_name: str, section: str) -> np.ndarray | None:

@@ -12,7 +12,7 @@ import os
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 
-from simpnmr.app.params.options import RuntimeSettings
+from paranmr.app.params.options import RuntimeSettings
 
 
 def apply_runtime_settings(

@@ -15,16 +15,16 @@ import matplotlib.ticker as ticker
 import numpy as np
 import scipy.constants as constants
 
-from simpnmr.core.const import ptable
-from simpnmr.core.domain.exp import Experiment
-from simpnmr.core.domain.mol import Molecule
-from simpnmr.core.fitting import models
-from simpnmr.viz.layout.canvas import create_header_plot_canvas
-from simpnmr.viz.layout.export import render_figure
-from simpnmr.viz.layout.label import resolve_label_layout
-from simpnmr.viz.layout.table import render_compact_table
-from simpnmr.viz.style.theme import PlotSpec
-from simpnmr.viz.utils.uncertainty import format_compact_uncertainty
+from paranmr.core.const import ptable
+from paranmr.core.domain.exp import Experiment
+from paranmr.core.domain.mol import Molecule
+from paranmr.core.fitting import models
+from paranmr.viz.layout.canvas import create_header_plot_canvas
+from paranmr.viz.layout.export import render_figure
+from paranmr.viz.layout.label import resolve_label_layout
+from paranmr.viz.layout.table import render_compact_table
+from paranmr.viz.style.theme import PlotSpec
+from paranmr.viz.utils.uncertainty import format_compact_uncertainty
 
 logger = logging.getLogger(__name__)
 

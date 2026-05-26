@@ -1,7 +1,7 @@
 Standalone CLI utilities
 ========================
 
-This page documents selected SimpNMR command-line utilities that operate
+This page documents selected ParaNMR command-line utilities that operate
 *directly on input files* and do not require YAML pipeline configuration files.
 
 These commands are intended for quick calculations, post-processing, and
@@ -38,7 +38,7 @@ preferred over CASSCF). Explicit method selection is not required.
 
 ::
 
-   simpnmr calc_pcs_iso susceptibility.csv 298.0 structure.xyz Fe1
+   paranmr calc_pcs_iso susceptibility.csv 298.0 structure.xyz Fe1
 
 When an ORCA output file is provided instead of a CSV file, the susceptibility
 backend and method are inferred automatically from the file contents.
@@ -65,7 +65,7 @@ itself. No YAML configuration file is required.
 
 ::
 
-   simpnmr get_sh --spin 2.0 chiT_regression.csv
+   paranmr get_sh --spin 2.0 chiT_regression.csv
 
 The command extracts the effective g-tensor (and, if applicable, zero-field
 splitting parameters) from the regression data and prints the results to

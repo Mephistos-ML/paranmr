@@ -10,8 +10,8 @@ quantum-chemical outputs and spin parameters.
 import numpy as np
 from numpy.typing import NDArray
 
-from simpnmr.core.build.eff_factors import calc_g_eff, choose_S_eff
-from simpnmr.core.const.physics import KB, MU0, MUB
+from paranmr.core.build.eff_factors import calc_g_eff, choose_S_eff
+from paranmr.core.const.physics import KB, MU0, MUB
 
 
 def get_spin_only_susc(

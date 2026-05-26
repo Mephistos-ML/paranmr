@@ -7,10 +7,10 @@ Loads experimental data and generates shift-vs-temperature and shift-vs-inverse-
 temperature plots.
 """
 
-from simpnmr.app.loaders.exp_load import load_experiments
-from simpnmr.app.params.options import PlotShiftTdepRunOptions
-from simpnmr.viz.plots.shifts import plot_shift_tdep
-from simpnmr.viz.style.theme import apply_profile
+from paranmr.app.loaders.exp_load import load_experiments
+from paranmr.app.params.options import PlotShiftTdepRunOptions
+from paranmr.viz.plots.shifts import plot_shift_tdep
+from paranmr.viz.style.theme import apply_profile
 
 
 def run_plot_shift_tdep(

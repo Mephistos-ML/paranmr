@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (C) 2026 Suturina Group
 
-"""Define SimpNMR command-line entry points.
+"""Define ParaNMR command-line entry points.
 
 Parses CLI arguments and dispatches subcommands to application pipelines.
 """
@@ -12,12 +12,12 @@ import os
 
 import yaml
 
-from simpnmr import __version__
-from simpnmr.app.params.options import RuntimeSettings
-from simpnmr.app.params.settings import apply_runtime_settings
-from simpnmr.cfg import config as cfg
-from simpnmr.cli.set_logging import setup_logging
-from simpnmr.io.qc.errors import QCError
+from paranmr import __version__
+from paranmr.app.params.options import RuntimeSettings
+from paranmr.app.params.settings import apply_runtime_settings
+from paranmr.cfg import config as cfg
+from paranmr.cli.set_logging import setup_logging
+from paranmr.io.qc.errors import QCError
 
 logger = logging.getLogger(__name__)
 
@@ -25,8 +25,8 @@ logger = logging.getLogger(__name__)
 def predict_cli(uargs: argparse.Namespace, runtime: RuntimeSettings) -> int:
     """Thin CLI wrapper for the predict pipeline."""
 
-    from simpnmr.app.params.options import PredictRunOptions
-    from simpnmr.app.pipelines.predict import run_predict
+    from paranmr.app.params.options import PredictRunOptions
+    from paranmr.app.pipelines.predict import run_predict
 
     config = cfg.PredictConfig.from_file(uargs.input_file)
     options = PredictRunOptions.from_namespace(uargs)
@@ -37,8 +37,8 @@ def predict_cli(uargs: argparse.Namespace, runtime: RuntimeSettings) -> int:
 def fit_susc_cli(uargs: argparse.Namespace, runtime: RuntimeSettings) -> int:
     """Thin CLI wrapper for the fit_susc pipeline."""
 
-    from simpnmr.app.params.options import FitSuscRunOptions
-    from simpnmr.app.pipelines.fit.susc_fit import run_fit_susc
+    from paranmr.app.params.options import FitSuscRunOptions
+    from paranmr.app.pipelines.fit.susc_fit import run_fit_susc
 
     config = cfg.FitSuscConfig.from_file(uargs.input_file)
     options = FitSuscRunOptions.from_namespace(uargs)
@@ -49,8 +49,8 @@ def fit_susc_cli(uargs: argparse.Namespace, runtime: RuntimeSettings) -> int:
 def fit_corr_time_cli(uargs: argparse.Namespace, runtime: RuntimeSettings) -> int:
     """Thin CLI wrapper for the fit_corr_time pipeline."""
 
-    from simpnmr.app.params.options import FitCorrTimeRunOptions
-    from simpnmr.app.pipelines.fit.corr_time_fit import run_fit_corr_time
+    from paranmr.app.params.options import FitCorrTimeRunOptions
+    from paranmr.app.pipelines.fit.corr_time_fit import run_fit_corr_time
 
     config = cfg.FitCorrTimeConfig.from_file(uargs.input_file)
     options = FitCorrTimeRunOptions.from_namespace(uargs)
@@ -61,8 +61,8 @@ def fit_corr_time_cli(uargs: argparse.Namespace, runtime: RuntimeSettings) -> in
 def plot_hfc_iso_ax_cli(uargs: argparse.Namespace, runtime: RuntimeSettings) -> int:
     """Thin CLI wrapper for plot_hfc_iso_ax pipeline."""
 
-    from simpnmr.app.params.options import PlotHFCIsoAxRunOptions
-    from simpnmr.app.pipelines.plot.hfc_invar_plot import run_plot_hfc_iso_ax
+    from paranmr.app.params.options import PlotHFCIsoAxRunOptions
+    from paranmr.app.pipelines.plot.hfc_invar_plot import run_plot_hfc_iso_ax
 
     config = cfg.PlotHFCConfig.from_file(uargs.input_file)
     options = PlotHFCIsoAxRunOptions.from_namespace(uargs)
@@ -73,8 +73,8 @@ def plot_hfc_iso_ax_cli(uargs: argparse.Namespace, runtime: RuntimeSettings) -> 
 def plot_shift_tdep_cli(uargs: argparse.Namespace, runtime: RuntimeSettings) -> int:
     """Thin CLI wrapper for plot_shift_tdep pipeline."""
 
-    from simpnmr.app.params.options import PlotShiftTdepRunOptions
-    from simpnmr.app.pipelines.plot.shift_t_plot import run_plot_shift_tdep
+    from paranmr.app.params.options import PlotShiftTdepRunOptions
+    from paranmr.app.pipelines.plot.shift_t_plot import run_plot_shift_tdep
 
     options = PlotShiftTdepRunOptions.from_namespace(uargs)
 
@@ -84,8 +84,8 @@ def plot_shift_tdep_cli(uargs: argparse.Namespace, runtime: RuntimeSettings) -> 
 def calc_pcs_iso_cli(uargs: argparse.Namespace, runtime: RuntimeSettings) -> int:
     """Thin CLI wrapper for calc_pcs_iso pipeline."""
 
-    from simpnmr.app.params.options import CalcPcsIsoRunOptions
-    from simpnmr.app.pipelines.pcs_iso import run_calc_pcs_iso
+    from paranmr.app.params.options import CalcPcsIsoRunOptions
+    from paranmr.app.pipelines.pcs_iso import run_calc_pcs_iso
 
     options = CalcPcsIsoRunOptions.from_namespace(uargs)
 
@@ -101,8 +101,8 @@ def calc_pcs_iso_cli(uargs: argparse.Namespace, runtime: RuntimeSettings) -> int
 def calc_pdip_cli(uargs: argparse.Namespace, runtime: RuntimeSettings) -> int:
     """Thin CLI wrapper for calc_pdip pipeline."""
 
-    from simpnmr.app.params.options import CalcPdipRunOptions
-    from simpnmr.app.pipelines.pdip import run_calc_pdip
+    from paranmr.app.params.options import CalcPdipRunOptions
+    from paranmr.app.pipelines.pdip import run_calc_pdip
 
     options = CalcPdipRunOptions.from_namespace(uargs)
 
@@ -119,8 +119,8 @@ def calc_pdip_cli(uargs: argparse.Namespace, runtime: RuntimeSettings) -> int:
 def extract_hfc_cli(uargs: argparse.Namespace, runtime: RuntimeSettings) -> int:
     """Thin CLI wrapper for extract_hfc pipeline."""
 
-    from simpnmr.app.params.options import ExtractHFCRunOptions
-    from simpnmr.app.pipelines.extract.hfc_extract import run_extract_hfc
+    from paranmr.app.params.options import ExtractHFCRunOptions
+    from paranmr.app.pipelines.extract.hfc_extract import run_extract_hfc
 
     options = ExtractHFCRunOptions.from_namespace(uargs)
 
@@ -130,8 +130,8 @@ def extract_hfc_cli(uargs: argparse.Namespace, runtime: RuntimeSettings) -> int:
 def plot_hfc_cli(uargs: argparse.Namespace, runtime: RuntimeSettings) -> int:
     """Thin CLI wrapper for plot_hfc pipeline."""
 
-    from simpnmr.app.params.options import PlotHFCRunOptions
-    from simpnmr.app.pipelines.plot.hfc_plot import run_plot_hfc
+    from paranmr.app.params.options import PlotHFCRunOptions
+    from paranmr.app.pipelines.plot.hfc_plot import run_plot_hfc
 
     options = PlotHFCRunOptions.from_namespace(uargs)
 
@@ -147,8 +147,8 @@ def plot_hfc_cli(uargs: argparse.Namespace, runtime: RuntimeSettings) -> int:
 def extract_dia_cli(uargs: argparse.Namespace, runtime: RuntimeSettings) -> int:
     """Thin CLI wrapper for extract_dia pipeline."""
 
-    from simpnmr.app.params.options import ExtractDiaRunOptions
-    from simpnmr.app.pipelines.extract.dia_extract import run_extract_dia
+    from paranmr.app.params.options import ExtractDiaRunOptions
+    from paranmr.app.pipelines.extract.dia_extract import run_extract_dia
 
     options = ExtractDiaRunOptions.from_namespace(uargs)
 
@@ -162,8 +162,8 @@ def extract_dia_cli(uargs: argparse.Namespace, runtime: RuntimeSettings) -> int:
 def get_sh_cli(uargs: argparse.Namespace, runtime: RuntimeSettings) -> int:
     """Thin CLI wrapper for get_sh workflow."""
 
-    from simpnmr.app.params.options import GetSHRunOptions
-    from simpnmr.app.pipelines.get_sh import run_get_sh
+    from paranmr.app.params.options import GetSHRunOptions
+    from paranmr.app.pipelines.get_sh import run_get_sh
 
     options = GetSHRunOptions.from_namespace(uargs)
 
@@ -173,8 +173,8 @@ def get_sh_cli(uargs: argparse.Namespace, runtime: RuntimeSettings) -> int:
 def benchmark_a_fc_cli(uargs: argparse.Namespace, runtime: RuntimeSettings) -> int:
     """Thin CLI wrapper for the A_fc benchmark pipeline."""
 
-    from simpnmr.app.params.options import BenchmarkAfcRunOptions
-    from simpnmr.app.pipelines.benchmarks.hyperfine.a_fc import run_benchmark_a_fc
+    from paranmr.app.params.options import BenchmarkAfcRunOptions
+    from paranmr.app.pipelines.benchmarks.hyperfine.a_fc import run_benchmark_a_fc
 
     config = cfg.AfcBenchmarkConfig.from_file(uargs.input_file)
     options = BenchmarkAfcRunOptions.from_namespace(uargs)
@@ -185,8 +185,8 @@ def benchmark_a_fc_cli(uargs: argparse.Namespace, runtime: RuntimeSettings) -> i
 def benchmark_a_sd_cli(uargs: argparse.Namespace, runtime: RuntimeSettings) -> int:
     """Thin CLI wrapper for the A_sd benchmark pipeline."""
 
-    from simpnmr.app.params.options import BenchmarkAsdRunOptions
-    from simpnmr.app.pipelines.benchmarks.hyperfine.a_sd import run_benchmark_a_sd
+    from paranmr.app.params.options import BenchmarkAsdRunOptions
+    from paranmr.app.pipelines.benchmarks.hyperfine.a_sd import run_benchmark_a_sd
 
     config = cfg.AsdBenchmarkConfig.from_file(uargs.input_file)
     options = BenchmarkAsdRunOptions.from_namespace(uargs)
@@ -211,7 +211,7 @@ def read_args(arg_list=None):
     """
 
     epilog = (
-        "To display options for a specific program, use\n\n      simpnmr SUBPROGRAM -h"
+        "To display options for a specific program, use\n\n      paranmr SUBPROGRAM -h"
     )
 
     parser = argparse.ArgumentParser(description=description, epilog=epilog)
@@ -233,7 +233,7 @@ def read_args(arg_list=None):
     parser.add_argument(
         "--version",
         action="version",
-        version=f"simpnmr {__version__}",
+        version=f"paranmr {__version__}",
     )
 
     parser.add_argument(
@@ -517,7 +517,7 @@ def read_args(arg_list=None):
 
     plot_hfc_iso.set_defaults(func=plot_hfc_iso_ax_cli)
 
-    plot_hfc_iso.add_argument("input_file", type=str, help=("simpnmr Input file"))
+    plot_hfc_iso.add_argument("input_file", type=str, help=("paranmr Input file"))
 
     plot_hfc_iso.add_argument("--save", action="store_true", help=("Save plot to file"))
 
@@ -643,7 +643,7 @@ def read_args(arg_list=None):
     plot_shift_tdep.set_defaults(func=plot_shift_tdep_cli)
 
     plot_shift_tdep.add_argument(
-        "experiment_files", type=str, nargs="+", help=("simpnmr experiment.csv files")
+        "experiment_files", type=str, nargs="+", help=("paranmr experiment.csv files")
     )
 
     fit_corr_time = subparsers.add_parser(

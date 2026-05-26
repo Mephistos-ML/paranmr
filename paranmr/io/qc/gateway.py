@@ -16,8 +16,8 @@ from abc import ABC, abstractmethod
 import numpy as np
 import numpy.typing as npt
 
-from simpnmr.core.util.text import subtitle, title
-from simpnmr.io.qc.backends.gaussian.detect import (  # noqa
+from paranmr.core.util.text import subtitle, title
+from paranmr.io.qc.backends.gaussian.detect import (  # noqa
     GAUSSIAN_09_SIGNATURE,
     GAUSSIAN_16_SIGNATURE,
     GAUSSIAN_SIGNATURE,
@@ -25,14 +25,14 @@ from simpnmr.io.qc.backends.gaussian.detect import (  # noqa
     is_gaussian_16,
     is_gaussian_log,
 )
-from simpnmr.io.qc.backends.gaussian.elstate import read_gaussian_log_spin  # noqa
-from simpnmr.io.qc.backends.gaussian.geom import read_gaussian_log_xyz  # noqa
-from simpnmr.io.qc.backends.gaussian.hfc import read_gaussian_log_a_tensors  # noqa
-from simpnmr.io.qc.backends.gaussian.shield import (  # noqa
+from paranmr.io.qc.backends.gaussian.elstate import read_gaussian_log_spin  # noqa
+from paranmr.io.qc.backends.gaussian.geom import read_gaussian_log_xyz  # noqa
+from paranmr.io.qc.backends.gaussian.hfc import read_gaussian_log_a_tensors  # noqa
+from paranmr.io.qc.backends.gaussian.shield import (  # noqa
     read_gaussian09_log_cs,
     read_gaussian16_log_cs,
 )
-from simpnmr.io.qc.backends.orca.detect import (
+from paranmr.io.qc.backends.orca.detect import (
     ORCA_A5_SIGNATURE,  # noqa
     ORCA_A6_SIGNATURE,  # noqa
     ORCA_SIGNATURE,  # noqa
@@ -41,33 +41,33 @@ from simpnmr.io.qc.backends.orca.detect import (
     is_orca_output,  # noqa
     is_orca_property,  # noqa
 )
-from simpnmr.io.qc.backends.orca.elstate import read_orca_spin  # noqa
-from simpnmr.io.qc.backends.orca.geom import (  # noqa
+from paranmr.io.qc.backends.orca.elstate import read_orca_spin  # noqa
+from paranmr.io.qc.backends.orca.geom import (  # noqa
     read_orca5_output_xyz,
     read_orca5_property_xyz,
 )
-from simpnmr.io.qc.backends.orca.gtensor import (  # noqa
+from paranmr.io.qc.backends.orca.gtensor import (  # noqa
     read_g_tensor_ab_initio,
 )
-from simpnmr.io.qc.backends.orca.gtensor import (
+from paranmr.io.qc.backends.orca.gtensor import (
     read_g_tensor_dft as read_orca_g_tensor_dft,
 )
-from simpnmr.io.qc.backends.orca.ham import read_eff_hamiltonian_tensor  # noqa
-from simpnmr.io.qc.backends.orca.hfc import (  # noqa
+from paranmr.io.qc.backends.orca.ham import read_eff_hamiltonian_tensor  # noqa
+from paranmr.io.qc.backends.orca.hfc import (  # noqa
     read_orca5_output_a_tensors,
     read_orca5_property_a_tensors,
     read_orca6_output_a_tensors,
 )
-from simpnmr.io.qc.backends.orca.shield import (  # noqa
+from paranmr.io.qc.backends.orca.shield import (  # noqa
     read_orca5_output_cs,
     read_orca5_property_cs,
 )
-from simpnmr.io.qc.backends.orca.susc import read_orca_susceptibility  # noqa
-from simpnmr.io.qc.errors import (
+from paranmr.io.qc.backends.orca.susc import read_orca_susceptibility  # noqa
+from paranmr.io.qc.errors import (
     ReaderContractError,
     UnsupportedFileError,
 )
-from simpnmr.tools.coords import xyz_fmt as xyzf
+from paranmr.tools.coords import xyz_fmt as xyzf
 
 logger = logging.getLogger(__name__)
 

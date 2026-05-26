@@ -2,7 +2,7 @@ Templates
 =========
 
 
-Downloadable YAML templates for common workflows. Edit the input file paths and run ``simpnmr``.
+Downloadable YAML templates for common workflows. Edit the input file paths and run ``paranmr``.
 For parameter descriptions, see :doc:`Input Files <../user_guide/input_files>`.
 
 .. toctree::
@@ -34,5 +34,5 @@ After downloading a template:
 
 .. code-block:: bash
 
-   simpnmr predict predict.yml
-   simpnmr fit_susc fit.yml
+   paranmr predict predict.yml
+   paranmr fit_susc fit.yml

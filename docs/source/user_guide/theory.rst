@@ -3,14 +3,14 @@
 Theory
 ======
 
-Below, we outline the key models and equations implemented in ``simpnmr``.
+Below, we outline the key models and equations implemented in ``paranmr``.
 
 .. _TOTAL:
 
 Total shift
 -----------
 
-In ``simpnmr``, the diamagnetic, spin-dipolar, Fermi-contact,
+In ``paranmr``, the diamagnetic, spin-dipolar, Fermi-contact,
 Fermi-contact g-correction, and orbital contributions are treated as separate
 components of the total shift. The total
 predicted chemical shift is therefore written as
@@ -34,7 +34,7 @@ Diamagnetic shift
 
 When the diamagnetic contribution is obtained from DFT shielding data, a
 reference value is required in order to convert shielding into a chemical
-shift. In ``simpnmr``, the diamagnetic shift contribution is written as
+shift. In ``paranmr``, the diamagnetic shift contribution is written as
 
 .. math::
    :label: :eq: dia
@@ -58,7 +58,7 @@ when forming :math:`\delta^{\mathrm{TOTAL}}`.
 Spin-dipolar contribution
 -------------------------
 
-In ``simpnmr``, the contribution arising from the anisotropic magnetic
+In ``paranmr``, the contribution arising from the anisotropic magnetic
 susceptibility and the traceless spin-dipolar hyperfine interaction is treated
 as a separate spin-dipolar shift channel, denoted
 :math:`\delta^{\mathrm{SD}}`. This term depends on the anisotropic part of
@@ -77,7 +77,7 @@ single-point DFT calculation of :math:`\mathbf{A}^{\mathrm{SD}}`:
 
    \delta^{\mathrm{SD}}=\frac{1}{3} \operatorname{tr}\left(\Delta \boldsymbol{\chi} \cdot \mathbf{A}^{\mathrm{SD}}\right)
 
-In ``simpnmr``, this defines the spin-dipolar contribution independently of
+In ``paranmr``, this defines the spin-dipolar contribution independently of
 the FC, FC g-correction, and orbital shift terms.
 
 .. note::
@@ -140,7 +140,7 @@ the spin-only magnetic susceptibility:
 
     \delta^{\mathrm{FC}}=\chi_{iso}^S A^{FC}
 
-In ``simpnmr``, :math:`\delta^{\mathrm{FC}}` is evaluated from the isotropic
+In ``paranmr``, :math:`\delta^{\mathrm{FC}}` is evaluated from the isotropic
 part of the Fermi-contact hyperfine tensor, i.e. from
 :math:`\frac{1}{3}\operatorname{tr}(\mathbf{A}^{\mathrm{FC}})`, where the spin-only magnetic susceptibility in SI units is:
 
@@ -158,7 +158,7 @@ magneton, :math:`\mathrm{g}_{\mathrm{e}}` is the free-electron g-factor,
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 In order to account for the effect of :math:`\mathbf{g}_{\mathrm{ab-initio}}`
-anisotropy on the FC term, ``simpnmr`` treats the corresponding correction as
+anisotropy on the FC term, ``paranmr`` treats the corresponding correction as
 a separate contribution.
 
 .. math::
@@ -188,7 +188,7 @@ anisotropy.
 Orbital shift contribution
 --------------------------
 
-In ``simpnmr``, the orbital contribution is treated as two additional shift
+In ``paranmr``, the orbital contribution is treated as two additional shift
 channels, :math:`\delta^{\mathrm{ORB}}_{\mathrm{iso}}` and
 :math:`\delta^{\mathrm{ORB}}_{\mathrm{aniso}}`. These do not modify the
 definitions of :math:`\delta^{\mathrm{SD}}`, :math:`\delta^{\mathrm{FC}}`, or
@@ -234,7 +234,7 @@ tensor from the same QC source.
 
    Another common source of confusion is the role of
    :math:`\mathbf{A}^{\mathrm{SD}}` in the orbital expressions above. In
-   ``simpnmr``, :math:`\mathbf{A}^{\mathrm{SD}}` still defines the
+   ``paranmr``, :math:`\mathbf{A}^{\mathrm{SD}}` still defines the
    spin-dipolar term on its own, while the orbital term is evaluated separately
    from the transformed combination
    :math:`\mathbf{A}^{\mathrm{SD}}+\mathbf{A}^{\mathrm{ORB}}`.

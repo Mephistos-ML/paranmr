@@ -5,24 +5,24 @@
 
 import os
 
-from simpnmr.app.params.options import BenchmarkAsdRunOptions
-from simpnmr.app.pipelines.benchmarks.hyperfine.runner import (
+from paranmr.app.params.options import BenchmarkAsdRunOptions
+from paranmr.app.pipelines.benchmarks.hyperfine.runner import (
     plot_hyperfine_benchmark_summary,
     plot_hyperfine_functional_max_summary,
 )
-from simpnmr.app.pipelines.benchmarks.hyperfine.sources import (
+from paranmr.app.pipelines.benchmarks.hyperfine.sources import (
     group_loaded_sources_by_functional,
     load_hyperfine_benchmark_sources,
 )
-from simpnmr.core.benchmarks.hyperfine.a_sd import (
+from paranmr.core.benchmarks.hyperfine.a_sd import (
     summarize_a_sd_max_by_nucleus,
     summarize_a_sd_ranges_by_functional_and_nucleus,
 )
-from simpnmr.viz.plots.benchmarks import (
+from paranmr.viz.plots.benchmarks import (
     plot_a_sd_functional_max_curve,
     plot_a_sd_spread,
 )
-from simpnmr.viz.style.theme import apply_profile
+from paranmr.viz.style.theme import apply_profile
 
 
 def run_benchmark_a_sd(config, options: BenchmarkAsdRunOptions | None = None) -> int:

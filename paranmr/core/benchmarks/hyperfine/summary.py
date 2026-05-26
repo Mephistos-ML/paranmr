@@ -11,7 +11,7 @@ from typing import Any
 
 import numpy as np
 
-from simpnmr.core.domain.mol import Molecule
+from paranmr.core.domain.mol import Molecule
 
 
 def summarize_hyperfine_metric_ranges_by_functional_and_nucleus(

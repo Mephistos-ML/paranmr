@@ -10,8 +10,8 @@ from matplotlib import pyplot as plt
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 
-from simpnmr.app.params.plot_cfg import PlotProfile
-from simpnmr.viz.layout.figure import FigureVariant, get_figsize
+from paranmr.app.params.plot_cfg import PlotProfile
+from paranmr.viz.layout.figure import FigureVariant, get_figsize
 
 
 def create_canvas(

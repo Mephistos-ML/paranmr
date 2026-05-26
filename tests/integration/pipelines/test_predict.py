@@ -22,7 +22,7 @@ def test_predict_with_qc_hfc_and_qc_susceptibility():
     relaxation-enabled prediction workflow.
     """
     cwd = Path("examples/P3FeCl/SIMULATIONS/Prediction")
-    cmd = ["simpnmr", "--hide", "predict", "P3FeCl_Prediction.yml"]
+    cmd = ["paranmr", "--hide", "predict", "P3FeCl_Prediction.yml"]
     result = subprocess.run(cmd, capture_output=True, text=True, cwd=cwd)
 
     if result.returncode != 0 and "missing" in result.stderr.lower():
@@ -46,7 +46,7 @@ def test_predict_with_pdip_hfc_and_csv_susceptibility():
     including the relaxation-enabled prediction workflow.
     """
     cwd = Path("examples/DyL1/SIMULATIONS/Prediction")
-    cmd = ["simpnmr", "--hide", "predict", "DyL1_1H_Prediction.yml"]
+    cmd = ["paranmr", "--hide", "predict", "DyL1_1H_Prediction.yml"]
     result = subprocess.run(cmd, capture_output=True, text=True, cwd=cwd)
 
     if result.returncode != 0 and "missing" in result.stderr.lower():

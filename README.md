@@ -1,12 +1,12 @@
-# SimpNMR
+# ParaNMR
 
-<img src="https://gitlab.com/suturina-group/simpnmr/-/raw/main/docs/source/_static/simpnmg-full-logo.png" width="300">
+<img src="https://gitlab.com/suturina-group/paranmr/-/raw/main/docs/source/_static/simpnmg-full-logo.png" width="300">
 
-[![Docs](https://img.shields.io/badge/docs-simpnmr.org-blue)](https://simpnmr.org/)
-[![PyPI](https://img.shields.io/pypi/v/simpnmr.svg)](https://pypi.org/project/simpnmr/)
-[![License](https://img.shields.io/badge/license-GPL--3.0--or--later-green)](https://gitlab.com/suturina-group/simpnmr/-/blob/main/LICENSE)
+[![Docs](https://img.shields.io/badge/docs-paranmr.org-blue)](https://paranmr.org/)
+[![PyPI](https://img.shields.io/pypi/v/paranmr.svg)](https://pypi.org/project/paranmr/)
+[![License](https://img.shields.io/badge/license-GPL--3.0--or--later-green)](https://gitlab.com/suturina-group/paranmr/-/blob/main/LICENSE)
 
-**SimpNMR** is an open-source Python toolkit for prediction, fitting, and analysis
+**ParaNMR** is an open-source Python toolkit for prediction, fitting, and analysis
 of paramagnetic NMR spectra based on experimental data and ab initio calculations.
 
 ## Features
@@ -18,19 +18,19 @@ of paramagnetic NMR spectra based on experimental data and ab initio calculation
 ## Installation
 
 ```bash
-pip install simpnmr
-simpnmr --help
+pip install paranmr
+paranmr --help
 ```
 
 ## Quick example
 
 ```bash
-simpnmr predict input.yml
+paranmr predict input.yml
 ```
 
 ## Documentation
 
-👉 https://simpnmr.org
+👉 https://paranmr.org
 
 ## Project status
 
@@ -46,11 +46,11 @@ Please use GitLab Issues for bug reports and feature requests.
 Development guidelines, architecture, and release policies are documented in the
 Developer Guide:
 
-👉 https://simpnmr.org/developer_guide/
+👉 https://paranmr.org/developer_guide/
 
 ## Citation
 
-If you use SimpNMR in academic work, please cite the software and the specific
+If you use ParaNMR in academic work, please cite the software and the specific
 version used. A DOI record will be added in the future.
 
 ## License

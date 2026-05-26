@@ -11,7 +11,7 @@ import numpy as np
 import numpy.linalg as la
 import numpy.typing as npt
 
-from simpnmr.io.qc.errors import MissingSectionError
+from paranmr.io.qc.errors import MissingSectionError
 
 
 def _read_gaussian_log_fc_values(file_name: str, n_atoms: int) -> npt.NDArray:

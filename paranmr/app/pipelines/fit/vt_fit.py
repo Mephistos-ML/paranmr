@@ -16,21 +16,21 @@ from typing import Any, Sequence
 import numpy as np
 
 # Application layer
-from simpnmr.app.loaders.sh_load import load_g_tensor_ab_initio
-from simpnmr.app.loaders.susc_load import load_susceptibilities
-from simpnmr.app.policies.susc import resolve_susceptibility_source
+from paranmr.app.loaders.sh_load import load_g_tensor_ab_initio
+from paranmr.app.loaders.susc_load import load_susceptibilities
+from paranmr.app.policies.susc import resolve_susceptibility_source
 
 # Core / domain
-from simpnmr.core.fitting import vt
-from simpnmr.core.phys.susc import get_g_corr_iso_susc
+from paranmr.core.fitting import vt
+from paranmr.core.phys.susc import get_g_corr_iso_susc
 
 # IO layer
-from simpnmr.io.csv.fit import save_slope_intercept
-from simpnmr.io.qc import gateway as rdrs
+from paranmr.io.csv.fit import save_slope_intercept
+from paranmr.io.qc import gateway as rdrs
 
 # Visualisation
-from simpnmr.viz.plots.susc import plot_exp_vs_ab_initio, plot_isoaxrho
-from simpnmr.viz.style.theme import apply_profile
+from paranmr.viz.plots.susc import plot_exp_vs_ab_initio, plot_isoaxrho
+from paranmr.viz.style.theme import apply_profile
 
 logger = logging.getLogger(__name__)
 

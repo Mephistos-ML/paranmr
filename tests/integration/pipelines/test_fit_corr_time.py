@@ -22,7 +22,7 @@ def test_fit_corr_time():
     produces the expected diagnostics CSV artifact.
     """
     cwd = Path("examples/FeH/SIMULATIONS/Fit_Correlation_Time")
-    cmd = ["simpnmr", "--hide", "fit_corr_time", "FeH_fit_corr_time.yml"]
+    cmd = ["paranmr", "--hide", "fit_corr_time", "FeH_fit_corr_time.yml"]
     result = subprocess.run(cmd, capture_output=True, text=True, cwd=cwd)
 
     if result.returncode != 0 and "missing" in result.stderr.lower():

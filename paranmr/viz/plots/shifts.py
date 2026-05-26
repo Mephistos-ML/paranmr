@@ -15,13 +15,13 @@ import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 import numpy as np
 
-from simpnmr.core.domain.exp import Experiment
-from simpnmr.core.domain.mol import Molecule
-from simpnmr.viz.layout.canvas import create_canvas
-from simpnmr.viz.layout.export import render_figure
-from simpnmr.viz.layout.violin import set_violin_colours
-from simpnmr.viz.style.theme import PlotSpec
-from simpnmr.viz.utils.fmt import isotope_format
+from paranmr.core.domain.exp import Experiment
+from paranmr.core.domain.mol import Molecule
+from paranmr.viz.layout.canvas import create_canvas
+from paranmr.viz.layout.export import render_figure
+from paranmr.viz.layout.violin import set_violin_colours
+from paranmr.viz.style.theme import PlotSpec
+from paranmr.viz.utils.fmt import isotope_format
 
 logger = logging.getLogger(__name__)
 

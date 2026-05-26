@@ -13,11 +13,11 @@ import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 import numpy as np
 
-from simpnmr.core.domain.mol import Nucleus
-from simpnmr.viz.layout.canvas import create_canvas
-from simpnmr.viz.layout.export import render_figure
-from simpnmr.viz.style.theme import PlotSpec
-from simpnmr.viz.utils.tensor_comp import comp2ind
+from paranmr.core.domain.mol import Nucleus
+from paranmr.viz.layout.canvas import create_canvas
+from paranmr.viz.layout.export import render_figure
+from paranmr.viz.style.theme import PlotSpec
+from paranmr.viz.utils.tensor_comp import comp2ind
 
 logger = logging.getLogger(__name__)
 

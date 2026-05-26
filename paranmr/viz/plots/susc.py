@@ -12,11 +12,11 @@ import logging
 import matplotlib.ticker as ticker
 import numpy as np
 
-from simpnmr.viz.layout.canvas import create_canvas, create_header_plot_canvas
-from simpnmr.viz.layout.export import render_figure
-from simpnmr.viz.layout.table import render_compact_table
-from simpnmr.viz.style.theme import PlotSpec
-from simpnmr.viz.utils.uncertainty import format_compact_uncertainty
+from paranmr.viz.layout.canvas import create_canvas, create_header_plot_canvas
+from paranmr.viz.layout.export import render_figure
+from paranmr.viz.layout.table import render_compact_table
+from paranmr.viz.style.theme import PlotSpec
+from paranmr.viz.utils.uncertainty import format_compact_uncertainty
 
 logger = logging.getLogger(__name__)
 
@@ -284,7 +284,7 @@ def plot_exp_vs_ab_initio(
             )
         y_fit = np.asarray(fit_y, dtype=float)
 
-        # Fitted data using SimpNMR
+        # Fitted data using ParaNMR
         ax.plot(
             inv_t_plot,
             y_fit,

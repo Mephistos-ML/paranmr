@@ -15,7 +15,7 @@ import logging
 import numpy as np
 import pandas as pd
 
-from simpnmr.io.csv.csv_util import read_csv_safe, write_csv_safe
+from paranmr.io.csv.csv_util import read_csv_safe, write_csv_safe
 
 logger = logging.getLogger(__name__)
 

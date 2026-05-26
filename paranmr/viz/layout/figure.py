@@ -8,7 +8,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Literal
 
-from simpnmr.app.params.plot_cfg import PlotProfile
+from paranmr.app.params.plot_cfg import PlotProfile
 
 FigureVariant = Literal[
     "horizontal",

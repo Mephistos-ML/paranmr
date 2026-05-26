@@ -12,11 +12,11 @@ from matplotlib import pyplot as plt
 from matplotlib import ticker
 from matplotlib.colors import to_rgba
 
-from simpnmr.viz.layout.canvas import create_canvas, create_header_plot_canvas
-from simpnmr.viz.layout.export import render_figure
-from simpnmr.viz.layout.label import resolve_label_layout
-from simpnmr.viz.layout.table import render_compact_table
-from simpnmr.viz.style.theme import PlotSpec
+from paranmr.viz.layout.canvas import create_canvas, create_header_plot_canvas
+from paranmr.viz.layout.export import render_figure
+from paranmr.viz.layout.label import resolve_label_layout
+from paranmr.viz.layout.table import render_compact_table
+from paranmr.viz.style.theme import PlotSpec
 
 logger = logging.getLogger(__name__)
 

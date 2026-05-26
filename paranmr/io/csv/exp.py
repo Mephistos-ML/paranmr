@@ -14,9 +14,9 @@ from typing import Iterable, List
 
 import pandas as pd
 
-from simpnmr.core.domain.exp import Experiment, Signal
-from simpnmr.io.csv.csv_util import read_csv_safe, write_csv_safe
-from simpnmr.io.text.parse import find_first_group
+from paranmr.core.domain.exp import Experiment, Signal
+from paranmr.io.csv.csv_util import read_csv_safe, write_csv_safe
+from paranmr.io.text.parse import find_first_group
 
 logger = logging.getLogger(__name__)
 

@@ -1,7 +1,7 @@
 Home
 ====
 
-``simpnmr`` is a Python package for the analysis of solution NMR data of
+``paranmr`` is a Python package for the analysis of solution NMR data of
 paramagnetic metal complexes using computational chemistry methods.
 
 The package provides reproducible, workflow-driven tools for:
@@ -24,13 +24,13 @@ calculations transparent, reproducible, and suitable for systematic studies.
       :link-type: doc
 
       Installation instructions, workflows, and practical guidance for running
-      prediction and fitting calculations with ``simpnmr``.
+      prediction and fitting calculations with ``paranmr``.
 
    .. grid-item-card:: Tutorials
       :link: tutorials/index
       :link-type: doc
 
-      Downloadable example materials for the SimpNMR tutorials and workshop,
+      Downloadable example materials for the ParaNMR tutorials and workshop,
       provided as ready-to-use files from the repository.
 
    .. grid-item-card:: Developer Guide

@@ -9,9 +9,9 @@ derives ZFS parameters for S > 1/2.
 
 import logging
 
-from simpnmr.core.sh import math
-from simpnmr.io.csv.fit import read_chiT_regression_csv
-from simpnmr.io.csv.sh import write_sh_results_csv
+from paranmr.core.sh import math
+from paranmr.io.csv.fit import read_chiT_regression_csv
+from paranmr.io.csv.sh import write_sh_results_csv
 
 logger = logging.getLogger(__name__)
 

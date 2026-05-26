@@ -9,7 +9,7 @@ import numpy as np
 import numpy.linalg as la
 from numpy.typing import ArrayLike, NDArray
 
-from simpnmr.core.const.physics import GE
+from paranmr.core.const.physics import GE
 
 
 class Hyperfine:

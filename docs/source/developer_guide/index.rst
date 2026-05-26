@@ -8,14 +8,14 @@ Developer Guide
       :link: architecture
       :link-type: doc
 
-      High-level overview of the ``simpnmr`` codebase architecture, layering,
+      High-level overview of the ``paranmr`` codebase architecture, layering,
       and execution model.
 
    .. grid-item-card:: Contributing
       :link: contributing
       :link-type: doc
 
-      Guidelines for contributing code, documentation, and improvements to ``simpnmr``.
+      Guidelines for contributing code, documentation, and improvements to ``paranmr``.
 
    .. grid-item-card:: Bug Reports
       :link: bugs

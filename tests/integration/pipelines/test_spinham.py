@@ -20,7 +20,7 @@ def test_get_sh_with_isoaxrho_fit_csv_runs_successfully():
     execution together with creation of the expected output CSV.
     """
     cwd = Path("tests/data/pipelines/spinham")
-    cmd = ["simpnmr", "get_sh", "--spin", "2.0", "isoaxrho_fit.csv"]
+    cmd = ["paranmr", "get_sh", "--spin", "2.0", "isoaxrho_fit.csv"]
     result = subprocess.run(cmd, capture_output=True, text=True, cwd=cwd)
 
     if result.returncode != 0 and "missing" in result.stderr.lower():

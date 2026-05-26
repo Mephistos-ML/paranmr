@@ -4,7 +4,7 @@ This module contains small helpers to detect whether a given text output belongs
 to the ORCA quantum-chemistry package.
 
 Detection is intentionally simple and mirrors the legacy logic previously
-implemented in `simpnmr.io.qc.readers`.
+implemented in `paranmr.io.qc.readers`.
 """
 
 from __future__ import annotations

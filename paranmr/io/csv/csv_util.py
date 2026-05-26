@@ -13,8 +13,8 @@ import os
 
 import pandas as pd
 
-from simpnmr.__version__ import __version__
-from simpnmr.io.csv.csv_valid import validate_csv_delimiters
+from paranmr.__version__ import __version__
+from paranmr.io.csv.csv_valid import validate_csv_delimiters
 
 
 def read_csv_safe(
@@ -88,7 +88,7 @@ def write_csv_safe(
     with open(file_name, "w", encoding=encoding, newline=newline) as fh:
         timestamp = datetime.datetime.now().strftime("%H:%M:%S %d-%m-%Y ")
         fh.write(
-            f"# This file was generated with SimpNMR v{__version__} at {timestamp}\n"
+            f"# This file was generated with ParaNMR v{__version__} at {timestamp}\n"
         )
         if comment is not None:
             if isinstance(comment, str):

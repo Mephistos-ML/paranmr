@@ -21,7 +21,7 @@ def test_calc_pcs_iso_with_csv_susceptibility_creates_cube_file():
     """
     cwd = Path("tests/data/pipelines/pcs_isosurface/csv_susceptibility_dyl1")
     cmd = [
-        "simpnmr",
+        "paranmr",
         "calc_pcs_iso",
         "Chi_DyL1_from_B20.csv",
         "302.15",
@@ -52,7 +52,7 @@ def test_calc_pcs_iso_with_nevpt2_susceptibility_creates_cube_file():
     """
     cwd = Path("tests/data/pipelines/pcs_isosurface/nevpt2_susceptibility_p3fecl")
     cmd = [
-        "simpnmr",
+        "paranmr",
         "calc_pcs_iso",
         "P3FeCl_Susceptibility_NEVPT2.out",
         "298.00",

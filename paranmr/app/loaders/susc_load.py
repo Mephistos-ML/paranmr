@@ -13,17 +13,17 @@ from typing import Any
 
 import numpy as np
 
-from simpnmr.app.policies.susc import resolve_susceptibility_source
-from simpnmr.core.build.susc import (
+from paranmr.app.policies.susc import resolve_susceptibility_source
+from paranmr.core.build.susc import (
     build_chi_d_tensor_from_csv,
     build_chi_d_tensor_from_orca,
     build_chi_iso_from_csv,
     build_chi_iso_g_corr,
     build_chi_iso_spin_only,
 )
-from simpnmr.core.domain.tensor import Susceptibility
-from simpnmr.io.csv.susc import read_susceptibilities_csv
-from simpnmr.io.qc import gateway as rdrs
+from paranmr.core.domain.tensor import Susceptibility
+from paranmr.io.csv.susc import read_susceptibilities_csv
+from paranmr.io.qc import gateway as rdrs
 
 logger = logging.getLogger(__name__)
 

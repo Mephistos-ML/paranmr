@@ -17,7 +17,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from enum import Enum
 
-from simpnmr.core.domain.mol import Molecule
+from paranmr.core.domain.mol import Molecule
 
 
 class OrbitalContribution(str, Enum):

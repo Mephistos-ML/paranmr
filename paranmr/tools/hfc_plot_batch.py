@@ -19,9 +19,9 @@ import yaml
 import yaml_include
 from matplotlib.lines import Line2D
 
-from simpnmr.app.loaders.labels_load import load_chem_labels_from_csv
-from simpnmr.app.loaders.mol_load import load_molecule_from_qca
-from simpnmr.core.domain.mol import Molecule
+from paranmr.app.loaders.labels_load import load_chem_labels_from_csv
+from paranmr.app.loaders.mol_load import load_molecule_from_qca
+from paranmr.core.domain.mol import Molecule
 
 mpl.rc("xtick", labelsize=12)
 mpl.rc("ytick", labelsize=12)

@@ -7,7 +7,7 @@ Provides helpers to evaluate effective g-values and angular momentum parameters
 from spin, orbital, and total angular momentum quantum numbers.
 """
 
-from simpnmr.core.const.physics import GE
+from paranmr.core.const.physics import GE
 
 
 def calc_g_eff(spin: float, orbit: float, total_momentum_J: float | None):

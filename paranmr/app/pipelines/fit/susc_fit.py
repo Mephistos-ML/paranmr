@@ -14,43 +14,43 @@ import numpy as np
 from pathos import multiprocessing as mp
 
 # Application layer
-from simpnmr.app.loaders.dia_load import load_diamagnetic_shifts
-from simpnmr.app.loaders.elstate_load import load_electronic_state
-from simpnmr.app.loaders.exp_load import load_experiments, save_experiment
-from simpnmr.app.loaders.hfc_load import load_hyperfines
-from simpnmr.app.loaders.labels_load import load_chem_labels_from_csv
-from simpnmr.app.loaders.mol_load import load_base_molecule
-from simpnmr.app.loaders.paramag_centre_load import load_paramagnetic_centre
-from simpnmr.app.loaders.sh_load import load_g_tensor_dft
-from simpnmr.app.params.options import FitSuscRunOptions
-from simpnmr.app.pipelines.fit.vt_fit import fit_vt
-from simpnmr.app.policies.assignment import resolve_assignment_search_settings
-from simpnmr.app.policies.hfc import has_missing_selected_chem_labels
-from simpnmr.app.policies.linewidth import resolve_output_linewidths
-from simpnmr.app.policies.susc import resolve_susc_fit_variables
+from paranmr.app.loaders.dia_load import load_diamagnetic_shifts
+from paranmr.app.loaders.elstate_load import load_electronic_state
+from paranmr.app.loaders.exp_load import load_experiments, save_experiment
+from paranmr.app.loaders.hfc_load import load_hyperfines
+from paranmr.app.loaders.labels_load import load_chem_labels_from_csv
+from paranmr.app.loaders.mol_load import load_base_molecule
+from paranmr.app.loaders.paramag_centre_load import load_paramagnetic_centre
+from paranmr.app.loaders.sh_load import load_g_tensor_dft
+from paranmr.app.params.options import FitSuscRunOptions
+from paranmr.app.pipelines.fit.vt_fit import fit_vt
+from paranmr.app.policies.assignment import resolve_assignment_search_settings
+from paranmr.app.policies.hfc import has_missing_selected_chem_labels
+from paranmr.app.policies.linewidth import resolve_output_linewidths
+from paranmr.app.policies.susc import resolve_susc_fit_variables
 
 # Core / domain
-from simpnmr.core.domain.exp import Experiment
-from simpnmr.core.domain.mol import Molecule
-from simpnmr.core.domain.tensor import Hyperfine
-from simpnmr.core.fitting import models
-from simpnmr.core.fitting.assign import (
+from paranmr.core.domain.exp import Experiment
+from paranmr.core.domain.mol import Molecule
+from paranmr.core.domain.tensor import Hyperfine
+from paranmr.core.fitting import models
+from paranmr.core.fitting.assign import (
     fit_with_hungarian_assignment,
     generate_assignment_permutations,
 )
-from simpnmr.core.pcs.isosurf import compute_pcs_isosurface
+from paranmr.core.pcs.isosurf import compute_pcs_isosurface
 
 # IO layer
-from simpnmr.io.csv.mol import save_molecule_to_csv
-from simpnmr.io.csv.susc import save_susc
-from simpnmr.io.cube.pcs_iso_write import write_pcs_cube
-from simpnmr.io.xyz import xyz_write
-from simpnmr.viz.plots.fitted_shifts import plot_fitted_shifts
+from paranmr.io.csv.mol import save_molecule_to_csv
+from paranmr.io.csv.susc import save_susc
+from paranmr.io.cube.pcs_iso_write import write_pcs_cube
+from paranmr.io.xyz import xyz_write
+from paranmr.viz.plots.fitted_shifts import plot_fitted_shifts
 
 # Visualisation
-from simpnmr.viz.plots.shifts import plot_shift_contrib, plot_shift_spread
-from simpnmr.viz.plots.spect import plot_pred_spectrum
-from simpnmr.viz.style.theme import apply_profile
+from paranmr.viz.plots.shifts import plot_shift_contrib, plot_shift_spread
+from paranmr.viz.plots.spect import plot_pred_spectrum
+from paranmr.viz.style.theme import apply_profile
 
 logger = logging.getLogger(__name__)
 

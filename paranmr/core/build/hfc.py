@@ -10,8 +10,8 @@ from typing import Any
 
 import numpy as np
 
-from simpnmr.core.conv.freq_to_ang import a_tensor_mhz_to_ang
-from simpnmr.core.domain.mol import Hyperfine, Molecule
+from paranmr.core.conv.freq_to_ang import a_tensor_mhz_to_ang
+from paranmr.core.domain.mol import Hyperfine, Molecule
 
 logger = logging.getLogger(__name__)
 

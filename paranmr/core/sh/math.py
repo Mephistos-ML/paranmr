@@ -12,8 +12,8 @@ import logging
 import numpy as np
 from sympy import Expr, nsolve, symbols
 
-from simpnmr.core.const.physics import GE, KB, C, H
-from simpnmr.core.util.uncertainty import delta_method_sigma
+from paranmr.core.const.physics import GE, KB, C, H
+from paranmr.core.util.uncertainty import delta_method_sigma
 
 logger = logging.getLogger(__name__)
 

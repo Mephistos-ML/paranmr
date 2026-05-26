@@ -9,7 +9,7 @@ in a readable tabular format.
 
 import logging
 
-from simpnmr.core.fitting import models
+from paranmr.core.fitting import models
 
 logger = logging.getLogger(__name__)
 

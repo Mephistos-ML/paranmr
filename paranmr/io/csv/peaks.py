@@ -12,7 +12,7 @@ from collections.abc import Mapping
 import numpy as np
 import pandas as pd
 
-from simpnmr.io.csv.csv_util import write_csv_safe
+from paranmr.io.csv.csv_util import write_csv_safe
 
 logger = logging.getLogger(__name__)
 

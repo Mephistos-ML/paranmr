@@ -13,13 +13,13 @@ import re
 import numpy as np
 from numpy.typing import ArrayLike, NDArray
 
-from simpnmr.core.const import isotopes, ptable
-from simpnmr.core.domain.relax import RelaxationEvaluation
-from simpnmr.core.domain.tensor import Hyperfine, Shift, Susceptibility
-from simpnmr.core.util import transform as tfm
-from simpnmr.core.util.arrays import flatten
-from simpnmr.core.util.text import subtitle, title
-from simpnmr.tools.coords import xyz_fmt as xyzf
+from paranmr.core.const import isotopes, ptable
+from paranmr.core.domain.relax import RelaxationEvaluation
+from paranmr.core.domain.tensor import Hyperfine, Shift, Susceptibility
+from paranmr.core.util import transform as tfm
+from paranmr.core.util.arrays import flatten
+from paranmr.core.util.text import subtitle, title
+from paranmr.tools.coords import xyz_fmt as xyzf
 
 logger = logging.getLogger(__name__)
 

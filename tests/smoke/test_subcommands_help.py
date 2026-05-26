@@ -13,5 +13,5 @@ import pytest
     ],
 )
 def test_simpnmr_subcommand_help(subcommand):
-    result = subprocess.run(["simpnmr", subcommand, "--help"], capture_output=True)
+    result = subprocess.run(["paranmr", subcommand, "--help"], capture_output=True)
     assert result.returncode == 0

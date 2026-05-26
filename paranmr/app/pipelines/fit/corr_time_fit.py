@@ -17,32 +17,32 @@ import numpy as np
 from scipy.optimize import curve_fit
 
 # Application layer
-from simpnmr.app.loaders.elstate_load import load_electronic_state
-from simpnmr.app.loaders.exp_load import load_experiments
-from simpnmr.app.loaders.hfc_load import load_hyperfines
-from simpnmr.app.loaders.labels_load import load_chem_labels_from_csv
-from simpnmr.app.loaders.mol_load import load_base_molecule
-from simpnmr.app.loaders.paramag_centre_load import load_paramagnetic_centre
-from simpnmr.app.params.options import FitCorrTimeRunOptions
-from simpnmr.app.policies.hfc import has_missing_selected_chem_labels
-from simpnmr.app.policies.relax import average_relaxation_rates_by_chem_label
+from paranmr.app.loaders.elstate_load import load_electronic_state
+from paranmr.app.loaders.exp_load import load_experiments
+from paranmr.app.loaders.hfc_load import load_hyperfines
+from paranmr.app.loaders.labels_load import load_chem_labels_from_csv
+from paranmr.app.loaders.mol_load import load_base_molecule
+from paranmr.app.loaders.paramag_centre_load import load_paramagnetic_centre
+from paranmr.app.params.options import FitCorrTimeRunOptions
+from paranmr.app.policies.hfc import has_missing_selected_chem_labels
+from paranmr.app.policies.relax import average_relaxation_rates_by_chem_label
 
 # Core / domain
-from simpnmr.core.const.gammas import NUCLEAR_GAMMAS
-from simpnmr.core.const.physics import EGAMMA
-from simpnmr.core.conv.ang_to_freq import angstrom_to_mhz
-from simpnmr.core.relaxation.eval import evaluate_relaxation_rates
+from paranmr.core.const.gammas import NUCLEAR_GAMMAS
+from paranmr.core.const.physics import EGAMMA
+from paranmr.core.conv.ang_to_freq import angstrom_to_mhz
+from paranmr.core.relaxation.eval import evaluate_relaxation_rates
 
 # Tools
-from simpnmr.core.util.strings import remove_numbers
+from paranmr.core.util.strings import remove_numbers
 
 # IO layer
-from simpnmr.io.csv.corr_time import save_corr_time_fit_data
-from simpnmr.io.xyz import xyz_write
+from paranmr.io.csv.corr_time import save_corr_time_fit_data
+from paranmr.io.xyz import xyz_write
 
 # Visualisation
-from simpnmr.viz.plots.corr_time import plot_corr_time_contrib, plot_corr_time_scatter
-from simpnmr.viz.style.theme import apply_profile
+from paranmr.viz.plots.corr_time import plot_corr_time_contrib, plot_corr_time_scatter
+from paranmr.viz.style.theme import apply_profile
 
 logger = logging.getLogger(__name__)
 

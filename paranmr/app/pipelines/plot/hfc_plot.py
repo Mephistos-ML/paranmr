@@ -9,11 +9,11 @@ hyperfine plots with optional saving and display.
 
 import os
 
-from simpnmr.app.loaders.labels_load import load_chem_labels_from_csv
-from simpnmr.app.loaders.mol_load import load_molecule_from_qca
-from simpnmr.app.params.options import PlotHFCRunOptions
-from simpnmr.viz.plots.hfc import plot_hyperfine, plot_hyperfine_spread
-from simpnmr.viz.style.theme import apply_profile
+from paranmr.app.loaders.labels_load import load_chem_labels_from_csv
+from paranmr.app.loaders.mol_load import load_molecule_from_qca
+from paranmr.app.params.options import PlotHFCRunOptions
+from paranmr.viz.plots.hfc import plot_hyperfine, plot_hyperfine_spread
+from paranmr.viz.style.theme import apply_profile
 
 
 def run_plot_hfc(

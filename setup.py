@@ -2,23 +2,23 @@
 
 import setuptools
 
-# Read version from simpnmr/__version__.py
+# Read version from paranmr/__version__.py
 version = {}
-with open("simpnmr/__version__.py", "r", encoding="utf-8") as f:
+with open("paranmr/__version__.py", "r", encoding="utf-8") as f:
     exec(f.read(), version)
 
 with open("README.md", "r", encoding="utf-8") as f:
     long_description = f.read()
 
 setuptools.setup(
-    name="simpnmr",
+    name="paranmr",
     version=version["__version__"],
     author="Suturina Group",
     author_email="",
     description="A package for working with paramagnetic NMR spectra",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://gitlab.com/suturina-group/simpnmr",
+    url="https://gitlab.com/suturina-group/paranmr",
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
@@ -46,10 +46,10 @@ setuptools.setup(
     },
     entry_points={
         "console_scripts": [
-            "simpnmr = simpnmr.cli.main:interface",
-            "plot_A_funcs = simpnmr.tools.hfc_plot_batch:main",
-            "plot_chi_funcs = simpnmr.tools.susc_plot_batch:main",
-            "xyz_to_chemlabel = simpnmr.tools.coords.chemcraft:main",
+            "paranmr = paranmr.cli.main:interface",
+            "plot_A_funcs = paranmr.tools.hfc_plot_batch:main",
+            "plot_chi_funcs = paranmr.tools.susc_plot_batch:main",
+            "xyz_to_chemlabel = paranmr.tools.coords.chemcraft:main",
         ]
     },
 )

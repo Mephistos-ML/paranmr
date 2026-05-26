@@ -9,7 +9,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Literal
 
-from simpnmr.core.domain.mol import Molecule
+from paranmr.core.domain.mol import Molecule
 
 AUTO_LINEWIDTH_FRACTION = 0.005
 LinewidthMode = Literal["auto", "relax"]

@@ -13,13 +13,13 @@ from dataclasses import replace
 import matplotlib.pyplot as plt
 import numpy as np
 
-from simpnmr.app.loaders.hfc_load import load_hyperfines
-from simpnmr.app.loaders.labels_load import load_chem_labels_from_csv
-from simpnmr.app.loaders.mol_load import load_base_molecule
-from simpnmr.app.params.options import PlotHFCIsoAxRunOptions
-from simpnmr.cfg import config as cfg
-from simpnmr.viz.plots.hfc import plot_hyperfine_iso_vs_ax
-from simpnmr.viz.style.theme import apply_profile
+from paranmr.app.loaders.hfc_load import load_hyperfines
+from paranmr.app.loaders.labels_load import load_chem_labels_from_csv
+from paranmr.app.loaders.mol_load import load_base_molecule
+from paranmr.app.params.options import PlotHFCIsoAxRunOptions
+from paranmr.cfg import config as cfg
+from paranmr.viz.plots.hfc import plot_hyperfine_iso_vs_ax
+from paranmr.viz.style.theme import apply_profile
 
 
 def run_plot_hfc_iso_ax(

@@ -14,8 +14,8 @@ import re
 import numpy as np
 import numpy.linalg as la
 
-from simpnmr.io.xyz import xyz_write
-from simpnmr.tools.coords import xyz_fmt
+from paranmr.io.xyz import xyz_write
+from paranmr.tools.coords import xyz_fmt
 
 logger = logging.getLogger(__name__)
 

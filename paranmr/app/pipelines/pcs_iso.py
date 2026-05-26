@@ -12,13 +12,13 @@ import os
 
 import numpy as np
 
-from simpnmr.app.loaders.susc_load import load_susceptibilities
-from simpnmr.app.params.options import CalcPcsIsoRunOptions
-from simpnmr.core.domain.tensor import Hyperfine
-from simpnmr.core.pcs.isosurf import compute_pcs_isosurface
-from simpnmr.io.cube.pcs_iso_write import write_pcs_cube
-from simpnmr.io.qc import gateway as rdrs
-from simpnmr.tools.coords import xyz_fmt as xyzf
+from paranmr.app.loaders.susc_load import load_susceptibilities
+from paranmr.app.params.options import CalcPcsIsoRunOptions
+from paranmr.core.domain.tensor import Hyperfine
+from paranmr.core.pcs.isosurf import compute_pcs_isosurface
+from paranmr.io.cube.pcs_iso_write import write_pcs_cube
+from paranmr.io.qc import gateway as rdrs
+from paranmr.tools.coords import xyz_fmt as xyzf
 
 logger = logging.getLogger(__name__)
 

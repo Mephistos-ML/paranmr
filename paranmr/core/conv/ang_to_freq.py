@@ -9,7 +9,7 @@ Provides helpers to convert hyperfine values using nuclear gyromagnetic ratios.
 import numpy as np
 from numpy.typing import NDArray
 
-from simpnmr.core.const.physics import EGAMMA, MU0, H
+from paranmr.core.const.physics import EGAMMA, MU0, H
 
 
 def angstrom_to_mhz(
