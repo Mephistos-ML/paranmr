@@ -1,7 +1,7 @@
 import subprocess
 
 
-def test_simpnmr_unknown_subcommand():
+def test_paranmr_unknown_subcommand():
     result = subprocess.run(
         ["paranmr", "definitely_not_a_command"], capture_output=True, text=True
     )
