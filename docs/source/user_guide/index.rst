@@ -8,6 +8,7 @@ User Guide
 
    installation
    workflows
+   benchmarks
    input_files
    standalone_cli
    output_files
@@ -28,6 +29,12 @@ User Guide
       :link-type: doc
 
       Overview of prediction and susceptibility fitting workflows supported by ``simpnmr``.
+
+   .. grid-item-card:: Benchmarks
+      :link: benchmarks
+      :link-type: doc
+
+      How to compare hyperfine ``A_fc`` and ``A_sd`` sources using dedicated benchmark workflows.
 
    .. grid-item-card:: Input Files
       :link: input_files
