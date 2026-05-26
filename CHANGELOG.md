@@ -2,6 +2,17 @@
 
 <!-- version list -->
 
+## v1.10.0 (2026-05-26)
+
+### Chores
+
+- **docs**: Update documentation and deployment URLs to GitHub Pages site
+  ([`f3fc228`](https://github.com/Mephistos-ML/paranmr/commit/f3fc2280106c7501b8c3e53ebd04d10e3e50152b))
+
+- **docs**: Update fork attribution and GitHub issue metadata
+  ([`ecefbbe`](https://github.com/Mephistos-ML/paranmr/commit/ecefbbe5d627eee3d22d9705f87bd64405d61a80))
+
+
 ## v1.9.1 (2026-05-05)
 
 ### Bug Fixes
