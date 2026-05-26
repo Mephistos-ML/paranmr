@@ -241,12 +241,12 @@ def read_args(arg_list=None):
         choices=["paper", "poster"],
         metavar="<str>",
         type=str,
-        default=os.environ.get("SIMPNMR_PLOT_PROFILE", "paper"),
+        default=os.environ.get("PARANMR_PLOT_PROFILE", "paper"),
         help=(
             "Global plotting profile used by all plot-generating workflows.\n"
             " - 'paper': compact typography for manuscripts\n"
             " - 'poster': larger typography for slides/posters\n"
-            "You can also set SIMPNMR_PLOT_PROFILE=paper|poster.\n"
+            "You can also set PARANMR_PLOT_PROFILE=paper|poster.\n"
             "Default: paper"
         ),
     )
@@ -261,12 +261,12 @@ def read_args(arg_list=None):
         choices=["default", "colorblind"],
         metavar="<str>",
         type=str,
-        default=os.environ.get("SIMPNMR_ACCESSIBILITY", "default"),
+        default=os.environ.get("PARANMR_ACCESSIBILITY", "default"),
         help=(
             "Accessibility mode for plots.\n"
             " - 'default': colour-only encoding (default)\n"
             " - 'colorblind': colour + pattern encoding for shift components\n"
-            "You can also set SIMPNMR_ACCESSIBILITY=default|colorblind."
+            "You can also set PARANMR_ACCESSIBILITY=default|colorblind."
         ),
     )
 
