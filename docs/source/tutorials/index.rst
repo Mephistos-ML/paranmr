@@ -2,7 +2,7 @@ Tutorials
 =========
 
 
-This section provides downloadable example materials for the SimpNMR tutorials
+This section provides downloadable example materials for the ParaNMR tutorials
 and workshop. The examples are distributed as a single bundle and are intended
 for hands-on use alongside the paper and the main documentation.
 
@@ -17,7 +17,7 @@ for hands-on use alongside the paper and the main documentation.
 
    .. grid-item-card:: Download examples
 
-      Download the full tutorial example bundle used for the SimpNMR
+      Download the full tutorial example bundle used for the ParaNMR
       tutorials and workshop.
 
       :download:`Download tutorial examples <../_downloads/examples.zip>`

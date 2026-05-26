@@ -73,7 +73,7 @@ def main():
     parser = argparse.ArgumentParser(
         description=(
             "This script converts annotated chemcraft .xyz files into a\n"
-            "chemlabels csv file for use with SimpNMR"
+            "chemlabels csv file for use with ParaNMR"
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )

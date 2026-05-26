@@ -1,4 +1,4 @@
-﻿# This file was generated with SimpNMR v1.6.0 at 15:28:53 14-03-2026 
+﻿# This file was generated with ParaNMR v1.6.0 at 15:28:53 14-03-2026 
 # T = 298.00 K
 # Coordinates and hyperfine tensors in this file are stored in the chi frame.
 atom_label (),chem_label (),x (Å),y (Å),z (Å),A_fc_iso (ppm Å^-3),A_sd_xx (ppm Å^-3),A_sd_xy (ppm Å^-3),A_sd_xz (ppm Å^-3),A_sd_yy (ppm Å^-3),A_sd_yz (ppm Å^-3),A_sd_zz (ppm Å^-3),δ_total_avg (ppm),δ_total (ppm),δ_dia (ppm),δ_pc (ppm),δ_fc_g_corr (ppm),δ_fc_spin_only (ppm),Δδ_fc_g_corr (ppm),linewidth (ppm)
