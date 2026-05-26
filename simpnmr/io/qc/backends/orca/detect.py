@@ -19,7 +19,8 @@ ORCA_A5_SIGNATURE = (
     "            '#,     ,#'  ##    ##  '#,     ,#' ,#      #,         ##   #,  ,#"
 )
 ORCA_A6_SIGNATURE = (
-    "            '#,     ,#'  ##    ##  '#,     ,#' ,#      #,     #,   #   #,  ,#"
+    "            '#,     ,#'  ##    ##  '#,     ,#' ,#      #,     #,   #   #,  ,#",
+    "            '#,     ,#'  ##    ##  '#,     ,#' ,#      #,     #,   #      #   ",
 )
 
 A_ORB_SIGNATURE = "A(ORB)"
@@ -80,7 +81,7 @@ def is_orca_a5_output(file_name: str) -> bool:
 def is_orca_a6_output(file_name: str) -> bool:
     with open(file_name, "r") as f:
         for line in f:
-            if ORCA_A6_SIGNATURE in line:
+            if any(signature in line for signature in ORCA_A6_SIGNATURE):
                 return True
     return False
 
