@@ -59,7 +59,7 @@ html_theme = "pydata_sphinx_theme"
 html_use_directory_uris = True
 
 # Canonical base URL for sitemap/canonical links.
-html_baseurl = "https://paranmr.org/"
+html_baseurl = "https://mephistos-ml.github.io/paranmr/"
 
 # Remove footer metadata (copyright and Sphinx attribution)
 html_show_copyright = False

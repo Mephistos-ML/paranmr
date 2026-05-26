@@ -2,7 +2,7 @@
 
 > Fork of the original [suturina-group/simpnmr](https://gitlab.com/suturina-group/simpnmr). The original work is maintained by Suturina Group; this repository is a fork under the new `paranmr` name.
 
-[![Docs](https://img.shields.io/badge/docs-paranmr.org-blue)](https://paranmr.org/)
+[![Docs](https://img.shields.io/badge/docs-paranmr.org-blue)](https://mephistos-ml.github.io/paranmr/)
 [![PyPI](https://img.shields.io/pypi/v/paranmr.svg)](https://pypi.org/project/paranmr/)
 [![License](https://img.shields.io/badge/license-GPL--3.0--or--later-green)](LICENSE)
 
@@ -30,7 +30,7 @@ paranmr predict input.yml
 
 ## Documentation
 
-👉 https://paranmr.org
+👉 https://mephistos-ml.github.io/paranmr/
 
 ## Project status
 
@@ -46,7 +46,7 @@ Please use GitHub Issues for bug reports and feature requests.
 Development guidelines, architecture, and release policies are documented in the
 Developer Guide:
 
-👉 https://paranmr.org/developer_guide/
+👉 https://mephistos-ml.github.io/paranmr/developer_guide/
 
 ## Citation
 
