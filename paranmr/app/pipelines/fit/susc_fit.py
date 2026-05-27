@@ -30,6 +30,7 @@ from paranmr.app.policies.linewidth import resolve_output_linewidths
 from paranmr.app.policies.susc import resolve_susc_fit_variables
 
 # Core / domain
+from paranmr.core.const.gammas import NUCLEAR_GAMMAS
 from paranmr.core.domain.exp import Experiment
 from paranmr.core.domain.mol import Molecule
 from paranmr.core.domain.tensor import Hyperfine
@@ -38,7 +39,16 @@ from paranmr.core.fitting.assign import (
     fit_with_hungarian_assignment,
     generate_assignment_permutations,
 )
+from paranmr.core.fitting.moments import (
+    gaussian_mixture_moments,
+    gaussian_peak_representation,
+)
 from paranmr.core.pcs.isosurf import compute_pcs_isosurface
+from paranmr.core.spectrum.kernels import (
+    gaussian_fwhm_to_sigma,
+    gaussian_height_from_area,
+)
+from paranmr.core.util.strings import remove_numbers
 
 # IO layer
 from paranmr.io.csv.mol import save_molecule_to_csv
@@ -53,6 +63,13 @@ from paranmr.viz.plots.spect import plot_pred_spectrum
 from paranmr.viz.style.theme import apply_profile
 
 logger = logging.getLogger(__name__)
+
+_PINK_LOG = "\033[95m"
+_RESET_LOG = "\033[0m"
+
+
+def _pink_log(message: str) -> str:
+    return f"{_PINK_LOG}{message}{_RESET_LOG}"
 
 
 def run_fit_susc(config, options: FitSuscRunOptions | None = None) -> int:
@@ -203,6 +220,10 @@ def run_fit_susc(config, options: FitSuscRunOptions | None = None) -> int:
     if options.dry_run:
         logger.info("Dry run successful — no computations executed")
         return 0
+
+    if config.assignment_method == "moments":
+        for experiment in experiments:
+            _log_gaussian_peak_projection(experiment)
 
     if len(config.susc_fit_average_shifts):
         if "all" in config.susc_fit_average_shifts:
@@ -573,3 +594,91 @@ def _obtain_r2a(
         print(model.adj_r2)
 
     return model.adj_r2
+
+
+def _log_gaussian_peak_projection(experiment: Experiment) -> None:
+    """Log pure-Gaussian peak parameters derived from experimental signals.
+
+    Args:
+        experiment: Experiment whose signal table is projected into Gaussian
+            representation.
+
+    Raises:
+        ValueError: If the experiment isotope has no usable gyromagnetic ratio.
+    """
+
+    isotope_key = remove_numbers(experiment.isotope)
+    gamma = NUCLEAR_GAMMAS.get(isotope_key)
+    if gamma is None or gamma == 0.0:
+        raise ValueError(
+            "Gaussian peak projection requires a nonzero gyromagnetic ratio "
+            f"for isotope {experiment.isotope}"
+        )
+
+    hz_per_ppm = gamma * experiment.magnetic_field
+
+    centers_ppm = np.asarray(
+        [signal.shift for signal in experiment.signals], dtype=float
+    )
+    widths_hz = np.asarray(
+        [signal.width for signal in experiment.signals], dtype=float
+    )
+    areas = np.asarray([signal.area for signal in experiment.signals], dtype=float)
+    original_l_to_g = np.asarray(
+        [signal.l_to_g for signal in experiment.signals], dtype=float
+    )
+
+    widths_ppm = widths_hz / hz_per_ppm
+    sigma_hz = gaussian_fwhm_to_sigma(widths_hz)
+    height_hz = gaussian_height_from_area(areas, sigma_hz)
+    gaussian_ppm = gaussian_peak_representation(
+        centers=centers_ppm,
+        fwhm=widths_ppm,
+        areas=areas,
+    )
+    moments = gaussian_mixture_moments(
+        centers=gaussian_ppm["center"],
+        sigmas=gaussian_ppm["sigma"],
+        area_norm=gaussian_ppm["area_norm"],
+    )
+
+    if np.any(original_l_to_g != 0.0):
+        logger.warning(
+            _pink_log(
+                "Gaussian peak projection at %.2f K ignores nonzero L/G values."
+            ),
+            experiment.temperature,
+        )
+
+    for index, signal in enumerate(experiment.signals):
+        logger.info(
+            _pink_log(
+                "Gaussian peak projection at %.2f K: assignment=%s, "
+                "center_ppm=%.6g, width_hz=%.6g, sigma_hz=%.6g, "
+                "height_hz=%.6g, fwhm_ppm=%.6g, sigma_ppm=%.6g, "
+                "height_ppm=%.6g, area=%.6g, area_norm=%.6g, "
+                "original_l_to_g=%.6g, gaussian_l_to_g=%.1f"
+            ),
+            experiment.temperature,
+            signal.assignment,
+            gaussian_ppm["center"][index],
+            widths_hz[index],
+            sigma_hz[index],
+            height_hz[index],
+            gaussian_ppm["fwhm"][index],
+            gaussian_ppm["sigma"][index],
+            gaussian_ppm["height"][index],
+            gaussian_ppm["area"][index],
+            gaussian_ppm["area_norm"][index],
+            original_l_to_g[index],
+            gaussian_ppm["l_to_g"][index],
+        )
+
+    logger.info(
+        _pink_log("Gaussian mixture moment vector at %.2f K: %s"),
+        experiment.temperature,
+        ", ".join(
+            f"{moment_name}={value:.6g}"
+            for moment_name, value in moments.items()
+        ),
+    )
