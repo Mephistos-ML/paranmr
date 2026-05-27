@@ -38,6 +38,7 @@ from paranmr.core.fitting.assign import (
     fit_with_hungarian_assignment,
     generate_assignment_permutations,
 )
+from paranmr.core.fitting.moments import compute_moment_residuals, compute_moments
 from paranmr.core.pcs.isosurf import compute_pcs_isosurface
 
 # IO layer
@@ -226,6 +227,19 @@ def run_fit_susc(config, options: FitSuscRunOptions | None = None) -> int:
 
     # Run fit for all experiments
     for molecule, susc_model, experiment in zip(molecules, susc_models, experiments):
+        shift_values = np.asarray(
+            [signal.shift for signal in experiment.signals], dtype=float
+        )
+        shift_moments = compute_moments(shift_values, type="central")
+        logger.info(
+            "Experimental standardized shift moment vectors at %.2f K: %s",
+            experiment.temperature,
+            ", ".join(
+                f"{moment_name}={value:.6g}"
+                for moment_name, value in shift_moments.items()
+            ),
+        )
+
         # If permuting assignments, then first
         # run all assignment permutations to find best one
         if config.assignment_method == "permute":
@@ -362,6 +376,39 @@ def run_fit_susc(config, options: FitSuscRunOptions | None = None) -> int:
         # Calculate shifts using new susceptibility tensor
         molecule.calculate_shifts()
         molecule.average_shifts()
+
+        fitted_shift_by_label = {
+            nuc.chem_label: nuc.shift.avg for nuc in molecule.nuclei
+        }
+        fitted_shift_values = np.asarray(
+            [
+                fitted_shift_by_label[signal.assignment]
+                for signal in experiment.signals
+            ],
+            dtype=float,
+        )
+        fitted_shift_moments = compute_moments(fitted_shift_values, type="central")
+        logger.info(
+            "Fitted standardized shift moment vectors at %.2f K: %s",
+            experiment.temperature,
+            ", ".join(
+                f"{moment_name}={value:.6g}"
+                for moment_name, value in fitted_shift_moments.items()
+            ),
+        )
+        shift_moment_residuals = compute_moment_residuals(
+            calculated=fitted_shift_moments,
+            experimental=shift_moments,
+            normalize=True,
+        )
+        logger.info(
+            "Normalized standardized shift moment residuals at %.2f K: %s",
+            experiment.temperature,
+            ", ".join(
+                f"{moment_name}={value:.6g}"
+                for moment_name, value in shift_moment_residuals.items()
+            ),
+        )
 
         with spec.context():
             plot_fitted_shifts(
