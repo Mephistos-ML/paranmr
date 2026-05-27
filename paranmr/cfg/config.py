@@ -486,7 +486,7 @@ class FitSuscConfig(Config):
 
     @assignment_method.setter
     def assignment_method(self, value: str):
-        if value not in ["fixed", "permute", "hungarian"]:
+        if value not in ["fixed", "permute", "hungarian", "moments"]:
             raise ValueError(f"Unknown assignment:method {value}")
         self._assignment_method = value
         return None
@@ -1157,6 +1157,15 @@ class FitSuscConfig(Config):
                 logger.warning(
                     "Ignoring Hungarian-only assignment:search mapping for "
                     "assignment method 'fixed'"
+                )
+
+        elif config.assignment_method == "moments":
+            if len(config.assignment_groups):
+                logger.info("Chemical groups (signals) provided with moments method")
+            if config.assignment_search:
+                logger.warning(
+                    "Ignoring Hungarian-only assignment:search mapping for "
+                    "assignment method 'moments'"
                 )
 
         elif config.assignment_method == "hungarian":

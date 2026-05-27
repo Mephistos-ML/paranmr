@@ -379,7 +379,7 @@ Used in susceptibility fitting workflows that require assignment handling.
     # assignment block schema (reference):
     assignment:
         # Assignment strategy [Required]
-        method: fixed # One of: fixed | permute | hungarian
+        method: fixed # One of: fixed | permute | hungarian | moments
 
         # Permutation groups [Required for permute only]
         groups:
@@ -393,7 +393,7 @@ Used in susceptibility fitting workflows that require assignment handling.
           max_iter: 100       # Optional, mode: custom only
           r2_threshold: 0.99  # Optional, mode: custom only
 
-The three supported strategies are:
+The supported strategies are:
 
 ``fixed``
     Uses the signal-to-nucleus assignments provided directly in the experimental
@@ -412,6 +412,11 @@ The three supported strategies are:
     Hungarian algorithm reassigns signals to nuclei so as to minimise the total
     absolute shift deviation. This is repeated until the assignment converges or
     the configured iteration limit is reached.
+
+``moments``
+    Uses the assignments provided directly in the experimental data files and
+    emits Gaussian moment diagnostics for those assigned signals. No assignment
+    search is performed.
 
     Search behaviour is controlled by the ``search`` mapping:
 
