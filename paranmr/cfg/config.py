@@ -140,9 +140,6 @@ class FitSuscConfig(Config):
     REQ_KEYWORDS = {
         "hyperfine": ["method", "file"],
         "experiment": ["files"],
-        "assignment": [
-            "method",
-        ],
         "nuclei": ["include"],
         "susc_fit": ["type", "variables"],
         "project": ["name"],
@@ -167,7 +164,13 @@ class FitSuscConfig(Config):
             "search",
         ],
         "nuclei": ["include", "include_groups"],
-        "susc_fit": ["type", "variables", "input_units", "average_shifts"],
+        "susc_fit": [
+            "type",
+            "variables",
+            "input_units",
+            "average_shifts",
+            "moment_weights",
+        ],
         "project": ["name"],
         "chem_labels": ["file"],
         "diamagnetic": [
@@ -221,6 +224,7 @@ class FitSuscConfig(Config):
         self._susc_fit_variables = ""
         self._susc_fit_input_units = "A3"
         self._susc_fit_average_shifts = []
+        self._susc_fit_moment_weights = {}
         self._chem_labels_file = ""
         self._spin_S = None
         self._spin_multiplicity = None
@@ -463,6 +467,8 @@ class FitSuscConfig(Config):
 
     @susc_fit_type.setter
     def susc_fit_type(self, value: bool):
+        if value not in ["full", "split", "isoaxrho", "eigen", "isoeigen", "moments"]:
+            raise ValueError(f"Unknown susc_fit:type {value}")
         self._susc_fit_type = value
         return
 
@@ -486,7 +492,7 @@ class FitSuscConfig(Config):
 
     @assignment_method.setter
     def assignment_method(self, value: str):
-        if value not in ["fixed", "permute", "hungarian", "moments"]:
+        if value not in ["fixed", "permute", "hungarian"]:
             raise ValueError(f"Unknown assignment:method {value}")
         self._assignment_method = value
         return None
@@ -669,7 +675,24 @@ class FitSuscConfig(Config):
     def susc_fit_average_shifts(self, values: list[str]):
         if isinstance(values, str):
             self.susc_fit_average_shifts = [values]
+            return
         self._susc_fit_average_shifts = values
+        return
+
+    @property
+    def susc_fit_moment_weights(self) -> dict[str, float]:
+        return self._susc_fit_moment_weights
+
+    @susc_fit_moment_weights.setter
+    def susc_fit_moment_weights(self, value: dict[str, float] | None):
+        if value is None or value == "":
+            self._susc_fit_moment_weights = {}
+            return
+        if not isinstance(value, dict):
+            raise ValueError("susc_fit:moment_weights must be a mapping")
+        self._susc_fit_moment_weights = {
+            moment_name: float(weight) for moment_name, weight in value.items()
+        }
         return
 
     @property
@@ -1157,15 +1180,6 @@ class FitSuscConfig(Config):
                 logger.warning(
                     "Ignoring Hungarian-only assignment:search mapping for "
                     "assignment method 'fixed'"
-                )
-
-        elif config.assignment_method == "moments":
-            if len(config.assignment_groups):
-                logger.info("Chemical groups (signals) provided with moments method")
-            if config.assignment_search:
-                logger.warning(
-                    "Ignoring Hungarian-only assignment:search mapping for "
-                    "assignment method 'moments'"
                 )
 
         elif config.assignment_method == "hungarian":

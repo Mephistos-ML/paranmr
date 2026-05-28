@@ -27,6 +27,7 @@ from paranmr.app.pipelines.fit.vt_fit import fit_vt
 from paranmr.app.policies.assignment import resolve_assignment_search_settings
 from paranmr.app.policies.hfc import has_missing_selected_chem_labels
 from paranmr.app.policies.linewidth import resolve_output_linewidths
+from paranmr.app.policies.peak_projection import resolve_gaussian_peak_inputs
 from paranmr.app.policies.susc import resolve_susc_fit_variables
 
 # Core / domain
@@ -200,8 +201,10 @@ def run_fit_susc(config, options: FitSuscRunOptions | None = None) -> int:
         "isoaxrho": models.IsoAxRhoFitter,
         "eigen": models.EigenFitter,
         "isoeigen": models.IsoEigenFitter,
+        "moments": models.FullSuscFitter,
     }
 
+    use_moment_fit = config.susc_fit_type == "moments"
     model_to_use = name_to_susc_fit[config.susc_fit_type]
 
     # Create one susceptibility model per molecule/experiment pair. Reduced
@@ -221,7 +224,7 @@ def run_fit_susc(config, options: FitSuscRunOptions | None = None) -> int:
         logger.info("Dry run successful — no computations executed")
         return 0
 
-    if config.assignment_method == "moments":
+    if use_moment_fit:
         for experiment in experiments:
             _log_gaussian_peak_projection(experiment)
 
@@ -247,6 +250,8 @@ def run_fit_susc(config, options: FitSuscRunOptions | None = None) -> int:
 
     # Run fit for all experiments
     for molecule, susc_model, experiment in zip(molecules, susc_models, experiments):
+        model_already_fitted = False
+
         # If permuting assignments, then first
         # run all assignment permutations to find best one
         if config.assignment_method == "permute":
@@ -327,6 +332,18 @@ def run_fit_susc(config, options: FitSuscRunOptions | None = None) -> int:
                 ),
             )
 
+        elif use_moment_fit:
+            _, widths_ppm, areas = resolve_gaussian_peak_inputs(experiment)
+            susc_model.fit_to_moments(
+                molecule=molecule,
+                experiment=experiment,
+                widths_ppm=widths_ppm,
+                areas=areas,
+                average_labels=average_labels,
+                moment_weights=config.susc_fit_moment_weights,
+            )
+            model_already_fitted = True
+
         elif config.assignment_method == "hungarian":
             search_settings = resolve_assignment_search_settings(
                 mode=config.assignment_search,
@@ -371,7 +388,8 @@ def run_fit_susc(config, options: FitSuscRunOptions | None = None) -> int:
             )
 
         # Fit susceptibility model to experimental chemical shifts.
-        susc_model.fit_to(molecule, experiment, average_labels=average_labels)
+        if not model_already_fitted:
+            susc_model.fit_to(molecule, experiment, average_labels=average_labels)
 
         # Skip if fit fails
         if not susc_model.fit_status:
@@ -617,18 +635,14 @@ def _log_gaussian_peak_projection(experiment: Experiment) -> None:
 
     hz_per_ppm = gamma * experiment.magnetic_field
 
-    centers_ppm = np.asarray(
-        [signal.shift for signal in experiment.signals], dtype=float
-    )
+    centers_ppm, widths_ppm, areas = resolve_gaussian_peak_inputs(experiment)
     widths_hz = np.asarray(
         [signal.width for signal in experiment.signals], dtype=float
     )
-    areas = np.asarray([signal.area for signal in experiment.signals], dtype=float)
     original_l_to_g = np.asarray(
         [signal.l_to_g for signal in experiment.signals], dtype=float
     )
 
-    widths_ppm = widths_hz / hz_per_ppm
     sigma_hz = gaussian_fwhm_to_sigma(widths_hz)
     height_hz = gaussian_height_from_area(areas, sigma_hz)
     gaussian_ppm = gaussian_peak_representation(
