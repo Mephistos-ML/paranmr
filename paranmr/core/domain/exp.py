@@ -17,7 +17,7 @@ class Signal:
 
     Args:
         shift: Chemical shift in ppm.
-        width: Signal width in ppm.
+        width: Signal full width at half maximum in Hz.
         area: Signal area (integral).
         assignment: Chemical label of the signal.
         l_to_g: Lorentzian-to-Gaussian lineshape ratio.
@@ -25,7 +25,7 @@ class Signal:
 
     Attributes:
         shift: Chemical shift in ppm.
-        width: Signal width in ppm.
+        width: Signal full width at half maximum in Hz.
         area: Signal area (integral).
         assignment: Chemical label of the signal.
         l_to_g: Lorentzian-to-Gaussian lineshape ratio.
