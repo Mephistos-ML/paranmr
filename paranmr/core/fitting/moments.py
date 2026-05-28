@@ -145,3 +145,102 @@ def gaussian_mixture_moments(
         "standardized_5": central_5 / std**5,
         "standardized_6": central_6 / std**6,
     }
+
+
+def gaussian_mixture_moment_residuals(
+    calculated: dict[str, float],
+    observed: dict[str, float],
+    normalize: bool = True,
+) -> dict[str, float]:
+    """Compute Gaussian mixture moment residuals as calculated minus observed.
+
+    Args:
+        calculated: Moment vector computed from theoretical/calculated peaks.
+        observed: Moment vector computed from observed peaks.
+        normalize: Whether to scale dimensional residuals. When ``True``, mean
+            and standard-deviation residuals are divided by observed ``std``;
+            all standardized shape-moment residuals are left unchanged.
+
+    Returns:
+        Mapping from moment name to residual value.
+
+    Raises:
+        ValueError: If moment keys differ or normalization is requested without a
+            nonzero observed ``std``.
+    """
+
+    if calculated.keys() != observed.keys():
+        raise ValueError("Calculated and observed moment keys must match")
+
+    residuals = {
+        moment_name: calculated[moment_name] - observed[moment_name]
+        for moment_name in observed.keys()
+    }
+    if not normalize:
+        return residuals
+
+    if "std" not in observed:
+        raise ValueError("Cannot normalize moment residuals without observed std")
+
+    observed_std = float(observed["std"])
+    if observed_std == 0.0:
+        raise ValueError("Cannot normalize moment residuals with zero observed std")
+
+    normalized = residuals.copy()
+    if "mean" in normalized:
+        normalized["mean"] = normalized["mean"] / observed_std
+    normalized["std"] = normalized["std"] / observed_std
+
+    return normalized
+
+
+def apply_moment_weights(
+    residuals: dict[str, float],
+    weights: dict[str, float] | None = None,
+) -> dict[str, float]:
+    """Apply per-moment weights to a residual vector.
+
+    Args:
+        residuals: Mapping from moment name to residual value.
+        weights: Optional mapping from moment name to multiplicative weight.
+            Missing weights default to one.
+
+    Returns:
+        Weighted residual vector with the same keys as ``residuals``.
+
+    Raises:
+        ValueError: If an unknown moment name or a negative weight is provided.
+    """
+
+    if weights is None:
+        weights = {}
+
+    unknown = set(weights) - set(residuals)
+    if unknown:
+        raise ValueError(
+            "Moment weights contain unknown moment(s): "
+            + ", ".join(sorted(unknown))
+        )
+
+    weighted = {}
+    for moment_name, residual in residuals.items():
+        weight = float(weights.get(moment_name, 1.0))
+        if weight < 0.0:
+            raise ValueError("Moment weights must be non-negative")
+        weighted[moment_name] = residual * weight
+
+    return weighted
+
+
+def moment_residual_norm(residuals: dict[str, float]) -> float:
+    """Compute the Euclidean norm of a moment residual vector.
+
+    Args:
+        residuals: Mapping from moment name to residual value.
+
+    Returns:
+        Euclidean norm of residual values.
+    """
+
+    values = np.asarray(list(residuals.values()), dtype=float)
+    return float(np.linalg.norm(values))
