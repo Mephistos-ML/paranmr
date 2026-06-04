@@ -232,6 +232,65 @@ def apply_moment_weights(
     return weighted
 
 
+def count_active_moment_residuals(
+    residuals: dict[str, float],
+    weights: dict[str, float] | None = None,
+) -> int:
+    """Count residual components with nonzero effective weight.
+
+    Args:
+        residuals: Mapping from moment name to residual value.
+        weights: Optional mapping from moment name to multiplicative weight.
+            Missing weights default to one.
+
+    Returns:
+        Number of residual components that contribute to the objective.
+
+    Raises:
+        ValueError: If an unknown moment name or a negative weight is provided.
+    """
+
+    return int(np.sum(active_moment_residual_mask(residuals, weights)))
+
+
+def active_moment_residual_mask(
+    residuals: dict[str, float],
+    weights: dict[str, float] | None = None,
+) -> NDArray[np.bool_]:
+    """Build a mask selecting residual components with nonzero weight.
+
+    Args:
+        residuals: Mapping from moment name to residual value.
+        weights: Optional mapping from moment name to multiplicative weight.
+            Missing weights default to one.
+
+    Returns:
+        Boolean mask in residual insertion order.
+
+    Raises:
+        ValueError: If an unknown moment name or a negative weight is provided.
+    """
+
+    if weights is None:
+        weights = {}
+
+    unknown = set(weights) - set(residuals)
+    if unknown:
+        raise ValueError(
+            "Moment weights contain unknown moment(s): "
+            + ", ".join(sorted(unknown))
+        )
+
+    mask = []
+    for moment_name in residuals:
+        weight = float(weights.get(moment_name, 1.0))
+        if weight < 0.0:
+            raise ValueError("Moment weights must be non-negative")
+        mask.append(weight != 0.0)
+
+    return np.asarray(mask, dtype=bool)
+
+
 def moment_residual_norm(residuals: dict[str, float]) -> float:
     """Compute the Euclidean norm of a moment residual vector.
 

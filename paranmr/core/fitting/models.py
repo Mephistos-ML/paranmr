@@ -21,7 +21,9 @@ from paranmr.core.domain.exp import Experiment
 from paranmr.core.domain.mol import Molecule, Nucleus
 from paranmr.core.domain.tensor import Susceptibility
 from paranmr.core.fitting.moments import (
+    active_moment_residual_mask,
     apply_moment_weights,
+    count_active_moment_residuals,
     gaussian_mixture_moment_residuals,
     gaussian_mixture_moments,
     gaussian_peak_representation,
@@ -612,10 +614,23 @@ class SusceptibilityModel(ABC):
             self.adj_r2 = np.nan
             return
 
-        if curr_fit.fun.size <= curr_fit.x.size:
+        effective_residual_count = count_active_moment_residuals(
+            observed_moments,
+            moment_weights,
+        )
+        if effective_residual_count <= curr_fit.x.size:
             self.fit_stdev = {label: np.nan for label in self.fit_vars.keys()}
         else:
-            stdev, _ = svd_stdev(curr_fit)
+            active_mask = active_moment_residual_mask(
+                observed_moments,
+                moment_weights,
+            )
+            active_fit = OptimizeResult(
+                fun=np.asarray(curr_fit.fun, dtype=float)[active_mask],
+                jac=np.asarray(curr_fit.jac, dtype=float)[active_mask, :],
+                x=curr_fit.x,
+            )
+            stdev, _ = svd_stdev(active_fit)
             self.fit_stdev = {
                 label: val for label, val in zip(self.fit_vars.keys(), stdev)
             }
