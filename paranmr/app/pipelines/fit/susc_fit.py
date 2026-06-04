@@ -202,9 +202,10 @@ def run_fit_susc(config, options: FitSuscRunOptions | None = None) -> int:
         "eigen": models.EigenFitter,
         "isoeigen": models.IsoEigenFitter,
         "moments": models.FullSuscFitter,
+        "moments_isoaxrho": models.IsoAxRhoFitter,
     }
 
-    use_moment_fit = config.susc_fit_type == "moments"
+    use_moment_fit = config.susc_fit_type in {"moments", "moments_isoaxrho"}
     model_to_use = name_to_susc_fit[config.susc_fit_type]
 
     # Create one susceptibility model per molecule/experiment pair. Reduced
