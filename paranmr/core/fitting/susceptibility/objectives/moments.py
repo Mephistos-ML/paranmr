@@ -13,7 +13,7 @@ from scipy.optimize._optimize import OptimizeResult
 
 from paranmr.core.domain.exp import Experiment
 from paranmr.core.domain.mol import Molecule, Nucleus
-from paranmr.core.fitting.moments import (
+from paranmr.core.fitting.susceptibility.moments import (
     active_moment_residual_mask,
     apply_moment_weights,
     count_active_moment_residuals,

@@ -40,7 +40,7 @@ from paranmr.core.fitting.susceptibility.assign import (
     fit_with_hungarian_assignment,
     generate_assignment_permutations,
 )
-from paranmr.core.fitting.moments import (
+from paranmr.core.fitting.susceptibility.moments import (
     gaussian_mixture_moments,
     gaussian_peak_representation,
 )
