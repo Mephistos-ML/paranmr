@@ -379,7 +379,7 @@ Used in susceptibility fitting workflows that require assignment handling.
     # assignment block schema (reference):
     assignment:
         # Assignment strategy [Required]
-        method: fixed # One of: fixed | permute | hungarian | moments
+        method: fixed # One of: fixed | permute | hungarian
 
         # Permutation groups [Required for permute only]
         groups:
@@ -413,28 +413,25 @@ The supported strategies are:
     absolute shift deviation. This is repeated until the assignment converges or
     the configured iteration limit is reached.
 
-``moments``
-    Uses the assignments provided directly in the experimental data files and
-    emits Gaussian moment diagnostics for those assigned signals. No assignment
-    search is performed.
+Search behaviour for ``hungarian`` is controlled by the ``search`` mapping:
 
-    Search behaviour is controlled by the ``search`` mapping:
+- ``mode: fast`` uses ``n_attempts=1``, ``max_iter=20``,
+  ``r2_threshold=0.95``.
+- ``mode: balanced`` uses ``n_attempts=10``, ``max_iter=100``,
+  ``r2_threshold=0.99``.
+- ``mode: robust`` uses ``n_attempts=25``, ``max_iter=250``,
+  ``r2_threshold=0.995``.
+- ``mode: custom`` allows these three numeric controls to be provided explicitly
+  under ``assignment:search``.
 
-    - ``mode: fast`` uses ``n_attempts=1``, ``max_iter=20``,
-      ``r2_threshold=0.95``.
-    - ``mode: balanced`` uses ``n_attempts=10``, ``max_iter=100``,
-      ``r2_threshold=0.99``.
-    - ``mode: robust`` uses ``n_attempts=25``, ``max_iter=250``,
-      ``r2_threshold=0.995``.
-    - ``mode: custom`` allows these three numeric controls to be provided
-      explicitly under ``assignment:search``.
+If the ``search`` block is omitted, the policy layer resolves the default
+behaviour to the ``balanced`` mode.
 
-    If the ``search`` block is omitted, the policy layer resolves the default
-    behaviour to the ``balanced`` mode.
+This method scales polynomially with the number of signals and is therefore
+preferred over ``permute`` for large or heavily degenerate assignment problems.
 
-    This method scales polynomially with the number of signals and is therefore
-    preferred over ``permute`` for large or heavily degenerate assignment
-    problems.
+Moment-based fitting is selected with ``susc_fit:type`` values such as
+``moments_split`` or ``moments_isoaxrho``; it is not an assignment method.
 
 .. _Hungarian algorithm: https://en.wikipedia.org/wiki/Hungarian_algorithm
 
@@ -469,10 +466,9 @@ Used in susceptibility fitting workflows.
     susc_fit:
         # Susceptibility model type [Required]
         type: isoaxrho # Isotropic + axial + rhombic susceptibility model
-              split # Split axial/rhombic susceptibility model
-              full # Full anisotropic susceptibility tensor
-              eigen # Eigenvalue-based susceptibility model
-              isoeigen # Isotropic susceptibility in the eigenframe
+              split # Split isotropic/anisotropic susceptibility model
+              moments_split # Moment objective using the split model
+              moments_isoaxrho # Moment objective using the iso/ax/rho model
 
         # Optional input units for the susceptibility fit variables
         # Default: A3
@@ -494,35 +490,20 @@ Used in susceptibility fitting workflows.
           dyy: [fit, 0.1]
           dyz: [fit, 0.1]
 
-        # Fit variables definition [Required for type: full]
-        variables:
-          dxx: [fit, 0.1]
-          dyy: [fit, 0.1]
-          dzz: [fit, 0.1]
-          dxy: [fix, 0.0]
-          dxz: [fix, 0.0]
-          dyz: [fit, 0.1]
+        # Moment-objective model types use the same variable names as their
+        # corresponding shift-objective models:
+        #   moments_split -> split variables
+        #   moments_isoaxrho -> isoaxrho variables
 
-        # Fit variables definition [Required for type: eigen]
-        variables:
-          x: [fit, 0.00]
-          y: [fit, 0.01]
-          z: [fix, 0.02]
-
-        # Fit variables definition [Required for type: eigen]
-        variables:
-          dxx: [fit, 0.02]
-          dxy: [fit, 0.01]
-          iso: [fix, 0.00]
-        
         average_shifts: 'all' # Average shifts over all chemical labels
                         ["Me1", "Me2"] # Average shifts over the specified chemical labels
 
 .. note::
 
    The required fit variables depend on the selected susceptibility model type.
-   No automatic consistency checks are performed between the chosen model and the
-   provided variable definitions.
+   ``moments_split`` uses the ``split`` variables, while
+   ``moments_isoaxrho`` uses the ``isoaxrho`` variables.
+   Configuration loading validates the selected model type and variable names.
 
 .. note::
 
