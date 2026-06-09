@@ -252,7 +252,7 @@ class SusceptibilityModel(ABC):
 
     @property
     @abstractmethod
-    def BOUNDS() -> dict[str, list[float, float]]:
+    def BOUNDS() -> dict[str, list[float]]:
         """Bounds for each model parameter.
 
         Returns:
@@ -320,7 +320,7 @@ class SusceptibilityModel(ABC):
         parameters: dict[str, float],
         nuclei: list[Nucleus],
         al_to_para_shift: dict[str, float],
-        average_labels: list[list[str]] = [],
+        average_labels: list[list[str]] | None = None,
     ) -> list[float]:
         """Computes residuals between experimental and predicted shifts.
 
@@ -336,6 +336,9 @@ class SusceptibilityModel(ABC):
             A list of residuals (experimental - predicted), optionally reweighted for
             averaged groups.
         """
+
+        if average_labels is None:
+            average_labels = []
 
         trial_shifts = self.model(parameters, nuclei)
 
@@ -368,7 +371,7 @@ class SusceptibilityModel(ABC):
         fix_vars: dict[str, float],
         nuclei: list[Nucleus],
         al_to_para_shift: dict[str, float],
-        average_labels: list[list[str]] = [],
+        average_labels: list[list[str]] | None = None,
     ) -> list[float]:
         """Adapter for optimizers that pass parameters as a flat float list.
 
@@ -389,6 +392,9 @@ class SusceptibilityModel(ABC):
             A list of residuals.
         """
 
+        if average_labels is None:
+            average_labels = []
+
         # Swap fit values for new values from fit routine
         new_fit_vars = {name: guess for guess, name in zip(new_vals, fit_vars.keys())}
 
@@ -407,7 +413,7 @@ class SusceptibilityModel(ABC):
         molecule: Molecule,
         experiment: Experiment,
         verbose: bool = True,
-        average_labels: list[list[str]] = [],
+        average_labels: list[list[str]] | None = None,
     ) -> None:
         """Fits the model to experimental susceptibility data.
 
@@ -421,6 +427,9 @@ class SusceptibilityModel(ABC):
         Returns:
             None.
         """
+
+        if average_labels is None:
+            average_labels = []
 
         # Starting values
         guess = [val for val in self.fit_vars.values()]
@@ -463,10 +472,10 @@ class SusceptibilityModel(ABC):
             self.final_var_values = copy.deepcopy(curr_fit_dict)
             self.fit_stdev = {label: np.nan for label in self.fit_vars.keys()}
             self.fit_status = False
-            self.mae = np.NaN
-            self.rmse = np.NaN
-            self.r2 = np.NaN
-            self.adj_r2 = np.NaN
+            self.mae = np.nan
+            self.rmse = np.nan
+            self.r2 = np.nan
+            self.adj_r2 = np.nan
         else:
             # Calculate standard deviation error on the parameters
             stdev, _ = svd_stdev(curr_fit)
@@ -507,7 +516,7 @@ class LinearSusceptibilityModel(SusceptibilityModel):
         molecule: Molecule,
         experiment: Experiment,
         verbose: bool = True,
-        average_labels: list[list[str]] = [],
+        average_labels: list[list[str]] | None = None,
     ) -> None:
         """Fits the linear model to experimental susceptibility data.
 
@@ -548,9 +557,9 @@ class LinearSusceptibilityModel(SusceptibilityModel):
             self.final_var_values = copy.deepcopy(curr_fit_dict)
             self.fit_stdev = {label: np.nan for label in self.fit_vars.keys()}
             self.fit_status = False
-            self.rmse = np.NaN
-            self.r2 = np.NaN
-            self.adj_r2 = np.NaN
+            self.rmse = np.nan
+            self.r2 = np.nan
+            self.adj_r2 = np.nan
         else:
             # Calculate Jacobian, here equal to the design matrix
             curr_fit.jac = self.design_matrix(molecule.nuclei, self.fix_vars)
