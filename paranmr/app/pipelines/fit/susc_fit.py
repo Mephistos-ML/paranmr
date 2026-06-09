@@ -44,6 +44,7 @@ from paranmr.core.fitting.moments import (
     gaussian_mixture_moments,
     gaussian_peak_representation,
 )
+from paranmr.core.fitting.objectives.moments import fit_model_to_moments
 from paranmr.core.pcs.isosurf import compute_pcs_isosurface
 from paranmr.core.spectrum.kernels import (
     gaussian_fwhm_to_sigma,
@@ -332,7 +333,8 @@ def run_fit_susc(config, options: FitSuscRunOptions | None = None) -> int:
 
         elif use_moment_fit:
             _, widths_ppm, areas = resolve_gaussian_peak_inputs(experiment)
-            susc_model.fit_to_moments(
+            fit_model_to_moments(
+                model=susc_model,
                 molecule=molecule,
                 experiment=experiment,
                 widths_ppm=widths_ppm,
