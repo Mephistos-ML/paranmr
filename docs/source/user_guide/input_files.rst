@@ -483,6 +483,7 @@ Used in susceptibility fitting workflows.
         # Susceptibility model type [Required]
         type: isoaxrho # Isotropic + axial + rhombic susceptibility model
               split # Split isotropic/anisotropic susceptibility model
+              isoaxrho_euler # Iso/ax/rho model with fitted Euler angles
 
         # Optional input units for the susceptibility fit variables
         # Default: A3
@@ -494,6 +495,15 @@ Used in susceptibility fitting workflows.
           iso: [fit, 0.2]
           ax:  [fit, 0.1]
           rho_over_ax: [fix, 0.0]
+
+        # Fit variables definition [Required for type: isoaxrho_euler]
+        variables:
+          iso: [fit, 0.2]
+          ax:  [fit, 0.1]
+          rho_over_ax: [fix, 0.0]
+          alpha: [fit, 0.0]
+          beta: [fit, 90.0]
+          gamma: [fit, 0.0]
 
         # Fit variables definition [Required for type: split]
         variables:

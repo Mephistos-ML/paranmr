@@ -37,6 +37,9 @@ from paranmr.core.domain.mol import Molecule
 from paranmr.core.domain.tensor import Hyperfine
 from paranmr.core.fitting.susceptibility.models.base import SusceptibilityModel
 from paranmr.core.fitting.susceptibility.models.isoaxrho import IsoAxRhoFitter
+from paranmr.core.fitting.susceptibility.models.isoaxrho_euler import (
+    IsoAxRhoEulerFitter,
+)
 from paranmr.core.fitting.susceptibility.models.split import SplitFitter
 from paranmr.core.fitting.susceptibility.assign import (
     fit_with_hungarian_assignment,
@@ -202,6 +205,7 @@ def run_fit_susc(config, options: FitSuscRunOptions | None = None) -> int:
     name_to_susc_fit: dict[str, SusceptibilityModel] = {
         "split": SplitFitter,
         "isoaxrho": IsoAxRhoFitter,
+        "isoaxrho_euler": IsoAxRhoEulerFitter,
     }
 
     use_moment_fit = config.assignment_method == "moments"
