@@ -35,8 +35,8 @@ from paranmr.core.const.gammas import NUCLEAR_GAMMAS
 from paranmr.core.domain.exp import Experiment
 from paranmr.core.domain.mol import Molecule
 from paranmr.core.domain.tensor import Hyperfine
-from paranmr.core.fitting import models
-from paranmr.core.fitting.assign import (
+from paranmr.core.fitting.susceptibility import models
+from paranmr.core.fitting.susceptibility.assign import (
     fit_with_hungarian_assignment,
     generate_assignment_permutations,
 )
@@ -44,8 +44,8 @@ from paranmr.core.fitting.moments import (
     gaussian_mixture_moments,
     gaussian_peak_representation,
 )
-from paranmr.core.fitting.objectives.moments import fit_model_to_moments
-from paranmr.core.fitting.objectives.shifts import fit_model_to_shifts
+from paranmr.core.fitting.susceptibility.objectives.moments import fit_model_to_moments
+from paranmr.core.fitting.susceptibility.objectives.shifts import fit_model_to_shifts
 from paranmr.core.pcs.isosurf import compute_pcs_isosurface
 from paranmr.core.spectrum.kernels import (
     gaussian_fwhm_to_sigma,

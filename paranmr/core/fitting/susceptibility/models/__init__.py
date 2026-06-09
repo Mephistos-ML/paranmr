@@ -3,12 +3,12 @@
 
 """Susceptibility fitting models."""
 
-from paranmr.core.fitting.models.base import (
+from paranmr.core.fitting.susceptibility.models.base import (
     LinearSusceptibilityModel,
     SusceptibilityModel,
 )
-from paranmr.core.fitting.models.isoaxrho import IsoAxRhoFitter
-from paranmr.core.fitting.models.split import SplitFitter
+from paranmr.core.fitting.susceptibility.models.isoaxrho import IsoAxRhoFitter
+from paranmr.core.fitting.susceptibility.models.split import SplitFitter
 
 __all__ = [
     "LinearSusceptibilityModel",

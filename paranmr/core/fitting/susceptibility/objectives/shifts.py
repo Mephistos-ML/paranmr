@@ -12,10 +12,10 @@ from scipy.optimize import least_squares, lsq_linear
 
 from paranmr.core.domain.exp import Experiment
 from paranmr.core.domain.mol import Molecule, Nucleus
-from paranmr.core.fitting.stats import svd_stdev
+from paranmr.core.fitting.susceptibility.stats import svd_stdev
 
 if TYPE_CHECKING:
-    from paranmr.core.fitting.models.base import (
+    from paranmr.core.fitting.susceptibility.models.base import (
         LinearSusceptibilityModel,
         SusceptibilityModel,
     )

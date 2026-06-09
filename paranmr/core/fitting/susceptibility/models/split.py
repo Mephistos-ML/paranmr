@@ -10,7 +10,7 @@ from numpy.typing import NDArray
 
 from paranmr.core.domain.mol import Nucleus
 from paranmr.core.domain.tensor import Susceptibility
-from paranmr.core.fitting.models.base import SusceptibilityModel
+from paranmr.core.fitting.susceptibility.models.base import SusceptibilityModel
 from paranmr.core.util.uncertainty import delta_method_sigma
 
 

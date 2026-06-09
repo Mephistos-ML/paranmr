@@ -16,8 +16,8 @@ from scipy.optimize import linear_sum_assignment
 
 from paranmr.core.domain.exp import Experiment
 from paranmr.core.domain.mol import Molecule
-from paranmr.core.fitting import models
-from paranmr.core.fitting.objectives.shifts import fit_model_to_shifts
+from paranmr.core.fitting.susceptibility import models
+from paranmr.core.fitting.susceptibility.objectives.shifts import fit_model_to_shifts
 
 logger = logging.getLogger(__name__)
 

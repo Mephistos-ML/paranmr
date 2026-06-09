@@ -22,7 +22,7 @@ from paranmr.core.fitting.moments import (
     gaussian_peak_representation,
     moment_residual_norm,
 )
-from paranmr.core.fitting.stats import svd_stdev
+from paranmr.core.fitting.susceptibility.stats import svd_stdev
 
 logger = logging.getLogger(__name__)
 

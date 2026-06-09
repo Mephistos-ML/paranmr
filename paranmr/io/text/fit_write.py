@@ -9,7 +9,7 @@ in a readable tabular format.
 
 import logging
 
-from paranmr.core.fitting import models
+from paranmr.core.fitting.susceptibility import models
 
 logger = logging.getLogger(__name__)
 
