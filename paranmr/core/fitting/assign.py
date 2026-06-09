@@ -17,6 +17,7 @@ from scipy.optimize import linear_sum_assignment
 from paranmr.core.domain.exp import Experiment
 from paranmr.core.domain.mol import Molecule
 from paranmr.core.fitting import models
+from paranmr.core.fitting.objectives.shifts import fit_model_to_shifts
 
 logger = logging.getLogger(__name__)
 
@@ -171,9 +172,10 @@ def fit_with_hungarian_assignment(
         final_assignment = list(current_assignment)
         for iteration in range(max_iter):
             # Fit susceptibility model to current assignment
-            trial_model.fit_to(
-                molecule,
-                trial_experiment,
+            fit_model_to_shifts(
+                model=trial_model,
+                molecule=molecule,
+                experiment=trial_experiment,
                 average_labels=average_labels,
             )
             logger.debug(
@@ -260,9 +262,10 @@ def fit_with_hungarian_assignment(
     # perform exactly one final fit on the caller-owned model so that the
     # externally visible state corresponds to the selected best attempt.
     _apply_assignment(experiment, best_assignment)
-    susc_model.fit_to(
-        molecule,
-        experiment,
+    fit_model_to_shifts(
+        model=susc_model,
+        molecule=molecule,
+        experiment=experiment,
         average_labels=average_labels,
     )
 

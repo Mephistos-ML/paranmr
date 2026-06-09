@@ -3,20 +3,14 @@
 
 """Base classes for susceptibility fitting models."""
 
-import copy
-import logging
 from abc import ABC, abstractmethod
 
 import numpy as np
 from numpy.typing import NDArray
-from scipy.optimize import least_squares, lsq_linear
 
 from paranmr.core.domain.exp import Experiment
-from paranmr.core.domain.mol import Molecule, Nucleus
+from paranmr.core.domain.mol import Nucleus
 from paranmr.core.domain.tensor import Susceptibility
-from paranmr.core.fitting.stats import svd_stdev
-
-logger = logging.getLogger(__name__)
 
 
 class SusceptibilityModel(ABC):
@@ -307,7 +301,7 @@ class SusceptibilityModel(ABC):
     def _post_fit(self) -> None:
         """Hook for model-specific post-processing after a successful fit.
 
-        Called at the end of `fit_to` after `final_var_values` and `fit_stdev` are set.
+        Called after fitting once `final_var_values` and `fit_stdev` are set.
         Subclasses may override to compute derived quantities.
 
         Returns:
@@ -315,281 +309,9 @@ class SusceptibilityModel(ABC):
         """
         return
 
-    def residuals(
-        self,
-        parameters: dict[str, float],
-        nuclei: list[Nucleus],
-        al_to_para_shift: dict[str, float],
-        average_labels: list[list[str]] | None = None,
-    ) -> list[float]:
-        """Computes residuals between experimental and predicted shifts.
-
-        Args:
-            parameters: Trial parameters used to compute model shifts.
-            nuclei: Nuclei for which shifts are computed.
-            al_to_para_shift: Mapping from atom label to experimental
-            paramagnetic shift.
-            average_labels: Optional groups of atom labels whose predicted shifts are
-                averaged prior to residual computation.
-
-        Returns:
-            A list of residuals (experimental - predicted), optionally reweighted for
-            averaged groups.
-        """
-
-        if average_labels is None:
-            average_labels = []
-
-        trial_shifts = self.model(parameters, nuclei)
-
-        # Initialize weights for all atom labels to 1.0
-        weights = {lab: 1.0 for lab in trial_shifts.keys()}
-        if average_labels:
-            # For each group, compute the average shift and assign a weight factor
-            # such that the overall contribution of the group is independent of its size
-            for group in average_labels:
-                group_average = np.mean([trial_shifts[lab] for lab in group])
-                group_size = len(group)
-                for lab in group:
-                    trial_shifts[lab] = group_average
-                    # residuals will be divided by this
-                    weights[lab] = np.sqrt(group_size)
-
-        # Compute residuals using uniform weighting for single signals
-        # and scaled weights for groups
-        residuals = [
-            (exp_shift - trial_shifts[atom_label]) / weights.get(atom_label, 1.0)
-            for atom_label, exp_shift in al_to_para_shift.items()
-        ]
-
-        return residuals
-
-    def residual_from_float_list(
-        self,
-        new_vals: list[float],
-        fit_vars: dict[str, float],
-        fix_vars: dict[str, float],
-        nuclei: list[Nucleus],
-        al_to_para_shift: dict[str, float],
-        average_labels: list[list[str]] | None = None,
-    ) -> list[float]:
-        """Adapter for optimizers that pass parameters as a flat float list.
-
-        Converts `new_vals` into a parameter dictionary (using `fit_vars` key order),
-        merges it with `fix_vars`, then calls `residuals`.
-
-        Args:
-            new_vals: New values provided by the optimizer (order matches `fit_vars`).
-            fit_vars: Fit-variable template mapping names to initial guesses.
-            fix_vars: Fixed parameters that remain constant during fitting.
-            nuclei: Nuclei for which shifts are computed.
-            al_to_para_shift: Mapping from atom label to experimental
-            paramagnetic shift.
-            average_labels: Optional groups of atom labels whose predicted shifts are
-                averaged prior to residual computation.
-
-        Returns:
-            A list of residuals.
-        """
-
-        if average_labels is None:
-            average_labels = []
-
-        # Swap fit values for new values from fit routine
-        new_fit_vars = {name: guess for guess, name in zip(new_vals, fit_vars.keys())}
-
-        # And make combined dict of fit and fixed
-        # variable names (keys) and values
-        all_vars = {**fix_vars, **new_fit_vars}
-
-        residuals = self.residuals(
-            all_vars, nuclei, al_to_para_shift, average_labels=average_labels
-        )
-
-        return residuals
-
-    def fit_to(
-        self,
-        molecule: Molecule,
-        experiment: Experiment,
-        verbose: bool = True,
-        average_labels: list[list[str]] | None = None,
-    ) -> None:
-        """Fits the model to experimental susceptibility data.
-
-        Args:
-            molecule: Molecule providing nuclei and geometric information.
-            experiment: Experimental data object.
-            verbose: If ``False``, suppresses terminal output.
-            average_labels: Optional groups of atom labels whose predicted shifts are
-                averaged prior to residual computation.
-
-        Returns:
-            None.
-        """
-
-        if average_labels is None:
-            average_labels = []
-
-        # Starting values
-        guess = [val for val in self.fit_vars.values()]
-
-        # Get bounds for variables to be fitted
-        bounds = np.array([self.BOUNDS[name] for name in self.fit_vars.keys()]).T
-
-        # Chemical label to paramagnetic shift
-        al_to_para_shift = {
-            nuc.label: experiment[nuc.chem_label].shift - nuc.shift.dia
-            for nuc in molecule.nuclei
-        }
-
-        curr_fit = least_squares(
-            fun=self.residual_from_float_list,
-            args=(
-                self.fit_vars,
-                self.fix_vars,
-                molecule.nuclei,
-                al_to_para_shift,
-                average_labels,
-            ),
-            x0=guess,
-            bounds=bounds,
-            jac="3-point",
-        )
-
-        self.temperature = experiment.temperature
-
-        # Fitted parameters
-        curr_fit_dict = {
-            name: value for name, value in zip(self.fit_vars.keys(), curr_fit.x)
-        }
-
-        if curr_fit.status == 0:
-            if verbose:
-                logger.warning(
-                    "Fit at %s K failed - Too many iterations", self.temperature
-                )
-            self.final_var_values = copy.deepcopy(curr_fit_dict)
-            self.fit_stdev = {label: np.nan for label in self.fit_vars.keys()}
-            self.fit_status = False
-            self.mae = np.nan
-            self.rmse = np.nan
-            self.r2 = np.nan
-            self.adj_r2 = np.nan
-        else:
-            # Calculate standard deviation error on the parameters
-            stdev, _ = svd_stdev(curr_fit)
-
-            # Standard deviation error on the parameters
-            self.fit_stdev = {
-                label: val for label, val in zip(self.fit_vars.keys(), stdev)
-            }
-            self.fit_status = True
-
-            # Set fitted values
-            self.final_var_values = copy.deepcopy(curr_fit_dict)
-
-            # and fixed values
-            for key, val in self.fix_vars.items():
-                self.final_var_values[key] = val
-
-            # Model-specific post-processing (e.g., derived parameter uncertainties)
-            self._post_fit()
-
-            # R2
-            self.mae = np.sum(np.abs(curr_fit.fun)) / len(curr_fit.fun)
-            ss_res = np.sum(curr_fit.fun**2)
-            self.rmse = np.sqrt(ss_res / len(curr_fit.fun))
-            ecs = [al_to_para_shift[nuc.label] for nuc in molecule.nuclei]
-            ss_tot = np.sum((ecs - np.mean(ecs)) ** 2)
-            self.r2 = 1 - (ss_res / ss_tot)
-            self.adj_r2 = 1 - (1 - self.r2) * (len(ecs) - 1) / (
-                len(ecs) - len(self.fit_vars) - 1
-            )
-
-        return
-
 
 class LinearSusceptibilityModel(SusceptibilityModel):
-    def fit_to(
-        self,
-        molecule: Molecule,
-        experiment: Experiment,
-        verbose: bool = True,
-        average_labels: list[list[str]] | None = None,
-    ) -> None:
-        """Fits the linear model to experimental susceptibility data.
-
-        Uses a linear least-squares formulation ``A x = b``.
-
-        Args:
-            molecule: Molecule providing nuclei and geometric information.
-            experiment: Experimental data object.
-            verbose: If ``False``, suppresses terminal output.
-            average_labels: Optional groups of atom labels whose shifts are averaged
-                prior to residual computation.
-
-        Returns:
-            None.
-        """
-
-        # Get bounds for variables to be fitted
-        bounds = np.array([self.BOUNDS[name] for name in self.fit_vars.keys()]).T
-
-        curr_fit = lsq_linear(
-            A=self.design_matrix(molecule.nuclei, self.fix_vars),
-            b=self.target_vector(molecule.nuclei, experiment, self.fix_vars),
-            bounds=bounds,
-        )
-
-        self.temperature = experiment.temperature
-
-        fit_var_names = [name for name in self.VARNAMES if name in self.fit_vars.keys()]
-
-        # Fitted parameters
-        curr_fit_dict = {name: value for name, value in zip(fit_var_names, curr_fit.x)}
-
-        if curr_fit.status == 0:
-            if verbose:
-                logger.warning(
-                    "Fit at %s K failed - Too many iterations", self.temperature
-                )
-            self.final_var_values = copy.deepcopy(curr_fit_dict)
-            self.fit_stdev = {label: np.nan for label in self.fit_vars.keys()}
-            self.fit_status = False
-            self.rmse = np.nan
-            self.r2 = np.nan
-            self.adj_r2 = np.nan
-        else:
-            # Calculate Jacobian, here equal to the design matrix
-            curr_fit.jac = self.design_matrix(molecule.nuclei, self.fix_vars)
-
-            # Calculate standard deviation error on the parameters
-            stdev, _ = svd_stdev(curr_fit)
-
-            # Standard deviation error on the parameters
-            self.fit_stdev = {
-                label: val for label, val in zip(self.fit_vars.keys(), stdev)
-            }
-            self.fit_status = True
-
-            # Set fitted values
-            self.final_var_values = copy.deepcopy(curr_fit_dict)
-            # and fixed values
-            for key, val in self.fix_vars.items():
-                self.final_var_values[key] = val
-
-            # R2
-            ss_res = np.sum(curr_fit.fun**2)
-            self.rmse = np.sqrt(ss_res / len(curr_fit.fun))
-            ecs = [experiment[nuc.chem_label] for nuc in molecule.nuclei]
-            ss_tot = np.sum((ecs - np.mean(ecs)) ** 2)
-            self.r2 = 1 - (ss_res / ss_tot)
-            self.adj_r2 = 1 - (1 - self.r2) * (len(ecs) - 1) / (
-                len(ecs) - len(self.fit_vars) - 1
-            )
-
-        return
+    """Base class for linear susceptibility fitting models."""
 
     @staticmethod
     @abstractmethod

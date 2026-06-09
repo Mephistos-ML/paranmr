@@ -45,6 +45,7 @@ from paranmr.core.fitting.moments import (
     gaussian_peak_representation,
 )
 from paranmr.core.fitting.objectives.moments import fit_model_to_moments
+from paranmr.core.fitting.objectives.shifts import fit_model_to_shifts
 from paranmr.core.pcs.isosurf import compute_pcs_isosurface
 from paranmr.core.spectrum.kernels import (
     gaussian_fwhm_to_sigma,
@@ -389,7 +390,12 @@ def run_fit_susc(config, options: FitSuscRunOptions | None = None) -> int:
 
         # Fit susceptibility model to experimental chemical shifts.
         if not model_already_fitted:
-            susc_model.fit_to(molecule, experiment, average_labels=average_labels)
+            fit_model_to_shifts(
+                model=susc_model,
+                molecule=molecule,
+                experiment=experiment,
+                average_labels=average_labels,
+            )
 
         # Skip if fit fails
         if not susc_model.fit_status:
@@ -605,7 +611,12 @@ def _obtain_r2a(
         experiment.signals[it].assignment = new
 
     # Fit susceptibility model to experimental chemical shifts
-    model.fit_to(molecule, experiment, average_labels=average_labels)
+    fit_model_to_shifts(
+        model=model,
+        molecule=molecule,
+        experiment=experiment,
+        average_labels=average_labels,
+    )
 
     # Print to screen if envvar enabled
     if echo_r2:
