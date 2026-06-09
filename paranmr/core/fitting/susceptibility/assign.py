@@ -16,7 +16,7 @@ from scipy.optimize import linear_sum_assignment
 
 from paranmr.core.domain.exp import Experiment
 from paranmr.core.domain.mol import Molecule
-from paranmr.core.fitting.susceptibility import models
+from paranmr.core.fitting.susceptibility.models.base import SusceptibilityModel
 from paranmr.core.fitting.susceptibility.objectives.shifts import fit_model_to_shifts
 
 logger = logging.getLogger(__name__)
@@ -86,7 +86,7 @@ def generate_assignment_permutations(
 
 def fit_with_hungarian_assignment(
     molecule: Molecule,
-    susc_model: models.SusceptibilityModel,
+    susc_model: SusceptibilityModel,
     experiment: Experiment,
     average_labels: list[list[str]],
     n_attempts: int,

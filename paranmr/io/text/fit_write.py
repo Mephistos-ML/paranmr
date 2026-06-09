@@ -9,13 +9,13 @@ in a readable tabular format.
 
 import logging
 
-from paranmr.core.fitting.susceptibility import models
+from paranmr.core.fitting.susceptibility.models.base import SusceptibilityModel
 
 logger = logging.getLogger(__name__)
 
 
 def write_model_data(
-    models: list[models.SusceptibilityModel], file_name: str, verbose: bool = True
+    models: list[SusceptibilityModel], file_name: str, verbose: bool = True
 ) -> None:
     """Writes fitted model parameters for multiple temperatures to a text file.
 

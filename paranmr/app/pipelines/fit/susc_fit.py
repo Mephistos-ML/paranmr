@@ -35,7 +35,9 @@ from paranmr.core.const.gammas import NUCLEAR_GAMMAS
 from paranmr.core.domain.exp import Experiment
 from paranmr.core.domain.mol import Molecule
 from paranmr.core.domain.tensor import Hyperfine
-from paranmr.core.fitting.susceptibility import models
+from paranmr.core.fitting.susceptibility.models.base import SusceptibilityModel
+from paranmr.core.fitting.susceptibility.models.isoaxrho import IsoAxRhoFitter
+from paranmr.core.fitting.susceptibility.models.split import SplitFitter
 from paranmr.core.fitting.susceptibility.assign import (
     fit_with_hungarian_assignment,
     generate_assignment_permutations,
@@ -197,11 +199,11 @@ def run_fit_susc(config, options: FitSuscRunOptions | None = None) -> int:
     # Create a molecule object to accompany each experiment object
     molecules = [copy.deepcopy(base_molecule) for _ in range(len(experiments))]
 
-    name_to_susc_fit: dict[str, models.SusceptibilityModel] = {
-        "split": models.SplitFitter,
-        "isoaxrho": models.IsoAxRhoFitter,
-        "moments_split": models.SplitFitter,
-        "moments_isoaxrho": models.IsoAxRhoFitter,
+    name_to_susc_fit: dict[str, SusceptibilityModel] = {
+        "split": SplitFitter,
+        "isoaxrho": IsoAxRhoFitter,
+        "moments_split": SplitFitter,
+        "moments_isoaxrho": IsoAxRhoFitter,
     }
 
     use_moment_fit = config.susc_fit_type in {"moments_split", "moments_isoaxrho"}
@@ -210,7 +212,7 @@ def run_fit_susc(config, options: FitSuscRunOptions | None = None) -> int:
     # Create one susceptibility model per molecule/experiment pair. Reduced
     # input units depend on experiment temperature, so normalization happens
     # per experiment here rather than once at config-load time.
-    susc_models: list[models.SusceptibilityModel] = []
+    susc_models: list[SusceptibilityModel] = []
     for experiment in experiments:
         fit_vars, fix_vars = resolve_susc_fit_variables(
             raw_variables=config.susc_fit_variables,
@@ -584,7 +586,7 @@ def run_fit_susc(config, options: FitSuscRunOptions | None = None) -> int:
 def _obtain_r2a(
     molecule: Molecule,
     assignment: list[str],
-    model: models.SusceptibilityModel,
+    model: SusceptibilityModel,
     experiment: Experiment,
     average_labels: list[list[str]],
     echo_r2: bool,
@@ -598,7 +600,7 @@ def _obtain_r2a(
     Args:
         molecule (Molecule): Molecule instance used for shift prediction.
         assignment (list[str]): Proposed assignment list (one per signal).
-        model (models.SusceptibilityModel): Model instance to fit.
+        model: Model instance to fit.
         experiment (Experiment): Experiment data to fit against.
         average_labels (list[list[str]]): Groups of labels to average during fitting.
 

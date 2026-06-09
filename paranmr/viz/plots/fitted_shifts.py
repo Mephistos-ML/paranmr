@@ -18,7 +18,7 @@ import scipy.constants as constants
 from paranmr.core.const import ptable
 from paranmr.core.domain.exp import Experiment
 from paranmr.core.domain.mol import Molecule
-from paranmr.core.fitting.susceptibility import models
+from paranmr.core.fitting.susceptibility.models.base import SusceptibilityModel
 from paranmr.viz.layout.canvas import create_header_plot_canvas
 from paranmr.viz.layout.export import render_figure
 from paranmr.viz.layout.label import resolve_label_layout
@@ -55,7 +55,7 @@ def _build_element_legend_handles(
 def plot_fitted_shifts(
     molecule: Molecule,
     experiment: Experiment,
-    susc_model: models.SusceptibilityModel,
+    susc_model: SusceptibilityModel,
     spec: PlotSpec,
     average: bool = True,
     show_point_labels: bool = True,
