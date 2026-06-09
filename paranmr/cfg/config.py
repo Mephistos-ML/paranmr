@@ -162,6 +162,7 @@ class FitSuscConfig(Config):
             "method",
             "groups",
             "search",
+            "moment_weights",
         ],
         "nuclei": ["include", "include_groups"],
         "susc_fit": [
@@ -169,7 +170,6 @@ class FitSuscConfig(Config):
             "variables",
             "input_units",
             "average_shifts",
-            "moment_weights",
         ],
         "project": ["name"],
         "chem_labels": ["file"],
@@ -218,13 +218,13 @@ class FitSuscConfig(Config):
         self._assignment_n_attempts = None
         self._assignment_max_iter = None
         self._assignment_r2_threshold = None
+        self._assignment_moment_weights = {}
         self._nuclei_include = ""
         self._nuclei_include_groups = []
         self._susc_fit_type = ""
         self._susc_fit_variables = ""
         self._susc_fit_input_units = "A3"
         self._susc_fit_average_shifts = []
-        self._susc_fit_moment_weights = {}
         self._chem_labels_file = ""
         self._spin_S = None
         self._spin_multiplicity = None
@@ -462,17 +462,12 @@ class FitSuscConfig(Config):
         return
 
     @property
-    def susc_fit_type(self) -> bool:
+    def susc_fit_type(self) -> str:
         return self._susc_fit_type
 
     @susc_fit_type.setter
-    def susc_fit_type(self, value: bool):
-        if value not in [
-            "split",
-            "isoaxrho",
-            "moments_split",
-            "moments_isoaxrho",
-        ]:
+    def susc_fit_type(self, value: str):
+        if value not in ["split", "isoaxrho"]:
             raise ValueError(f"Unknown susc_fit:type {value}")
         self._susc_fit_type = value
         return
@@ -497,7 +492,7 @@ class FitSuscConfig(Config):
 
     @assignment_method.setter
     def assignment_method(self, value: str):
-        if value not in ["fixed", "permute", "hungarian"]:
+        if value not in ["fixed", "permute", "hungarian", "moments"]:
             raise ValueError(f"Unknown assignment:method {value}")
         self._assignment_method = value
         return None
@@ -685,17 +680,17 @@ class FitSuscConfig(Config):
         return
 
     @property
-    def susc_fit_moment_weights(self) -> dict[str, float]:
-        return self._susc_fit_moment_weights
+    def assignment_moment_weights(self) -> dict[str, float]:
+        return self._assignment_moment_weights
 
-    @susc_fit_moment_weights.setter
-    def susc_fit_moment_weights(self, value: dict[str, float] | None):
+    @assignment_moment_weights.setter
+    def assignment_moment_weights(self, value: dict[str, float] | None):
         if value is None or value == "":
-            self._susc_fit_moment_weights = {}
+            self._assignment_moment_weights = {}
             return
         if not isinstance(value, dict):
-            raise ValueError("susc_fit:moment_weights must be a mapping")
-        self._susc_fit_moment_weights = {
+            raise ValueError("assignment:moment_weights must be a mapping")
+        self._assignment_moment_weights = {
             moment_name: float(weight) for moment_name, weight in value.items()
         }
         return
@@ -1193,6 +1188,32 @@ class FitSuscConfig(Config):
                     "assignment:groups is not supported when "
                     "assignment:method is 'hungarian'"
                 )
+
+        elif config.assignment_method == "moments":
+            if len(config.assignment_groups):
+                raise ValueError(
+                    "assignment:groups is not supported when "
+                    "assignment:method is 'moments'"
+                )
+            if config.assignment_search:
+                logger.warning(
+                    "Ignoring Hungarian-only assignment:search mapping for "
+                    "assignment method 'moments'"
+                )
+            if not config.assignment_moment_weights:
+                raise ValueError(
+                    "assignment:moment_weights is required when "
+                    "assignment:method is 'moments'"
+                )
+
+        if (
+            config.assignment_method != "moments"
+            and config.assignment_moment_weights
+        ):
+            raise ValueError(
+                "assignment:moment_weights is only supported when "
+                "assignment:method is 'moments'"
+            )
 
         return config
 

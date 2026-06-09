@@ -202,11 +202,9 @@ def run_fit_susc(config, options: FitSuscRunOptions | None = None) -> int:
     name_to_susc_fit: dict[str, SusceptibilityModel] = {
         "split": SplitFitter,
         "isoaxrho": IsoAxRhoFitter,
-        "moments_split": SplitFitter,
-        "moments_isoaxrho": IsoAxRhoFitter,
     }
 
-    use_moment_fit = config.susc_fit_type in {"moments_split", "moments_isoaxrho"}
+    use_moment_fit = config.assignment_method == "moments"
     model_to_use = name_to_susc_fit[config.susc_fit_type]
 
     # Create one susceptibility model per molecule/experiment pair. Reduced
@@ -343,7 +341,7 @@ def run_fit_susc(config, options: FitSuscRunOptions | None = None) -> int:
                 widths_ppm=widths_ppm,
                 areas=areas,
                 average_labels=average_labels,
-                moment_weights=config.susc_fit_moment_weights,
+                moment_weights=config.assignment_moment_weights,
             )
             model_already_fitted = True
 

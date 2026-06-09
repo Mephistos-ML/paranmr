@@ -379,7 +379,7 @@ Used in susceptibility fitting workflows that require assignment handling.
     # assignment block schema (reference):
     assignment:
         # Assignment strategy [Required]
-        method: fixed # One of: fixed | permute | hungarian
+        method: fixed # One of: fixed | permute | hungarian | moments
 
         # Permutation groups [Required for permute only]
         groups:
@@ -392,6 +392,15 @@ Used in susceptibility fitting workflows that require assignment handling.
           n_attempts: 10      # Optional, mode: custom only
           max_iter: 100       # Optional, mode: custom only
           r2_threshold: 0.99  # Optional, mode: custom only
+
+        # Moment residual weights [Required for moments only]
+        moment_weights:
+          mean: 1.0
+          std: 5.0
+          skewness: 0.5
+          kurtosis: 0.25
+          standardized_5: 0.1
+          standardized_6: 0.0
 
 The supported strategies are:
 
@@ -413,6 +422,12 @@ The supported strategies are:
     absolute shift deviation. This is repeated until the assignment converges or
     the configured iteration limit is reached.
 
+``moments``
+    Fits the selected susceptibility model by matching Gaussian mixture moments
+    rather than assigned per-signal shifts. This method uses the experimental
+    peak centers, widths, and areas and does not perform assignment search.
+    Per-moment weights are required under ``assignment:moment_weights``.
+
 Search behaviour for ``hungarian`` is controlled by the ``search`` mapping:
 
 - ``mode: fast`` uses ``n_attempts=1``, ``max_iter=20``,
@@ -430,8 +445,8 @@ behaviour to the ``balanced`` mode.
 This method scales polynomially with the number of signals and is therefore
 preferred over ``permute`` for large or heavily degenerate assignment problems.
 
-Moment-based fitting is selected with ``susc_fit:type`` values such as
-``moments_split`` or ``moments_isoaxrho``; it is not an assignment method.
+Moment-based fitting is selected with ``assignment:method: moments``. The
+``susc_fit:type`` field still selects the susceptibility model parameterization.
 
 .. _Hungarian algorithm: https://en.wikipedia.org/wiki/Hungarian_algorithm
 
@@ -441,8 +456,9 @@ Moment-based fitting is selected with ``susc_fit:type`` values such as
 
    For ``permute``, the ``groups`` key must be explicitly defined.
 
-   For ``hungarian``, the ``groups`` key is not supported. Hungarian assignment
-   is controlled only through the optional ``search`` mapping.
+   For ``hungarian`` and ``moments``, the ``groups`` key is not supported.
+   Hungarian assignment is controlled only through the optional ``search``
+   mapping. Moment fitting requires ``assignment:moment_weights``.
 
    The canonical Hungarian forms are ``search: {mode: balanced}`` for preset
    behaviour and ``search: {mode: custom, n_attempts: ..., max_iter: ...,
@@ -467,8 +483,6 @@ Used in susceptibility fitting workflows.
         # Susceptibility model type [Required]
         type: isoaxrho # Isotropic + axial + rhombic susceptibility model
               split # Split isotropic/anisotropic susceptibility model
-              moments_split # Moment objective using the split model
-              moments_isoaxrho # Moment objective using the iso/ax/rho model
 
         # Optional input units for the susceptibility fit variables
         # Default: A3
@@ -490,19 +504,12 @@ Used in susceptibility fitting workflows.
           dyy: [fit, 0.1]
           dyz: [fit, 0.1]
 
-        # Moment-objective model types use the same variable names as their
-        # corresponding shift-objective models:
-        #   moments_split -> split variables
-        #   moments_isoaxrho -> isoaxrho variables
-
         average_shifts: 'all' # Average shifts over all chemical labels
                         ["Me1", "Me2"] # Average shifts over the specified chemical labels
 
 .. note::
 
    The required fit variables depend on the selected susceptibility model type.
-   ``moments_split`` uses the ``split`` variables, while
-   ``moments_isoaxrho`` uses the ``isoaxrho`` variables.
    Configuration loading validates the selected model type and variable names.
 
 .. note::

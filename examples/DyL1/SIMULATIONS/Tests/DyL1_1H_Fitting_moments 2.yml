@@ -22,16 +22,8 @@ experiment:
 chem_labels:
   file: ../../DATA/LABELS/DyL1_1H_Labels.csv
   
-susc_fit:
-  type: moments_split
-  variables:
-    iso: [fix, 0.0]
-    dxx: [fit, 0.001]
-    dxy: [fix, 0.0]
-    dxz: [fix, 0.0]
-    dyy: [fit, 0.001]
-    dyz: [fix, 0.0]
-  average_shifts: 'all'
+assignment:
+  method: moments
   moment_weights:
     mean: 1.0
     std: 10.0
@@ -43,3 +35,13 @@ susc_fit:
     kurtosis: 0.0
     standardized_5: 0.0
     standardized_6: 0.0
+susc_fit:
+  type: split
+  variables:
+    iso: [fix, 0.0]
+    dxx: [fit, 0.001]
+    dxy: [fix, 0.0]
+    dxz: [fix, 0.0]
+    dyy: [fit, 0.001]
+    dyz: [fix, 0.0]
+  average_shifts: 'all'

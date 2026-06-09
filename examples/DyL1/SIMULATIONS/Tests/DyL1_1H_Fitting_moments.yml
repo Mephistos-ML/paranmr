@@ -22,8 +22,18 @@ experiment:
 chem_labels:
   file: ../../DATA/LABELS/DyL1_1H_Labels.csv
   
+assignment:
+  method: moments
+  moment_weights:
+    mean: 1.0
+    std: 10.0
+    skewness: 1.0
+    kurtosis: 1.0
+    standardized_5: 1.0
+    standardized_6: 1.0
+
 susc_fit:
-  type: moments_split
+  type: split
   variables:
     iso: [fit, 0.0]
     dxx: [fit, 0.001]
@@ -32,10 +42,3 @@ susc_fit:
     dyy: [fit, 0.001]
     dyz: [fit, 0.001]
   average_shifts: 'all'
-  moment_weights:
-    mean: 1.0
-    std: 10.0
-    skewness: 1.0
-    kurtosis: 1.0
-    standardized_5: 1.0
-    standardized_6: 1.0

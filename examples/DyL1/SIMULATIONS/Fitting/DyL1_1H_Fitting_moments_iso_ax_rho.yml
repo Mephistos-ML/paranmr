@@ -1,5 +1,5 @@
 project:
-  name: DyL1_1H_Fitting_Moments
+  name: DyL1_1H_Fitting_Moments_iso_ax_rho
     
 hyperfine:
   method: pdip
@@ -28,17 +28,14 @@ assignment:
     mean: 1.0
     std: 5.0
     skewness: 0.5
-    kurtosis: 0.25
+    kurtosis: 0.92
     standardized_5: 0.1
-    standardized_6: 0.0
+    standardized_6: 0.057
     
 susc_fit:
-  type: split
+  type: isoaxrho
   variables:
     iso: [fit, 0.0]
-    dxx: [fit, 0.001]
-    dxy: [fit, 0.001]
-    dxz: [fit, 0.001]
-    dyy: [fit, 0.001]
-    dyz: [fit, 0.001]
+    ax: [fit, 0.001]
+    rho_over_ax: [fix, 0.0]
   average_shifts: 'all'

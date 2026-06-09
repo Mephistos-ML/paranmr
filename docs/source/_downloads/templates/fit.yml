@@ -19,7 +19,7 @@ nuclei:
   include: <insert nucleus> # e.g. H or C
 
 susc_fit:
-  type: <split|isoaxrho|moments_split|moments_isoaxrho>
+  type: <split|isoaxrho>
   variables:
     <insert variable 1>: [<fit|fix>, <initial value>]
     <insert variable 2>: [<fit|fix>, <initial value>]
