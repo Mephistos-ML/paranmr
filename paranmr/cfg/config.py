@@ -468,12 +468,9 @@ class FitSuscConfig(Config):
     @susc_fit_type.setter
     def susc_fit_type(self, value: bool):
         if value not in [
-            "full",
             "split",
             "isoaxrho",
-            "eigen",
-            "isoeigen",
-            "moments",
+            "moments_split",
             "moments_isoaxrho",
         ]:
             raise ValueError(f"Unknown susc_fit:type {value}")

@@ -196,16 +196,13 @@ def run_fit_susc(config, options: FitSuscRunOptions | None = None) -> int:
     molecules = [copy.deepcopy(base_molecule) for _ in range(len(experiments))]
 
     name_to_susc_fit: dict[str, models.SusceptibilityModel] = {
-        "full": models.FullSuscFitter,
         "split": models.SplitFitter,
         "isoaxrho": models.IsoAxRhoFitter,
-        "eigen": models.EigenFitter,
-        "isoeigen": models.IsoEigenFitter,
-        "moments": models.FullSuscFitter,
+        "moments_split": models.SplitFitter,
         "moments_isoaxrho": models.IsoAxRhoFitter,
     }
 
-    use_moment_fit = config.susc_fit_type in {"moments", "moments_isoaxrho"}
+    use_moment_fit = config.susc_fit_type in {"moments_split", "moments_isoaxrho"}
     model_to_use = name_to_susc_fit[config.susc_fit_type]
 
     # Create one susceptibility model per molecule/experiment pair. Reduced
