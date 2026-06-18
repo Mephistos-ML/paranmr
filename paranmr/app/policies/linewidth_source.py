@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (C) 2026 Suturina Group
 
-"""Resolve linewidth inputs for susceptibility fitting workflows."""
+"""Resolve linewidth sources for susceptibility fitting workflows."""
 
 import numpy as np
 from numpy.typing import NDArray
@@ -10,13 +10,13 @@ from paranmr.app.policies.peak_projection import resolve_gaussian_peak_inputs
 from paranmr.core.domain.exp import Experiment
 
 
-def resolve_moment_linewidths(
+def resolve_fitting_linewidths(
     *,
     method: str,
     experiment: Experiment,
     experimental_widths_ppm: NDArray | None = None,
 ) -> NDArray:
-    """Return linewidths used by moment-based susceptibility fitting.
+    """Return linewidths used by susceptibility fitting workflows.
 
     Args:
         method: Linewidth source selector. Currently only ``"experimental"``
@@ -39,6 +39,6 @@ def resolve_moment_linewidths(
         return widths_ppm
 
     raise ValueError(
-        "Unsupported moment linewidth method "
+        "Unsupported fitting linewidth method "
         f"{method!r}. Supported methods: 'experimental'."
     )

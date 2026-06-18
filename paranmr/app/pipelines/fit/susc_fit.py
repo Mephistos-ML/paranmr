@@ -26,8 +26,8 @@ from paranmr.app.params.options import FitSuscRunOptions
 from paranmr.app.pipelines.fit.vt_fit import fit_vt
 from paranmr.app.policies.assignment import resolve_assignment_search_settings
 from paranmr.app.policies.hfc import has_missing_selected_chem_labels
-from paranmr.app.policies.linewidth import resolve_output_linewidths
-from paranmr.app.policies.linewidth_fit import resolve_moment_linewidths
+from paranmr.app.policies.linewidth_source import resolve_fitting_linewidths
+from paranmr.app.policies.output_linewidth import resolve_output_linewidths
 from paranmr.app.policies.peak_projection import resolve_gaussian_peak_inputs
 from paranmr.app.policies.susc import resolve_susc_fit_variables
 
@@ -346,7 +346,7 @@ def run_fit_susc(config, options: FitSuscRunOptions | None = None) -> int:
 
         elif use_moment_fit:
             _, widths_ppm, areas = resolve_gaussian_peak_inputs(experiment)
-            widths_ppm = resolve_moment_linewidths(
+            widths_ppm = resolve_fitting_linewidths(
                 method=config.linewidth_method,
                 experiment=experiment,
                 experimental_widths_ppm=widths_ppm,

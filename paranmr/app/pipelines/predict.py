@@ -30,7 +30,7 @@ from paranmr.app.loaders.sh_load import (
 from paranmr.app.loaders.susc_load import load_susceptibilities
 from paranmr.app.params.options import PredictRunOptions
 from paranmr.app.policies.hfc import has_missing_selected_chem_labels
-from paranmr.app.policies.linewidth import resolve_output_linewidths
+from paranmr.app.policies.output_linewidth import resolve_output_linewidths
 from paranmr.app.policies.relax import resolve_relaxation_conditions
 from paranmr.app.policies.susc import resolve_susceptibility_source
 
