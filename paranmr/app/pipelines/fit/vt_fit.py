@@ -21,7 +21,17 @@ from paranmr.app.loaders.susc_load import load_susceptibilities
 from paranmr.app.policies.susc import resolve_susceptibility_source
 
 # Core / domain
-from paranmr.core.fitting import vt
+from paranmr.core.fitting.variable_temperatures.components import (
+    calculate_E_D_components,
+    compute_analytic_component,
+    compute_curie_prefactor,
+    compute_g_sq_components,
+    compute_tip_correction,
+)
+from paranmr.core.fitting.variable_temperatures.fitters import (
+    compute_chit_high_t_limit,
+    fit_chit_linear_model,
+)
 from paranmr.core.phys.susc import get_g_corr_iso_susc
 
 # IO layer
@@ -159,10 +169,10 @@ def fit_vt(
         )
 
         # Precompute g^2 invariants in the chi eigenframe for analytic chi(T) evaluation
-        g_components_sq = vt.compute_g_sq_components(g_rot_diag)
+        g_components_sq = compute_g_sq_components(g_rot_diag)
 
         # Compute the axial and rhombic parts of the effective Hamiltonian tensor (J)
-        D_J, E_J = vt.calculate_E_D_components(eff_H_rot)
+        D_J, E_J = calculate_E_D_components(eff_H_rot)
 
         # Map VT component identifiers to explicit Susceptibility attribute names
         comp_to_attr = {"iso": "iso_g_corr", "ax": "axiality", "rho": "rhombicity"}
@@ -197,7 +207,7 @@ def fit_vt(
         analytic_chi_vt = {}
         for comp in fit_component:
             analytic_chi_vt[comp] = np.asarray(
-                vt.compute_analytic_component(
+                compute_analytic_component(
                     comp,
                     t_grid,
                     g_components_sq,
@@ -221,7 +231,7 @@ def fit_vt(
                 raise ValueError(
                     f"Missing ab initio susceptibility component: {comp_to_attr[comp]}"
                 )
-            tip_ref = vt.compute_tip_correction(
+            tip_ref = compute_tip_correction(
                 ab_initio_value,
                 analytic_val_ref,
                 spin,
@@ -234,7 +244,7 @@ def fit_vt(
             ab_series[comp] = np.asarray(ab_series_full[comp], dtype=float)[ab_mask]
 
         # Normalise ab initio chiT series by the Curie prefactor for consistency
-        curie_prefactor = vt.compute_curie_prefactor(spin)
+        curie_prefactor = compute_curie_prefactor(spin)
         for comp in fit_component:
             ab_series[comp] = ab_series[comp] / curie_prefactor
 
@@ -268,7 +278,7 @@ def fit_vt(
     # Fit the VT model parameters for each susceptibility component
     for comp in fit_component:
         if method == "vt_2nd_order":
-            vals, errs, params = vt.fit_chit_linear_model(
+            vals, errs, params = fit_chit_linear_model(
                 spin=spin,
                 fit_temps=temps_fit,
                 chi_vals=chi_vals[comp],
@@ -277,7 +287,7 @@ def fit_vt(
             )
 
         if temps_fit.size == 1 or method == "ht_limit":
-            vals, errs, params = vt.compute_chit_high_t_limit(
+            vals, errs, params = compute_chit_high_t_limit(
                 spin=spin,
                 fit_temps=temps_fit,
                 chi_vals=chi_vals[comp],
