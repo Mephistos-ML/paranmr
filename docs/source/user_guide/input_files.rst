@@ -393,14 +393,16 @@ Used in susceptibility fitting workflows that require assignment handling.
           max_iter: 100       # Optional, mode: custom only
           r2_threshold: 0.99  # Optional, mode: custom only
 
-        # Moment residual weights [Required for moments only]
-        moment_weights:
-          mean: 1.0
-          std: 5.0
-          skewness: 0.5
-          kurtosis: 0.25
-          standardized_5: 0.1
-          standardized_6: 0.0
+        # Moment objective [Required for moments only]
+        moment_objective:
+          type: weighted_ls  # One of: weighted_ls | bootstrap_diagonal_gmm | bootstrap_full_gmm
+          weights:           # Required for type: weighted_ls
+            mean: 1.0
+            std: 5.0
+            skewness: 0.5
+            kurtosis: 0.25
+            standardized_5: 0.1
+            standardized_6: 0.0
 
 The supported strategies are:
 
@@ -426,7 +428,7 @@ The supported strategies are:
     Fits the selected susceptibility model by matching Gaussian mixture moments
     rather than assigned per-signal shifts. This method uses the experimental
     peak centers, widths, and areas and does not perform assignment search.
-    Per-moment weights are required under ``assignment:moment_weights``.
+    A moment objective is required under ``assignment:moment_objective``.
 
 Search behaviour for ``hungarian`` is controlled by the ``search`` mapping:
 
@@ -448,6 +450,14 @@ preferred over ``permute`` for large or heavily degenerate assignment problems.
 Moment-based fitting is selected with ``assignment:method: moments``. The
 ``susc_fit:type`` field still selects the susceptibility model parameterization.
 
+The moment objective controls how the normalized moment residual vector is
+transformed before least-squares optimization. The ``weighted_ls`` objective
+uses user-provided per-moment weights. The experimental
+``bootstrap_diagonal_gmm`` objective estimates diagonal inverse-variance weights
+by bootstrap perturbation of the experimental peak table. The experimental
+``bootstrap_full_gmm`` objective instead uses the full bootstrap covariance
+matrix with regularization.
+
 .. _Hungarian algorithm: https://en.wikipedia.org/wiki/Hungarian_algorithm
 
 .. note::
@@ -458,7 +468,7 @@ Moment-based fitting is selected with ``assignment:method: moments``. The
 
    For ``hungarian`` and ``moments``, the ``groups`` key is not supported.
    Hungarian assignment is controlled only through the optional ``search``
-   mapping. Moment fitting requires ``assignment:moment_weights``.
+   mapping. Moment fitting requires ``assignment:moment_objective``.
 
    The canonical Hungarian forms are ``search: {mode: balanced}`` for preset
    behaviour and ``search: {mode: custom, n_attempts: ..., max_iter: ...,

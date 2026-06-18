@@ -41,16 +41,20 @@ from paranmr.core.fitting.susceptibility.models.isoaxrho_euler import (
     IsoAxRhoEulerFitter,
 )
 from paranmr.core.fitting.susceptibility.models.split import SplitFitter
-from paranmr.core.fitting.susceptibility.assign import (
+from paranmr.core.fitting.susceptibility.assignment.hungarian import (
     fit_with_hungarian_assignment,
+)
+from paranmr.core.fitting.susceptibility.assignment.permutations import (
     generate_assignment_permutations,
 )
-from paranmr.core.fitting.susceptibility.moments import (
+from paranmr.core.fitting.susceptibility.fitters.moments import fit_model_to_moments
+from paranmr.core.fitting.susceptibility.fitters.shifts import fit_model_to_shifts
+from paranmr.core.fitting.susceptibility.moments.descriptors import (
     gaussian_mixture_moments,
+)
+from paranmr.core.fitting.susceptibility.moments.gaussian import (
     gaussian_peak_representation,
 )
-from paranmr.core.fitting.susceptibility.objectives.moments import fit_model_to_moments
-from paranmr.core.fitting.susceptibility.objectives.shifts import fit_model_to_shifts
 from paranmr.core.pcs.isosurf import compute_pcs_isosurface
 from paranmr.core.spectrum.kernels import (
     gaussian_fwhm_to_sigma,
@@ -252,6 +256,9 @@ def run_fit_susc(config, options: FitSuscRunOptions | None = None) -> int:
     if not config.diamagnetic_file:
         _terms.pop(_terms.index("d"))
 
+    fitted_molecules: list[Molecule] = []
+    fitted_susc_models: list[SusceptibilityModel] = []
+
     # Run fit for all experiments
     for molecule, susc_model, experiment in zip(molecules, susc_models, experiments):
         model_already_fitted = False
@@ -345,7 +352,7 @@ def run_fit_susc(config, options: FitSuscRunOptions | None = None) -> int:
                 widths_ppm=widths_ppm,
                 areas=areas,
                 average_labels=average_labels,
-                moment_weights=config.assignment_moment_weights,
+                moment_objective=config.assignment_moment_objective,
             )
             model_already_fitted = True
 
@@ -469,7 +476,17 @@ def run_fit_susc(config, options: FitSuscRunOptions | None = None) -> int:
                 order="descending",
             )
 
+        fitted_molecules.append(molecule)
+        fitted_susc_models.append(susc_model)
+
     # Write shift data to file
+    if not fitted_molecules:
+        raise RuntimeError(
+            "All susceptibility fits failed; no fitted susceptibility tensor is "
+            "available to write. Check the optimizer status and moment objective "
+            "diagnostics above."
+        )
+
     _comment_base = f"Hyperfines from file {config.hyperfine_file}\n"
     if len(config.diamagnetic_file):
         _comment_base += f"Diamagnetic shifts from file {config.diamagnetic_file}\n"
@@ -478,7 +495,7 @@ def run_fit_susc(config, options: FitSuscRunOptions | None = None) -> int:
             f"Diamagnetic reference from file {config.diamagnetic_ref_file}\n"
         )
 
-    for molecule in molecules:
+    for molecule in fitted_molecules:
         comment = _comment_base + f"T = {molecule.susc.temperature:.2f} K"
         save_molecule_to_csv(
             molecule=molecule,
@@ -493,14 +510,14 @@ def run_fit_susc(config, options: FitSuscRunOptions | None = None) -> int:
 
     # Write susceptibility tensor with model terms
     save_susc(
-        molecules,
+        fitted_molecules,
         os.path.join(config.project_name, "susceptibility_tensor.csv"),
-        susc_models=susc_models,
+        susc_models=fitted_susc_models,
         susc_units=options.susc_units,
     )
 
     if options.pcs_isosurface:
-        for molecule in molecules:
+        for molecule in fitted_molecules:
             # Generate and save PCS isosurface
             molecule.susc.calc_irred()
 

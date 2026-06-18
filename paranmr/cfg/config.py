@@ -78,19 +78,21 @@ class Config(ABC):
                 parsed[key] = value
             parsed.pop("master")
 
-        # Check for unsupported keywords
-        unsupported = [key for key in parsed if key not in cls.KEYWORDS]
-        # and subkeywords
-        unsupported += [
-            subkey
+        # Check for unsupported keywords and subkeywords.
+        unsupported_keywords = [key for key in parsed if key not in cls.KEYWORDS]
+        unsupported_subkeywords = [
+            (key, subkey)
             for key in parsed
+            if key in cls.KEYWORDS
             for subkey in parsed[key]
             if subkey not in cls.KEYWORDS[key]
         ]
-        if any(unsupported):
-            for us in unsupported:
-                logger.warning("Input keyword %s unknown", us)
-                parsed.pop(us)
+        for key in unsupported_keywords:
+            logger.warning("Input keyword %s unknown", key)
+            parsed.pop(key)
+        for key, subkey in unsupported_subkeywords:
+            logger.warning("Input keyword %s:%s unknown", key, subkey)
+            parsed[key].pop(subkey)
 
         # missing required (mandatory) keywords
         for keyword in cls.REQ_KEYWORDS:
@@ -162,7 +164,7 @@ class FitSuscConfig(Config):
             "method",
             "groups",
             "search",
-            "moment_weights",
+            "moment_objective",
         ],
         "nuclei": ["include", "include_groups"],
         "susc_fit": [
@@ -218,7 +220,7 @@ class FitSuscConfig(Config):
         self._assignment_n_attempts = None
         self._assignment_max_iter = None
         self._assignment_r2_threshold = None
-        self._assignment_moment_weights = {}
+        self._assignment_moment_objective = {}
         self._nuclei_include = ""
         self._nuclei_include_groups = []
         self._susc_fit_type = ""
@@ -680,18 +682,81 @@ class FitSuscConfig(Config):
         return
 
     @property
-    def assignment_moment_weights(self) -> dict[str, float]:
-        return self._assignment_moment_weights
+    def assignment_moment_objective(self) -> dict:
+        return self._assignment_moment_objective
 
-    @assignment_moment_weights.setter
-    def assignment_moment_weights(self, value: dict[str, float] | None):
+    @assignment_moment_objective.setter
+    def assignment_moment_objective(self, value: dict | None):
         if value is None or value == "":
-            self._assignment_moment_weights = {}
+            self._assignment_moment_objective = {}
             return
         if not isinstance(value, dict):
-            raise ValueError("assignment:moment_weights must be a mapping")
-        self._assignment_moment_weights = {
-            moment_name: float(weight) for moment_name, weight in value.items()
+            raise ValueError("assignment:moment_objective must be a mapping")
+
+        objective_type = str(value.get("type", "weighted_ls")).strip().lower()
+        allowed = {"weighted_ls", "bootstrap_diagonal_gmm", "bootstrap_full_gmm"}
+        if objective_type not in allowed:
+            raise ValueError(
+                "assignment:moment_objective:type must be one of "
+                + ", ".join(sorted(allowed))
+            )
+
+        if objective_type == "weighted_ls":
+            unknown = set(value) - {"type", "weights"}
+            if unknown:
+                raise ValueError(
+                    "assignment:moment_objective contains unknown key(s): "
+                    + ", ".join(sorted(unknown))
+                )
+            weights = value.get("weights", {})
+            if weights is None or weights == "":
+                weights = {}
+            if not isinstance(weights, dict):
+                raise ValueError(
+                    "assignment:moment_objective:weights must be a mapping"
+                )
+            self._assignment_moment_objective = {
+                "type": objective_type,
+                "weights": {
+                    moment_name: float(weight)
+                    for moment_name, weight in weights.items()
+                },
+            }
+            return
+
+        unknown = set(value) - {"type", "bootstrap"}
+        if unknown:
+            raise ValueError(
+                "assignment:moment_objective contains unknown key(s): "
+                + ", ".join(sorted(unknown))
+            )
+        bootstrap = value.get("bootstrap", {})
+        if bootstrap is None or bootstrap == "":
+            bootstrap = {}
+        if not isinstance(bootstrap, dict):
+            raise ValueError(
+                "assignment:moment_objective:bootstrap must be a mapping"
+            )
+        allowed_bootstrap = {
+            "samples",
+            "seed",
+            "center_sigma_ppm",
+            "centre_sigma_ppm",
+            "linewidth_relative_sigma",
+            "area_relative_sigma",
+            "variance_floor",
+            "covariance_regularization",
+            "shrinkage",
+        }
+        unknown_bootstrap = set(bootstrap) - allowed_bootstrap
+        if unknown_bootstrap:
+            raise ValueError(
+                "assignment:moment_objective:bootstrap contains unknown key(s): "
+                + ", ".join(sorted(unknown_bootstrap))
+            )
+        self._assignment_moment_objective = {
+            "type": objective_type,
+            "bootstrap": bootstrap,
         }
         return
 
@@ -1200,18 +1265,18 @@ class FitSuscConfig(Config):
                     "Ignoring Hungarian-only assignment:search mapping for "
                     "assignment method 'moments'"
                 )
-            if not config.assignment_moment_weights:
+            if not config.assignment_moment_objective:
                 raise ValueError(
-                    "assignment:moment_weights is required when "
+                    "assignment:moment_objective is required when "
                     "assignment:method is 'moments'"
                 )
 
         if (
             config.assignment_method != "moments"
-            and config.assignment_moment_weights
+            and config.assignment_moment_objective
         ):
             raise ValueError(
-                "assignment:moment_weights is only supported when "
+                "assignment:moment_objective is only supported when "
                 "assignment:method is 'moments'"
             )
 
