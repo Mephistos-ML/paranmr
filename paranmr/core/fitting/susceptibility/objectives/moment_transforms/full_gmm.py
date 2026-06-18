@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (C) 2026 Suturina Group
 
-"""Bootstrap full-covariance GMM moment objective transform."""
+"""Full-covariance GMM moment objective transform."""
 
 from __future__ import annotations
 
@@ -13,7 +13,7 @@ from paranmr.core.fitting.susceptibility.objectives.moment_transforms.state impo
 )
 
 
-def bootstrap_full_gmm_transform(
+def full_gmm_transform(
     *,
     moment_names: tuple[str, ...],
     covariance: NDArray[np.float64],

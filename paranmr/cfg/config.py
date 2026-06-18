@@ -694,7 +694,7 @@ class FitSuscConfig(Config):
             raise ValueError("assignment:moment_objective must be a mapping")
 
         objective_type = str(value.get("type", "weighted_ls")).strip().lower()
-        allowed = {"weighted_ls", "bootstrap_diagonal_gmm", "bootstrap_full_gmm"}
+        allowed = {"weighted_ls", "diagonal_gmm", "full_gmm"}
         if objective_type not in allowed:
             raise ValueError(
                 "assignment:moment_objective:type must be one of "
@@ -724,20 +724,28 @@ class FitSuscConfig(Config):
             }
             return
 
-        unknown = set(value) - {"type", "bootstrap"}
+        unknown = set(value) - {"type", "uncertainty"}
         if unknown:
             raise ValueError(
                 "assignment:moment_objective contains unknown key(s): "
                 + ", ".join(sorted(unknown))
             )
-        bootstrap = value.get("bootstrap", {})
-        if bootstrap is None or bootstrap == "":
-            bootstrap = {}
-        if not isinstance(bootstrap, dict):
+        uncertainty = value.get("uncertainty", {"method": "bootstrap"})
+        if uncertainty is None or uncertainty == "":
+            uncertainty = {"method": "bootstrap"}
+        if not isinstance(uncertainty, dict):
             raise ValueError(
-                "assignment:moment_objective:bootstrap must be a mapping"
+                "assignment:moment_objective:uncertainty must be a mapping"
             )
-        allowed_bootstrap = {
+        uncertainty_method = str(
+            uncertainty.get("method", "bootstrap")
+        ).strip().lower()
+        if uncertainty_method != "bootstrap":
+            raise ValueError(
+                "assignment:moment_objective:uncertainty:method must be bootstrap"
+            )
+        allowed_uncertainty = {
+            "method",
             "samples",
             "seed",
             "center_sigma_ppm",
@@ -748,15 +756,17 @@ class FitSuscConfig(Config):
             "covariance_regularization",
             "shrinkage",
         }
-        unknown_bootstrap = set(bootstrap) - allowed_bootstrap
-        if unknown_bootstrap:
+        unknown_uncertainty = set(uncertainty) - allowed_uncertainty
+        if unknown_uncertainty:
             raise ValueError(
-                "assignment:moment_objective:bootstrap contains unknown key(s): "
-                + ", ".join(sorted(unknown_bootstrap))
+                "assignment:moment_objective:uncertainty contains unknown key(s): "
+                + ", ".join(sorted(unknown_uncertainty))
             )
+        uncertainty = dict(uncertainty)
+        uncertainty["method"] = uncertainty_method
         self._assignment_moment_objective = {
             "type": objective_type,
-            "bootstrap": bootstrap,
+            "uncertainty": uncertainty,
         }
         return
 

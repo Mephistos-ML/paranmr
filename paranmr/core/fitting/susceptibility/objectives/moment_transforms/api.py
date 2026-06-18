@@ -11,11 +11,11 @@ from numpy.typing import ArrayLike, NDArray
 from paranmr.core.fitting.susceptibility.moments.bootstrap import (
     bootstrap_moment_residual_covariance,
 )
-from paranmr.core.fitting.susceptibility.objectives.moment_transforms.bootstrap_diagonal_gmm import (
-    bootstrap_diagonal_gmm_transform,
+from paranmr.core.fitting.susceptibility.objectives.moment_transforms.diagonal_gmm import (
+    diagonal_gmm_transform,
 )
-from paranmr.core.fitting.susceptibility.objectives.moment_transforms.bootstrap_full_gmm import (
-    bootstrap_full_gmm_transform,
+from paranmr.core.fitting.susceptibility.objectives.moment_transforms.full_gmm import (
+    full_gmm_transform,
 )
 from paranmr.core.fitting.susceptibility.objectives.moment_transforms.state import (
     bootstrap_float,
@@ -53,18 +53,26 @@ def prepare_moment_objective(
             diagnostics=diagnostics,
         )
 
-    if objective_type in {"bootstrap_diagonal_gmm", "bootstrap_full_gmm"}:
-        bootstrap = objective_config.get("bootstrap", {})
+    if objective_type in {"diagonal_gmm", "full_gmm"}:
+        uncertainty = objective_config.get("uncertainty", {"method": "bootstrap"})
+        uncertainty_method = str(uncertainty.get("method", "bootstrap")).lower()
+        if uncertainty_method != "bootstrap":
+            raise ValueError("Only bootstrap moment uncertainty is currently supported")
+        bootstrap_config = {
+            key: value for key, value in uncertainty.items() if key != "method"
+        }
         covariance, variances = bootstrap_moment_residual_covariance(
             observed_centers=observed_centers,
             widths_ppm=widths_ppm,
             areas=areas,
             observed_moments=observed_moments,
-            bootstrap_config=bootstrap,
+            bootstrap_config=bootstrap_config,
         )
-        variance_floor = bootstrap_float(bootstrap, "variance_floor", 1.0e-12)
-        if objective_type == "bootstrap_diagonal_gmm":
-            transform, diagnostics = bootstrap_diagonal_gmm_transform(
+        variance_floor = bootstrap_float(
+            bootstrap_config, "variance_floor", 1.0e-12
+        )
+        if objective_type == "diagonal_gmm":
+            transform, diagnostics = diagonal_gmm_transform(
                 moment_names=moment_names,
                 covariance=covariance,
                 variances=variances,
@@ -72,12 +80,12 @@ def prepare_moment_objective(
             )
             component_names = moment_names
         else:
-            transform, diagnostics = bootstrap_full_gmm_transform(
+            transform, diagnostics = full_gmm_transform(
                 moment_names=moment_names,
                 covariance=covariance,
                 variances=variances,
                 variance_floor=variance_floor,
-                bootstrap_config=bootstrap,
+                bootstrap_config=bootstrap_config,
             )
             component_names = tuple(
                 f"gmm_component_{idx + 1}" for idx in range(transform.shape[0])
@@ -94,7 +102,7 @@ def prepare_moment_objective(
     raise ValueError(
         "Unknown moment objective type "
         f"{objective_type!r}. Supported values are 'weighted_ls', "
-        "'bootstrap_diagonal_gmm', and 'bootstrap_full_gmm'."
+        "'diagonal_gmm', and 'full_gmm'."
     )
 
 
