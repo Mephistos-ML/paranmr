@@ -27,3 +27,6 @@ susc_fit:
 
 assignment:
   method: <insert method>
+
+linewidth:
+  method: experimental

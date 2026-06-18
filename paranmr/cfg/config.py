@@ -166,6 +166,9 @@ class FitSuscConfig(Config):
             "search",
             "moment_objective",
         ],
+        "linewidth": [
+            "method",
+        ],
         "nuclei": ["include", "include_groups"],
         "susc_fit": [
             "type",
@@ -221,6 +224,7 @@ class FitSuscConfig(Config):
         self._assignment_max_iter = None
         self._assignment_r2_threshold = None
         self._assignment_moment_objective = {}
+        self._linewidth_method = "experimental"
         self._nuclei_include = ""
         self._nuclei_include_groups = []
         self._susc_fit_type = ""
@@ -724,7 +728,10 @@ class FitSuscConfig(Config):
             }
             return
 
-        unknown = set(value) - {"type", "uncertainty"}
+        objective_keys = {"type", "uncertainty", "variance_floor"}
+        if objective_type == "full_gmm":
+            objective_keys.update({"covariance_regularization", "shrinkage"})
+        unknown = set(value) - objective_keys
         if unknown:
             raise ValueError(
                 "assignment:moment_objective contains unknown key(s): "
@@ -752,9 +759,6 @@ class FitSuscConfig(Config):
             "centre_sigma_ppm",
             "linewidth_relative_sigma",
             "area_relative_sigma",
-            "variance_floor",
-            "covariance_regularization",
-            "shrinkage",
         }
         unknown_uncertainty = set(uncertainty) - allowed_uncertainty
         if unknown_uncertainty:
@@ -764,10 +768,46 @@ class FitSuscConfig(Config):
             )
         uncertainty = dict(uncertainty)
         uncertainty["method"] = uncertainty_method
-        self._assignment_moment_objective = {
+        parsed_objective = {
             "type": objective_type,
             "uncertainty": uncertainty,
         }
+        if "variance_floor" in value and value["variance_floor"] not in (None, ""):
+            parsed_objective["variance_floor"] = float(value["variance_floor"])
+        if objective_type == "full_gmm":
+            if (
+                "covariance_regularization" in value
+                and value["covariance_regularization"] not in (None, "")
+            ):
+                parsed_objective["covariance_regularization"] = float(
+                    value["covariance_regularization"]
+                )
+            if "shrinkage" in value and value["shrinkage"] not in (None, ""):
+                parsed_objective["shrinkage"] = float(value["shrinkage"])
+        self._assignment_moment_objective = parsed_objective
+        return
+
+    @property
+    def linewidth_method(self) -> str:
+        return self._linewidth_method
+
+    @linewidth_method.setter
+    def linewidth_method(self, value: str | None):
+        if value is None or value == "":
+            self._linewidth_method = "experimental"
+            return
+        if not isinstance(value, str):
+            raise ValueError("linewidth:method must be a string")
+
+        method = value.strip().lower()
+        allowed = {"experimental"}
+        if method not in allowed:
+            raise ValueError(
+                "Invalid linewidth:method '"
+                + str(value)
+                + "'. Allowed values are: 'experimental'."
+            )
+        self._linewidth_method = method
         return
 
     @property

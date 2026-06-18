@@ -454,9 +454,10 @@ The moment objective controls how the normalized moment residual vector is
 transformed before least-squares optimization. The ``weighted_ls`` objective uses user-provided per-moment weights.
 The ``diagonal_gmm`` objective uses a diagonal inverse-variance weighting
 matrix. The ``full_gmm`` objective uses the full covariance weighting matrix
-with regularization. For GMM objectives, moment uncertainty is provided by the
-``uncertainty`` mapping; currently the supported uncertainty method is
-``bootstrap`` perturbation of the experimental peak table.
+with regularization. Numerical GMM options such as ``variance_floor`` and
+``covariance_regularization`` live directly under ``moment_objective``. Moment
+uncertainty is provided by the ``uncertainty`` mapping; currently the supported
+uncertainty method is ``bootstrap`` perturbation of the experimental peak table.
 
 .. _Hungarian algorithm: https://en.wikipedia.org/wiki/Hungarian_algorithm
 
@@ -476,6 +477,31 @@ with regularization. For GMM objectives, moment uncertainty is provided by the
 
    Assignment handling assumes that experimental data and assignments are
    ordered consistently by the user.
+
+Linewidth
+^^^^^^^^^
+
+Defines the source of linewidths used by moment-based susceptibility fitting.
+
+**Applicability:**  
+Used in susceptibility fitting workflows.
+
+.. code-block:: yaml
+
+    # linewidth block schema (reference):
+    linewidth:
+        # Linewidth source for moment fitting [Optional]
+        # Default: experimental
+        method: experimental
+
+Currently, ``experimental`` is the only supported method. It uses linewidths
+from the experimental peak table.
+
+.. note::
+
+   Future linewidth modes may provide model-derived linewidths. Until such a
+   mode is implemented, ``linewidth:method`` must be ``experimental`` when the
+   block is present.
 
 Magnetic Susceptibility Fitting
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
