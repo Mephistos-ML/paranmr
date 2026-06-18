@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (C) 2026 Suturina Group
 
-"""Moment-based fitting objective for susceptibility models."""
+"""Moment-based susceptibility fitting workflow."""
 
 import copy
 import logging
@@ -13,14 +13,19 @@ from scipy.optimize._optimize import OptimizeResult
 
 from paranmr.core.domain.exp import Experiment
 from paranmr.core.domain.mol import Molecule, Nucleus
-from paranmr.core.fitting.susceptibility.moments import (
-    active_moment_residual_mask,
-    apply_moment_weights,
-    count_active_moment_residuals,
+from paranmr.core.fitting.susceptibility.objectives.moment_transforms import (
+    active_moment_objective_mask,
+    apply_moment_objective,
+    count_active_moment_objective_residuals,
+    prepare_moment_objective,
+)
+from paranmr.core.fitting.susceptibility.moments.descriptors import (
     gaussian_mixture_moment_residuals,
     gaussian_mixture_moments,
-    gaussian_peak_representation,
     moment_residual_norm,
+)
+from paranmr.core.fitting.susceptibility.moments.gaussian import (
+    gaussian_peak_representation,
 )
 from paranmr.core.fitting.susceptibility.stats import svd_stdev
 
@@ -38,6 +43,24 @@ def _format_moment_values(values: dict[str, float]) -> str:
     return ", ".join(
         f"{moment_name}={value:.6g}" for moment_name, value in values.items()
     )
+
+
+def _format_moment_objective(objective_state: dict) -> str:
+    diagnostics = objective_state.get("diagnostics", {})
+    weights = diagnostics.get("weights", {})
+    weight_text = _format_moment_values(weights) if weights else "none"
+    parts = [f"type={objective_state.get('type')}", f"weights={weight_text}"]
+    if "covariance_regularization" in diagnostics:
+        parts.append(
+            "covariance_regularization="
+            f"{diagnostics['covariance_regularization']:.6g}"
+        )
+    if "covariance_condition_number" in diagnostics:
+        parts.append(
+            "covariance_condition_number="
+            f"{diagnostics['covariance_condition_number']:.6g}"
+        )
+    return ", ".join(parts)
 
 
 def calculated_centers_from_parameters(
@@ -95,7 +118,7 @@ def moment_residual_from_float_list(
     observed_moments: dict[str, float],
     widths_ppm: NDArray,
     areas: NDArray,
-    moment_weights: dict[str, float] | None,
+    moment_objective_state: dict,
 ) -> list[float]:
     """Compute moment residuals for optimizer-supplied model parameters."""
 
@@ -124,7 +147,7 @@ def moment_residual_from_float_list(
         observed=observed_moments,
         normalize=True,
     )
-    weighted_residuals = apply_moment_weights(residuals, moment_weights)
+    weighted_residuals = apply_moment_objective(residuals, moment_objective_state)
 
     return list(weighted_residuals.values())
 
@@ -136,7 +159,7 @@ def fit_model_to_moments(
     widths_ppm: NDArray,
     areas: NDArray,
     average_labels: list[list[str]] = [],
-    moment_weights: dict[str, float] | None = None,
+    moment_objective: dict | None = None,
     verbose: bool = True,
 ) -> None:
     """Fit a susceptibility model by matching Gaussian mixture moments."""
@@ -176,6 +199,18 @@ def fit_model_to_moments(
         sigmas=observed_peaks["sigma"],
         area_norm=observed_peaks["area_norm"],
     )
+    moment_objective_state = prepare_moment_objective(
+        observed_centers=observed_centers,
+        widths_ppm=widths_arr,
+        areas=areas_arr,
+        observed_moments=observed_moments,
+        objective_config=moment_objective,
+    )
+    logger.info(
+        _pink_log("Prepared moment objective at %.4f K: %s"),
+        experiment.temperature,
+        _format_moment_objective(moment_objective_state),
+    )
 
     guess = [val for val in model.fit_vars.values()]
     bounds = np.array([model.BOUNDS[name] for name in model.fit_vars.keys()]).T
@@ -191,7 +226,7 @@ def fit_model_to_moments(
             observed_moments,
             widths_arr,
             areas_arr,
-            moment_weights,
+            moment_objective_state,
         ),
         x0=guess,
         bounds=bounds,
@@ -229,17 +264,13 @@ def fit_model_to_moments(
         model.adj_r2 = np.nan
         return
 
-    effective_residual_count = count_active_moment_residuals(
-        observed_moments,
-        moment_weights,
+    effective_residual_count = count_active_moment_objective_residuals(
+        moment_objective_state
     )
     if effective_residual_count <= curr_fit.x.size:
         model.fit_stdev = {label: np.nan for label in model.fit_vars.keys()}
     else:
-        active_mask = active_moment_residual_mask(
-            observed_moments,
-            moment_weights,
-        )
+        active_mask = active_moment_objective_mask(moment_objective_state)
         active_fit = OptimizeResult(
             fun=np.asarray(curr_fit.fun, dtype=float)[active_mask],
             jac=np.asarray(curr_fit.jac, dtype=float)[active_mask, :],
@@ -282,7 +313,7 @@ def fit_model_to_moments(
         observed=observed_moments,
         normalize=True,
     )
-    weighted_residuals = apply_moment_weights(residuals, moment_weights)
+    weighted_residuals = apply_moment_objective(residuals, moment_objective_state)
     score = moment_residual_norm(weighted_residuals)
     unweighted_score = moment_residual_norm(residuals)
 
@@ -315,4 +346,9 @@ def fit_model_to_moments(
         _pink_log("Unweighted moment fit score at %.4f K = %.6g"),
         experiment.temperature,
         unweighted_score,
+    )
+    logger.info(
+        _pink_log("Moment objective at %.4f K: %s"),
+        experiment.temperature,
+        _format_moment_objective(moment_objective_state),
     )
