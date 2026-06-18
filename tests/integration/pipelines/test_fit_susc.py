@@ -36,7 +36,7 @@ def test_fit_susc_with_pdip_hfc_isoaxrho_and_permutation_assignment(tmp_path: Pa
     coordinates together with the ``isoaxrho`` susceptibility fit model and
     permutation-based assignment.
     """
-    cwd = Path("examples/DyL1/SIMULATIONS/Fitting")
+    cwd = Path("examples/DyL1/SIMULATIONS/Fitting/Standart_Fit")
     cmd = ["paranmr", "--hide", "fit_susc", "DyL1_1H_Fitting.yml"]
     result = subprocess.run(
         cmd, capture_output=True, text=True, cwd=cwd, env=_cli_env(tmp_path)
