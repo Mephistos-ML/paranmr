@@ -12,52 +12,9 @@ import logging
 import numpy as np
 import pandas as pd
 
-from paranmr.core.fitting.susceptibility.fitters.moments import MomentSignalMapping
 from paranmr.io.csv.csv_util import read_csv_safe, write_csv_safe
 
 logger = logging.getLogger(__name__)
-
-
-def save_moment_signal_mappings(
-    mappings: list[MomentSignalMapping],
-    file_name: str,
-    comment: str | list[str] | None = None,
-    verbose: bool = True,
-) -> None:
-    """Write derived moment signal mappings to CSV.
-
-    Args:
-        mappings: Derived signal-to-calculated-package mappings.
-        file_name: Output CSV path.
-        comment: Optional comment header.
-        verbose: If ``True``, log the output path.
-
-    Returns:
-        None.
-    """
-
-    rows = [
-        {
-            "signal_label": mapping.signal_label,
-            "observed_center_ppm": mapping.observed_center,
-            "observed_width_ppm": mapping.observed_width,
-            "observed_area": mapping.observed_area,
-            "atom_labels": ",".join(mapping.atom_labels),
-            "package_labels": ",".join(mapping.package_labels),
-            "calculated_centers_ppm": ",".join(
-                f"{center:.6f}" for center in mapping.calculated_centers
-            ),
-            "calculated_center_ppm": mapping.calculated_center,
-            "delta_ppm": mapping.delta_ppm,
-        }
-        for mapping in mappings
-    ]
-    write_csv_safe(pd.DataFrame(rows), file_name, comment)
-
-    if verbose:
-        logger.info("Moment signal mappings written to %s", file_name)
-
-    return
 
 
 def save_slope_intercept(

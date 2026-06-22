@@ -48,10 +48,7 @@ from paranmr.core.fitting.susceptibility.assignment.hungarian import (
 from paranmr.core.fitting.susceptibility.assignment.permutations import (
     generate_assignment_permutations,
 )
-from paranmr.core.fitting.susceptibility.fitters.moments import (
-    MomentSignalMapping,
-    fit_model_to_moments,
-)
+from paranmr.core.fitting.susceptibility.fitters.moments import fit_model_to_moments
 from paranmr.core.fitting.susceptibility.fitters.shifts import fit_model_to_shifts
 from paranmr.core.fitting.susceptibility.moments.descriptors import (
     gaussian_mixture_moments,
@@ -68,7 +65,6 @@ from paranmr.core.util.strings import remove_numbers
 
 # IO layer
 from paranmr.io.csv.mol import save_molecule_to_csv
-from paranmr.io.csv.fit import save_moment_signal_mappings
 from paranmr.io.csv.susc import save_susc
 from paranmr.io.cube.pcs_iso_write import write_pcs_cube
 from paranmr.io.xyz import xyz_write
@@ -302,7 +298,6 @@ def run_fit_susc(config, options: FitSuscRunOptions | None = None) -> int:
 
     fitted_molecules: list[Molecule] = []
     fitted_susc_models: list[SusceptibilityModel] = []
-    moment_signal_mappings_by_temperature: dict[float, list[MomentSignalMapping]] = {}
 
     # Run fit for all experiments
     for molecule, susc_model, experiment in zip(molecules, susc_models, experiments):
@@ -398,7 +393,7 @@ def run_fit_susc(config, options: FitSuscRunOptions | None = None) -> int:
                 experimental_widths_ppm=widths_ppm,
                 label_kind="atom_label",
             )
-            moment_signal_mappings = fit_model_to_moments(
+            fit_model_to_moments(
                 model=susc_model,
                 molecule=molecule,
                 experiment=experiment,
@@ -417,18 +412,6 @@ def run_fit_susc(config, options: FitSuscRunOptions | None = None) -> int:
                     id(experiment)
                 ),
                 include_diamagnetic=moment_include_diamagnetic,
-            )
-            moment_signal_mappings_by_temperature[experiment.temperature] = (
-                moment_signal_mappings
-            )
-            save_moment_signal_mappings(
-                mappings=moment_signal_mappings,
-                file_name=os.path.join(
-                    config.project_name,
-                    f"moment_signal_mappings_{experiment.temperature:.2f}_K.csv",
-                ),
-                comment=f"T = {experiment.temperature:.2f} K",
-                verbose=True,
             )
             model_already_fitted = True
 
@@ -648,14 +631,6 @@ def run_fit_susc(config, options: FitSuscRunOptions | None = None) -> int:
         shift_range[1] + np.positive(np.max(extras)),
     ]
     linewidth_output = resolve_output_linewidths(mol, shift_range)
-    spectrum_annotations = None
-    if use_moment_fit:
-        mappings = moment_signal_mappings_by_temperature.get(mol.susc.temperature, [])
-        spectrum_annotations = [
-            (mapping.calculated_center, mapping.signal_label)
-            for mapping in mappings
-            if np.isfinite(mapping.calculated_center)
-        ]
 
     if spin is not None:
         temps_fit = np.array([mol.susc.temperature for mol in molecules], dtype=float)
@@ -676,7 +651,6 @@ def run_fit_susc(config, options: FitSuscRunOptions | None = None) -> int:
             shift_range=shift_range,
             spec=spec,
             effective_linewidths_by_label=linewidth_output.values_by_label,
-            annotation_peaks=spectrum_annotations,
             save=True,
             show=options.runtime.show_plots,
             save_name=os.path.join(

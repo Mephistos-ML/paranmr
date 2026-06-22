@@ -46,7 +46,6 @@ def plot_pred_spectrum(
     shift_range: ArrayLike,
     spec: PlotSpec,
     effective_linewidths_by_label: Mapping[str, float] | None = None,
-    annotation_peaks: list[tuple[float, str]] | None = None,
     save: bool = True,
     show: bool = True,
     save_name: str = "predicted_spectrum.pdf",
@@ -62,8 +61,6 @@ def plot_pred_spectrum(
         spec: Plot styling contract.
         effective_linewidths_by_label: Optional per-nucleus linewidths in ppm
             resolved by the application pipeline.
-        annotation_peaks: Optional ``(shift_ppm, label)`` pairs used for peak
-            annotations instead of molecule-derived nucleus labels.
         save: If ``True``, saves the plot to `save_name`.
         show: If ``True``, shows the plot.
         save_name: Output image file name.
@@ -115,19 +112,14 @@ def plot_pred_spectrum(
     # Spectrum trace
     ax.plot(x_grid, y_intensity, color=palette.primary, lw=glyphs.line_lw * 0.75)
 
-    if annotation_peaks is None:
-        avg_shifts = {
-            nucleus.signal_math_label: nucleus.shift.avg
-            for nucleus in molecule.nuclei
-            if nucleus.isotope == isotope
-        }
-        sorted_shifts_labels = sorted(avg_shifts.items(), key=lambda x: x[1])
-        sorted_labels = [label for label, _ in sorted_shifts_labels]
-        sorted_shifts = [shift for _, shift in sorted_shifts_labels]
-    else:
-        sorted_shifts_labels = sorted(annotation_peaks, key=lambda x: x[0])
-        sorted_shifts = [shift for shift, _ in sorted_shifts_labels]
-        sorted_labels = [label for _, label in sorted_shifts_labels]
+    avg_shifts = {
+        nucleus.signal_math_label: nucleus.shift.avg
+        for nucleus in molecule.nuclei
+        if nucleus.isotope == isotope
+    }
+    sorted_shifts_labels = sorted(avg_shifts.items(), key=lambda x: x[1])
+    sorted_labels = [label for label, _ in sorted_shifts_labels]
+    sorted_shifts = [shift for _, shift in sorted_shifts_labels]
 
     _annotate_peaks_with_barrier(
         ax,

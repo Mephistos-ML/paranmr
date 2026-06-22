@@ -52,21 +52,6 @@ class CalculatedSignalPackage:
     center: float
 
 
-@dataclass(frozen=True)
-class MomentSignalMapping:
-    """Derived mapping from an observed signal to fitted calculated packages."""
-
-    signal_label: str
-    observed_center: float
-    observed_width: float
-    observed_area: float
-    package_labels: tuple[str, ...]
-    atom_labels: tuple[str, ...]
-    calculated_centers: tuple[float, ...]
-    calculated_center: float
-    delta_ppm: float
-
-
 def _pink_log(message: str) -> str:
     return f"{_PINK_LOG}{message}{_RESET_LOG}"
 
@@ -266,71 +251,6 @@ def _observed_widths_for_calculated_packages(
     )
 
 
-def derive_moment_signal_mappings(
-    *,
-    signal_labels: list[str],
-    observed_centers: NDArray,
-    observed_widths: NDArray,
-    observed_areas: NDArray,
-    calculated_packages: list[CalculatedSignalPackage],
-) -> list[MomentSignalMapping]:
-    """Map fitted calculated packages to observed signal labels by order.
-
-    This is an output interpretation of a moment fit. Signal labels come from
-    the experiment; atom labels come from fitted calculated packages. Both
-    mixtures are interpreted in sorted spectral order, matching the moment
-    objective.
-    """
-
-    centers = np.asarray(observed_centers, dtype=float)
-    widths = np.asarray(observed_widths, dtype=float)
-    areas = np.asarray(observed_areas, dtype=float)
-    if not (len(signal_labels) == centers.size == widths.size == areas.size):
-        raise ValueError(
-            "Observed signal labels, centers, widths, and areas must have "
-            "matching lengths"
-        )
-
-    grouped_indices = [
-        [int(index) for index in indices]
-        for indices in np.array_split(
-            np.arange(len(calculated_packages)),
-            len(signal_labels),
-        )
-    ]
-
-    mappings = []
-    for signal_index, package_indices in enumerate(grouped_indices):
-        packages = [calculated_packages[index] for index in package_indices]
-        package_labels = tuple(package.label for package in packages)
-        atom_labels = tuple(
-            atom_label
-            for package in packages
-            for atom_label in package.atom_labels
-        )
-        calculated_centers = tuple(float(package.center) for package in packages)
-        if calculated_centers:
-            calculated_center = float(np.mean(calculated_centers))
-            delta_ppm = calculated_center - float(centers[signal_index])
-        else:
-            calculated_center = np.nan
-            delta_ppm = np.nan
-        mappings.append(
-            MomentSignalMapping(
-                signal_label=str(signal_labels[signal_index]),
-                observed_center=float(centers[signal_index]),
-                observed_width=float(widths[signal_index]),
-                observed_area=float(areas[signal_index]),
-                package_labels=package_labels,
-                atom_labels=atom_labels,
-                calculated_centers=calculated_centers,
-                calculated_center=calculated_center,
-                delta_ppm=delta_ppm,
-            )
-        )
-    return mappings
-
-
 def moment_residual_from_float_list(
     new_vals: list[float],
     model,
@@ -426,10 +346,9 @@ def fit_model_to_moments(
     observed_centers_ppm: NDArray | None = None,
     include_diamagnetic: bool = True,
     verbose: bool = True,
-) -> list[MomentSignalMapping]:
+) -> None:
     """Fit a susceptibility model by matching Gaussian mixture moments."""
 
-    observed_labels = [signal.signal_label for signal in experiment.signals]
     if observed_centers_ppm is None:
         observed_centers = np.asarray(
             [signal.shift for signal in experiment.signals], dtype=float
@@ -441,7 +360,6 @@ def fit_model_to_moments(
 
     sort_idx = np.argsort(observed_centers)
     observed_centers = observed_centers[sort_idx]
-    observed_labels = [observed_labels[index] for index in sort_idx]
     widths_arr = widths_arr[sort_idx]
     areas_arr = areas_arr[sort_idx]
 
@@ -539,7 +457,7 @@ def fit_model_to_moments(
         model.rmse = np.nan
         model.r2 = np.nan
         model.adj_r2 = np.nan
-        return []
+        return
 
     if final_linewidth_vars:
         logger.info(
@@ -669,10 +587,4 @@ def fit_model_to_moments(
         experiment.temperature,
         _format_moment_objective(moment_objective_state),
     )
-    return derive_moment_signal_mappings(
-        signal_labels=observed_labels,
-        observed_centers=observed_centers,
-        observed_widths=widths_arr,
-        observed_areas=areas_arr,
-        calculated_packages=sorted_calc_packages,
-    )
+    return
