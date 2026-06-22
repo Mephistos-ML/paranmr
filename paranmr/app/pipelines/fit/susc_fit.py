@@ -346,19 +346,28 @@ def run_fit_susc(config, options: FitSuscRunOptions | None = None) -> int:
 
         elif use_moment_fit:
             _, widths_ppm, areas = resolve_gaussian_peak_inputs(experiment)
-            widths_ppm = resolve_fitting_linewidths(
+            fitting_linewidths = resolve_fitting_linewidths(
                 method=config.linewidth_method,
                 experiment=experiment,
+                molecule=molecule,
+                variables=config.linewidth_variables,
                 experimental_widths_ppm=widths_ppm,
             )
             fit_model_to_moments(
                 model=susc_model,
                 molecule=molecule,
                 experiment=experiment,
-                widths_ppm=widths_ppm,
+                widths_ppm=fitting_linewidths.observed_widths_ppm,
                 areas=areas,
                 average_labels=average_labels,
                 moment_objective=config.assignment_moment_objective,
+                calculated_widths_by_label=(
+                    fitting_linewidths.calculated_widths_by_label
+                ),
+                linewidth_mean_inv_r6_by_label=(
+                    fitting_linewidths.mean_inv_r6_by_label
+                ),
+                linewidth_variables=config.linewidth_variables,
             )
             model_already_fitted = True
 

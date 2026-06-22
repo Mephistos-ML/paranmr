@@ -30,3 +30,6 @@ assignment:
 
 linewidth:
   method: experimental
+  # variables:
+  #   p1: [fit, <initial value>, [<lower>, <upper>]]
+  #   p2: [fix, <value>]

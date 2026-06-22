@@ -492,16 +492,22 @@ Used in susceptibility fitting workflows.
     linewidth:
         # Linewidth source for moment fitting [Optional]
         # Default: experimental
-        method: experimental
+        method: experimental # Use experimental peak-table linewidths
+                r6 # Use r^-6 calculated linewidths
 
-Currently, ``experimental`` is the only supported method. It uses linewidths
-from the experimental peak table.
+        # Required for method: r6
+        variables:
+          p1: [fit, 1.0, [0.0, .inf]]
+          p2: [fix, 0.0]
 
-.. note::
+``experimental``
+    Uses linewidths from the experimental peak table. This is the default.
 
-   Future linewidth modes may provide model-derived linewidths. Until such a
-   mode is implemented, ``linewidth:method`` must be ``experimental`` when the
-   block is present.
+``r6``
+    Uses linewidths calculated as ``p1 * mean(1/r^6) + p2`` for each
+    calculated signal package. The ``p1`` and ``p2`` variables may use either
+    ``fix`` mode with a non-negative value or ``fit`` mode with a non-negative
+    initial guess and explicit bounds.
 
 Magnetic Susceptibility Fitting
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

@@ -11,17 +11,17 @@ from numpy.typing import ArrayLike, NDArray
 from paranmr.core.fitting.susceptibility.moments.bootstrap import (
     bootstrap_moment_residual_covariance,
 )
-from paranmr.core.fitting.susceptibility.objectives.moment_transforms.diagonal_gmm import (
+from paranmr.core.fitting.susceptibility.objectives.moments.diagonal_gmm import (
     diagonal_gmm_transform,
 )
-from paranmr.core.fitting.susceptibility.objectives.moment_transforms.full_gmm import (
+from paranmr.core.fitting.susceptibility.objectives.moments.full_gmm import (
     full_gmm_transform,
 )
-from paranmr.core.fitting.susceptibility.objectives.moment_transforms.state import (
-    bootstrap_float,
+from paranmr.core.fitting.susceptibility.objectives.moments.state import (
+    config_float,
     build_moment_objective_state,
 )
-from paranmr.core.fitting.susceptibility.objectives.moment_transforms.weighted_ls import (
+from paranmr.core.fitting.susceptibility.objectives.moments.weighted_ls import (
     weighted_ls_transform,
 )
 
@@ -68,8 +68,8 @@ def prepare_moment_objective(
             observed_moments=observed_moments,
             bootstrap_config=bootstrap_config,
         )
-        variance_floor = bootstrap_float(
-            bootstrap_config, "variance_floor", 1.0e-12
+        variance_floor = config_float(
+            objective_config, "variance_floor", 1.0e-12
         )
         if objective_type == "diagonal_gmm":
             transform, diagnostics = diagonal_gmm_transform(
@@ -85,7 +85,7 @@ def prepare_moment_objective(
                 covariance=covariance,
                 variances=variances,
                 variance_floor=variance_floor,
-                bootstrap_config=bootstrap_config,
+                objective_config=objective_config,
             )
             component_names = tuple(
                 f"gmm_component_{idx + 1}" for idx in range(transform.shape[0])

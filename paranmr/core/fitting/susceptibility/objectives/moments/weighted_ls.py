@@ -8,7 +8,7 @@ from __future__ import annotations
 import numpy as np
 from numpy.typing import NDArray
 
-from paranmr.core.fitting.susceptibility.objectives.moment_transforms.state import (
+from paranmr.core.fitting.susceptibility.objectives.moments.state import (
     weights_from_transform,
 )
 

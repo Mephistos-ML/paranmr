@@ -40,7 +40,7 @@ def weights_from_transform(
     return {name: float(value) for name, value in zip(moment_names, diagonal)}
 
 
-def bootstrap_float(config: dict, key: str, default: float) -> float:
+def config_float(config: dict, key: str, default: float) -> float:
     """Read a float bootstrap option with support for blank defaults."""
     value = config.get(key, default)
     if value in (None, ""):

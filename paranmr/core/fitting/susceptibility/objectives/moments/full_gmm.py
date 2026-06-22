@@ -8,8 +8,8 @@ from __future__ import annotations
 import numpy as np
 from numpy.typing import NDArray
 
-from paranmr.core.fitting.susceptibility.objectives.moment_transforms.state import (
-    bootstrap_float,
+from paranmr.core.fitting.susceptibility.objectives.moments.state import (
+    config_float,
 )
 
 
@@ -19,13 +19,13 @@ def full_gmm_transform(
     covariance: NDArray[np.float64],
     variances: NDArray[np.float64],
     variance_floor: float,
-    bootstrap_config: dict,
+    objective_config: dict,
 ) -> tuple[NDArray[np.float64], dict]:
     """Build a full-covariance bootstrap GMM residual transform."""
-    shrinkage = bootstrap_float(
-        bootstrap_config,
+    shrinkage = config_float(
+        objective_config,
         "covariance_regularization",
-        bootstrap_float(bootstrap_config, "shrinkage", 0.1),
+        config_float(objective_config, "shrinkage", 0.1),
     )
     if not 0.0 <= shrinkage <= 1.0:
         raise ValueError("covariance_regularization must be between 0 and 1")
