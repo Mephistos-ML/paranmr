@@ -23,7 +23,6 @@ from paranmr.core.fitting.susceptibility.objectives.moments.api import (
 from paranmr.core.fitting.susceptibility.moments.descriptors import (
     gaussian_mixture_moment_residuals,
     gaussian_mixture_moments,
-    moment_residual_norm,
 )
 from paranmr.core.fitting.susceptibility.moments.gaussian import (
     gaussian_peak_representation,
@@ -32,9 +31,6 @@ from paranmr.core.fitting.susceptibility.stats import svd_stdev
 from paranmr.core.fitting.linewidth import predict_r6_linewidths
 
 logger = logging.getLogger(__name__)
-
-_PINK_LOG = "\033[95m"
-_RESET_LOG = "\033[0m"
 
 
 @dataclass(frozen=True)
@@ -52,31 +48,15 @@ class CalculatedSignalPackage:
     center: float
 
 
-def _pink_log(message: str) -> str:
-    return f"{_PINK_LOG}{message}{_RESET_LOG}"
+@dataclass(frozen=True)
+class MomentFitDiagnostics:
+    """Publication-grade diagnostics for a completed moment fit."""
 
-
-def _format_moment_values(values: dict[str, float]) -> str:
-    return ", ".join(
-        f"{moment_name}={value:.6g}" for moment_name, value in values.items()
-    )
-
-
-def _format_package_linewidths(
-    packages: list[CalculatedSignalPackage],
-    linewidths_ppm: NDArray,
-) -> str:
-    return ", ".join(
-        f"{package.label}(center_ppm={package.center:.6g}, fwhm_ppm={width:.6g})"
-        for package, width in zip(packages, linewidths_ppm)
-    )
-
-
-def _format_moment_objective(objective_state: dict) -> str:
-    diagnostics = objective_state.get("diagnostics", {})
-    weights = diagnostics.get("weights", {})
-    weight_text = _format_moment_values(weights) if weights else "none"
-    return f"type={objective_state.get('type')}, weights={weight_text}"
+    temperature: float
+    objective_type: str
+    observed_moments: dict[str, float]
+    calculated_moments: dict[str, float]
+    weighted_score: float
 
 
 def calculated_signal_packages_from_parameters(
@@ -240,6 +220,57 @@ def _observed_widths_for_calculated_packages(
     )
 
 
+def _calculated_moments_from_parameters(
+    *,
+    model,
+    parameters: dict[str, float],
+    nuclei: list[Nucleus],
+    average_labels: list[list[str]],
+    widths_ppm: NDArray,
+    calculated_widths_by_label: dict[str, float] | None,
+    linewidth_mean_inv_r6_by_label: dict[str, float] | None,
+    linewidth_variables: dict[str, float],
+    include_diamagnetic: bool,
+) -> dict[str, float]:
+    packages = calculated_signal_packages_from_parameters(
+        model=model,
+        parameters=parameters,
+        nuclei=nuclei,
+        average_labels=average_labels,
+        include_diamagnetic=include_diamagnetic,
+    )
+    sorted_packages = sort_packages_by_center(packages)
+    centers = package_centers(sorted_packages)
+    linewidths_by_label = calculated_widths_by_label
+    if linewidth_mean_inv_r6_by_label is not None and linewidth_variables:
+        linewidths_by_label = predict_r6_linewidths(
+            linewidth_mean_inv_r6_by_label,
+            linewidth_variables["p1"],
+            linewidth_variables["p2"],
+        )
+    if linewidths_by_label is not None:
+        calculated_widths_ppm = package_linewidths(
+            sorted_packages,
+            linewidths_by_label,
+        )
+    else:
+        calculated_widths_ppm = _observed_widths_for_calculated_packages(
+            widths_ppm,
+            len(sorted_packages),
+        )
+
+    calculated_peaks = gaussian_peak_representation(
+        centers=centers,
+        fwhm=calculated_widths_ppm,
+        areas=np.ones(len(sorted_packages), dtype=float),
+    )
+    return gaussian_mixture_moments(
+        centers=calculated_peaks["center"],
+        sigmas=calculated_peaks["sigma"],
+        area_norm=calculated_peaks["area_norm"],
+    )
+
+
 def moment_residual_from_float_list(
     new_vals: list[float],
     model,
@@ -272,44 +303,16 @@ def moment_residual_from_float_list(
         },
     }
 
-    packages = calculated_signal_packages_from_parameters(
+    calculated_moments = _calculated_moments_from_parameters(
         model=model,
         parameters=all_vars,
         nuclei=nuclei,
         average_labels=average_labels,
+        widths_ppm=widths_ppm,
+        calculated_widths_by_label=calculated_widths_by_label,
+        linewidth_mean_inv_r6_by_label=linewidth_mean_inv_r6_by_label,
+        linewidth_variables=linewidth_vars,
         include_diamagnetic=include_diamagnetic,
-    )
-    sorted_packages = sort_packages_by_center(packages)
-    centers = package_centers(sorted_packages)
-    calculated_widths_ppm = None
-    linewidths_by_label = calculated_widths_by_label
-    if linewidth_mean_inv_r6_by_label is not None and linewidth_vars:
-        linewidths_by_label = predict_r6_linewidths(
-            linewidth_mean_inv_r6_by_label,
-            linewidth_vars["p1"],
-            linewidth_vars["p2"],
-        )
-    if linewidths_by_label is not None:
-        calculated_widths_ppm = package_linewidths(
-            sorted_packages,
-            linewidths_by_label,
-        )
-    else:
-        calculated_widths_ppm = _observed_widths_for_calculated_packages(
-            widths_ppm,
-            len(sorted_packages),
-        )
-
-    calculated_areas = np.ones(len(sorted_packages), dtype=float)
-    calculated_peaks = gaussian_peak_representation(
-        centers=centers,
-        fwhm=calculated_widths_ppm,
-        areas=calculated_areas,
-    )
-    calculated_moments = gaussian_mixture_moments(
-        centers=calculated_peaks["center"],
-        sigmas=calculated_peaks["sigma"],
-        area_norm=calculated_peaks["area_norm"],
     )
     residuals = gaussian_mixture_moment_residuals(
         calculated=calculated_moments,
@@ -335,7 +338,7 @@ def fit_model_to_moments(
     observed_centers_ppm: NDArray | None = None,
     include_diamagnetic: bool = True,
     verbose: bool = True,
-) -> None:
+) -> MomentFitDiagnostics | None:
     """Fit a susceptibility model by matching Gaussian mixture moments."""
 
     if observed_centers_ppm is None:
@@ -368,11 +371,6 @@ def fit_model_to_moments(
         areas=areas_arr,
         observed_moments=observed_moments,
         objective_config=moment_objective,
-    )
-    logger.info(
-        _pink_log("Prepared moment objective at %.4f K: %s"),
-        experiment.temperature,
-        _format_moment_objective(moment_objective_state),
     )
 
     linewidth_fit_vars, linewidth_fix_vars, linewidth_bounds = (
@@ -408,35 +406,15 @@ def fit_model_to_moments(
     )
 
     model.temperature = experiment.temperature
-    logger.info(
-        _pink_log(
-            "Moment fit optimizer at %.4f K: nfev=%d, njev=%s, "
-            "status=%d, message=%s"
-        ),
-        experiment.temperature,
-        curr_fit.nfev,
-        curr_fit.njev,
-        curr_fit.status,
-        curr_fit.message,
-    )
     n_susc_params = len(model.fit_vars)
     curr_fit_dict = {
         name: value
         for name, value in zip(model.fit_vars.keys(), curr_fit.x[:n_susc_params])
     }
-    linewidth_fit_dict = {
-        name: value
-        for name, value in zip(
-            linewidth_fit_vars.keys(),
-            curr_fit.x[n_susc_params:],
-        )
-    }
-    final_linewidth_vars = {**linewidth_fix_vars, **linewidth_fit_dict}
-
     if curr_fit.status == 0:
         if verbose:
             logger.warning(
-                _pink_log("Moment fit at %s K failed - Too many iterations"),
+                "Moment fit at %s K failed - Too many iterations",
                 model.temperature,
             )
         model.final_var_values = copy.deepcopy(curr_fit_dict)
@@ -446,14 +424,7 @@ def fit_model_to_moments(
         model.rmse = np.nan
         model.r2 = np.nan
         model.adj_r2 = np.nan
-        return
-
-    if final_linewidth_vars:
-        logger.info(
-            _pink_log("Moment linewidth parameters at %.4f K: %s"),
-            experiment.temperature,
-            _format_moment_values(final_linewidth_vars),
-        )
+        return None
 
     effective_residual_count = count_active_moment_objective_residuals(
         moment_objective_state
@@ -484,53 +455,24 @@ def fit_model_to_moments(
     model.rmse = float(np.sqrt(ss_res / len(residual_values)))
     model.r2 = np.nan
     model.adj_r2 = np.nan
-
-    calc_packages = calculated_signal_packages_from_parameters(
+    linewidth_fit_dict = {
+        name: value
+        for name, value in zip(
+            linewidth_fit_vars.keys(),
+            curr_fit.x[n_susc_params:],
+        )
+    }
+    final_linewidth_vars = {**linewidth_fix_vars, **linewidth_fit_dict}
+    calculated_moments = _calculated_moments_from_parameters(
         model=model,
         parameters=model.final_var_values,
         nuclei=molecule.nuclei,
         average_labels=average_labels,
+        widths_ppm=widths_arr,
+        calculated_widths_by_label=calculated_widths_by_label,
+        linewidth_mean_inv_r6_by_label=linewidth_mean_inv_r6_by_label,
+        linewidth_variables=final_linewidth_vars,
         include_diamagnetic=include_diamagnetic,
-    )
-    sorted_calc_packages = sort_packages_by_center(calc_packages)
-    calc_centers = package_centers(sorted_calc_packages)
-    calculated_widths_ppm = None
-    final_linewidths_by_label = calculated_widths_by_label
-    if linewidth_mean_inv_r6_by_label is not None and linewidth_variables is not None:
-        final_linewidths_by_label = predict_r6_linewidths(
-            linewidth_mean_inv_r6_by_label,
-            final_linewidth_vars["p1"],
-            final_linewidth_vars["p2"],
-        )
-    if final_linewidths_by_label is not None:
-        calculated_widths_ppm = package_linewidths(
-            sorted_calc_packages,
-            final_linewidths_by_label,
-        )
-    else:
-        calculated_widths_ppm = _observed_widths_for_calculated_packages(
-            widths_arr,
-            len(sorted_calc_packages),
-        )
-    if linewidth_mean_inv_r6_by_label is not None:
-        logger.info(
-            _pink_log("Moment calculated r6 linewidths at %.4f K: %s"),
-            experiment.temperature,
-            _format_package_linewidths(
-                sorted_calc_packages,
-                calculated_widths_ppm,
-            ),
-        )
-    calculated_areas = np.ones(len(sorted_calc_packages), dtype=float)
-    calculated_peaks = gaussian_peak_representation(
-        centers=calc_centers,
-        fwhm=calculated_widths_ppm,
-        areas=calculated_areas,
-    )
-    calculated_moments = gaussian_mixture_moments(
-        centers=calculated_peaks["center"],
-        sigmas=calculated_peaks["sigma"],
-        area_norm=calculated_peaks["area_norm"],
     )
     residuals = gaussian_mixture_moment_residuals(
         calculated=calculated_moments,
@@ -538,42 +480,12 @@ def fit_model_to_moments(
         normalize=True,
     )
     weighted_residuals = apply_moment_objective(residuals, moment_objective_state)
-    score = moment_residual_norm(weighted_residuals)
-    unweighted_score = moment_residual_norm(residuals)
-
-    logger.info(
-        _pink_log("Moment fit score at %.4f K = %.6g"),
-        experiment.temperature,
-        score,
+    weighted_values = np.asarray(list(weighted_residuals.values()), dtype=float)
+    weighted_score = float(np.sqrt(np.sum(weighted_values**2)))
+    return MomentFitDiagnostics(
+        temperature=float(experiment.temperature),
+        objective_type=str(moment_objective_state["type"]),
+        observed_moments={k: float(v) for k, v in observed_moments.items()},
+        calculated_moments={k: float(v) for k, v in calculated_moments.items()},
+        weighted_score=weighted_score,
     )
-    logger.info(
-        _pink_log("Observed Gaussian mixture moment vector at %.4f K: %s"),
-        experiment.temperature,
-        _format_moment_values(observed_moments),
-    )
-    logger.info(
-        _pink_log("Calculated Gaussian mixture moment vector at %.4f K: %s"),
-        experiment.temperature,
-        _format_moment_values(calculated_moments),
-    )
-    logger.info(
-        _pink_log("Normalized Gaussian mixture moment residuals at %.4f K: %s"),
-        experiment.temperature,
-        _format_moment_values(residuals),
-    )
-    logger.info(
-        _pink_log("Weighted Gaussian mixture moment residuals at %.4f K: %s"),
-        experiment.temperature,
-        _format_moment_values(weighted_residuals),
-    )
-    logger.info(
-        _pink_log("Unweighted moment fit score at %.4f K = %.6g"),
-        experiment.temperature,
-        unweighted_score,
-    )
-    logger.info(
-        _pink_log("Moment objective at %.4f K: %s"),
-        experiment.temperature,
-        _format_moment_objective(moment_objective_state),
-    )
-    return
