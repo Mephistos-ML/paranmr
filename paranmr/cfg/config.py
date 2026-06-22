@@ -145,7 +145,6 @@ class FitSuscConfig(Config):
         "nuclei": ["include"],
         "susc_fit": ["type", "variables"],
         "project": ["name"],
-        "chem_labels": ["file"],
     }
 
     KEYWORDS = {
@@ -168,6 +167,7 @@ class FitSuscConfig(Config):
         ],
         "linewidth": [
             "method",
+            "variables",
         ],
         "nuclei": ["include", "include_groups"],
         "susc_fit": [
@@ -225,6 +225,7 @@ class FitSuscConfig(Config):
         self._assignment_r2_threshold = None
         self._assignment_moment_objective = {}
         self._linewidth_method = "experimental"
+        self._linewidth_variables = None
         self._nuclei_include = ""
         self._nuclei_include_groups = []
         self._susc_fit_type = ""
@@ -800,14 +801,107 @@ class FitSuscConfig(Config):
             raise ValueError("linewidth:method must be a string")
 
         method = value.strip().lower()
-        allowed = {"experimental"}
+        allowed = {"experimental", "r6"}
         if method not in allowed:
             raise ValueError(
                 "Invalid linewidth:method '"
                 + str(value)
-                + "'. Allowed values are: 'experimental'."
+                + "'. Allowed values are: 'experimental' or 'r6'."
             )
         self._linewidth_method = method
+        return
+
+    @property
+    def linewidth_variables(self) -> dict[str, list[object]] | None:
+        return self._linewidth_variables
+
+    @linewidth_variables.setter
+    def linewidth_variables(self, value: dict[str, object] | None):
+        if value is None or value == "":
+            self._linewidth_variables = None
+            return
+        if not isinstance(value, dict):
+            raise ValueError("linewidth:variables must be a mapping")
+
+        required = {"p1", "p2"}
+        unknown = set(value) - required
+        if unknown:
+            raise ValueError(
+                "linewidth:variables contains unknown variable(s): "
+                + ", ".join(sorted(unknown))
+            )
+        missing = required - set(value)
+        if missing:
+            raise ValueError(
+                "linewidth:variables is missing variable(s): "
+                + ", ".join(sorted(missing))
+            )
+
+        variables: dict[str, list[object]] = {}
+        for name in ["p1", "p2"]:
+            entry = value[name]
+            if not (isinstance(entry, (list, tuple)) and len(entry) in {2, 3}):
+                raise ValueError(
+                    "linewidth:variables entries must be [fix, value] or "
+                    "[fit, guess, [lower, upper]]; "
+                    f"bad entry for {name}: {entry!r}"
+                )
+            mode, raw_value = entry[0], entry[1]
+            if not isinstance(mode, str):
+                raise ValueError(
+                    f"linewidth:variables:{name} mode must be 'fit' or 'fix'"
+                )
+            mode = mode.strip().lower()
+            if mode not in {"fit", "fix"}:
+                raise ValueError(
+                    f"linewidth:variables:{name} mode must be 'fit' or 'fix'"
+                )
+            try:
+                numeric_value = float(raw_value)
+            except (TypeError, ValueError) as exc:
+                raise ValueError(
+                    f"linewidth:variables:{name} value must be numeric"
+                ) from exc
+            if not np.isfinite(numeric_value) or numeric_value < 0.0:
+                raise ValueError(
+                    f"linewidth:variables:{name} must be finite and non-negative"
+                )
+            if mode == "fix":
+                if len(entry) != 2:
+                    raise ValueError(
+                        f"linewidth:variables:{name} fixed entries must be "
+                        "[fix, value]"
+                    )
+                variables[name] = ["fix", numeric_value]
+                continue
+
+            if len(entry) != 3:
+                raise ValueError(
+                    f"linewidth:variables:{name} fitted entries must be "
+                    "[fit, guess, [lower, upper]]"
+                )
+            bounds = entry[2]
+            if not (isinstance(bounds, (list, tuple)) and len(bounds) == 2):
+                raise ValueError(
+                    f"linewidth:variables:{name} bounds must be [lower, upper]"
+                )
+            lower, upper = (float(bounds[0]), float(bounds[1]))
+            if not np.isfinite(lower) or lower < 0.0:
+                raise ValueError(
+                    f"linewidth:variables:{name} lower bound must be finite "
+                    "and non-negative"
+                )
+            if np.isnan(upper) or upper < lower:
+                raise ValueError(
+                    f"linewidth:variables:{name} upper bound must be numeric "
+                    "and greater than or equal to the lower bound"
+                )
+            if numeric_value < lower or numeric_value > upper:
+                raise ValueError(
+                    f"linewidth:variables:{name} guess must be inside bounds"
+                )
+            variables[name] = ["fit", numeric_value, [lower, upper]]
+        self._linewidth_variables = variables
         return
 
     @property
@@ -1200,6 +1294,12 @@ class FitSuscConfig(Config):
 
         config = super().from_file(file_name)
 
+        if config.nuclei_include_groups and not config.chem_labels_file:
+            raise ValueError(
+                "Invalid nuclei configuration: 'nuclei:include_groups' requires "
+                "'chem_labels:file' to map chemical labels to atom labels."
+            )
+
         # If an optional VT susceptibility file is provided, require a ab_initio_format.
         if getattr(config, "susc_vt_ab_initio_file", ""):
             if not getattr(config, "susc_vt_ab_initio_format", ""):
@@ -1329,6 +1429,18 @@ class FitSuscConfig(Config):
                 "assignment:moment_objective is only supported when "
                 "assignment:method is 'moments'"
             )
+
+        if config.linewidth_method == "experimental":
+            if config.linewidth_variables is not None:
+                raise ValueError(
+                    "linewidth:variables is only supported when "
+                    "linewidth:method is 'r6'"
+                )
+        elif config.linewidth_method == "r6":
+            if config.linewidth_variables is None:
+                raise ValueError(
+                    "linewidth:variables is required when linewidth:method is 'r6'"
+                )
 
         return config
 
