@@ -41,7 +41,7 @@ def weights_from_transform(
 
 
 def config_float(config: dict, key: str, default: float) -> float:
-    """Read a float bootstrap option with support for blank defaults."""
+    """Read a float option with support for blank defaults."""
     value = config.get(key, default)
     if value in (None, ""):
         value = default

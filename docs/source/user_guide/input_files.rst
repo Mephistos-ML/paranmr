@@ -395,7 +395,7 @@ Used in susceptibility fitting workflows that require assignment handling.
 
         # Moment objective [Required for moments only]
         moment_objective:
-          type: weighted_ls  # One of: weighted_ls | diagonal_gmm | full_gmm
+          type: weighted_ls
           weights:           # Required for type: weighted_ls
             mean: 1.0
             std: 5.0
@@ -451,13 +451,8 @@ Moment-based fitting is selected with ``assignment:method: moments``. The
 ``susc_fit:type`` field still selects the susceptibility model parameterization.
 
 The moment objective controls how the normalized moment residual vector is
-transformed before least-squares optimization. The ``weighted_ls`` objective uses user-provided per-moment weights.
-The ``diagonal_gmm`` objective uses a diagonal inverse-variance weighting
-matrix. The ``full_gmm`` objective uses the full covariance weighting matrix
-with regularization. Numerical GMM options such as ``variance_floor`` and
-``covariance_regularization`` live directly under ``moment_objective``. Moment
-uncertainty is provided by the ``uncertainty`` mapping; currently the supported
-uncertainty method is ``bootstrap`` perturbation of the experimental peak table.
+transformed before least-squares optimization. The supported objective is
+``weighted_ls``, which uses user-provided per-moment weights.
 
 .. _Hungarian algorithm: https://en.wikipedia.org/wiki/Hungarian_algorithm
 

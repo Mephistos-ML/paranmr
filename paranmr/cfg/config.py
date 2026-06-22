@@ -701,93 +701,31 @@ class FitSuscConfig(Config):
             raise ValueError("assignment:moment_objective must be a mapping")
 
         objective_type = str(value.get("type", "weighted_ls")).strip().lower()
-        allowed = {"weighted_ls", "diagonal_gmm", "full_gmm"}
+        allowed = {"weighted_ls"}
         if objective_type not in allowed:
             raise ValueError(
                 "assignment:moment_objective:type must be one of "
                 + ", ".join(sorted(allowed))
             )
 
-        if objective_type == "weighted_ls":
-            unknown = set(value) - {"type", "weights"}
-            if unknown:
-                raise ValueError(
-                    "assignment:moment_objective contains unknown key(s): "
-                    + ", ".join(sorted(unknown))
-                )
-            weights = value.get("weights", {})
-            if weights is None or weights == "":
-                weights = {}
-            if not isinstance(weights, dict):
-                raise ValueError(
-                    "assignment:moment_objective:weights must be a mapping"
-                )
-            self._assignment_moment_objective = {
-                "type": objective_type,
-                "weights": {
-                    moment_name: float(weight)
-                    for moment_name, weight in weights.items()
-                },
-            }
-            return
-
-        objective_keys = {"type", "uncertainty", "variance_floor"}
-        if objective_type == "full_gmm":
-            objective_keys.update({"covariance_regularization", "shrinkage"})
-        unknown = set(value) - objective_keys
+        unknown = set(value) - {"type", "weights"}
         if unknown:
             raise ValueError(
                 "assignment:moment_objective contains unknown key(s): "
                 + ", ".join(sorted(unknown))
             )
-        uncertainty = value.get("uncertainty", {"method": "bootstrap"})
-        if uncertainty is None or uncertainty == "":
-            uncertainty = {"method": "bootstrap"}
-        if not isinstance(uncertainty, dict):
-            raise ValueError(
-                "assignment:moment_objective:uncertainty must be a mapping"
-            )
-        uncertainty_method = str(
-            uncertainty.get("method", "bootstrap")
-        ).strip().lower()
-        if uncertainty_method != "bootstrap":
-            raise ValueError(
-                "assignment:moment_objective:uncertainty:method must be bootstrap"
-            )
-        allowed_uncertainty = {
-            "method",
-            "samples",
-            "seed",
-            "center_sigma_ppm",
-            "centre_sigma_ppm",
-            "linewidth_relative_sigma",
-            "area_relative_sigma",
-        }
-        unknown_uncertainty = set(uncertainty) - allowed_uncertainty
-        if unknown_uncertainty:
-            raise ValueError(
-                "assignment:moment_objective:uncertainty contains unknown key(s): "
-                + ", ".join(sorted(unknown_uncertainty))
-            )
-        uncertainty = dict(uncertainty)
-        uncertainty["method"] = uncertainty_method
-        parsed_objective = {
+        weights = value.get("weights", {})
+        if weights is None or weights == "":
+            weights = {}
+        if not isinstance(weights, dict):
+            raise ValueError("assignment:moment_objective:weights must be a mapping")
+        self._assignment_moment_objective = {
             "type": objective_type,
-            "uncertainty": uncertainty,
+            "weights": {
+                moment_name: float(weight)
+                for moment_name, weight in weights.items()
+            },
         }
-        if "variance_floor" in value and value["variance_floor"] not in (None, ""):
-            parsed_objective["variance_floor"] = float(value["variance_floor"])
-        if objective_type == "full_gmm":
-            if (
-                "covariance_regularization" in value
-                and value["covariance_regularization"] not in (None, "")
-            ):
-                parsed_objective["covariance_regularization"] = float(
-                    value["covariance_regularization"]
-                )
-            if "shrinkage" in value and value["shrinkage"] not in (None, ""):
-                parsed_objective["shrinkage"] = float(value["shrinkage"])
-        self._assignment_moment_objective = parsed_objective
         return
 
     @property

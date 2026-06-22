@@ -76,18 +76,7 @@ def _format_moment_objective(objective_state: dict) -> str:
     diagnostics = objective_state.get("diagnostics", {})
     weights = diagnostics.get("weights", {})
     weight_text = _format_moment_values(weights) if weights else "none"
-    parts = [f"type={objective_state.get('type')}", f"weights={weight_text}"]
-    if "covariance_regularization" in diagnostics:
-        parts.append(
-            "covariance_regularization="
-            f"{diagnostics['covariance_regularization']:.6g}"
-        )
-    if "covariance_condition_number" in diagnostics:
-        parts.append(
-            "covariance_condition_number="
-            f"{diagnostics['covariance_condition_number']:.6g}"
-        )
-    return ", ".join(parts)
+    return f"type={objective_state.get('type')}, weights={weight_text}"
 
 
 def calculated_signal_packages_from_parameters(
