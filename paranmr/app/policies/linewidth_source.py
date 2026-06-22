@@ -26,8 +26,8 @@ class FittingLinewidths:
             ``experiment.signals``.
         calculated_widths_by_label: Optional calculated linewidths in ppm keyed
             by calculated signal-package label.
-        mean_inv_r6_by_label: Optional ``mean(1/r^6)`` values keyed by chemical
-            label for ``r6`` linewidth models.
+        mean_inv_r6_by_label: Optional ``mean(1/r^6)`` values keyed by the
+            calculated package label for ``r6`` linewidth models.
     """
 
     observed_widths_ppm: NDArray
@@ -42,6 +42,7 @@ def resolve_fitting_linewidths(
     molecule: Molecule | None = None,
     variables: dict[str, list[object]] | None = None,
     experimental_widths_ppm: NDArray | None = None,
+    label_kind: str = "signal_label",
 ) -> FittingLinewidths:
     """Return linewidths used by susceptibility fitting workflows.
 
@@ -53,6 +54,7 @@ def resolve_fitting_linewidths(
         variables: Optional linewidth model variables.
         experimental_widths_ppm: Optional precomputed experimental linewidths
             in ppm, ordered like ``experiment.signals``.
+        label_kind: Label kind used by calculated linewidth models.
 
     Returns:
         Resolved observed linewidths and optional calculated linewidths.
@@ -80,6 +82,7 @@ def resolve_fitting_linewidths(
             nuclei=molecule.nuclei,
             paramagnetic_centre=molecule.paramagnetic_centre,
             isotope_filter=experiment.isotope,
+            label_kind=label_kind,
         )
         fixed_values = _fixed_r6_values(variables)
         calculated_widths_by_label = None

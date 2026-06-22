@@ -17,7 +17,7 @@ from paranmr.core.domain.mol import Molecule
 def summarize_a_fc_ranges_by_functional_and_nucleus(
     functional_sources: dict[str, list[tuple[str, Molecule]]],
 ) -> dict[str, dict[str, dict[str, dict[str, object]]]]:
-    """Summarize A_fc values by functional, nucleus, and chemical label."""
+    """Summarize A_fc values by functional, nucleus, and signal label."""
     return summarize_hyperfine_metric_ranges_by_functional_and_nucleus(
         functional_sources,
         metric_key="a_fc",
@@ -47,9 +47,9 @@ def summarize_a_fc_max_report_rows(
     for nucleus_label, max_rows in max_by_nucleus.items():
         for row in max_rows:
             functional = str(row["functional"])
-            chem_label = str(row["chem_label"])
+            signal_label = str(row["signal_label"])
             max_value = float(row["max"])
-            min_value = float(summary[functional][nucleus_label][chem_label]["min"])
+            min_value = float(summary[functional][nucleus_label][signal_label]["min"])
             range_value = (
                 (max_value - min_value) / max_value
                 if max_value != 0.0
@@ -58,7 +58,7 @@ def summarize_a_fc_max_report_rows(
 
             rows.append(
                 {
-                    "chem_label": chem_label,
+                    "signal_label": signal_label,
                     "nucleus": nucleus_label,
                     "functional": functional,
                     "max (ppm A-3)": max_value,

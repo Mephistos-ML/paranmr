@@ -20,7 +20,7 @@ from paranmr.app.loaders.dia_load import load_diamagnetic_shifts
 from paranmr.app.loaders.elstate_load import load_electronic_state
 from paranmr.app.loaders.exp_load import load_experiments
 from paranmr.app.loaders.hfc_load import load_hyperfines
-from paranmr.app.loaders.labels_load import load_chem_labels_from_csv
+from paranmr.app.loaders.labels_load import load_signal_labels_from_csv
 from paranmr.app.loaders.mol_load import load_base_molecule
 from paranmr.app.loaders.paramag_centre_load import load_paramagnetic_centre
 from paranmr.app.loaders.sh_load import (
@@ -29,7 +29,7 @@ from paranmr.app.loaders.sh_load import (
 )
 from paranmr.app.loaders.susc_load import load_susceptibilities
 from paranmr.app.params.options import PredictRunOptions
-from paranmr.app.policies.hfc import has_missing_selected_chem_labels
+from paranmr.app.policies.hfc import has_missing_selected_signal_labels
 from paranmr.app.policies.output_linewidth import resolve_output_linewidths
 from paranmr.app.policies.relax import resolve_relaxation_conditions
 from paranmr.app.policies.susc import resolve_susceptibility_source
@@ -159,25 +159,25 @@ def run_predict(config, options: PredictRunOptions | None = None) -> int:
     if not suscs:
         raise ValueError("No susceptibility data found for specified temperature(s)")
 
-    # Load chemical labels
-    if len(config.chem_labels_file):
-        al_to_cl, al_to_cml = load_chem_labels_from_csv(config.chem_labels_file)
-        if has_missing_selected_chem_labels(base_molecule, al_to_cl):
+    # Load signal labels
+    if len(config.signal_labels_file):
+        al_to_sl, al_to_sml = load_signal_labels_from_csv(config.signal_labels_file)
+        if has_missing_selected_signal_labels(base_molecule, al_to_sl):
             logger.warning(
-                "Chemical labels file does not define labels for all selected nuclei; "
+                "Signal labels file does not define labels for all selected nuclei; "
                 "missing labels will use atom labels."
             )
-        base_molecule.apply_chem_labels(al_to_cl, al_to_cml)
+        base_molecule.apply_signal_labels(al_to_sl, al_to_sml)
 
-        # Save xyz file with chemical labels for chemcraft
+        # Save xyz file with signal labels for chemcraft
         xyz_write.save_chemcraft_xyz(
             file_name=os.path.join(config.project_name, "chemcraft_structure.xyz"),
             labels=base_molecule.labels,
             coords=base_molecule.coords,
-            chem_labels={nuc.label: nuc.chem_label for nuc in base_molecule.nuclei},
+            signal_labels={nuc.label: nuc.signal_label for nuc in base_molecule.nuclei},
         )
 
-    # Save xyz file with chemical labels for chemcraft
+    # Save xyz file with signal labels for chemcraft
     xyz_write.save_xyz(
         file_name=os.path.join(config.project_name, "structure.xyz"),
         labels=base_molecule.labels,
@@ -566,25 +566,25 @@ def _apply_relaxation_linewidths(
     if rates_r1 is None or rates_r2 is None:
         raise ValueError("Shared relaxation evaluator returned incomplete R1/R2 rates")
 
-    # Group R2 rates by chemical label for linewidth averaging in Hz.
-    r2_by_chem_label = {}
+    # Group R2 rates by signal label for linewidth averaging in Hz.
+    r2_by_signal_label = {}
     for nuc in base_molecule.nuclei:
         if nuc.label not in rates_r2:
             continue
-        if nuc.chem_label not in r2_by_chem_label:
-            r2_by_chem_label[nuc.chem_label] = []
-        r2_by_chem_label[nuc.chem_label].append(rates_r2[nuc.label])
+        if nuc.signal_label not in r2_by_signal_label:
+            r2_by_signal_label[nuc.signal_label] = []
+        r2_by_signal_label[nuc.signal_label].append(rates_r2[nuc.label])
 
-    # Calculate average linewidths for each chemical label (Hz)
-    avg_lw_by_chem_label = {
-        chem_label: np.mean([rate / np.pi for rate in rate_list])
-        for chem_label, rate_list in r2_by_chem_label.items()
+    # Calculate average linewidths for each signal label (Hz)
+    avg_lw_by_signal_label = {
+        signal_label: np.mean([rate / np.pi for rate in rate_list])
+        for signal_label, rate_list in r2_by_signal_label.items()
     }
 
     for nuc in base_molecule.nuclei:
-        if nuc.chem_label in avg_lw_by_chem_label:
+        if nuc.signal_label in avg_lw_by_signal_label:
             nuc.shift.lw = (
-                avg_lw_by_chem_label[nuc.chem_label]
+                avg_lw_by_signal_label[nuc.signal_label]
                 / (abs(omega_I_dict[nuc.label]) / (2 * np.pi))
                 * 1e6
             )

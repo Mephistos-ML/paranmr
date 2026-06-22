@@ -13,7 +13,7 @@ from paranmr.io.csv.csv_util import read_csv_safe
 
 DATA_DIR = Path("tests/data/sources/hfc/qc/orca/version_6")
 HFC_FILE = DATA_DIR / "P3FeCl_HFC.out"
-CHEM_LABELS_FILE = DATA_DIR / "P3FeCl_Chemical_Labels_13C.csv"
+SIGNAL_LABELS_FILE = DATA_DIR / "P3FeCl_Signal_Labels_13C.csv"
 
 
 def _cli_env(tmp_path: Path) -> dict[str, str]:
@@ -42,8 +42,8 @@ def _write_benchmark_input(tmp_path: Path, *, project_dir: Path) -> Path:
                 "  - functional: B3LYP",
                 f"    file: {HFC_FILE.resolve()}",
                 "",
-                "chem_labels:",
-                f"  file: {CHEM_LABELS_FILE.resolve()}",
+                "signal_labels:",
+                f"  file: {SIGNAL_LABELS_FILE.resolve()}",
                 "",
                 "nuclei:",
                 "  include: [C]",
@@ -77,7 +77,7 @@ def test_benchmark_a_fc_with_orca6_hfc(tmp_path: Path):
 
     report = read_csv_safe(project_dir / "A_FC_benchmark_max.csv")
     assert list(report.columns) == [
-        "chem_label",
+        "signal_label",
         "nucleus",
         "functional",
         "max (ppm A-3)",

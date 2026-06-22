@@ -4,7 +4,7 @@
 """Compute point-dipole hyperfine deviatoric (traceless) tensors.
 
 Loads structural data, evaluates point-dipole A_dip tensors, optionally applies
-chemical labels, and writes results to CSV with optional plots.
+signal labels, and writes results to CSV with optional plots.
 """
 
 import logging
@@ -12,9 +12,9 @@ import os
 
 import numpy as np
 
-from paranmr.app.loaders.labels_load import load_chem_labels_from_csv
+from paranmr.app.loaders.labels_load import load_signal_labels_from_csv
 from paranmr.app.params.options import CalcPdipRunOptions
-from paranmr.app.policies.hfc import has_missing_selected_chem_labels
+from paranmr.app.policies.hfc import has_missing_selected_signal_labels
 from paranmr.core.domain.mol import Molecule
 from paranmr.io.qc import gateway as rdrs
 from paranmr.tools.coords import xyz_fmt as xyzf
@@ -28,7 +28,7 @@ def run_calc_pdip(
     structure_file: str,
     centres: list[str],
     elements: list[str] | str,
-    chem_labels: str | None,
+    signal_labels: str | None,
     plot_components: list[str],
     options: CalcPdipRunOptions,
 ) -> int:
@@ -56,21 +56,21 @@ def run_calc_pdip(
     # Calculate point-dipole hyperfine deviatoric (traceless) tensor
     molecule.calc_pdip(centres)
 
-    if chem_labels is not None:
-        al_to_cl, al_to_cml = load_chem_labels_from_csv(chem_labels)
-        if has_missing_selected_chem_labels(molecule, al_to_cl):
+    if signal_labels is not None:
+        al_to_sl, al_to_sml = load_signal_labels_from_csv(signal_labels)
+        if has_missing_selected_signal_labels(molecule, al_to_sl):
             logger.warning(
-                "Chemical labels file does not define labels for all selected nuclei; "
+                "Signal labels file does not define labels for all selected nuclei; "
                 "missing labels will use atom labels."
             )
-        molecule.apply_chem_labels(al_to_cl, al_to_cml)
+        molecule.apply_signal_labels(al_to_sl, al_to_sml)
 
     # Save hyperfine data to file
     out = np.array(
         [
             "{}, {}, {:.5f}, {:.5f}, {:.5f}, {:.5f}, {:.5f}, {:.5f}".format(
                 nuc.label,
-                nuc.chem_label,
+                nuc.signal_label,
                 *nuc.A.sd[0, :],
                 *nuc.A.sd[1, 1:],
                 nuc.A.sd[2, 2],
@@ -116,7 +116,7 @@ def run_calc_pdip(
                 window_title="Point-Dipole Hyperfines",
             )
 
-            if chem_labels is not None:
+            if signal_labels is not None:
                 plot_hyperfine_spread(
                     molecule.nuclei,
                     plot_components,

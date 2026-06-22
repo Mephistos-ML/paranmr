@@ -1,7 +1,7 @@
 #temperature 302.15
 #magnetic_field 4.7
 #isotope 1H
-assignment,shift (ppm),width (Hz),area (),r1 (Hz)
+signal_label,shift (ppm),width (Hz),area (),r1 (Hz)
 aax,82.89,587.31,4108.48,3013
 py5,24.14,97.24,5139.3,126
 py3,23.91,102.86,3914.16,126

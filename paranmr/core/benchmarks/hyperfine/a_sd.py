@@ -17,7 +17,7 @@ from paranmr.core.domain.mol import Molecule
 def summarize_a_sd_ranges_by_functional_and_nucleus(
     functional_sources: dict[str, list[tuple[str, Molecule]]],
 ) -> dict[str, dict[str, dict[str, dict[str, object]]]]:
-    """Summarize axial A_sd values by functional, nucleus, and chemical label."""
+    """Summarize axial A_sd values by functional, nucleus, and signal label."""
     return summarize_hyperfine_metric_ranges_by_functional_and_nucleus(
         functional_sources,
         metric_key="a_sd",

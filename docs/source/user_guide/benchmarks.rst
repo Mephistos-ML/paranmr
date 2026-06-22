@@ -21,8 +21,8 @@ The minimal configuration for ``benchmark a_fc`` looks like this:
    project:
      name: A_FC_Benchmark
 
-   chem_labels:
-     file: chem_labels.csv
+   signal_labels:
+     file: signal_labels.csv
 
    nuclei:
      include: H
@@ -43,7 +43,7 @@ The minimal configuration for ``benchmark a_fc`` looks like this:
 Required configuration blocks:
 
 - ``project``: the output directory for benchmark results.
-- ``chem_labels``: a chemical-label mapping file for grouping nuclei.
+- ``signal_labels``: a signal-label mapping file for grouping nuclei.
 - ``nuclei``: the nuclei to include in the benchmark.
 - ``hyperfine``: a list of hyperfine source blocks.
 
@@ -56,7 +56,7 @@ Each ``hyperfine`` entry contains:
 The optional ``benchmark`` block supports:
 
 - ``max_label_tolerance``: relative tolerance used when selecting a majority
-  chemical label for the max benchmark curve.
+  signal label for the max benchmark curve.
 
 Running benchmarks
 ------------------
@@ -89,14 +89,14 @@ Files produced by ``benchmark a_fc``:
 
 - ``A_FC_benchmark_max.csv``: maximum ``A_fc`` values by functional and nucleus.
 - ``<FUNCTIONAL>_<NUCLEUS>_A_FC_benchmark_spread.pdf``: ``A_fc`` spread across
-  chemical labels for one functional.
+  signal labels for one functional.
 - ``<NUCLEUS>_A_FC_benchmark_max_curve.pdf``: sorted maximum ``A_fc`` values for
   each nucleus.
 
 Files produced by ``benchmark a_sd``:
 
 - ``<FUNCTIONAL>_<NUCLEUS>_A_SD_benchmark_spread.pdf``: ``A_sd`` spread across
-  chemical labels for one functional.
+  signal labels for one functional.
 - ``<NUCLEUS>_A_SD_benchmark_max_curve.pdf``: sorted maximum ``A_sd`` values for
   each nucleus.
 

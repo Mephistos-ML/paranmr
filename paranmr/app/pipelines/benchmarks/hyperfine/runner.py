@@ -24,7 +24,7 @@ def plot_hyperfine_benchmark_summary(
     for functional, nucleus_summary in summary.items():
         safe_functional = safe_filename_token(functional)
         plotted_nuclei: list[str] = []
-        for nucleus_label, chem_label_summary in nucleus_summary.items():
+        for nucleus_label, signal_label_summary in nucleus_summary.items():
             safe_nucleus = safe_filename_token(nucleus_label)
             save_name = os.path.join(
                 output_dir,
@@ -33,7 +33,7 @@ def plot_hyperfine_benchmark_summary(
             plot_spread(
                 functional=functional,
                 nucleus_label=nucleus_label,
-                chem_label_summary=chem_label_summary,
+                signal_label_summary=signal_label_summary,
                 spec=spec,
                 save=True,
                 show=show,
@@ -105,16 +105,16 @@ def _log_max_label_diagnostics(
                 "%s %s max label replaced: %s -> %s",
                 nucleus_label,
                 row["functional"],
-                row["raw_chem_label"],
-                row["chem_label"],
+                row["raw_signal_label"],
+                row["signal_label"],
             )
-        elif row["raw_chem_label"] != row.get("majority_chem_label"):
+        elif row["raw_signal_label"] != row.get("majority_signal_label"):
             logger.warning(
                 "%s %s max label differs from majority label: %s vs %s. "
                 "Set or increase benchmark:max_label_tolerance to allow "
                 "majority-label replacement.",
                 nucleus_label,
                 row["functional"],
-                row["raw_chem_label"],
-                row["majority_chem_label"],
+                row["raw_signal_label"],
+                row["majority_signal_label"],
             )

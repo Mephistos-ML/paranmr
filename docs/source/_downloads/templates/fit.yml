@@ -12,7 +12,7 @@ diamagnetic:
   method: <insert method>
   file: <insert filename>
 
-chem_labels:
+signal_labels:
   file: <insert filename>
 
 nuclei:

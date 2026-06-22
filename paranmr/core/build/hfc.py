@@ -280,7 +280,7 @@ def build_hfc_from_csv(
     This builder reads full hyperfine tensors from a CSV-derived payload,
     assembles canonical `Hyperfine` objects keyed by atom label, stores them on
     the `Molecule`, and projects matching payloads onto runtime nuclei. If
-    chemical labels are present in the payload, they are also applied to the
+    signal labels are present in the payload, they are also applied to the
     domain object.
 
     Args:
@@ -288,22 +288,22 @@ def build_hfc_from_csv(
         payload: CSV payload that may contain:
             - labels
             - tensors
-            - chem_labels
-            - chem_math_labels
+            - signal_labels
+            - signal_math_labels
 
     Returns:
         The input Molecule enriched with canonical CSV-derived HFC assembly,
-        runtime projection onto matching nuclei, and optional chemical labels.
+        runtime projection onto matching nuclei, and optional signal labels.
 
     Raises:
         KeyError: If a required tensor is missing for a labelled nucleus.
-        ValueError: If tensor shapes or chemical-label lengths are invalid.
+        ValueError: If tensor shapes or signal-label lengths are invalid.
     """
     labels: list[str] = payload["labels"]
 
     tensors = payload.get("tensors")
-    chem_labels = payload.get("chem_labels")
-    chem_math_labels = payload.get("chem_math_labels")
+    signal_labels = payload.get("signal_labels")
+    signal_math_labels = payload.get("signal_math_labels")
 
     if tensors is not None:
         if isinstance(tensors, dict):
@@ -324,24 +324,27 @@ def build_hfc_from_csv(
 
         molecule.set_available_hfc_by_label(hfc_by_label)
 
-    al_to_cl = None
-    al_to_cml = None
-    if chem_labels is not None:
-        if len(chem_labels) != len(labels):
+    al_to_sl = None
+    al_to_sml = None
+    if signal_labels is not None:
+        if len(signal_labels) != len(labels):
             raise ValueError(
-                f"chem_labels length mismatch: {len(chem_labels)} vs {len(labels)}"
+                f"signal_labels length mismatch: {len(signal_labels)} vs {len(labels)}"
             )
-        al_to_cl = {lab: str(cl) for lab, cl in zip(labels, chem_labels)}
+        al_to_sl = {lab: str(cl) for lab, cl in zip(labels, signal_labels)}
 
-        if chem_math_labels is not None:
-            if len(chem_math_labels) != len(labels):
+        if signal_math_labels is not None:
+            if len(signal_math_labels) != len(labels):
                 raise ValueError(
-                    f"chem_math_labels length mismatch: "
-                    f"{len(chem_math_labels)} vs {len(labels)}"
+                    f"signal_math_labels length mismatch: "
+                    f"{len(signal_math_labels)} vs {len(labels)}"
                 )
-            al_to_cml = {lab: str(cml) for lab, cml in zip(labels, chem_math_labels)}
+            al_to_sml = {
+                lab: str(signal_math_label)
+                for lab, signal_math_label in zip(labels, signal_math_labels)
+            }
 
-    if al_to_cl is not None:
-        molecule.apply_chem_labels(al_to_cl, al_to_cml)
+    if al_to_sl is not None:
+        molecule.apply_signal_labels(al_to_sl, al_to_sml)
 
     return molecule

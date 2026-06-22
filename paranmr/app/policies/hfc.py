@@ -78,15 +78,15 @@ def validate_pdip_xyz_labels(labels: list[str]) -> None:
         )
 
 
-def has_missing_selected_chem_labels(
+def has_missing_selected_signal_labels(
     molecule: Molecule,
     labels_by_atom_label: Mapping[str, str],
 ) -> bool:
-    """Return whether selected nuclei are missing chemical labels.
+    """Return whether selected nuclei are missing signal labels.
 
     Args:
         molecule: Molecule containing selected runtime nuclei.
-        labels_by_atom_label: Mapping from atom labels to chemical labels.
+        labels_by_atom_label: Mapping from atom labels to signal labels.
 
     Returns:
         True if any selected nucleus is absent from `labels_by_atom_label`.

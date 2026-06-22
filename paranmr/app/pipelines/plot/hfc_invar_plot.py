@@ -3,7 +3,7 @@
 
 """Plot hyperfine isotropic-to-axial ratios.
 
-Loads hyperfine data, optionally applies chemical labels and averaging, and
+Loads hyperfine data, optionally applies signal labels and averaging, and
 generates iso/ax plots for one or more input files.
 """
 
@@ -14,7 +14,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from paranmr.app.loaders.hfc_load import load_hyperfines
-from paranmr.app.loaders.labels_load import load_chem_labels_from_csv
+from paranmr.app.loaders.labels_load import load_signal_labels_from_csv
 from paranmr.app.loaders.mol_load import load_base_molecule
 from paranmr.app.params.options import PlotHFCIsoAxRunOptions
 from paranmr.cfg import config as cfg
@@ -57,12 +57,12 @@ def run_plot_hfc_iso_ax(
             for av in config.hyperfine_average or []:
                 base_molecule.average_hyperfine(av)
 
-            if config.chem_labels_file:
-                al_to_cl, al_to_cml = load_chem_labels_from_csv(config.chem_labels_file)
-                base_molecule.apply_chem_labels(al_to_cl, al_to_cml)
+            if config.signal_labels_file:
+                al_to_sl, al_to_sml = load_signal_labels_from_csv(config.signal_labels_file)
+                base_molecule.apply_signal_labels(al_to_sl, al_to_sml)
 
             iso_div_ax = {
-                nuc.chem_math_label: (np.trace(nuc.A.fc) / 3.0)
+                nuc.signal_math_label: (np.trace(nuc.A.fc) / 3.0)
                 / (nuc.A.sd[0, 0] + nuc.A.sd[1, 1])
                 for nuc in base_molecule.nuclei
             }

@@ -6,13 +6,13 @@
 from types import SimpleNamespace
 
 from paranmr.app.loaders.hfc_load import load_hyperfines
-from paranmr.app.loaders.labels_load import load_chem_labels_from_csv
+from paranmr.app.loaders.labels_load import load_signal_labels_from_csv
 from paranmr.app.loaders.mol_load import load_base_molecule
 
 
 def load_hyperfine_benchmark_sources(config) -> list[dict[str, object]]:
     """Load all configured hyperfine benchmark sources."""
-    al_to_cl, al_to_cml = load_chem_labels_from_csv(config.chem_labels_file)
+    al_to_sl, al_to_sml = load_signal_labels_from_csv(config.signal_labels_file)
 
     signals: list[dict[str, object]] = []
     for index, source in enumerate(config.hyperfine, start=1):
@@ -25,7 +25,7 @@ def load_hyperfine_benchmark_sources(config) -> list[dict[str, object]]:
 
         molecule = load_base_molecule(source_config)
         molecule = load_hyperfines(molecule=molecule, config=source_config)
-        molecule.apply_chem_labels(al_to_cl, al_to_cml)
+        molecule.apply_signal_labels(al_to_sl, al_to_sml)
 
         signals.append(
             {

@@ -28,16 +28,16 @@ def summarize_hyperfine_metric_ranges_by_functional_and_nucleus(
         for source_id, molecule in sources:
             for nucleus in molecule.nuclei:
                 nucleus_label = nucleus.label_nn
-                chem_label = nucleus.chem_label
+                signal_label = nucleus.signal_label
                 metric_value = float(metric_getter(nucleus))
                 grouped_values[functional].setdefault(nucleus_label, {})
                 grouped_values[functional][nucleus_label].setdefault(
-                    chem_label, []
+                    signal_label, []
                 ).append(
                     {
                         "source_id": source_id,
                         "atom_label": nucleus.label,
-                        "chem_math_label": nucleus.chem_math_label,
+                        "signal_math_label": nucleus.signal_math_label,
                         metric_key: metric_value,
                     }
                 )
@@ -45,16 +45,16 @@ def summarize_hyperfine_metric_ranges_by_functional_and_nucleus(
     summary: dict[str, dict[str, dict[str, dict[str, object]]]] = {}
     for functional, nucleus_values in grouped_values.items():
         summary[functional] = {}
-        for nucleus_label, chem_label_values in nucleus_values.items():
+        for nucleus_label, signal_label_values in nucleus_values.items():
             summary[functional][nucleus_label] = {}
-            for chem_label, values in chem_label_values.items():
+            for signal_label, values in signal_label_values.items():
                 metric_values = [float(entry[metric_key]) for entry in values]
-                summary[functional][nucleus_label][chem_label] = {
+                summary[functional][nucleus_label][signal_label] = {
                     "min": min(metric_values),
                     "max": max(metric_values),
                     "mean": float(np.mean(metric_values)),
                     "count": len(metric_values),
-                    "chem_math_label": values[0]["chem_math_label"],
+                    "signal_math_label": values[0]["signal_math_label"],
                     "values": values,
                 }
 
@@ -70,18 +70,18 @@ def summarize_hyperfine_metric_max_by_nucleus(
     raw_rows_by_nucleus: dict[str, list[dict[str, object]]] = {}
 
     for functional, nucleus_summary in summary.items():
-        for nucleus_label, chem_label_summary in nucleus_summary.items():
-            max_chem_label, max_summary = max(
-                chem_label_summary.items(),
+        for nucleus_label, signal_label_summary in nucleus_summary.items():
+            max_signal_label, max_summary = max(
+                signal_label_summary.items(),
                 key=lambda item: float(item[1]["max"]),
             )
             raw_rows_by_nucleus.setdefault(nucleus_label, []).append(
                 {
                     "functional": functional,
                     "max": float(max_summary["max"]),
-                    "chem_label": max_chem_label,
+                    "signal_label": max_signal_label,
                     "raw_max": float(max_summary["max"]),
-                    "raw_chem_label": max_chem_label,
+                    "raw_signal_label": max_signal_label,
                     "adjusted": False,
                 }
             )
@@ -89,19 +89,19 @@ def summarize_hyperfine_metric_max_by_nucleus(
     max_by_nucleus: dict[str, list[dict[str, object]]] = {}
     for nucleus_label, raw_rows in raw_rows_by_nucleus.items():
         majority_label = Counter(
-            str(row["raw_chem_label"]) for row in raw_rows
+            str(row["raw_signal_label"]) for row in raw_rows
         ).most_common(1)[0][0]
 
         adjusted_rows: list[dict[str, object]] = []
         for row in raw_rows:
             adjusted_row = dict(row)
             raw_max = float(row["raw_max"])
-            adjusted_row["majority_chem_label"] = majority_label
-            majority_max = _get_chem_label_max(
+            adjusted_row["majority_signal_label"] = majority_label
+            majority_max = _get_signal_label_max(
                 summary=summary,
                 functional=str(row["functional"]),
                 nucleus_label=nucleus_label,
-                chem_label=majority_label,
+                signal_label=majority_label,
             )
 
             if majority_max is not None:
@@ -112,8 +112,8 @@ def summarize_hyperfine_metric_max_by_nucleus(
                 )
                 if drop_fraction <= max_label_tolerance:
                     adjusted_row["max"] = majority_max
-                    adjusted_row["chem_label"] = majority_label
-                    adjusted_row["adjusted"] = majority_label != row["raw_chem_label"]
+                    adjusted_row["signal_label"] = majority_label
+                    adjusted_row["adjusted"] = majority_label != row["raw_signal_label"]
                     adjusted_row["drop_fraction"] = drop_fraction
 
             adjusted_rows.append(adjusted_row)
@@ -127,15 +127,15 @@ def summarize_hyperfine_metric_max_by_nucleus(
     return max_by_nucleus
 
 
-def _get_chem_label_max(
+def _get_signal_label_max(
     *,
     summary: dict[str, dict[str, dict[str, dict[str, object]]]],
     functional: str,
     nucleus_label: str,
-    chem_label: str,
+    signal_label: str,
 ) -> float | None:
     """Return a chem-label maximum from nested benchmark summary."""
     try:
-        return float(summary[functional][nucleus_label][chem_label]["max"])
+        return float(summary[functional][nucleus_label][signal_label]["max"])
     except KeyError:
         return None

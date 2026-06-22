@@ -18,7 +18,7 @@ from paranmr.viz.utils.fmt import isotope_format
 def plot_a_fc_spread(
     functional: str,
     nucleus_label: str,
-    chem_label_summary: dict[str, dict[str, object]],
+    signal_label_summary: dict[str, dict[str, object]],
     *,
     spec: PlotSpec,
     save: bool = True,
@@ -26,12 +26,12 @@ def plot_a_fc_spread(
     save_name: str = "a_fc_spread.pdf",
     window_title: str | None = None,
 ) -> tuple[plt.Figure, plt.Axes]:
-    """Plot A_fc distributions by chemical label for one functional.
+    """Plot A_fc distributions by signal label for one functional.
 
     Args:
         functional: Functional name used as the plot title.
         nucleus_label: Nucleus label plotted in this figure.
-        chem_label_summary: Mapping from chemical label to summary entries with
+        signal_label_summary: Mapping from signal label to summary entries with
             source-resolved ``values`` and precomputed ``mean`` values.
         spec: Resolved plotting style.
         save: If ``True``, saves the plot to `save_name`.
@@ -45,7 +45,7 @@ def plot_a_fc_spread(
     return _plot_hyperfine_metric_spread(
         functional=functional,
         nucleus_label=nucleus_label,
-        chem_label_summary=chem_label_summary,
+        signal_label_summary=signal_label_summary,
         spec=spec,
         value_key="a_fc",
         y_label=r"$A_\mathregular{FC}$ (ppm Å$^\mathregular{-3}$)",
@@ -97,7 +97,7 @@ def plot_a_fc_functional_max_curve(
 def plot_a_sd_spread(
     functional: str,
     nucleus_label: str,
-    chem_label_summary: dict[str, dict[str, object]],
+    signal_label_summary: dict[str, dict[str, object]],
     *,
     spec: PlotSpec,
     save: bool = True,
@@ -105,11 +105,11 @@ def plot_a_sd_spread(
     save_name: str = "a_sd_spread.pdf",
     window_title: str | None = None,
 ) -> tuple[plt.Figure, plt.Axes]:
-    """Plot axial A_sd distributions by chemical label for one functional."""
+    """Plot axial A_sd distributions by signal label for one functional."""
     return _plot_hyperfine_metric_spread(
         functional=functional,
         nucleus_label=nucleus_label,
-        chem_label_summary=chem_label_summary,
+        signal_label_summary=signal_label_summary,
         spec=spec,
         value_key="a_sd",
         y_label=r"$A_{\mathregular{SD}}^{\mathregular{ax}}$ (ppm Å$^\mathregular{-3}$)",
@@ -150,7 +150,7 @@ def plot_a_sd_functional_max_curve(
 def _plot_hyperfine_metric_spread(
     functional: str,
     nucleus_label: str,
-    chem_label_summary: dict[str, dict[str, object]],
+    signal_label_summary: dict[str, dict[str, object]],
     *,
     spec: PlotSpec,
     value_key: str,
@@ -160,7 +160,7 @@ def _plot_hyperfine_metric_spread(
     save_name: str,
     window_title: str,
 ) -> tuple[plt.Figure, plt.Axes]:
-    """Plot hyperfine metric distributions by chemical label."""
+    """Plot hyperfine metric distributions by signal label."""
     formatted_nucleus = _format_benchmark_nucleus(nucleus_label)
     fig, ax = create_canvas(
         spec.profile,
@@ -173,16 +173,16 @@ def _plot_hyperfine_metric_spread(
     scale = spec.skin_axes(ax)
     palette = spec.palette
 
-    ordered_labels = list(chem_label_summary)
+    ordered_labels = list(signal_label_summary)
     xvals = np.arange(1, len(ordered_labels) + 1)
     x_positions = xvals + 0.5
 
     datasets = [
-        [float(entry[value_key]) for entry in chem_label_summary[label]["values"]]
+        [float(entry[value_key]) for entry in signal_label_summary[label]["values"]]
         for label in ordered_labels
     ]
     mean_values = [
-        float(chem_label_summary[label]["mean"]) for label in ordered_labels
+        float(signal_label_summary[label]["mean"]) for label in ordered_labels
     ]
 
     violin_colour = palette.secondary if palette is not None else "C1"
@@ -225,7 +225,7 @@ def _plot_hyperfine_metric_spread(
     ax.set_xticks(x_positions)
     ax.set_xticklabels(
         [
-            str(chem_label_summary[label].get("chem_math_label", label))
+            str(signal_label_summary[label].get("signal_math_label", label))
             for label in ordered_labels
         ],
         rotation=90,

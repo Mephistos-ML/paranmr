@@ -53,7 +53,7 @@ def fit_model_to_shifts(
     guess = [val for val in model.fit_vars.values()]
     bounds = np.array([model.BOUNDS[name] for name in model.fit_vars.keys()]).T
     al_to_para_shift = {
-        nuc.label: experiment[nuc.chem_label].shift - nuc.shift.dia
+        nuc.label: experiment[nuc.signal_label].shift - nuc.shift.dia
         for nuc in molecule.nuclei
     }
 
@@ -167,7 +167,7 @@ def fit_linear_model_to_shifts(
 
     ss_res = np.sum(curr_fit.fun**2)
     model.rmse = np.sqrt(ss_res / len(curr_fit.fun))
-    ecs = [experiment[nuc.chem_label] for nuc in molecule.nuclei]
+    ecs = [experiment[nuc.signal_label] for nuc in molecule.nuclei]
     ss_tot = np.sum((ecs - np.mean(ecs)) ** 2)
     model.r2 = 1 - (ss_res / ss_tot)
     model.adj_r2 = 1 - (1 - model.r2) * (len(ecs) - 1) / (

@@ -46,6 +46,7 @@ def plot_pred_spectrum(
     shift_range: ArrayLike,
     spec: PlotSpec,
     effective_linewidths_by_label: Mapping[str, float] | None = None,
+    annotation_peaks: list[tuple[float, str]] | None = None,
     save: bool = True,
     show: bool = True,
     save_name: str = "predicted_spectrum.pdf",
@@ -61,6 +62,8 @@ def plot_pred_spectrum(
         spec: Plot styling contract.
         effective_linewidths_by_label: Optional per-nucleus linewidths in ppm
             resolved by the application pipeline.
+        annotation_peaks: Optional ``(shift_ppm, label)`` pairs used for peak
+            annotations instead of molecule-derived nucleus labels.
         save: If ``True``, saves the plot to `save_name`.
         show: If ``True``, shows the plot.
         save_name: Output image file name.
@@ -112,17 +115,19 @@ def plot_pred_spectrum(
     # Spectrum trace
     ax.plot(x_grid, y_intensity, color=palette.primary, lw=glyphs.line_lw * 0.75)
 
-    # Labels
-    avg_shifts = {
-        nucleus.chem_math_label: nucleus.shift.avg
-        for nucleus in molecule.nuclei
-        if nucleus.isotope == isotope
-    }
-
-    # Ensure labels match shifts in sorted order
-    sorted_shifts_labels = sorted(avg_shifts.items(), key=lambda x: x[1])
-    sorted_labels = [label for label, _ in sorted_shifts_labels]
-    sorted_shifts = [shift for _, shift in sorted_shifts_labels]
+    if annotation_peaks is None:
+        avg_shifts = {
+            nucleus.signal_math_label: nucleus.shift.avg
+            for nucleus in molecule.nuclei
+            if nucleus.isotope == isotope
+        }
+        sorted_shifts_labels = sorted(avg_shifts.items(), key=lambda x: x[1])
+        sorted_labels = [label for label, _ in sorted_shifts_labels]
+        sorted_shifts = [shift for _, shift in sorted_shifts_labels]
+    else:
+        sorted_shifts_labels = sorted(annotation_peaks, key=lambda x: x[0])
+        sorted_shifts = [shift for shift, _ in sorted_shifts_labels]
+        sorted_labels = [label for _, label in sorted_shifts_labels]
 
     _annotate_peaks_with_barrier(
         ax,
@@ -236,7 +241,7 @@ def plot_raw_deconv_pred(
 
     # Map each nucleus text-label to its simulated (predicted) peak position
     avg_shifts = {
-        nucleus.chem_math_label: nucleus.shift.avg
+        nucleus.signal_math_label: nucleus.shift.avg
         for nucleus in molecule.nuclei
         if nucleus.isotope == isotope
     }
@@ -385,9 +390,9 @@ def plot_raw_deconv_pred(
         if nucleus.isotope != isotope:
             continue
 
-        # Prefer the plain chemical label if available.
-        plain = getattr(nucleus, "chem_label", None)
-        latex = getattr(nucleus, "chem_math_label", None)
+        # Prefer the plain signal label if available.
+        plain = getattr(nucleus, "signal_label", None)
+        latex = getattr(nucleus, "signal_math_label", None)
         if plain and latex:
             latex_label_map[str(plain)] = str(latex)
 
@@ -409,7 +414,7 @@ def plot_raw_deconv_pred(
 
     pm_sorted = sorted(
         [
-            (signal.shift, _map_assignment_to_latex(signal.assignment))
+            (signal.shift, _map_assignment_to_latex(signal.signal_label))
             for signal in experiment.signals
         ],
         key=lambda x: x[0],

@@ -37,7 +37,7 @@ def evaluate_relaxation_rates(
     This helper centralizes the one-and-the-same formalism selection logic used
     by both correlation-time fitting and relaxation-aware prediction workflows.
     It returns a domain-level decomposition of per-nucleus relaxation channels
-    and leaves any chemical-label averaging or linewidth conversion to the
+    and leaves any signal-label averaging or linewidth conversion to the
     caller.
 
     Args:

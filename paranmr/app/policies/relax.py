@@ -19,22 +19,22 @@ import numpy as np
 from paranmr.core.domain.mol import Molecule
 
 
-def average_relaxation_rates_by_chem_label(
+def average_relaxation_rates_by_signal_label(
     molecule: Molecule,
     rates_by_label: dict[str, float] | None,
 ) -> dict[str, float] | None:
-    """Average per-nucleus relaxation rates by chemical label.
+    """Average per-nucleus relaxation rates by signal label.
 
     This helper projects atom-label-indexed relaxation rates onto the
-    chemical-label representation used by higher-level workflows such as
+    signal-label representation used by higher-level workflows such as
     linewidth prediction and correlation-time fitting.
 
     Args:
-        molecule: Molecule providing the ``label`` to ``chem_label`` mapping.
+        molecule: Molecule providing the ``label`` to ``signal_label`` mapping.
         rates_by_label: Optional mapping from atom label to relaxation rate.
 
     Returns:
-        Mapping from chemical label to averaged relaxation rate, or ``None``
+        Mapping from signal label to averaged relaxation rate, or ``None``
         when no channel data is available.
     """
     if rates_by_label is None:
@@ -43,11 +43,11 @@ def average_relaxation_rates_by_chem_label(
     grouped_rates = defaultdict(list)
     for nuc in molecule.nuclei:
         if nuc.label in rates_by_label:
-            grouped_rates[nuc.chem_label].append(rates_by_label[nuc.label])
+            grouped_rates[nuc.signal_label].append(rates_by_label[nuc.label])
 
     return {
-        chem_label: np.mean(rate_list)
-        for chem_label, rate_list in grouped_rates.items()
+        signal_label: np.mean(rate_list)
+        for signal_label, rate_list in grouped_rates.items()
     }
 
 

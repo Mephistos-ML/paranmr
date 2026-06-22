@@ -19,7 +19,7 @@ import yaml
 import yaml_include
 from matplotlib.lines import Line2D
 
-from paranmr.app.loaders.labels_load import load_chem_labels_from_csv
+from paranmr.app.loaders.labels_load import load_signal_labels_from_csv
 from paranmr.app.loaders.mol_load import load_molecule_from_qca
 from paranmr.core.domain.mol import Molecule
 
@@ -32,19 +32,19 @@ yaml.add_constructor("!inc", yaml_include.Constructor(base_dir="."))
 
 
 def load_hyperfine_data(
-    sources: dict[str, str], chem_labels: str, elements="H"
+    sources: dict[str, str], signal_labels: str, elements="H"
 ) -> dict[str, Molecule]:
     """
     Load hyperfine coupling data from multiple sources and build Molecule objects.
 
     For each entry in `sources`, the function reads a quantum-chemistry output file,
     constructs a `Molecule`, applies unit conversion (via the Molecule factory),
-    and attaches chemical labels from `chem_labels`.
+    and attaches signal labels from `signal_labels`.
 
     Args:
         sources (dict[str, str]): Mapping from a source name (e.g. a functional) to
             the corresponding input file path.
-        chem_labels (str): Path to a CSV file containing chemical labels (and
+        signal_labels (str): Path to a CSV file containing signal labels (and
             optionally math labels) for atoms.
         elements (str | list[str]): Elements to include. Use "all" to include all
             elements.
@@ -63,8 +63,8 @@ def load_hyperfine_data(
             converter=None,
         )
 
-        al_to_cl, al_to_cml = load_chem_labels_from_csv(chem_labels)
-        molecule.apply_chem_labels(al_to_cl, al_to_cml)
+        al_to_sl, al_to_sml = load_signal_labels_from_csv(signal_labels)
+        molecule.apply_signal_labels(al_to_sl, al_to_sml)
 
         all_molecules[source_name] = molecule
 
@@ -148,7 +148,7 @@ def plot_component(
 
 def plot_normalisation(
     norms: dict[str, float],
-    chemlabels: dict[str, float],
+    signal_labels: dict[str, float],
     save=True,
     show=True,
     savename="normalisation.pdf",
@@ -160,7 +160,7 @@ def plot_normalisation(
     Args:
         norms (dict[str, float]): Mapping from source name to the max absolute
             isotropic value used for normalisation.
-        chemlabels (dict[str, str]): Mapping from source name to the label
+        signal_labels (dict[str, str]): Mapping from source name to the label
             corresponding to the max absolute isotropic value.
         save (bool): If True, save the figure to `savename`.
         show (bool): If True, display the plot window.
@@ -171,7 +171,7 @@ def plot_normalisation(
         None
     """
 
-    unilabs = set(chemlabels.values())
+    unilabs = set(signal_labels.values())
     # Deterministic local colour cycle
     colour_cycle = ["black", "blue", "red", "green"]
     colours = {
@@ -185,7 +185,7 @@ def plot_normalisation(
         print(name, value)
 
     for it, (key, val) in enumerate(norms.items()):
-        ax.plot(it, val, lw=0, marker="x", mew=2.0, color=colours[chemlabels[key]])
+        ax.plot(it, val, lw=0, marker="x", mew=2.0, color=colours[signal_labels[key]])
 
     legend_elements = [
         Line2D([0], [0], marker="x", color=colour, label=label, mew=2, lw=0)
@@ -218,9 +218,9 @@ def main():
     )
 
     parser.add_argument(
-        "chem_labels",
+        "signal_labels",
         type=str,
-        help=".csv file containing chemical labels of each atom",
+        help=".csv file containing signal labels of each atom",
     )
 
     parser.add_argument(
@@ -245,12 +245,12 @@ def main():
     sources = {name: file for name, file in zip(config["name"], config["input_file"])}
 
     molecules = load_hyperfine_data(
-        sources, chem_labels=uargs.chem_labels, elements=uargs.elements
+        sources, signal_labels=uargs.signal_labels, elements=uargs.elements
     )
 
     all_isos = {
         name: {
-            nuc.chem_math_label: (1.0 / 3.0) * np.trace(nuc.A.fc)
+            nuc.signal_math_label: (1.0 / 3.0) * np.trace(nuc.A.fc)
             for nuc in molecule.nuclei
         }
         for name, molecule in molecules.items()
@@ -304,7 +304,7 @@ def main():
 
     all_ax = {
         name: {
-            nuc.chem_math_label: nuc.A.sd[0, 0] - nuc.A.sd[1, 1]
+            nuc.signal_math_label: nuc.A.sd[0, 0] - nuc.A.sd[1, 1]
             for nuc in molecule.nuclei
         }
         for name, molecule in molecules.items()
@@ -312,7 +312,7 @@ def main():
 
     all_rho = {
         name: {
-            nuc.chem_math_label: -nuc.A.sd[0, 0] - nuc.A.sd[1, 1]
+            nuc.signal_math_label: -nuc.A.sd[0, 0] - nuc.A.sd[1, 1]
             for nuc in molecule.nuclei
         }
         for name, molecule in molecules.items()

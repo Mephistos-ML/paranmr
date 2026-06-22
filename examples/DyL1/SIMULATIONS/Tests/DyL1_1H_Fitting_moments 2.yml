@@ -19,7 +19,7 @@ diamagnetic:
 experiment:
   files: ../../DATA/PARA/DyL1_Exp_Decomposition.csv
   
-chem_labels:
+signal_labels:
   file: ../../DATA/LABELS/DyL1_1H_Labels.csv
   
 assignment:

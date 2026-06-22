@@ -177,7 +177,7 @@ class FitSuscConfig(Config):
             "average_shifts",
         ],
         "project": ["name"],
-        "chem_labels": ["file"],
+        "signal_labels": ["file"],
         "diamagnetic": [
             "method",
             "file",
@@ -232,7 +232,7 @@ class FitSuscConfig(Config):
         self._susc_fit_variables = ""
         self._susc_fit_input_units = "A3"
         self._susc_fit_average_shifts = []
-        self._chem_labels_file = ""
+        self._signal_labels_file = ""
         self._spin_S = None
         self._spin_multiplicity = None
         self._spin_file = ""
@@ -333,7 +333,7 @@ class FitSuscConfig(Config):
 
     @nuclei_include_groups.setter
     def nuclei_include_groups(self, values: list | str):
-        # Accept a single string or a list of strings representing chem_labels
+        # Accept a single string or a list of strings representing signal_labels
         if isinstance(values, str):
             self._nuclei_include_groups = [values]
         else:
@@ -343,14 +343,14 @@ class FitSuscConfig(Config):
     def _resolve_nuclei_include_groups(self):
         """Expands `nuclei:include_groups` into atom labels.
 
-        Uses `chem_labels_file` to map `chem_label` values to `atom_label` values.
+        Uses `signal_labels_file` to map `signal_label` values to `atom_label` values.
         The expanded atoms are merged into `self._nuclei_include` with duplicates
         removed while preserving order.
 
         This method is safe to call multiple times.
 
         Raises:
-            FileNotFoundError: If `chem_labels_file` does not exist.
+            FileNotFoundError: If `signal_labels_file` does not exist.
         """
         raw_groups = getattr(self, "_nuclei_include_groups", [])
         if raw_groups is None:
@@ -361,13 +361,13 @@ class FitSuscConfig(Config):
         groups = [str(g).strip() for g in raw_groups if str(g).strip()]
         if not groups:
             return
-        # If chem_labels_file is not set yet, skip silently
-        chem_file = getattr(self, "_chem_labels_file", "")
-        if not chem_file:
+        # If signal_labels_file is not set yet, skip silently
+        signal_labels_file = getattr(self, "_signal_labels_file", "")
+        if not signal_labels_file:
             return
         expanded_atoms: list[str] = []
         try:
-            with open(chem_file, newline="") as csvfile:
+            with open(signal_labels_file, newline="") as csvfile:
                 reader = csv.DictReader(csvfile, skipinitialspace=True)
 
                 # Strip header whitespace by matching keys after .strip().
@@ -378,18 +378,20 @@ class FitSuscConfig(Config):
                     return None
 
                 for row in reader:
-                    clabel = (_get(row, "chem_label") or "").strip()
-                    alabel = (_get(row, "atom_label") or "").strip()
-                    if clabel in groups and alabel:
-                        expanded_atoms.append(alabel)
+                    signal_label = (_get(row, "signal_label") or "").strip()
+                    atom_label = (_get(row, "atom_label") or "").strip()
+                    if signal_label in groups and atom_label:
+                        expanded_atoms.append(atom_label)
         except FileNotFoundError:
-            raise FileNotFoundError(f"chem_labels_file not found: {chem_file}")
+            raise FileNotFoundError(
+                f"signal_labels_file not found: {signal_labels_file}"
+            )
         except Exception as e:
             raise e
         if not expanded_atoms:
             raise ValueError(
                 "No nuclei selected: nuclei:include_groups did not match any "
-                "chem_label entries in chem_labels_file. "
+                "signal_label entries in signal_labels_file. "
                 f"Requested groups={groups}."
             )
         # Merge with existing nuclei_include
@@ -639,14 +641,14 @@ class FitSuscConfig(Config):
         return None
 
     @property
-    def chem_labels_file(self) -> str:
-        return self._chem_labels_file
+    def signal_labels_file(self) -> str:
+        return self._signal_labels_file
 
-    @chem_labels_file.setter
-    def chem_labels_file(self, value: str):
+    @signal_labels_file.setter
+    def signal_labels_file(self, value: str):
         if not isinstance(value, str):
-            raise ValueError("chem_labels_file file should be string")
-        self._chem_labels_file = os.path.abspath(value)
+            raise ValueError("signal_labels_file file should be string")
+        self._signal_labels_file = os.path.abspath(value)
         return None
 
     @property
@@ -1294,10 +1296,10 @@ class FitSuscConfig(Config):
 
         config = super().from_file(file_name)
 
-        if config.nuclei_include_groups and not config.chem_labels_file:
+        if config.nuclei_include_groups and not config.signal_labels_file:
             raise ValueError(
                 "Invalid nuclei configuration: 'nuclei:include_groups' requires "
-                "'chem_labels:file' to map chemical labels to atom labels."
+                "'signal_labels:file' to map signal labels to atom labels."
             )
 
         # If an optional VT susceptibility file is provided, require a ab_initio_format.
@@ -1405,6 +1407,12 @@ class FitSuscConfig(Config):
                 )
 
         elif config.assignment_method == "moments":
+            if config.nuclei_include_groups:
+                raise ValueError(
+                    "nuclei:include_groups is not supported when "
+                    "assignment:method is 'moments'; moment matching does not "
+                    "use signal-label atom grouping."
+                )
             if len(config.assignment_groups):
                 raise ValueError(
                     "assignment:groups is not supported when "
@@ -1469,7 +1477,7 @@ class PredictConfig(FitSuscConfig):
         "experiment": ["files", "spectrum_files", "exp_reference"],
         "nuclei": ["include"],
         "project": ["name"],
-        "chem_labels": ["file"],
+        "signal_labels": ["file"],
         "diamagnetic": [
             "method",
             "file",
@@ -1715,7 +1723,7 @@ class FitCorrTimeConfig(FitSuscConfig):
             "model",
         ],
         "project": ["name"],
-        "chem_labels": ["file"],
+        "signal_labels": ["file"],
     }
 
     KEYWORDS = {
@@ -1738,7 +1746,7 @@ class FitCorrTimeConfig(FitSuscConfig):
             "model",
         ],
         "project": ["name"],
-        "chem_labels": ["file"],
+        "signal_labels": ["file"],
     }
 
     def __init__(self, **kwargs):
@@ -1919,7 +1927,7 @@ class PlotHFCConfig(FitSuscConfig):
         ],
         "nuclei": ["include", "include_groups"],
         "project": ["name"],
-        "chem_labels": ["file"],
+        "signal_labels": ["file"],
     }
 
     @property

@@ -123,7 +123,7 @@ def load_experiments_from_csv(
         table,
         ["area", "areas", "area ()", "area()", "integral", "integrals"],
     )
-    assignment_col = _pick_col(table, ["assignment", "assignments"])
+    signal_label_col = _pick_col(table, ["signal_label", "signal_labels"])
 
     l_to_g_col = next((c for c in ["L/G", "L/G ()"] if c in table.columns), None)
     r1_col = next(
@@ -161,7 +161,7 @@ def load_experiments_from_csv(
                     float(row[shift_col]),
                     float(row[width_col]),
                     float(row[area_col]),
-                    str(row[assignment_col]),
+                    str(row[signal_label_col]),
                     l_to_g=l_to_g,
                     r1=r1,
                 )
@@ -206,10 +206,10 @@ def write_experiment_to_csv(
 
 
 def _build_experiment_signals_df(experiment: "Experiment") -> pd.DataFrame:
-    columns = ["assignment ()", "shift (ppm)", "width (Hz)", "area ()", "L/G ()"]
+    columns = ["signal_label ()", "shift (ppm)", "width (Hz)", "area ()", "L/G ()"]
 
     data = {
-        "assignment ()": [s.assignment for s in experiment.signals],
+        "signal_label ()": [s.signal_label for s in experiment.signals],
         "shift (ppm)": [s.shift for s in experiment.signals],
         "width (Hz)": [s.width for s in experiment.signals],
         "area ()": [s.area for s in experiment.signals],

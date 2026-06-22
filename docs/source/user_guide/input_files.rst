@@ -5,7 +5,7 @@ Input YAML Files
 
 The input file is a declarative description of a calculation. Each top-level block
 maps to a specific subsystem (hyperfine source, susceptibility source, experiment,
-assignment, and fitting model). Values are validated against the workflow configuration contract.
+signal_label, and fitting model). Values are validated against the workflow configuration contract.
 
 .. rubric:: Important Conventions
 
@@ -94,7 +94,7 @@ Used in workflows that require hyperfine tensor information, including:
                               on  # Include orbital hyperfine contribution when available
 
         # Define whether HFC averaging is needed [Optional]
-        average: ['Me1', 'Me2'] # Chemical labels over which hyperfine tensors are averaged
+        average: ['Me1', 'Me2'] # Signal labels over which hyperfine tensors are averaged
         
         # Define paramagnetic centre [Required for pdip and when relaxation is enabled]
         paramagnetic_centre: [0.0, 0.0, 0.0] # Three Cartesian coordinates [x, y, z] in the same frame/units as the structure or HFC input
@@ -129,33 +129,33 @@ Used in workflows that require hyperfine tensor information, including:
    quantities are available. At present, this pathway is implemented only for
    ORCA 5 and ORCA 6 outputs.
 
-Chemical Labels
-^^^^^^^^^^^^^^^
+Signal Labels
+^^^^^^^^^^^^^
 
-Defines a mapping between atomic labels and chemical groups used for averaging,
+Defines a mapping between atom labels and signal groups used for averaging,
 selection, and assignment operations.
 
 **Applicability:**  
 
-Used in workflows that group nuclei by chemical labels.
+Used in workflows that group nuclei by signal labels.
 
 .. code-block:: yaml
 
-    # chem_labels block schema (reference):
-    chem_labels:
-        # Chemical label mapping file [Required]
-        file: chem_labels.csv # CSV file mapping atom labels to chemical groups
+    # signal_labels block schema (reference):
+    signal_labels:
+        # Signal label mapping file [Required]
+        file: signal_labels.csv # CSV file mapping atom labels to signal groups
 
 .. note::
 
-   Chemical labels are used to group nuclei for averaging and assignment purposes.
+   Signal labels are used to group nuclei for averaging and assignment workflows.
    This block is optional for pNMR prediction, but is mandatory for susceptibility fitting.
 
 Nuclei
 ^^^^^^
 
 Defines which nuclei are included in prediction or fitting workflows,
-either explicitly or via chemical group labels.
+either explicitly or via signal group labels.
 
 **Applicability:**  
 Optional. Used in workflows that require explicit nucleus selection, including:
@@ -169,13 +169,13 @@ Optional. Used in workflows that require explicit nucleus selection, including:
         # Explicit nucleus selection [Required unless include_groups is provided]
         include: [H, C, H1] # Atom symbols and/or explicit atom labels
 
-        # Selection via chemical labels [Optional]
-        include_groups: [Me1, Me2] # Chemical labels defined in chem_labels
+        # Selection via signal labels [Optional]
+        include_groups: [Me1, Me2] # Signal labels defined in signal_labels
 
 .. note::
 
    Nuclei may be selected either explicitly using ``include`` or indirectly via
-   chemical labels using ``include_groups``.
+   signal labels using ``include_groups``.
 
    If ``include_groups`` is provided, explicit nucleus selection is optional.
 
@@ -407,11 +407,11 @@ Used in susceptibility fitting workflows that require assignment handling.
 The supported strategies are:
 
 ``fixed``
-    Uses the signal-to-nucleus assignments provided directly in the experimental
+    Uses the signal-to-nucleus signal_labels provided directly in the experimental
     data files. No reordering is performed.
 
 ``permute``
-    Exhaustively enumerates all permutations of assignments within the
+    Exhaustively enumerates all permutations of signal_labels within the
     user-defined ``groups`` and selects the permutation that maximises the
     adjusted R². Guarantees the global optimum within the specified groups but
     scales factorially with group size.
@@ -475,7 +475,7 @@ uncertainty method is ``bootstrap`` perturbation of the experimental peak table.
    behaviour and ``search: {mode: custom, n_attempts: ..., max_iter: ...,
    r2_threshold: ...}`` for fully explicit search control.
 
-   Assignment handling assumes that experimental data and assignments are
+   Assignment handling assumes that experimental data and signal_labels are
    ordered consistently by the user.
 
 Linewidth
@@ -556,8 +556,8 @@ Used in susceptibility fitting workflows.
           dyy: [fit, 0.1]
           dyz: [fit, 0.1]
 
-        average_shifts: 'all' # Average shifts over all chemical labels
-                        ["Me1", "Me2"] # Average shifts over the specified chemical labels
+        average_shifts: 'all' # Average shifts over all signal labels
+                        ["Me1", "Me2"] # Average shifts over the specified signal labels
 
 .. note::
 

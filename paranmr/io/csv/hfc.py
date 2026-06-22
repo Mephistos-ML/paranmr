@@ -114,7 +114,7 @@ def _build_hyperfines_df(molecule):
 
     columns = [
         "atom_label ()",
-        "chem_label ()",
+        "signal_label ()",
         "A_fc_iso (ppm Å^-3)",
         "A_sd_xx (ppm Å^-3)",
         "A_sd_xy (ppm Å^-3)",
@@ -128,7 +128,7 @@ def _build_hyperfines_df(molecule):
 
     data = {
         "atom_label ()": [nuc.label for nuc in nuclei],
-        "chem_label ()": [nuc.chem_label for nuc in nuclei],
+        "signal_label ()": [nuc.signal_label for nuc in nuclei],
         "A_fc_iso (ppm Å^-3)": [(1.0 / 3.0) * np.trace(nuc.A.fc) for nuc in nuclei],
         "A_sd_xx (ppm Å^-3)": [nuc.A.sd[0, 0] for nuc in nuclei],
         "A_sd_xy (ppm Å^-3)": [nuc.A.sd[0, 1] for nuc in nuclei],

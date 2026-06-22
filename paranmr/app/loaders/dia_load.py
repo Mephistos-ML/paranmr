@@ -27,7 +27,7 @@ def load_diamagnetic_shifts(
 
     Returns:
         dia_by_key: Mapping key -> dia shift.
-        key_kind: 'atom_label' or 'chem_label' (which key the mapping uses).
+        key_kind: 'atom_label' or 'signal_label' (which key the mapping uses).
         ref_avg_by_label_nn: Optional mapping label_nn -> averaged reference shift.
     """
     # --- main dia file ---
@@ -41,14 +41,14 @@ def load_diamagnetic_shifts(
             dia_by_key = {
                 str(k): float(v) for k, v in zip(dia["atom_label"], dia["shift"])
             }
-        elif "chem_label" in dia.columns:
-            key_kind = "chem_label"
+        elif "signal_label" in dia.columns:
+            key_kind = "signal_label"
             dia_by_key = {
-                str(k): float(v) for k, v in zip(dia["chem_label"], dia["shift"])
+                str(k): float(v) for k, v in zip(dia["signal_label"], dia["shift"])
             }
         else:
             raise KeyError(
-                "atom_label or chem_label not present in diamagnetic shift file"
+                "atom_label or signal_label not present in diamagnetic shift file"
             )
 
     elif file_type == "dft":

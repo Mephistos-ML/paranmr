@@ -12,7 +12,7 @@ For susceptibility fitting workflows (``fit_susc``), the names of all generated 
 1. ``assigned_experiment_<TEMPERATURE>_K.csv``  
    Assigned experimental data at a given temperature.
 
-   The file has the same format as the input experimental CSV, but with assignments applied.
+   The file has the same format as the input experimental CSV, but with signal_labels applied.
 
 2. ``dft_hyperfines.csv``  
    Raw hyperfine coupling constants extracted from a DFT calculation.
@@ -22,7 +22,7 @@ For susceptibility fitting workflows (``fit_susc``), the names of all generated 
 3. ``hyperfines_and_shifts_<TEMPERATURE>_K.csv``  
    Combined hyperfine and shift data at a given temperature.
 
-   Contains hyperfine coupling constants, chemical shifts, atomic coordinates, and chemical labels for each nucleus in the system.
+   Contains hyperfine coupling constants, chemical shifts, atomic coordinates, and signal labels for each nucleus in the system.
 
 4. ``pcs_isosurf_<TEMPERATURE>_K.cube``  
    Pseudocontact shift isosurface.

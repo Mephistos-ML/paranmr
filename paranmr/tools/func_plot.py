@@ -3,7 +3,7 @@
 
 """Plot hyperfine coupling trends across multiple QC sources.
 
-Loads hyperfine data for multiple sources, applies chemical labels, and generates
+Loads hyperfine data for multiple sources, applies signal labels, and generates
 comparison plots for isotropic and anisotropic hyperfine components.
 """
 
@@ -15,22 +15,22 @@ import matplotlib.ticker as ticker
 import numpy as np
 import pandas as pd
 
-from paranmr.app.loaders.labels_load import load_chem_labels_from_csv
+from paranmr.app.loaders.labels_load import load_signal_labels_from_csv
 from paranmr.app.loaders.mol_load import load_molecule_from_qca
 
 
-def load_hyperfine_data(sources: dict[str, str], chem_labels: str) -> dict[str, object]:
+def load_hyperfine_data(sources: dict[str, str], signal_labels: str) -> dict[str, object]:
     """
     Load hyperfine data from multiple sources and return Molecule objects.
 
     For each entry in `sources`, the function reads a quantum-chemistry output file,
     constructs a `Molecule` (including unit conversion via the Molecule factory),
-    and attaches chemical labels from `chem_labels`.
+    and attaches signal labels from `signal_labels`.
 
     Args:
         sources (dict[str, str]): Mapping from a source name (e.g. a functional) to
             the corresponding input file path.
-        chem_labels (str): Path to a CSV file containing chemical labels (and
+        signal_labels (str): Path to a CSV file containing signal labels (and
             optionally math labels) for atoms.
 
     Returns:
@@ -47,8 +47,8 @@ def load_hyperfine_data(sources: dict[str, str], chem_labels: str) -> dict[str, 
             converter="MHz_to_Ang-3",
         )
 
-        al_to_cl, al_to_cml = load_chem_labels_from_csv(chem_labels)
-        molecule.apply_chem_labels(al_to_cl, al_to_cml)
+        al_to_sl, al_to_sml = load_signal_labels_from_csv(signal_labels)
+        molecule.apply_signal_labels(al_to_sl, al_to_sml)
 
         all_molecules[source_name] = molecule
 
@@ -186,9 +186,9 @@ def main() -> None:
     )
 
     parser.add_argument(
-        "chem_labels",
+        "signal_labels",
         type=str,
-        help=".csv file containing chemical labels of each atom",
+        help=".csv file containing signal labels of each atom",
     )
 
     parser.add_argument(
@@ -204,11 +204,11 @@ def main() -> None:
 
     sources = {name: file for name, file in zip(config["names"], config["files"])}
 
-    molecules = load_hyperfine_data(sources, chem_labels=uargs.chem_labels)
+    molecules = load_hyperfine_data(sources, signal_labels=uargs.signal_labels)
 
     all_isos = {
         name: {
-            nuc.chem_math_label: (1.0 / 3.0) * np.trace(nuc.A.fc)
+            nuc.signal_math_label: (1.0 / 3.0) * np.trace(nuc.A.fc)
             for nuc in molecule.nuclei
         }
         for name, molecule in molecules.items()
@@ -252,7 +252,7 @@ def main() -> None:
 
     all_ax = {
         name: {
-            nuc.chem_math_label: nuc.A.sd[0, 0] - nuc.A.sd[1, 1]
+            nuc.signal_math_label: nuc.A.sd[0, 0] - nuc.A.sd[1, 1]
             for nuc in molecule.nuclei
         }
         for name, molecule in molecules.items()
@@ -260,7 +260,7 @@ def main() -> None:
 
     all_rho = {
         name: {
-            nuc.chem_math_label: -nuc.A.sd[0, 0] - nuc.A.sd[1, 1]
+            nuc.signal_math_label: -nuc.A.sd[0, 0] - nuc.A.sd[1, 1]
             for nuc in molecule.nuclei
         }
         for name, molecule in molecules.items()

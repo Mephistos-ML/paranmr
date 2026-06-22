@@ -1,7 +1,7 @@
 #temperature 287.30
 #magnetic_field 11.75
 #isotope 13C
-assignment,shift (ppm),width (Hz),area ()
+signal_label,shift (ppm),width (Hz),area ()
 C3,1035.11,438.69,6.05
 C1,782.9,374.19,7.14
 C2_down,410.9,191.69,6.49

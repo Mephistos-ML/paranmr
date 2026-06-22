@@ -72,7 +72,7 @@ def plot_fitted_shifts(
         molecule: Molecule containing theoretical shift data.
         experiment: Experimental shift data.
         susc_model: Fitted susceptibility model.
-        average: If ``True``, averages equivalent nuclei (same chemical label).
+        average: If ``True``, averages equivalent nuclei (same signal label).
         show_point_labels: If ``True``, draws nucleus labels next to markers.
             If ``False``, draws an element-shape legend instead.
         save: If ``True``, saves the plot to `save_name`.
@@ -89,21 +89,21 @@ def plot_fitted_shifts(
 
     seen = set()
     unique_nuclei = [
-        seen.add(nuc.chem_label) or nuc
+        seen.add(nuc.signal_label) or nuc
         for nuc in molecule.nuclei
-        if nuc.chem_label not in seen
+        if nuc.signal_label not in seen
     ]
 
     if average:
         # Theoretical shifts, averaged over equivalent nuclei
-        calc_shifts = {nuc.chem_label: nuc.shift.avg for nuc in unique_nuclei}
+        calc_shifts = {nuc.signal_label: nuc.shift.avg for nuc in unique_nuclei}
         # Experimental shifts, same order as theoretical
         exp = {label: experiment[label].shift for label in calc_shifts.keys()}
     else:
         # One signal per nucleus
-        calc_shifts = {nuc.chem_label: [] for nuc in unique_nuclei}
+        calc_shifts = {nuc.signal_label: [] for nuc in unique_nuclei}
         for nuc in molecule.nuclei:
-            calc_shifts[nuc.chem_label].append(nuc.shift.total)
+            calc_shifts[nuc.signal_label].append(nuc.shift.total)
 
         # Experimental shifts, same order as theoretical
         exp = {
@@ -117,14 +117,14 @@ def plot_fitted_shifts(
     ]
     _markers = {ele: mrkr for (ele, mrkr) in zip(_unique_elements, ["o", "v", "s"])}
 
-    markers = {nuc.chem_label: _markers[nuc.label_nn] for nuc in molecule.nuclei}
+    markers = {nuc.signal_label: _markers[nuc.label_nn] for nuc in molecule.nuclei}
 
     # if math labels are present then use these instead
-    if all([len(nuc.chem_math_label) for nuc in molecule.nuclei]):
+    if all([len(nuc.signal_math_label) for nuc in molecule.nuclei]):
         for nuc in unique_nuclei:
-            calc_shifts[nuc.chem_math_label] = calc_shifts.pop(nuc.chem_label)
-            markers[nuc.chem_math_label] = markers.pop(nuc.chem_label)
-            exp[nuc.chem_math_label] = exp.pop(nuc.chem_label)
+            calc_shifts[nuc.signal_math_label] = calc_shifts.pop(nuc.signal_label)
+            markers[nuc.signal_math_label] = markers.pop(nuc.signal_label)
+            exp[nuc.signal_math_label] = exp.pop(nuc.signal_label)
 
     figure_variant = "vertical_extended" if len(susc_model.VARNAMES) > 3 else "vertical"
     # TODO(viz): Move fitted-shift header/plot ratio tuning into PlotSpec so

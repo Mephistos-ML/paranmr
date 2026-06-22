@@ -44,14 +44,27 @@ class CalculatedSignalPackage:
     Args:
         label: Stable package label.
         atom_labels: Atom labels contributing to the package.
-        chem_labels: Chemical labels contributing to the package.
         center: Calculated package center in ppm.
     """
 
     label: str
     atom_labels: tuple[str, ...]
-    chem_labels: tuple[str, ...]
     center: float
+
+
+@dataclass(frozen=True)
+class MomentSignalMapping:
+    """Derived mapping from an observed signal to fitted calculated packages."""
+
+    signal_label: str
+    observed_center: float
+    observed_width: float
+    observed_area: float
+    package_labels: tuple[str, ...]
+    atom_labels: tuple[str, ...]
+    calculated_centers: tuple[float, ...]
+    calculated_center: float
+    delta_ppm: float
 
 
 def _pink_log(message: str) -> str:
@@ -97,6 +110,7 @@ def calculated_signal_packages_from_parameters(
     parameters: dict[str, float],
     nuclei: list[Nucleus],
     average_labels: list[list[str]] = [],
+    include_diamagnetic: bool = True,
 ) -> list[CalculatedSignalPackage]:
     """Compute calculated independent signal packages from model parameters.
 
@@ -106,7 +120,9 @@ def calculated_signal_packages_from_parameters(
 
     trial_shifts = model.model(parameters, nuclei)
     label_to_total_shift = {
-        nuc.label: trial_shifts[nuc.label] + nuc.shift.dia for nuc in nuclei
+        nuc.label: trial_shifts[nuc.label]
+        + (nuc.shift.dia if include_diamagnetic else 0.0)
+        for nuc in nuclei
     }
     nucleus_by_label = {nuc.label: nuc for nuc in nuclei}
 
@@ -117,9 +133,8 @@ def calculated_signal_packages_from_parameters(
         group_values = [label_to_total_shift[label] for label in group]
         packages.append(
             CalculatedSignalPackage(
-                label=_package_label(group_labels, nucleus_by_label),
+                label=_package_label(group_labels),
                 atom_labels=group_labels,
-                chem_labels=_package_chem_labels(group_labels, nucleus_by_label),
                 center=float(np.mean(group_values)),
             )
         )
@@ -127,9 +142,8 @@ def calculated_signal_packages_from_parameters(
 
     packages.extend(
         CalculatedSignalPackage(
-            label=nucleus_by_label[label].chem_label,
+            label=nucleus_by_label[label].label,
             atom_labels=(label,),
-            chem_labels=(nucleus_by_label[label].chem_label,),
             center=float(total_shift),
         )
         for label, total_shift in label_to_total_shift.items()
@@ -182,7 +196,7 @@ def package_linewidths(
         package.label
         for package in packages
         if package.label not in linewidths_by_label
-        and not all(label in linewidths_by_label for label in package.chem_labels)
+        and not all(label in linewidths_by_label for label in package.atom_labels)
     ]
     if missing:
         raise ValueError(
@@ -200,20 +214,10 @@ def package_linewidths(
 
 def _package_label(
     atom_labels: tuple[str, ...],
-    nucleus_by_label: dict[str, Nucleus],
 ) -> str:
-    unique_chem_labels = list(_package_chem_labels(atom_labels, nucleus_by_label))
-    if len(unique_chem_labels) == 1:
-        return unique_chem_labels[0]
-    return "+".join(unique_chem_labels)
-
-
-def _package_chem_labels(
-    atom_labels: tuple[str, ...],
-    nucleus_by_label: dict[str, Nucleus],
-) -> tuple[str, ...]:
-    chem_labels = [nucleus_by_label[label].chem_label for label in atom_labels]
-    return tuple(dict.fromkeys(chem_labels))
+    if len(atom_labels) == 1:
+        return atom_labels[0]
+    return "+".join(atom_labels)
 
 
 def _package_linewidth(
@@ -222,7 +226,7 @@ def _package_linewidth(
 ) -> float:
     if package.label in linewidths_by_label:
         return linewidths_by_label[package.label]
-    return float(np.mean([linewidths_by_label[label] for label in package.chem_labels]))
+    return float(np.mean([linewidths_by_label[label] for label in package.atom_labels]))
 
 
 def _split_linewidth_variables(
@@ -247,6 +251,86 @@ def _split_linewidth_variables(
     return fit_vars, fix_vars, bounds
 
 
+def _observed_widths_for_calculated_packages(
+    observed_widths_ppm: NDArray,
+    n_packages: int,
+) -> NDArray:
+    widths = np.asarray(observed_widths_ppm, dtype=float)
+    if widths.size == n_packages:
+        return widths
+    raise ValueError(
+        "Moment fitting cannot reuse experimental linewidths for calculated "
+        f"packages when their counts differ: observed={widths.size}, "
+        f"calculated={n_packages}. Use a calculated linewidth source such as "
+        "'linewidth:method: r6'."
+    )
+
+
+def derive_moment_signal_mappings(
+    *,
+    signal_labels: list[str],
+    observed_centers: NDArray,
+    observed_widths: NDArray,
+    observed_areas: NDArray,
+    calculated_packages: list[CalculatedSignalPackage],
+) -> list[MomentSignalMapping]:
+    """Map fitted calculated packages to observed signal labels by order.
+
+    This is an output interpretation of a moment fit. Signal labels come from
+    the experiment; atom labels come from fitted calculated packages. Both
+    mixtures are interpreted in sorted spectral order, matching the moment
+    objective.
+    """
+
+    centers = np.asarray(observed_centers, dtype=float)
+    widths = np.asarray(observed_widths, dtype=float)
+    areas = np.asarray(observed_areas, dtype=float)
+    if not (len(signal_labels) == centers.size == widths.size == areas.size):
+        raise ValueError(
+            "Observed signal labels, centers, widths, and areas must have "
+            "matching lengths"
+        )
+
+    grouped_indices = [
+        [int(index) for index in indices]
+        for indices in np.array_split(
+            np.arange(len(calculated_packages)),
+            len(signal_labels),
+        )
+    ]
+
+    mappings = []
+    for signal_index, package_indices in enumerate(grouped_indices):
+        packages = [calculated_packages[index] for index in package_indices]
+        package_labels = tuple(package.label for package in packages)
+        atom_labels = tuple(
+            atom_label
+            for package in packages
+            for atom_label in package.atom_labels
+        )
+        calculated_centers = tuple(float(package.center) for package in packages)
+        if calculated_centers:
+            calculated_center = float(np.mean(calculated_centers))
+            delta_ppm = calculated_center - float(centers[signal_index])
+        else:
+            calculated_center = np.nan
+            delta_ppm = np.nan
+        mappings.append(
+            MomentSignalMapping(
+                signal_label=str(signal_labels[signal_index]),
+                observed_center=float(centers[signal_index]),
+                observed_width=float(widths[signal_index]),
+                observed_area=float(areas[signal_index]),
+                package_labels=package_labels,
+                atom_labels=atom_labels,
+                calculated_centers=calculated_centers,
+                calculated_center=calculated_center,
+                delta_ppm=delta_ppm,
+            )
+        )
+    return mappings
+
+
 def moment_residual_from_float_list(
     new_vals: list[float],
     model,
@@ -262,6 +346,7 @@ def moment_residual_from_float_list(
     linewidth_fit_names: list[str],
     linewidth_fix_vars: dict[str, float],
     moment_objective_state: dict,
+    include_diamagnetic: bool,
 ) -> list[float]:
     """Compute moment residuals for optimizer-supplied model parameters."""
 
@@ -283,10 +368,11 @@ def moment_residual_from_float_list(
         parameters=all_vars,
         nuclei=nuclei,
         average_labels=average_labels,
+        include_diamagnetic=include_diamagnetic,
     )
     sorted_packages = sort_packages_by_center(packages)
     centers = package_centers(sorted_packages)
-    calculated_widths_ppm = widths_ppm
+    calculated_widths_ppm = None
     linewidths_by_label = calculated_widths_by_label
     if linewidth_mean_inv_r6_by_label is not None and linewidth_vars:
         linewidths_by_label = predict_r6_linewidths(
@@ -299,11 +385,17 @@ def moment_residual_from_float_list(
             sorted_packages,
             linewidths_by_label,
         )
+    else:
+        calculated_widths_ppm = _observed_widths_for_calculated_packages(
+            widths_ppm,
+            len(sorted_packages),
+        )
 
+    calculated_areas = np.ones(len(sorted_packages), dtype=float)
     calculated_peaks = gaussian_peak_representation(
         centers=centers,
         fwhm=calculated_widths_ppm,
-        areas=areas,
+        areas=calculated_areas,
     )
     calculated_moments = gaussian_mixture_moments(
         centers=calculated_peaks["center"],
@@ -331,32 +423,25 @@ def fit_model_to_moments(
     calculated_widths_by_label: dict[str, float] | None = None,
     linewidth_mean_inv_r6_by_label: dict[str, float] | None = None,
     linewidth_variables: dict[str, list[object]] | None = None,
+    observed_centers_ppm: NDArray | None = None,
+    include_diamagnetic: bool = True,
     verbose: bool = True,
-) -> None:
+) -> list[MomentSignalMapping]:
     """Fit a susceptibility model by matching Gaussian mixture moments."""
 
-    initial_parameters = {**model.fix_vars, **model.fit_vars}
-    initial_packages = calculated_signal_packages_from_parameters(
-        model=model,
-        parameters=initial_parameters,
-        nuclei=molecule.nuclei,
-        average_labels=average_labels,
-    )
-
-    if len(experiment.signals) != len(initial_packages):
-        raise ValueError(
-            "Moment fitting currently requires the number of observed peaks "
-            "to match the number of calculated peak packages"
+    observed_labels = [signal.signal_label for signal in experiment.signals]
+    if observed_centers_ppm is None:
+        observed_centers = np.asarray(
+            [signal.shift for signal in experiment.signals], dtype=float
         )
-
-    observed_centers = np.asarray(
-        [signal.shift for signal in experiment.signals], dtype=float
-    )
+    else:
+        observed_centers = np.asarray(observed_centers_ppm, dtype=float)
     widths_arr = np.asarray(widths_ppm, dtype=float)
     areas_arr = np.asarray(areas, dtype=float)
 
     sort_idx = np.argsort(observed_centers)
     observed_centers = observed_centers[sort_idx]
+    observed_labels = [observed_labels[index] for index in sort_idx]
     widths_arr = widths_arr[sort_idx]
     areas_arr = areas_arr[sort_idx]
 
@@ -408,6 +493,7 @@ def fit_model_to_moments(
             list(linewidth_fit_vars.keys()),
             linewidth_fix_vars,
             moment_objective_state,
+            include_diamagnetic,
         ),
         x0=guess,
         bounds=bounds,
@@ -453,7 +539,7 @@ def fit_model_to_moments(
         model.rmse = np.nan
         model.r2 = np.nan
         model.adj_r2 = np.nan
-        return
+        return []
 
     if final_linewidth_vars:
         logger.info(
@@ -497,10 +583,11 @@ def fit_model_to_moments(
         parameters=model.final_var_values,
         nuclei=molecule.nuclei,
         average_labels=average_labels,
+        include_diamagnetic=include_diamagnetic,
     )
     sorted_calc_packages = sort_packages_by_center(calc_packages)
     calc_centers = package_centers(sorted_calc_packages)
-    calculated_widths_ppm = widths_arr
+    calculated_widths_ppm = None
     final_linewidths_by_label = calculated_widths_by_label
     if linewidth_mean_inv_r6_by_label is not None and linewidth_variables is not None:
         final_linewidths_by_label = predict_r6_linewidths(
@@ -513,6 +600,11 @@ def fit_model_to_moments(
             sorted_calc_packages,
             final_linewidths_by_label,
         )
+    else:
+        calculated_widths_ppm = _observed_widths_for_calculated_packages(
+            widths_arr,
+            len(sorted_calc_packages),
+        )
     if linewidth_mean_inv_r6_by_label is not None:
         logger.info(
             _pink_log("Moment calculated r6 linewidths at %.4f K: %s"),
@@ -522,10 +614,11 @@ def fit_model_to_moments(
                 calculated_widths_ppm,
             ),
         )
+    calculated_areas = np.ones(len(sorted_calc_packages), dtype=float)
     calculated_peaks = gaussian_peak_representation(
         centers=calc_centers,
         fwhm=calculated_widths_ppm,
-        areas=areas_arr,
+        areas=calculated_areas,
     )
     calculated_moments = gaussian_mixture_moments(
         centers=calculated_peaks["center"],
@@ -575,4 +668,11 @@ def fit_model_to_moments(
         _pink_log("Moment objective at %.4f K: %s"),
         experiment.temperature,
         _format_moment_objective(moment_objective_state),
+    )
+    return derive_moment_signal_mappings(
+        signal_labels=observed_labels,
+        observed_centers=observed_centers,
+        observed_widths=widths_arr,
+        observed_areas=areas_arr,
+        calculated_packages=sorted_calc_packages,
     )

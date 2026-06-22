@@ -13,7 +13,7 @@ from paranmr.io.csv.csv_util import write_csv_safe
 logger = logging.getLogger(__name__)
 
 A_FC_BENCHMARK_MAX_COLUMNS = [
-    "chem_label",
+    "signal_label",
     "nucleus",
     "functional",
     "max (ppm A-3)",

@@ -72,11 +72,11 @@ def fit_with_hungarian_assignment(
     )
 
     def _apply_assignment(exp: Experiment, assignment: list[str]) -> None:
-        for i, chem_label in enumerate(assignment):
-            exp.signals[i].assignment = chem_label
+        for i, signal_label in enumerate(assignment):
+            exp.signals[i].signal_label = signal_label
 
     def _current_assignment(exp: Experiment) -> list[str]:
-        return [sig.assignment for sig in exp.signals]
+        return [sig.signal_label for sig in exp.signals]
 
     best_r2 = -np.inf
     best_assignment: list[str] | None = None
@@ -125,23 +125,23 @@ def fit_with_hungarian_assignment(
             dia = {nuc.label: nuc.shift.dia for nuc in molecule.nuclei}
             pred_total = {label: pred_para[label] + dia[label] for label in pred_para}
 
-            cl_to_group: dict[str, list[str]] = {}
+            signal_to_group: dict[str, list[str]] = {}
             for group in average_labels:
                 nuc = next(n for n in molecule.nuclei if n.label == group[0])
-                cl_to_group[nuc.chem_label] = group
+                signal_to_group[nuc.signal_label] = group
 
             avg_pred: dict[str, float] = {}
-            for cl, group in cl_to_group.items():
+            for signal_label, group in signal_to_group.items():
                 shifts = [pred_total[lbl] for lbl in group]
-                avg_pred[cl] = float(np.mean(shifts))
+                avg_pred[signal_label] = float(np.mean(shifts))
 
             labels_ordered = sorted(avg_pred)
             n_sig = len(trial_experiment.signals)
             n_lbl = len(labels_ordered)
             cost = np.zeros((n_sig, n_lbl))
             for i, sig in enumerate(trial_experiment.signals):
-                for j, cl in enumerate(labels_ordered):
-                    cost[i, j] = abs(sig.shift - avg_pred[cl])
+                for j, signal_label in enumerate(labels_ordered):
+                    cost[i, j] = abs(sig.shift - avg_pred[signal_label])
 
             _, col_idx = linear_sum_assignment(cost)
             new_assignment = [labels_ordered[j] for j in col_idx]
