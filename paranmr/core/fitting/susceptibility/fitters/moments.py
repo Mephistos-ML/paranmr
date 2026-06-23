@@ -320,9 +320,6 @@ def fit_model_to_moments(
         area_norm=observed_peaks["area_norm"],
     )
     moment_objective_state = prepare_moment_objective(
-        observed_centers=observed_centers,
-        widths_ppm=widths_arr,
-        areas=areas_arr,
         observed_moments=observed_moments,
         objective_config=moment_objective,
     )

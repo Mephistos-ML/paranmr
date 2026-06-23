@@ -6,7 +6,7 @@
 from __future__ import annotations
 
 import numpy as np
-from numpy.typing import ArrayLike, NDArray
+from numpy.typing import NDArray
 
 from paranmr.core.fitting.susceptibility.objectives.moments.state import (
     build_moment_objective_state,
@@ -18,9 +18,6 @@ from paranmr.core.fitting.susceptibility.objectives.moments.weighted_ls import (
 
 def prepare_moment_objective(
     *,
-    observed_centers: ArrayLike,
-    widths_ppm: ArrayLike,
-    areas: ArrayLike,
     observed_moments: dict[str, float],
     objective_config: dict | None = None,
 ) -> dict:
