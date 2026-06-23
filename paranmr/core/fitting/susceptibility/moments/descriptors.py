@@ -105,62 +105,48 @@ def gaussian_mixture_moments(
     }
 
 
-def gaussian_mixture_moment_residuals(
-    calculated: dict[str, float],
+def normalize_gaussian_mixture_moment_vectors(
+    *,
     observed: dict[str, float],
-    normalize: bool = True,
-) -> dict[str, float]:
-    """Compute Gaussian mixture moment residuals as calculated minus observed.
+    calculated: dict[str, float],
+) -> tuple[dict[str, float], dict[str, float]]:
+    """Normalize observed and calculated moments for objective evaluation.
+
+    The observed standard deviation defines the comparison scale for dimensional
+    moments. Shape moments are already standardized by their definitions and are
+    therefore copied unchanged.
 
     Args:
-        calculated: Moment vector computed from theoretical/calculated peaks.
-        observed: Moment vector computed from observed peaks.
-        normalize: Whether to scale dimensional residuals. When ``True``, mean
-            and standard-deviation residuals are divided by observed ``std``;
-            all standardized shape-moment residuals are left unchanged.
+        observed: Raw Gaussian-mixture moments from experimental peaks.
+        calculated: Raw Gaussian-mixture moments from calculated peaks.
 
     Returns:
-        Mapping from moment name to residual value.
+        ``(normalized_observed, normalized_calculated)`` moment mappings.
 
     Raises:
-        ValueError: If moment keys differ or normalization is requested without a
-            nonzero observed ``std``.
+        ValueError: If moment keys differ or observed ``std`` is zero/missing.
     """
 
     if calculated.keys() != observed.keys():
         raise ValueError("Calculated and observed moment keys must match")
-
-    residuals = {
-        moment_name: calculated[moment_name] - observed[moment_name]
-        for moment_name in observed.keys()
-    }
-    if not normalize:
-        return residuals
-
     if "std" not in observed:
-        raise ValueError("Cannot normalize moment residuals without observed std")
+        raise ValueError("Cannot normalize moment vectors without observed std")
 
     observed_std = float(observed["std"])
     if observed_std == 0.0:
-        raise ValueError("Cannot normalize moment residuals with zero observed std")
+        raise ValueError("Cannot normalize moment vectors with zero observed std")
 
-    normalized = residuals.copy()
-    if "mean" in normalized:
-        normalized["mean"] = normalized["mean"] / observed_std
-    normalized["std"] = normalized["std"] / observed_std
+    normalized_observed = {name: float(value) for name, value in observed.items()}
+    if "mean" in normalized_observed:
+        normalized_observed["mean"] = normalized_observed["mean"] / observed_std
+    normalized_observed["std"] = normalized_observed["std"] / observed_std
 
-    return normalized
+    normalized_calculated = {
+        name: float(value) for name, value in calculated.items()
+    }
+    if "mean" in normalized_calculated:
+        normalized_calculated["mean"] = normalized_calculated["mean"] / observed_std
+    normalized_calculated["std"] = normalized_calculated["std"] / observed_std
 
+    return normalized_observed, normalized_calculated
 
-def moment_residual_norm(residuals: dict[str, float]) -> float:
-    """Compute the Euclidean norm of a moment residual vector.
-
-    Args:
-        residuals: Mapping from moment name to residual value.
-
-    Returns:
-        Euclidean norm of residual values.
-    """
-
-    values = np.asarray(list(residuals.values()), dtype=float)
-    return float(np.linalg.norm(values))

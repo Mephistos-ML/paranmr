@@ -21,8 +21,8 @@ from paranmr.core.fitting.susceptibility.objectives.moments.api import (
     prepare_moment_objective,
 )
 from paranmr.core.fitting.susceptibility.moments.descriptors import (
-    gaussian_mixture_moment_residuals,
     gaussian_mixture_moments,
+    normalize_gaussian_mixture_moment_vectors,
 )
 from paranmr.core.fitting.susceptibility.moments.gaussian import (
     gaussian_peak_representation,
@@ -290,9 +290,10 @@ def moment_residual_from_float_list(
 ) -> list[float]:
     """Compute moment residuals for optimizer-supplied model parameters."""
 
+    optimizer_values = np.asarray(new_vals, dtype=float)
     n_susc_params = len(fit_vars)
-    susc_vals = new_vals[:n_susc_params]
-    linewidth_vals = new_vals[n_susc_params:]
+    susc_vals = optimizer_values[:n_susc_params]
+    linewidth_vals = optimizer_values[n_susc_params:]
     new_fit_vars = {name: guess for guess, name in zip(susc_vals, fit_vars.keys())}
     all_vars = {**fix_vars, **new_fit_vars}
     linewidth_vars = {
@@ -314,11 +315,19 @@ def moment_residual_from_float_list(
         linewidth_variables=linewidth_vars,
         include_diamagnetic=include_diamagnetic,
     )
-    residuals = gaussian_mixture_moment_residuals(
-        calculated=calculated_moments,
-        observed=observed_moments,
-        normalize=True,
+    objective_observed_moments, objective_calculated_moments = (
+        normalize_gaussian_mixture_moment_vectors(
+            observed=observed_moments,
+            calculated=calculated_moments,
+        )
     )
+    if objective_calculated_moments.keys() != objective_observed_moments.keys():
+        raise ValueError("Calculated and observed moment keys must match")
+    residuals = {
+        moment_name: objective_calculated_moments[moment_name]
+        - objective_observed_moments[moment_name]
+        for moment_name in objective_observed_moments.keys()
+    }
     weighted_residuals = apply_moment_objective(residuals, moment_objective_state)
 
     return list(weighted_residuals.values())
@@ -474,11 +483,19 @@ def fit_model_to_moments(
         linewidth_variables=final_linewidth_vars,
         include_diamagnetic=include_diamagnetic,
     )
-    residuals = gaussian_mixture_moment_residuals(
-        calculated=calculated_moments,
-        observed=observed_moments,
-        normalize=True,
+    objective_observed_moments, objective_calculated_moments = (
+        normalize_gaussian_mixture_moment_vectors(
+            observed=observed_moments,
+            calculated=calculated_moments,
+        )
     )
+    if objective_calculated_moments.keys() != objective_observed_moments.keys():
+        raise ValueError("Calculated and observed moment keys must match")
+    residuals = {
+        moment_name: objective_calculated_moments[moment_name]
+        - objective_observed_moments[moment_name]
+        for moment_name in objective_observed_moments.keys()
+    }
     weighted_residuals = apply_moment_objective(residuals, moment_objective_state)
     weighted_values = np.asarray(list(weighted_residuals.values()), dtype=float)
     weighted_score = float(np.sqrt(np.sum(weighted_values**2)))

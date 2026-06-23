@@ -23,18 +23,18 @@ from paranmr.app.loaders.mol_load import load_base_molecule
 from paranmr.app.loaders.paramag_centre_load import load_paramagnetic_centre
 from paranmr.app.loaders.sh_load import load_g_tensor_dft
 from paranmr.app.params.options import FitSuscRunOptions
+from paranmr.app.pipelines.fit.linewidth_r6 import resolve_r6_linewidth_inputs
 from paranmr.app.pipelines.fit.vt_fit import fit_vt
 from paranmr.app.policies.assignment import resolve_assignment_search_settings
 from paranmr.app.policies.hfc import has_missing_selected_signal_labels
-from paranmr.app.policies.linewidth_source import resolve_fitting_linewidths
 from paranmr.app.policies.output_linewidth import resolve_output_linewidths
-from paranmr.app.policies.peak_projection import resolve_gaussian_peak_inputs
 from paranmr.app.policies.susc import resolve_susc_fit_variables
 
 # Core / domain
 from paranmr.core.domain.exp import Experiment
 from paranmr.core.domain.mol import Molecule
 from paranmr.core.domain.tensor import Hyperfine
+from paranmr.core.conv.freq_to_ppm import signal_widths_hz_to_ppm
 from paranmr.core.fitting.susceptibility.models.base import SusceptibilityModel
 from paranmr.core.fitting.susceptibility.models.isoaxrho import IsoAxRhoFitter
 from paranmr.core.fitting.susceptibility.models.isoaxrho_euler import (
@@ -85,9 +85,8 @@ def run_fit_susc(config, options: FitSuscRunOptions | None = None) -> int:
         raise ValueError("FitSuscRunOptions is required")
 
     delimiter = options.runtime.csv_delimiter
-    use_moment_fit = config.assignment_method == "moments"
 
-    # Build the resolved plotting contract once per run.
+    # Build the resolved plotting contract once per run
     spec = apply_profile(options.runtime.plot_profile)
 
     # Make output directory and file
@@ -121,10 +120,27 @@ def run_fit_susc(config, options: FitSuscRunOptions | None = None) -> int:
         hyperfine_file=config.hyperfine_file,
         hyperfine_method=config.hyperfine_method,
     )
-    spin = base_molecule.electronic.spin_S
 
-    # Add signal labels for assignment-based workflows.
-    if len(config.signal_labels_file) and not use_moment_fit:
+    # Apply rotation matrix to all hyperfine tensors if requested
+    if len(config.hyperfine_rotate):
+        _rot_a = np.loadtxt(config.hyperfine_rotate)
+        base_molecule.rotate_hyperfines(_rot_a)
+
+    # Load experiments
+    experiments = load_experiments(config.experiment_files)
+
+    # Load diamagnetic shift file
+    if len(config.diamagnetic_file):
+        load_diamagnetic_shifts(
+            file_name=config.diamagnetic_file,
+            file_type=config.diamagnetic_method,
+            ref_file_name=config.diamagnetic_ref_file,
+            ref_file_type=config.diamagnetic_ref_method,
+        )
+
+    # Add signal labels for assignment-based workflows before any assignment
+    # or shift-fit logic consumes `molecule.nuclei`.
+    if config.assignment_method != "moments" and len(config.signal_labels_file):
         try:
             al_to_sl, al_to_sml = load_signal_labels_from_csv(config.signal_labels_file)
             if has_missing_selected_signal_labels(base_molecule, al_to_sl):
@@ -138,76 +154,6 @@ def run_fit_susc(config, options: FitSuscRunOptions | None = None) -> int:
         except KeyError as err:
             # treat missing labels/keys as a user input error
             raise ValueError(str(err))
-
-        # Save xyz file with signal labels for chemcraft
-        xyz_write.save_chemcraft_xyz(
-            file_name=os.path.join(config.project_name, "chemcraft_structure.xyz"),
-            labels=base_molecule.labels,
-            coords=base_molecule.coords,
-            signal_labels={nuc.label: nuc.signal_label for nuc in base_molecule.nuclei},
-        )
-    elif len(config.signal_labels_file):
-        logger.warning(
-            "Ignoring signal_labels:file for assignment:method 'moments'; "
-            "moment matching uses atom labels for calculated packages and "
-            "experiment assignments only as signal labels."
-        )
-
-    # Save xyz file with signal labels for chemcraft
-    xyz_write.save_xyz(
-        file_name=os.path.join(config.project_name, "structure.xyz"),
-        labels=base_molecule.labels,
-        coords=base_molecule.coords,
-        comment=f"Structure from {config.hyperfine_file}",
-    )
-
-    # Apply rotation matrix to all hyperfine tensors
-    # if requested
-    if len(config.hyperfine_rotate):
-        _rot_a = np.loadtxt(config.hyperfine_rotate)
-        base_molecule.rotate_hyperfines(_rot_a)
-
-    # Create experiments before diamagnetic policy resolution. Moment fitting can
-    # use experiment assignments as signal labels for signal-level dia shifts.
-    experiments = load_experiments(config.experiment_files)
-    moment_observed_centers_by_experiment: dict[int, np.ndarray] = {}
-    moment_include_diamagnetic = True
-
-    # Load diamagnetic shift file
-    if len(config.diamagnetic_file):
-        dia_by_key, key_kind, ref_avg_by_label_nn = load_diamagnetic_shifts(
-            file_name=config.diamagnetic_file,
-            file_type=config.diamagnetic_method,
-            ref_file_name=config.diamagnetic_ref_file,
-            ref_file_type=config.diamagnetic_ref_method,
-        )
-        if use_moment_fit:
-            if key_kind == "signal_label":
-                if ref_avg_by_label_nn is not None:
-                    raise ValueError(
-                        "diamagnetic_ref is not supported with signal_label-keyed "
-                        "diamagnetic shifts for moment fitting."
-                    )
-                moment_observed_centers_by_experiment = {
-                    id(experiment): _moment_observed_centers_minus_signal_label_dia(
-                        experiment,
-                        dia_by_key,
-                    )
-                    for experiment in experiments
-                }
-                moment_include_diamagnetic = False
-            elif key_kind == "atom_label":
-                base_molecule.apply_diamagnetic_shifts(
-                    dia_by_key=dia_by_key,
-                    key_kind=key_kind,
-                    ref_avg_by_label_nn=ref_avg_by_label_nn,
-                )
-        else:
-            base_molecule.apply_diamagnetic_shifts(
-                dia_by_key=dia_by_key,
-                key_kind=key_kind,
-                ref_avg_by_label_nn=ref_avg_by_label_nn,
-            )
 
     # Rotationally average hyperfines
     if len(config.hyperfine_average):
@@ -238,7 +184,7 @@ def run_fit_susc(config, options: FitSuscRunOptions | None = None) -> int:
             raw_variables=config.susc_fit_variables,
             input_units=config.susc_fit_input_units,
             temperature=experiment.temperature,
-            spin=spin,
+            spin=base_molecule.electronic.spin_S,
         )
         susc_models.append(model_to_use(fit_vars, fix_vars))
 
@@ -246,23 +192,8 @@ def run_fit_susc(config, options: FitSuscRunOptions | None = None) -> int:
         logger.info("Dry run successful — no computations executed")
         return 0
 
-    if use_moment_fit:
-        for experiment in experiments:
-            if any(signal.l_to_g != 0.0 for signal in experiment.signals):
-                logger.warning(
-                    "Gaussian peak projection at %.2f K ignores nonzero L/G values.",
-                    experiment.temperature,
-                )
-
-    if use_moment_fit:
-        if len(config.susc_fit_average_shifts):
-            logger.warning(
-                "Ignoring susc_fit:average_shifts for assignment:method "
-                "'moments'; moment matching does not use signal-label "
-                "atom-to-signal grouping."
-            )
-        average_labels = []
-    elif len(config.susc_fit_average_shifts):
+    average_labels = []
+    if config.assignment_method != "moments" and len(config.susc_fit_average_shifts):
         if "all" in config.susc_fit_average_shifts:
             config.susc_fit_average_shifts = list(
                 {nuc.signal_label for nuc in base_molecule.nuclei}
@@ -271,8 +202,6 @@ def run_fit_susc(config, options: FitSuscRunOptions | None = None) -> int:
             [nuc.label for nuc in base_molecule.nuclei if nuc.signal_label == _cl]
             for _cl in config.susc_fit_average_shifts
         ]
-    else:
-        average_labels = []
 
     # Shift terms for plots
     # does not affect fit!
@@ -369,39 +298,31 @@ def run_fit_susc(config, options: FitSuscRunOptions | None = None) -> int:
                 ),
             )
 
-        elif use_moment_fit:
-            _, widths_ppm, areas = resolve_gaussian_peak_inputs(experiment)
-            fitting_linewidths = resolve_fitting_linewidths(
-                method=config.linewidth_method,
-                experiment=experiment,
+        elif config.assignment_method == "moments":
+            observed_widths_ppm = signal_widths_hz_to_ppm(experiment)
+            linewidth_inputs = resolve_r6_linewidth_inputs(
                 molecule=molecule,
+                isotope_filter=experiment.isotope,
                 variables=config.linewidth_variables,
-                experimental_widths_ppm=widths_ppm,
                 label_kind="atom_label",
             )
-            moment_diagnostics = fit_model_to_moments(
+            moment_fit_result = fit_model_to_moments(
                 model=susc_model,
                 molecule=molecule,
-                experiment=experiment,
-                widths_ppm=fitting_linewidths.observed_widths_ppm,
-                areas=areas,
-                average_labels=average_labels,
+                centers_ppm=np.asarray(
+                    [signal.shift for signal in experiment.signals],
+                    dtype=float,
+                ),
+                widths_ppm=observed_widths_ppm,
+                areas=np.asarray([signal.area for signal in experiment.signals], dtype=float),
+                temperature=experiment.temperature,
                 moment_objective=config.assignment_moment_objective,
-                calculated_widths_by_label=(
-                    fitting_linewidths.calculated_widths_by_label
-                ),
-                linewidth_mean_inv_r6_by_label=(
-                    fitting_linewidths.mean_inv_r6_by_label
-                ),
+                linewidth_mean_inv_r6_by_label=linewidth_inputs.mean_inv_r6_by_label,
                 linewidth_variables=config.linewidth_variables,
-                observed_centers_ppm=moment_observed_centers_by_experiment.get(
-                    id(experiment)
-                ),
-                include_diamagnetic=moment_include_diamagnetic,
             )
-            if moment_diagnostics is not None:
+            if moment_fit_result is not None:
                 save_moment_fit_diagnostics(
-                    diagnostics=moment_diagnostics,
+                    diagnostics=moment_fit_result,
                     file_name=os.path.join(
                         config.project_name,
                         "moment_fit_diagnostics_"
@@ -473,7 +394,7 @@ def run_fit_susc(config, options: FitSuscRunOptions | None = None) -> int:
         molecule.calculate_shifts()
         molecule.average_shifts()
 
-        if not use_moment_fit:
+        if not config.assignment_method == "moments":
             with spec.context():
                 plot_fitted_shifts(
                     molecule,
@@ -627,13 +548,13 @@ def run_fit_susc(config, options: FitSuscRunOptions | None = None) -> int:
     ]
     linewidth_output = resolve_output_linewidths(mol, shift_range)
 
-    if spin is not None:
+    if base_molecule.electronic.spin_S is not None:
         temps_fit = np.array([mol.susc.temperature for mol in molecules], dtype=float)
         if temps_fit.size > 1:
             fit_vt(
                 config=config,
                 molecules=molecules,
-                spin=spin,
+                spin=base_molecule.electronic.spin_S,
                 susc_models=susc_models,
                 plot_profile=options.runtime.plot_profile,
                 show_plots=options.runtime.show_plots,
@@ -653,6 +574,23 @@ def run_fit_susc(config, options: FitSuscRunOptions | None = None) -> int:
                 f"pred_spectrum_{molecule.susc.temperature:.2f}_K",
             ),
         )
+
+    # Save xyz file with signal labels for chemcraft
+    if len(config.signal_labels_file):
+        xyz_write.save_chemcraft_xyz(
+            file_name=os.path.join(config.project_name, "chemcraft_structure.xyz"),
+            labels=base_molecule.labels,
+            coords=base_molecule.coords,
+            signal_labels={nuc.label: nuc.signal_label for nuc in base_molecule.nuclei},
+        )
+
+    # Save xyz file with signal labels for chemcraft
+    xyz_write.save_xyz(
+        file_name=os.path.join(config.project_name, "structure.xyz"),
+        labels=base_molecule.labels,
+        coords=base_molecule.coords,
+        comment=f"Structure from {config.hyperfine_file}",
+    )
 
     return 0
 
@@ -712,9 +650,5 @@ def _obtain_r2a(
         experiment=experiment,
         average_labels=average_labels,
     )
-
-    # Print to screen if envvar enabled
-    if echo_r2:
-        print(model.adj_r2)
 
     return model.adj_r2
