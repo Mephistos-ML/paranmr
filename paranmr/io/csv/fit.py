@@ -12,14 +12,14 @@ import logging
 import numpy as np
 import pandas as pd
 
-from paranmr.core.fitting.susceptibility.fitters.moments import MomentFitDiagnostics
+from paranmr.core.fitting.susceptibility.fitters.moments import MomentFitResult
 from paranmr.io.csv.csv_util import read_csv_safe, write_csv_safe
 
 logger = logging.getLogger(__name__)
 
 
 def save_moment_fit_diagnostics(
-    diagnostics: MomentFitDiagnostics,
+    diagnostics: MomentFitResult,
     file_name: str,
     verbose: bool = True,
 ) -> None:

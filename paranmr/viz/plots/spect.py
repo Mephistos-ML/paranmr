@@ -17,12 +17,11 @@ import matplotlib.ticker as ticker
 import numpy as np
 from numpy.typing import ArrayLike
 
-from paranmr.core.const.gammas import NUCLEAR_GAMMAS
+from paranmr.core.conv.freq_to_ppm import signal_widths_hz_to_ppm
 from paranmr.core.domain.exp import Experiment
 from paranmr.core.domain.mol import Molecule
 from paranmr.core.spectrum.kernels import gaussian, lorentzian
 from paranmr.core.util.arrays import find_index_of_nearest
-from paranmr.core.util.strings import remove_numbers
 from paranmr.io.csv.spec import write_spectrum
 from paranmr.viz.layout.canvas import create_canvas, create_stacked_canvas
 from paranmr.viz.layout.export import render_figure
@@ -252,11 +251,8 @@ def plot_raw_deconv_pred(
     y_deconv_intensity = np.zeros_like(x_grid)
 
     # Accumulate deconvoluted spectrum intensities
-    for signal in experiment.signals:
-        # Convert experimental linewidth from Hz to ppm
-        exp_width_ppm = signal.width / (
-            NUCLEAR_GAMMAS[remove_numbers(isotope)] * experiment.magnetic_field
-        )
+    widths_ppm = signal_widths_hz_to_ppm(experiment)
+    for signal, exp_width_ppm in zip(experiment.signals, widths_ppm):
         # Add Lorentzian contribution
         y_deconv_intensity += signal.l_to_g * lorentzian(
             x_grid, exp_width_ppm, signal.shift, signal.area
