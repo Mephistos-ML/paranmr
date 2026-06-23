@@ -38,7 +38,7 @@ def fit_susc_cli(uargs: argparse.Namespace, runtime: RuntimeSettings) -> int:
     """Thin CLI wrapper for the fit_susc pipeline."""
 
     from paranmr.app.params.options import FitSuscRunOptions
-    from paranmr.app.pipelines.fit.susc_fit import run_fit_susc
+    from paranmr.app.pipelines.fit.susc import run_fit_susc
 
     config = cfg.FitSuscConfig.from_file(uargs.input_file)
     options = FitSuscRunOptions.from_namespace(uargs)

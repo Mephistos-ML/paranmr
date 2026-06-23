@@ -1,6 +1,3 @@
-# SPDX-License-Identifier: GPL-3.0-or-later
-# Copyright (C) 2026 Suturina Group
-
 """Fit susceptibility tensors to experimental shift data.
 
 Loads inputs, fits a selected susceptibility model, and writes outputs and plots.
@@ -11,48 +8,38 @@ import logging
 import os
 
 import numpy as np
-from pathos import multiprocessing as mp
 
 # Application layer
 from paranmr.app.loaders.dia_load import load_diamagnetic_shifts
 from paranmr.app.loaders.elstate_load import load_electronic_state
-from paranmr.app.loaders.exp_load import load_experiments, save_experiment
+from paranmr.app.loaders.exp_load import load_experiments
 from paranmr.app.loaders.hfc_load import load_hyperfines
 from paranmr.app.loaders.labels_load import load_signal_labels_from_csv
 from paranmr.app.loaders.mol_load import load_base_molecule
 from paranmr.app.loaders.paramag_centre_load import load_paramagnetic_centre
 from paranmr.app.loaders.sh_load import load_g_tensor_dft
 from paranmr.app.params.options import FitSuscRunOptions
-from paranmr.app.pipelines.fit.linewidth_r6 import resolve_r6_linewidth_inputs
 from paranmr.app.pipelines.fit.vt_fit import fit_vt
-from paranmr.app.policies.assignment import resolve_assignment_search_settings
+from paranmr.app.pipelines.fit.susc.fixed import fit_assigned_shifts
+from paranmr.app.pipelines.fit.susc.hungarian import fit_hungarian_assignment
+from paranmr.app.pipelines.fit.susc.moments import fit_moment_assignment
+from paranmr.app.pipelines.fit.susc.permute import fit_permuted_assignments
 from paranmr.app.policies.hfc import has_missing_selected_signal_labels
 from paranmr.app.policies.output_linewidth import resolve_output_linewidths
 from paranmr.app.policies.susc import resolve_susc_fit_variables
 
 # Core / domain
-from paranmr.core.domain.exp import Experiment
 from paranmr.core.domain.mol import Molecule
 from paranmr.core.domain.tensor import Hyperfine
-from paranmr.core.conv.freq_to_ppm import signal_widths_hz_to_ppm
 from paranmr.core.fitting.susceptibility.models.base import SusceptibilityModel
 from paranmr.core.fitting.susceptibility.models.isoaxrho import IsoAxRhoFitter
 from paranmr.core.fitting.susceptibility.models.isoaxrho_euler import (
     IsoAxRhoEulerFitter,
 )
 from paranmr.core.fitting.susceptibility.models.split import SplitFitter
-from paranmr.core.fitting.susceptibility.assignment.hungarian import (
-    fit_with_hungarian_assignment,
-)
-from paranmr.core.fitting.susceptibility.assignment.permutations import (
-    generate_assignment_permutations,
-)
-from paranmr.core.fitting.susceptibility.fitters.moments import fit_model_to_moments
-from paranmr.core.fitting.susceptibility.fitters.shifts import fit_model_to_shifts
 from paranmr.core.pcs.isosurf import compute_pcs_isosurface
 
 # IO layer
-from paranmr.io.csv.fit import save_moment_fit_diagnostics
 from paranmr.io.csv.mol import save_molecule_to_csv
 from paranmr.io.csv.susc import save_susc
 from paranmr.io.cube.pcs_iso_write import write_pcs_cube
@@ -221,162 +208,45 @@ def run_fit_susc(config, options: FitSuscRunOptions | None = None) -> int:
         # If permuting assignments, then first
         # run all assignment permutations to find best one
         if config.assignment_method == "permute":
-            # If no permutation groups provided, permute all
-            if not len(config.assignment_groups):
-                config.assignment_groups = [
-                    list({nuc.signal_label for nuc in molecule.nuclei})
-                ]
-            # For the current experiment, generate a new set in which
-            # the assignment is permuted according to user defined groups
-            permed_assignments = generate_assignment_permutations(
-                experiment=experiment, groups=config.assignment_groups
-            )
-
-            logger.info("There are %s possible permutations", len(permed_assignments))
-
-            # For each permutation, fit tensor and store r2_adjusted
-
-            # Number of threads
-            if config.num_threads == "auto":
-                num_threads = mp.cpu_count() - 1
-            else:
-                num_threads = config.num_threads
-
-            if num_threads > len(permed_assignments):
-                num_threads = len(permed_assignments)
-
-            # Create parallel pool
-            pool = mp.Pool(num_threads)
-            logger.info(
-                "Parallel permutation search: %s worker processes",
-                num_threads,
-            )
-
-            echo_r2 = options.runtime.echo_r2
-
-            iterables = [
-                (
-                    molecule,
-                    permed_assgn,
-                    susc_model,
-                    copy.deepcopy(experiment),
-                    average_labels,
-                    echo_r2,
-                )
-                for permed_assgn in permed_assignments
-            ]
-
-            # Calculate each assignment's r2 in parallel
-            results = pool.starmap(_obtain_r2a, iterables)
-
-            # Close Pool and let all the processes complete
-            pool.close()
-            pool.join()
-
-            # Find assignment with largest r2
-            # and use in subsequent (re)fitting
-            assignment = permed_assignments[np.nanargmax(results)]
-            opt_r2 = np.nanmax(results)
-            logger.info("Optimal assignment with adj R² = %.6f", opt_r2)
-
-            # and swap in new, permuted, assignments
-            for it, new in enumerate(assignment):
-                experiment.signals[it].signal_label = new
-
-            # Save assigned experiment to file
-            save_experiment(
-                experiment,
-                file_name=os.path.join(
-                    config.project_name,
-                    f"assigned_experiment_{experiment.temperature:.2f}_K.csv",
-                ),
+            _opt_r2, _assignment = fit_permuted_assignments(
+                molecule=molecule,
+                experiment=experiment,
+                model=susc_model,
+                average_labels=average_labels,
+                assignment_groups=config.assignment_groups,
+                num_threads=config.num_threads,
+                project_name=config.project_name,
                 delimiter=delimiter,
-                comment=(
-                    f"Optimal Assignment\n"
-                    f"r2 = {opt_r2:f}\n"
-                    f"T = {experiment.temperature:.2f} K"
-                ),
             )
 
         elif config.assignment_method == "moments":
-            observed_widths_ppm = signal_widths_hz_to_ppm(experiment)
-            linewidth_inputs = resolve_r6_linewidth_inputs(
-                molecule=molecule,
-                isotope_filter=experiment.isotope,
-                variables=config.linewidth_variables,
-                label_kind="atom_label",
-            )
-            moment_fit_result = fit_model_to_moments(
+            fit_moment_assignment(
                 model=susc_model,
                 molecule=molecule,
-                centers_ppm=np.asarray(
-                    [signal.shift for signal in experiment.signals],
-                    dtype=float,
-                ),
-                widths_ppm=observed_widths_ppm,
-                areas=np.asarray([signal.area for signal in experiment.signals], dtype=float),
-                temperature=experiment.temperature,
-                moment_objective=config.assignment_moment_objective,
-                linewidth_mean_inv_r6_by_label=linewidth_inputs.mean_inv_r6_by_label,
+                experiment=experiment,
+                project_name=config.project_name,
+                assignment_moment_objective=config.assignment_moment_objective,
                 linewidth_variables=config.linewidth_variables,
             )
-            if moment_fit_result is not None:
-                save_moment_fit_diagnostics(
-                    diagnostics=moment_fit_result,
-                    file_name=os.path.join(
-                        config.project_name,
-                        "moment_fit_diagnostics_"
-                        f"{experiment.temperature:.2f}_K.csv",
-                    ),
-                )
             model_already_fitted = True
 
         elif config.assignment_method == "hungarian":
-            search_settings = resolve_assignment_search_settings(
-                mode=config.assignment_search,
-                n_attempts=config.assignment_n_attempts,
-                max_iter=config.assignment_max_iter,
-                r2_threshold=config.assignment_r2_threshold,
-            )
-            logger.info(
-                "Hungarian search policy resolved: mode=%s, n_attempts=%d, "
-                "max_iter=%d, r2_threshold=%.6f",
-                search_settings.mode,
-                search_settings.n_attempts,
-                search_settings.max_iter,
-                search_settings.r2_threshold,
-            )
-
-            # Call Hungarian assignment function
-            opt_r2, assignment = fit_with_hungarian_assignment(
+            fit_hungarian_assignment(
                 molecule=molecule,
                 susc_model=susc_model,
                 experiment=experiment,
                 average_labels=average_labels,
-                n_attempts=search_settings.n_attempts,
-                max_iter=search_settings.max_iter,
-                r2_threshold=search_settings.r2_threshold,
-            )
-            logger.info("Hungarian completed: best R² = %.6f", opt_r2)
-
-            # Save assigned experiment to file
-            save_experiment(
-                experiment,
-                file_name=os.path.join(
-                    config.project_name,
-                    f"assigned_experiment_{experiment.temperature:.2f}_K.csv",
-                ),
+                assignment_search=config.assignment_search,
+                n_attempts=config.assignment_n_attempts,
+                max_iter=config.assignment_max_iter,
+                r2_threshold=config.assignment_r2_threshold,
+                project_name=config.project_name,
                 delimiter=delimiter,
-                comment=(
-                    f"# Optimal Assignment (Hungarian)\n"
-                    f"# r2 = {opt_r2:f}\n"
-                    f"# T = {experiment.temperature:.2f} K"
-                ),
             )
 
         # Fit susceptibility model to experimental chemical shifts.
         if not model_already_fitted:
-            fit_model_to_shifts(
+            fit_assigned_shifts(
                 model=susc_model,
                 molecule=molecule,
                 experiment=experiment,
@@ -593,62 +463,3 @@ def run_fit_susc(config, options: FitSuscRunOptions | None = None) -> int:
     )
 
     return 0
-
-
-def _moment_observed_centers_minus_signal_label_dia(
-    experiment: Experiment,
-    dia_by_signal_label: dict[str, float],
-) -> np.ndarray:
-    """Return moment-fit observed centers corrected by signal-label dia."""
-
-    centers = []
-    for signal in experiment.signals:
-        try:
-            dia_shift = dia_by_signal_label[signal.signal_label]
-        except KeyError as exc:
-            raise KeyError(
-                "Cannot find signal label "
-                f"{signal.signal_label!r} in diamagnetic shift mapping"
-            ) from exc
-        centers.append(float(signal.shift) - float(dia_shift))
-    return np.asarray(centers, dtype=float)
-
-
-def _obtain_r2a(
-    molecule: Molecule,
-    assignment: list[str],
-    model: SusceptibilityModel,
-    experiment: Experiment,
-    average_labels: list[list[str]],
-    echo_r2: bool,
-):
-    """
-    Fit a susceptibility model for a proposed assignment and return adjusted R^2.
-
-    This helper is designed to be run in parallel when searching over assignment
-    permutations.
-
-    Args:
-        molecule (Molecule): Molecule instance used for shift prediction.
-        assignment (list[str]): Proposed assignment list (one per signal).
-        model: Model instance to fit.
-        experiment (Experiment): Experiment data to fit against.
-        average_labels (list[list[str]]): Groups of labels to average during fitting.
-
-    Returns:
-        float: Adjusted R^2 value for this assignment.
-    """
-
-    # and swap in new, permuted, assignments
-    for it, new in enumerate(assignment):
-        experiment.signals[it].signal_label = new
-
-    # Fit susceptibility model to experimental chemical shifts
-    fit_model_to_shifts(
-        model=model,
-        molecule=molecule,
-        experiment=experiment,
-        average_labels=average_labels,
-    )
-
-    return model.adj_r2
