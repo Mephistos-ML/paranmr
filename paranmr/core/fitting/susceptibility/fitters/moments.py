@@ -12,7 +12,6 @@ from numpy.typing import NDArray
 from scipy.optimize import least_squares
 from scipy.optimize._optimize import OptimizeResult
 
-from paranmr.core.domain.exp import Experiment
 from paranmr.core.domain.mol import Molecule, Nucleus
 from paranmr.core.fitting.susceptibility.objectives.moments.api import (
     active_moment_objective_mask,
@@ -49,8 +48,8 @@ class CalculatedSignalPackage:
 
 
 @dataclass(frozen=True)
-class MomentFitDiagnostics:
-    """Publication-grade diagnostics for a completed moment fit."""
+class MomentFitResult:
+    """Structured result for a completed moment fit."""
 
     temperature: float
     objective_type: str
@@ -63,7 +62,6 @@ def calculated_signal_packages_from_parameters(
     model,
     parameters: dict[str, float],
     nuclei: list[Nucleus],
-    average_labels: list[list[str]] = [],
     include_diamagnetic: bool = True,
 ) -> list[CalculatedSignalPackage]:
     """Compute calculated independent signal packages from model parameters.
@@ -80,31 +78,14 @@ def calculated_signal_packages_from_parameters(
     }
     nucleus_by_label = {nuc.label: nuc for nuc in nuclei}
 
-    used_labels = set()
-    packages = []
-    for group in average_labels:
-        group_labels = tuple(group)
-        group_values = [label_to_total_shift[label] for label in group]
-        packages.append(
-            CalculatedSignalPackage(
-                label=_package_label(group_labels),
-                atom_labels=group_labels,
-                center=float(np.mean(group_values)),
-            )
-        )
-        used_labels.update(group)
-
-    packages.extend(
+    return [
         CalculatedSignalPackage(
             label=nucleus_by_label[label].label,
             atom_labels=(label,),
             center=float(total_shift),
         )
         for label, total_shift in label_to_total_shift.items()
-        if label not in used_labels
-    )
-
-    return packages
+    ]
 
 
 def package_centers_sorted_by_center(
@@ -166,14 +147,6 @@ def package_linewidths(
     )
 
 
-def _package_label(
-    atom_labels: tuple[str, ...],
-) -> str:
-    if len(atom_labels) == 1:
-        return atom_labels[0]
-    return "+".join(atom_labels)
-
-
 def _package_linewidth(
     package: CalculatedSignalPackage,
     linewidths_by_label: dict[str, float],
@@ -205,29 +178,11 @@ def _split_linewidth_variables(
     return fit_vars, fix_vars, bounds
 
 
-def _observed_widths_for_calculated_packages(
-    observed_widths_ppm: NDArray,
-    n_packages: int,
-) -> NDArray:
-    widths = np.asarray(observed_widths_ppm, dtype=float)
-    if widths.size == n_packages:
-        return widths
-    raise ValueError(
-        "Moment fitting cannot reuse experimental linewidths for calculated "
-        f"packages when their counts differ: observed={widths.size}, "
-        f"calculated={n_packages}. Use a calculated linewidth source such as "
-        "'linewidth:method: r6'."
-    )
-
-
 def _calculated_moments_from_parameters(
     *,
     model,
     parameters: dict[str, float],
     nuclei: list[Nucleus],
-    average_labels: list[list[str]],
-    widths_ppm: NDArray,
-    calculated_widths_by_label: dict[str, float] | None,
     linewidth_mean_inv_r6_by_label: dict[str, float] | None,
     linewidth_variables: dict[str, float],
     include_diamagnetic: bool,
@@ -236,28 +191,28 @@ def _calculated_moments_from_parameters(
         model=model,
         parameters=parameters,
         nuclei=nuclei,
-        average_labels=average_labels,
         include_diamagnetic=include_diamagnetic,
     )
     sorted_packages = sort_packages_by_center(packages)
     centers = package_centers(sorted_packages)
-    linewidths_by_label = calculated_widths_by_label
-    if linewidth_mean_inv_r6_by_label is not None and linewidth_variables:
-        linewidths_by_label = predict_r6_linewidths(
+    if linewidth_mean_inv_r6_by_label is None:
+        raise ValueError(
+            "Moment fitting requires an R6 linewidth model for calculated "
+            "packages."
+        )
+    if not linewidth_variables or "p1" not in linewidth_variables or "p2" not in linewidth_variables:
+        raise ValueError(
+            "Moment fitting requires linewidth variables p1 and p2 for the R6 "
+            "linewidth model."
+        )
+    calculated_widths_ppm = package_linewidths(
+        sorted_packages,
+        predict_r6_linewidths(
             linewidth_mean_inv_r6_by_label,
             linewidth_variables["p1"],
             linewidth_variables["p2"],
-        )
-    if linewidths_by_label is not None:
-        calculated_widths_ppm = package_linewidths(
-            sorted_packages,
-            linewidths_by_label,
-        )
-    else:
-        calculated_widths_ppm = _observed_widths_for_calculated_packages(
-            widths_ppm,
-            len(sorted_packages),
-        )
+        ),
+    )
 
     calculated_peaks = gaussian_peak_representation(
         centers=centers,
@@ -277,21 +232,19 @@ def moment_residual_from_float_list(
     fit_vars: dict[str, float],
     fix_vars: dict[str, float],
     nuclei: list[Nucleus],
-    average_labels: list[list[str]],
     observed_moments: dict[str, float],
-    widths_ppm: NDArray,
-    areas: NDArray,
-    calculated_widths_by_label: dict[str, float] | None,
     linewidth_mean_inv_r6_by_label: dict[str, float] | None,
     linewidth_fit_names: list[str],
     linewidth_fix_vars: dict[str, float],
     moment_objective_state: dict,
-    include_diamagnetic: bool,
 ) -> list[float]:
     """Compute moment residuals for optimizer-supplied model parameters."""
 
     optimizer_values = np.asarray(new_vals, dtype=float)
     n_susc_params = len(fit_vars)
+    use_diamagnetic = any(
+        getattr(nuc.shift, "dia", 0.0) != 0.0 for nuc in nuclei
+    )
     susc_vals = optimizer_values[:n_susc_params]
     linewidth_vals = optimizer_values[n_susc_params:]
     new_fit_vars = {name: guess for guess, name in zip(susc_vals, fit_vars.keys())}
@@ -308,12 +261,9 @@ def moment_residual_from_float_list(
         model=model,
         parameters=all_vars,
         nuclei=nuclei,
-        average_labels=average_labels,
-        widths_ppm=widths_ppm,
-        calculated_widths_by_label=calculated_widths_by_label,
         linewidth_mean_inv_r6_by_label=linewidth_mean_inv_r6_by_label,
         linewidth_variables=linewidth_vars,
-        include_diamagnetic=include_diamagnetic,
+        include_diamagnetic=use_diamagnetic,
     )
     objective_observed_moments, objective_calculated_moments = (
         normalize_gaussian_mixture_moment_vectors(
@@ -336,28 +286,23 @@ def moment_residual_from_float_list(
 def fit_model_to_moments(
     model,
     molecule: Molecule,
-    experiment: Experiment,
+    centers_ppm: NDArray,
     widths_ppm: NDArray,
     areas: NDArray,
-    average_labels: list[list[str]] = [],
+    temperature: float,
     moment_objective: dict | None = None,
-    calculated_widths_by_label: dict[str, float] | None = None,
     linewidth_mean_inv_r6_by_label: dict[str, float] | None = None,
     linewidth_variables: dict[str, list[object]] | None = None,
-    observed_centers_ppm: NDArray | None = None,
-    include_diamagnetic: bool = True,
     verbose: bool = True,
-) -> MomentFitDiagnostics | None:
+) -> MomentFitResult | None:
     """Fit a susceptibility model by matching Gaussian mixture moments."""
 
-    if observed_centers_ppm is None:
-        observed_centers = np.asarray(
-            [signal.shift for signal in experiment.signals], dtype=float
-        )
-    else:
-        observed_centers = np.asarray(observed_centers_ppm, dtype=float)
+    observed_centers = np.asarray(centers_ppm, dtype=float)
     widths_arr = np.asarray(widths_ppm, dtype=float)
     areas_arr = np.asarray(areas, dtype=float)
+    use_diamagnetic = any(
+        getattr(nuc.shift, "dia", 0.0) != 0.0 for nuc in molecule.nuclei
+    )
 
     sort_idx = np.argsort(observed_centers)
     observed_centers = observed_centers[sort_idx]
@@ -398,23 +343,18 @@ def fit_model_to_moments(
             model.fit_vars,
             model.fix_vars,
             molecule.nuclei,
-            average_labels,
             observed_moments,
-            widths_arr,
-            areas_arr,
-            calculated_widths_by_label,
             linewidth_mean_inv_r6_by_label,
             list(linewidth_fit_vars.keys()),
             linewidth_fix_vars,
             moment_objective_state,
-            include_diamagnetic,
         ),
         x0=guess,
         bounds=bounds,
         jac="3-point",
     )
 
-    model.temperature = experiment.temperature
+    model.temperature = float(temperature)
     n_susc_params = len(model.fit_vars)
     curr_fit_dict = {
         name: value
@@ -476,12 +416,9 @@ def fit_model_to_moments(
         model=model,
         parameters=model.final_var_values,
         nuclei=molecule.nuclei,
-        average_labels=average_labels,
-        widths_ppm=widths_arr,
-        calculated_widths_by_label=calculated_widths_by_label,
         linewidth_mean_inv_r6_by_label=linewidth_mean_inv_r6_by_label,
         linewidth_variables=final_linewidth_vars,
-        include_diamagnetic=include_diamagnetic,
+        include_diamagnetic=use_diamagnetic,
     )
     objective_observed_moments, objective_calculated_moments = (
         normalize_gaussian_mixture_moment_vectors(
@@ -499,8 +436,8 @@ def fit_model_to_moments(
     weighted_residuals = apply_moment_objective(residuals, moment_objective_state)
     weighted_values = np.asarray(list(weighted_residuals.values()), dtype=float)
     weighted_score = float(np.sqrt(np.sum(weighted_values**2)))
-    return MomentFitDiagnostics(
-        temperature=float(experiment.temperature),
+    return MomentFitResult(
+        temperature=float(temperature),
         objective_type=str(moment_objective_state["type"]),
         observed_moments={k: float(v) for k, v in observed_moments.items()},
         calculated_moments={k: float(v) for k, v in calculated_moments.items()},

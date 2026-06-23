@@ -504,6 +504,11 @@ class FitSuscConfig(Config):
         if value not in ["fixed", "permute", "hungarian", "moments"]:
             raise ValueError(f"Unknown assignment:method {value}")
         self._assignment_method = value
+        if self._assignment_method == "moments" and self._susc_fit_average_shifts:
+            raise ValueError(
+                "susc_fit:average_shifts cannot be used with "
+                "assignment:method 'moments'"
+            )
         return None
 
     @property
@@ -685,6 +690,11 @@ class FitSuscConfig(Config):
         if isinstance(values, str):
             self.susc_fit_average_shifts = [values]
             return
+        if self._assignment_method == "moments" and values:
+            raise ValueError(
+                "susc_fit:average_shifts cannot be used with "
+                "assignment:method 'moments'"
+            )
         self._susc_fit_average_shifts = values
         return
 
