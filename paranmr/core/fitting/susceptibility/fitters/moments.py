@@ -81,11 +81,13 @@ def fit_moment_model(
     model = inputs.model
     model.temperature = float(inputs.temperature)
     n_susc_params = len(inputs.fit_var_names)
+
     # Capture only the susceptibility parameters from the optimizer vector.
     curr_fit_dict = {
         name: value
         for name, value in zip(inputs.fit_var_names, curr_fit.x[:n_susc_params])
     }
+
     # Return a failed fit with NaN diagnostics when the optimizer exhausts iterations.
     if curr_fit.status == 0:
         if verbose:
@@ -148,6 +150,7 @@ def fit_moment_model(
             )
         }
     )
+
     # Recompute calculated moments using the fitted model parameters.
     final_linewidths_by_label = _predict_r6_widths(
         linewidth_mean_inv_r6_by_label=inputs.linewidth_mean_inv_r6_by_label,
@@ -160,6 +163,7 @@ def fit_moment_model(
         linewidths_by_label=final_linewidths_by_label,
         include_diamagnetic=inputs.use_diamagnetic,
     )
+    
     # Package the final comparison between experimental and calculated moments.
     weighted_score = _weighted_moment_score(
         observed_moments=inputs.observed_moments,
