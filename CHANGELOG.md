@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v1.12.2 (2026-06-24)
+
+### Bug Fixes
+
+- **release**: Trigger PyPI publish after trusted publishing setup
+  ([`c976c99`](https://github.com/Mephistos-ML/paranmr/commit/c976c99b034b0f9bcbc96362a070f9feb70e15c4))
+
+
 ## v1.12.1 (2026-06-24)
 
 ### Bug Fixes
