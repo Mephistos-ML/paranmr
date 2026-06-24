@@ -251,7 +251,12 @@ def plot_raw_deconv_pred(
     y_deconv_intensity = np.zeros_like(x_grid)
 
     # Accumulate deconvoluted spectrum intensities
-    widths_ppm = signal_widths_hz_to_ppm(experiment)
+    widths_hz = [signal.width for signal in experiment.signals]
+    widths_ppm = signal_widths_hz_to_ppm(
+        widths_hz,
+        experiment.isotope,
+        experiment.magnetic_field,
+    )
     for signal, exp_width_ppm in zip(experiment.signals, widths_ppm):
         # Add Lorentzian contribution
         y_deconv_intensity += signal.l_to_g * lorentzian(
