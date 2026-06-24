@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v1.12.0 (2026-06-24)
+
+### Features
+
+- **release**: Restore semantic release workflow
+  ([`7b380da`](https://github.com/Mephistos-ML/paranmr/commit/7b380da7aed98c1cbcc5ec82ba8cb1e0f7fbf028))
+
+
 ## v1.10.0 (2026-05-26)
 
 ### Chores
