@@ -3,13 +3,13 @@
 
 """Plot hyperfine tensor components from QC output.
 
-Loads molecular data, optionally applies chemical labels, and generates
+Loads molecular data, optionally applies signal labels, and generates
 hyperfine plots with optional saving and display.
 """
 
 import os
 
-from paranmr.app.loaders.labels_load import load_chem_labels_from_csv
+from paranmr.app.loaders.labels_load import load_signal_labels_from_csv
 from paranmr.app.loaders.mol_load import load_molecule_from_qca
 from paranmr.app.params.options import PlotHFCRunOptions
 from paranmr.viz.plots.hfc import plot_hyperfine, plot_hyperfine_spread
@@ -19,7 +19,7 @@ from paranmr.viz.style.theme import apply_profile
 def run_plot_hfc(
     calculation_data: str,
     components: list[str],
-    chem_labels: str | None,
+    signal_labels: str | None,
     elements: list[str] | str,
     options: PlotHFCRunOptions,
 ) -> int:
@@ -31,9 +31,9 @@ def run_plot_hfc(
         converter="MHz_to_Ang-3",
     )
 
-    if chem_labels is not None:
-        al_to_cl, al_to_cml = load_chem_labels_from_csv(chem_labels)
-        molecule.apply_chem_labels(al_to_cl, al_to_cml)
+    if signal_labels is not None:
+        al_to_sl, al_to_sml = load_signal_labels_from_csv(signal_labels)
+        molecule.apply_signal_labels(al_to_sl, al_to_sml)
 
     file_head = os.path.splitext(os.path.basename(calculation_data))[0]
 
@@ -41,7 +41,7 @@ def run_plot_hfc(
     spec = apply_profile(options.runtime.plot_profile)
 
     with spec.context():
-        if chem_labels is not None:
+        if signal_labels is not None:
             plot_hyperfine_spread(
                 molecule.nuclei,
                 components=components,

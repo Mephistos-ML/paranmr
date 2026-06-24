@@ -1,7 +1,7 @@
 ﻿# This file was generated with ParaNMR v1.6.0 at 15:28:53 14-03-2026 
 # T = 298.00 K
 # Coordinates and hyperfine tensors in this file are stored in the chi frame.
-atom_label (),chem_label (),x (Å),y (Å),z (Å),A_fc_iso (ppm Å^-3),A_sd_xx (ppm Å^-3),A_sd_xy (ppm Å^-3),A_sd_xz (ppm Å^-3),A_sd_yy (ppm Å^-3),A_sd_yz (ppm Å^-3),A_sd_zz (ppm Å^-3),δ_total_avg (ppm),δ_total (ppm),δ_dia (ppm),δ_pc (ppm),δ_fc_g_corr (ppm),δ_fc_spin_only (ppm),Δδ_fc_g_corr (ppm),linewidth (ppm)
+atom_label (),signal_label (),x (Å),y (Å),z (Å),A_fc_iso (ppm Å^-3),A_sd_xx (ppm Å^-3),A_sd_xy (ppm Å^-3),A_sd_xz (ppm Å^-3),A_sd_yy (ppm Å^-3),A_sd_yz (ppm Å^-3),A_sd_zz (ppm Å^-3),δ_total_avg (ppm),δ_total (ppm),δ_dia (ppm),δ_pc (ppm),δ_fc_g_corr (ppm),δ_fc_spin_only (ppm),Δδ_fc_g_corr (ppm),linewidth (ppm)
 C1,C3,10.229852,-7.932649,11.157257,5228.864189,516.633366,-2817.518135,-1478.661767,723.169469,1709.518491,-1239.802893,1062.681642,1460.315153,33.070000,154.499697,1272.745456,1101.411152,171.334304,0.050593
 C2,C3,9.449686,-8.259930,14.161375,1908.099211,-1251.839747,-1726.530237,864.060334,2003.690878,-2165.684099,-751.850748,1062.681642,699.127066,33.070000,201.611154,464.445913,401.923185,62.522727,0.050593
 C3,C3,11.484680,-6.038566,13.336697,4078.321667,3490.360306,-1176.980810,1568.530276,-1775.371985,-379.818926,-1714.988416,1062.681642,1028.602708,33.070000,2.838084,992.694624,859.060171,133.634453,0.050593

@@ -4,7 +4,7 @@
 """Read and write molecule CSV files for structure, labels, and pNMR tensors.
 
 Provides CSV parsing and serialization helpers for atom labels, coordinates,
-optional chemical labels, canonical split hyperfine tensors, and optional
+optional signal labels, canonical split hyperfine tensors, and optional
 orbital hyperfine tensors.
 """
 
@@ -35,8 +35,8 @@ def read_molecule_csv(file_name: str) -> dict:
             - ``coords``: Cartesian coordinates with shape ``(n, 3)``.
             - ``tensors``: Reconstructed full hyperfine tensors or ``None``.
             - ``orb_tensors``: Reconstructed orbital tensors or ``None``.
-            - ``chem_labels``: Chemical labels or ``None``.
-            - ``chem_math_labels``: Chemical math labels or ``None``.
+            - ``signal_labels``: Signal labels or ``None``.
+            - ``signal_math_labels``: Chemical math labels or ``None``.
     """
     data = read_csv_safe(file_name)
 
@@ -134,22 +134,22 @@ def read_molecule_csv(file_name: str) -> dict:
     else:
         orb_tensors = None
 
-    chem_labels = None
-    chem_math_labels = None
+    signal_labels = None
+    signal_math_labels = None
 
-    if "chem_label ()" in data.columns:
-        chem_labels = data["chem_label ()"].tolist()
+    if "signal_label ()" in data.columns:
+        signal_labels = data["signal_label ()"].tolist()
 
-    if "chem_math_label ()" in data.columns:
-        chem_math_labels = data["chem_math_label ()"].tolist()
+    if "signal_math_label ()" in data.columns:
+        signal_math_labels = data["signal_math_label ()"].tolist()
 
     return {
         "labels": labels,
         "coords": coords,
         "tensors": tensors,
         "orb_tensors": orb_tensors,
-        "chem_labels": chem_labels,
-        "chem_math_labels": chem_math_labels,
+        "signal_labels": signal_labels,
+        "signal_math_labels": signal_math_labels,
     }
 
 
@@ -162,7 +162,7 @@ def save_molecule_to_csv(
 ) -> None:
     """Write molecule structure, tensor, and shift data to a CSV file.
 
-    The exported table includes coordinates, available chemical labels,
+    The exported table includes coordinates, available signal labels,
     canonical split hyperfine columns, optional orbital hyperfine columns,
     and atom-resolved shift-related columns derived from the molecule payload.
 
@@ -225,8 +225,8 @@ def _build_molecule_df(molecule):
     base_specs = [
         ("atom_label ()", lambda ctx: ctx["label"]),
         (
-            "chem_label ()",
-            lambda ctx: ctx["nuc"].chem_label if ctx["nuc"] is not None else np.nan,
+            "signal_label ()",
+            lambda ctx: ctx["nuc"].signal_label if ctx["nuc"] is not None else np.nan,
         ),
         ("x (Å)", lambda ctx: ctx["coord"][0]),
         ("y (Å)", lambda ctx: ctx["coord"][1]),

@@ -90,7 +90,7 @@ def build_molecule_from_csv(
     """Build a base `Molecule` from a CSV-derived structural payload.
 
     The CSV payload may contain additional fields such as hyperfine tensors or
-    chemical labels. This builder intentionally uses only the structural fields
+    signal labels. This builder intentionally uses only the structural fields
     required to initialise a base `Molecule`. Any hyperfine enrichment should be
     handled later by a dedicated HFC builder/loader path.
 

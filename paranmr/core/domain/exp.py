@@ -17,17 +17,17 @@ class Signal:
 
     Args:
         shift: Chemical shift in ppm.
-        width: Signal width in ppm.
+        width: Signal full width at half maximum in Hz.
         area: Signal area (integral).
-        assignment: Chemical label of the signal.
+        signal_label: Signal/package label.
         l_to_g: Lorentzian-to-Gaussian lineshape ratio.
         r1: Longitudinal relaxation rate in s^-1.
 
     Attributes:
         shift: Chemical shift in ppm.
-        width: Signal width in ppm.
+        width: Signal full width at half maximum in Hz.
         area: Signal area (integral).
-        assignment: Chemical label of the signal.
+        signal_label: Signal/package label.
         l_to_g: Lorentzian-to-Gaussian lineshape ratio.
         r1: Longitudinal relaxation rate in s^-1.
     """
@@ -37,7 +37,7 @@ class Signal:
         shift: float,
         width: float,
         area: float,
-        assignment: str = "UNK",
+        signal_label: str = "UNK",
         l_to_g: float = 1.0,
         r1: Optional[float] = None,
     ) -> None:
@@ -61,12 +61,12 @@ class Signal:
         if self.area < 0.0:
             raise ValueError("area must be non-negative")
 
-        if not isinstance(assignment, str):
-            raise TypeError("assignment must be str")
-        assignment = assignment.strip()
-        if not assignment:
-            raise ValueError("assignment must be non-empty")
-        self.assignment = assignment
+        if not isinstance(signal_label, str):
+            raise TypeError("signal_label must be str")
+        signal_label = signal_label.strip()
+        if not signal_label:
+            raise ValueError("signal_label must be non-empty")
+        self.signal_label = signal_label
 
         try:
             self.l_to_g = float(l_to_g)
@@ -95,7 +95,7 @@ class Experiment:
         temperature: Experiment temperature in Kelvin.
         magnetic_field: Spectrometer magnetic field in Tesla.
         isotope: Isotope label (e.g., ``"13C"``).
-        signals: List of assigned signals.
+        signals: List of signals.
         spectrum: Optional experimental spectrum as an ``(N, 2)`` array where the
             first column is ppm and the second column is intensity.
         exp_reference: Optional experimental reference position in ppm used for
@@ -103,7 +103,7 @@ class Experiment:
 
     Attributes:
         temperature: Experiment temperature in Kelvin.
-        signals: List of assigned signals.
+        signals: List of signals.
         magnetic_field: Spectrometer magnetic field in Tesla.
         isotope: Isotope label.
         spectrum: Experimental spectrum as an ``(N, 2)`` array or ``None``.
@@ -132,18 +132,18 @@ class Experiment:
         return
 
     def keys(self):
-        """Returns the list of signal assignments.
+        """Returns the list of signal labels.
 
-        This enables selecting signals by assignment name.
+        This enables selecting signals by signal label.
 
         Returns:
-            List of assignment strings.
+            List of signal label strings.
         """
-        return [signal.assignment for signal in self.signals]
+        return [signal.signal_label for signal in self.signals]
 
     def __getitem__(self, item):
         # This is probably slow
-        lookup = {signal.assignment: signal for signal in self.signals}
+        lookup = {signal.signal_label: signal for signal in self.signals}
         return lookup[item]
 
     def __iter__(self):
@@ -221,10 +221,13 @@ class Experiment:
 
     def __str__(self):
         out = f"Temperature {self.temperature:f} K\n"
-        out += "assignment, shift, width, area\n"
-        width = max([len(signal.assignment) for signal in self.signals])
+        out += "signal_label, shift, width, area\n"
+        width = max([len(signal.signal_label) for signal in self.signals])
         for signal in self.signals:
             out += "{}, {: 10.4f}, {:7.4f}, {:5.2f}\n".format(
-                signal.assignment.ljust(width), signal.shift, signal.width, signal.area
+                signal.signal_label.ljust(width),
+                signal.shift,
+                signal.width,
+                signal.area,
             )
         return out

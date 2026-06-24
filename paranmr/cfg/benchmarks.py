@@ -59,7 +59,7 @@ class AfcBenchmarkConfig:
 
     Args:
         project_name: Output project directory name.
-        chem_labels_file: Path to the chemical-label mapping file.
+        signal_labels_file: Path to the signal-label mapping file.
         nuclei_include: Nuclei selected for the benchmark.
         max_label_tolerance: Relative tolerance for replacing one-off max labels
             with the majority max label in functional max plots.
@@ -71,14 +71,14 @@ class AfcBenchmarkConfig:
 
     KEYWORDS = {
         "project": ["name"],
-        "chem_labels": ["file"],
+        "signal_labels": ["file"],
         "nuclei": ["include"],
         "benchmark": ["max_label_tolerance"],
         "hyperfine": ["functional", "method", "file"],
     }
     REQ_KEYWORDS = {
         "project": ["name"],
-        "chem_labels": ["file"],
+        "signal_labels": ["file"],
         "nuclei": ["include"],
         "hyperfine": ["functional", "file"],
     }
@@ -86,13 +86,13 @@ class AfcBenchmarkConfig:
     def __init__(
         self,
         project_name: str,
-        chem_labels_file: str,
+        signal_labels_file: str,
         nuclei_include: list[str] | str,
         max_label_tolerance: float,
         hyperfine: list[HyperfineBenchmarkBlock],
     ) -> None:
         self.project_name = project_name
-        self.chem_labels_file = chem_labels_file
+        self.signal_labels_file = signal_labels_file
         self.nuclei_include = nuclei_include
         self.max_label_tolerance = max_label_tolerance
         self.hyperfine = hyperfine
@@ -131,7 +131,7 @@ class AfcBenchmarkConfig:
         cls._validate_top_level_keys(parsed)
 
         project_name = cls._parse_project_name(parsed["project"])
-        chem_labels_file = cls._parse_chem_labels_file(parsed["chem_labels"])
+        signal_labels_file = cls._parse_signal_labels_file(parsed["signal_labels"])
         nuclei_include = cls._parse_nuclei_include(parsed["nuclei"])
         max_label_tolerance = cls._parse_max_label_tolerance(
             parsed.get("benchmark", {})
@@ -140,7 +140,7 @@ class AfcBenchmarkConfig:
 
         return cls(
             project_name=project_name,
-            chem_labels_file=chem_labels_file,
+            signal_labels_file=signal_labels_file,
             nuclei_include=nuclei_include,
             max_label_tolerance=max_label_tolerance,
             hyperfine=hyperfine_blocks,
@@ -188,21 +188,21 @@ class AfcBenchmarkConfig:
         return project_name
 
     @classmethod
-    def _parse_chem_labels_file(cls, chem_labels_block: Any) -> str:
-        """Parse and validate the ``chem_labels`` YAML block."""
-        if not isinstance(chem_labels_block, dict):
-            raise ValueError("chem_labels block must be a mapping")
+    def _parse_signal_labels_file(cls, signal_labels_block: Any) -> str:
+        """Parse and validate the ``signal_labels`` YAML block."""
+        if not isinstance(signal_labels_block, dict):
+            raise ValueError("signal_labels block must be a mapping")
 
-        cls._validate_block_keys("chem_labels", chem_labels_block)
+        cls._validate_block_keys("signal_labels", signal_labels_block)
 
-        if "file" not in chem_labels_block:
-            raise KeyError("Error: missing keyword chem_labels:file")
+        if "file" not in signal_labels_block:
+            raise KeyError("Error: missing keyword signal_labels:file")
 
-        chem_labels_file = chem_labels_block["file"]
-        if not isinstance(chem_labels_file, str) or not chem_labels_file:
-            raise ValueError("chem_labels:file must be a non-empty string")
+        signal_labels_file = signal_labels_block["file"]
+        if not isinstance(signal_labels_file, str) or not signal_labels_file:
+            raise ValueError("signal_labels:file must be a non-empty string")
 
-        return str(Path(chem_labels_file).expanduser().resolve())
+        return str(Path(signal_labels_file).expanduser().resolve())
 
     @classmethod
     def _parse_nuclei_include(cls, nuclei_block: Any) -> list[str] | str:
@@ -310,15 +310,15 @@ class AfcBenchmarkConfig:
         self._project_name = value
 
     @property
-    def chem_labels_file(self) -> str:
-        """Path to the chemical-label mapping file."""
-        return self._chem_labels_file
+    def signal_labels_file(self) -> str:
+        """Path to the signal-label mapping file."""
+        return self._signal_labels_file
 
-    @chem_labels_file.setter
-    def chem_labels_file(self, value: str) -> None:
+    @signal_labels_file.setter
+    def signal_labels_file(self, value: str) -> None:
         if not isinstance(value, str) or not value:
-            raise ValueError("chem_labels_file must be a non-empty string")
-        self._chem_labels_file = str(Path(value).expanduser().resolve())
+            raise ValueError("signal_labels_file must be a non-empty string")
+        self._signal_labels_file = str(Path(value).expanduser().resolve())
 
     @property
     def nuclei_include(self) -> list[str] | str:

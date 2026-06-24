@@ -5,7 +5,7 @@ Input YAML Files
 
 The input file is a declarative description of a calculation. Each top-level block
 maps to a specific subsystem (hyperfine source, susceptibility source, experiment,
-assignment, and fitting model). Values are validated against the workflow configuration contract.
+signal_label, and fitting model). Values are validated against the workflow configuration contract.
 
 .. rubric:: Important Conventions
 
@@ -94,7 +94,7 @@ Used in workflows that require hyperfine tensor information, including:
                               on  # Include orbital hyperfine contribution when available
 
         # Define whether HFC averaging is needed [Optional]
-        average: ['Me1', 'Me2'] # Chemical labels over which hyperfine tensors are averaged
+        average: ['Me1', 'Me2'] # Signal labels over which hyperfine tensors are averaged
         
         # Define paramagnetic centre [Required for pdip and when relaxation is enabled]
         paramagnetic_centre: [0.0, 0.0, 0.0] # Three Cartesian coordinates [x, y, z] in the same frame/units as the structure or HFC input
@@ -129,33 +129,33 @@ Used in workflows that require hyperfine tensor information, including:
    quantities are available. At present, this pathway is implemented only for
    ORCA 5 and ORCA 6 outputs.
 
-Chemical Labels
-^^^^^^^^^^^^^^^
+Signal Labels
+^^^^^^^^^^^^^
 
-Defines a mapping between atomic labels and chemical groups used for averaging,
+Defines a mapping between atom labels and signal groups used for averaging,
 selection, and assignment operations.
 
 **Applicability:**  
 
-Used in workflows that group nuclei by chemical labels.
+Used in workflows that group nuclei by signal labels.
 
 .. code-block:: yaml
 
-    # chem_labels block schema (reference):
-    chem_labels:
-        # Chemical label mapping file [Required]
-        file: chem_labels.csv # CSV file mapping atom labels to chemical groups
+    # signal_labels block schema (reference):
+    signal_labels:
+        # Signal label mapping file [Required]
+        file: signal_labels.csv # CSV file mapping atom labels to signal groups
 
 .. note::
 
-   Chemical labels are used to group nuclei for averaging and assignment purposes.
+   Signal labels are used to group nuclei for averaging and assignment workflows.
    This block is optional for pNMR prediction, but is mandatory for susceptibility fitting.
 
 Nuclei
 ^^^^^^
 
 Defines which nuclei are included in prediction or fitting workflows,
-either explicitly or via chemical group labels.
+either explicitly or via signal group labels.
 
 **Applicability:**  
 Optional. Used in workflows that require explicit nucleus selection, including:
@@ -169,13 +169,13 @@ Optional. Used in workflows that require explicit nucleus selection, including:
         # Explicit nucleus selection [Required unless include_groups is provided]
         include: [H, C, H1] # Atom symbols and/or explicit atom labels
 
-        # Selection via chemical labels [Optional]
-        include_groups: [Me1, Me2] # Chemical labels defined in chem_labels
+        # Selection via signal labels [Optional]
+        include_groups: [Me1, Me2] # Signal labels defined in signal_labels
 
 .. note::
 
    Nuclei may be selected either explicitly using ``include`` or indirectly via
-   chemical labels using ``include_groups``.
+   signal labels using ``include_groups``.
 
    If ``include_groups`` is provided, explicit nucleus selection is optional.
 
@@ -379,7 +379,7 @@ Used in susceptibility fitting workflows that require assignment handling.
     # assignment block schema (reference):
     assignment:
         # Assignment strategy [Required]
-        method: fixed # One of: fixed | permute | hungarian
+        method: fixed # One of: fixed | permute | hungarian | moments
 
         # Permutation groups [Required for permute only]
         groups:
@@ -393,14 +393,25 @@ Used in susceptibility fitting workflows that require assignment handling.
           max_iter: 100       # Optional, mode: custom only
           r2_threshold: 0.99  # Optional, mode: custom only
 
-The three supported strategies are:
+        # Moment objective [Required for moments only]
+        moment_objective:
+          type: weighted_ls
+          weights:           # Required for type: weighted_ls
+            mean: 1.0
+            std: 5.0
+            skewness: 0.5
+            kurtosis: 0.25
+            standardized_5: 0.1
+            standardized_6: 0.0
+
+The supported strategies are:
 
 ``fixed``
-    Uses the signal-to-nucleus assignments provided directly in the experimental
+    Uses the signal-to-nucleus signal_labels provided directly in the experimental
     data files. No reordering is performed.
 
 ``permute``
-    Exhaustively enumerates all permutations of assignments within the
+    Exhaustively enumerates all permutations of signal_labels within the
     user-defined ``groups`` and selects the permutation that maximises the
     adjusted R². Guarantees the global optimum within the specified groups but
     scales factorially with group size.
@@ -413,23 +424,35 @@ The three supported strategies are:
     absolute shift deviation. This is repeated until the assignment converges or
     the configured iteration limit is reached.
 
-    Search behaviour is controlled by the ``search`` mapping:
+``moments``
+    Fits the selected susceptibility model by matching Gaussian mixture moments
+    rather than assigned per-signal shifts. This method uses the experimental
+    peak centers, widths, and areas and does not perform assignment search.
+    A moment objective is required under ``assignment:moment_objective``.
 
-    - ``mode: fast`` uses ``n_attempts=1``, ``max_iter=20``,
-      ``r2_threshold=0.95``.
-    - ``mode: balanced`` uses ``n_attempts=10``, ``max_iter=100``,
-      ``r2_threshold=0.99``.
-    - ``mode: robust`` uses ``n_attempts=25``, ``max_iter=250``,
-      ``r2_threshold=0.995``.
-    - ``mode: custom`` allows these three numeric controls to be provided
-      explicitly under ``assignment:search``.
+Search behaviour for ``hungarian`` is controlled by the ``search`` mapping:
 
-    If the ``search`` block is omitted, the policy layer resolves the default
-    behaviour to the ``balanced`` mode.
+- ``mode: fast`` uses ``n_attempts=1``, ``max_iter=20``,
+  ``r2_threshold=0.95``.
+- ``mode: balanced`` uses ``n_attempts=10``, ``max_iter=100``,
+  ``r2_threshold=0.99``.
+- ``mode: robust`` uses ``n_attempts=25``, ``max_iter=250``,
+  ``r2_threshold=0.995``.
+- ``mode: custom`` allows these three numeric controls to be provided explicitly
+  under ``assignment:search``.
 
-    This method scales polynomially with the number of signals and is therefore
-    preferred over ``permute`` for large or heavily degenerate assignment
-    problems.
+If the ``search`` block is omitted, the policy layer resolves the default
+behaviour to the ``balanced`` mode.
+
+This method scales polynomially with the number of signals and is therefore
+preferred over ``permute`` for large or heavily degenerate assignment problems.
+
+Moment-based fitting is selected with ``assignment:method: moments``. The
+``susc_fit:type`` field still selects the susceptibility model parameterization.
+
+The moment objective controls how the normalized moment residual vector is
+transformed before least-squares optimization. The supported objective is
+``weighted_ls``, which uses user-provided per-moment weights.
 
 .. _Hungarian algorithm: https://en.wikipedia.org/wiki/Hungarian_algorithm
 
@@ -439,15 +462,47 @@ The three supported strategies are:
 
    For ``permute``, the ``groups`` key must be explicitly defined.
 
-   For ``hungarian``, the ``groups`` key is not supported. Hungarian assignment
-   is controlled only through the optional ``search`` mapping.
+   For ``hungarian`` and ``moments``, the ``groups`` key is not supported.
+   Hungarian assignment is controlled only through the optional ``search``
+   mapping. Moment fitting requires ``assignment:moment_objective``.
 
    The canonical Hungarian forms are ``search: {mode: balanced}`` for preset
    behaviour and ``search: {mode: custom, n_attempts: ..., max_iter: ...,
    r2_threshold: ...}`` for fully explicit search control.
 
-   Assignment handling assumes that experimental data and assignments are
+   Assignment handling assumes that experimental data and signal_labels are
    ordered consistently by the user.
+
+Linewidth
+^^^^^^^^^
+
+Defines the source of linewidths used by moment-based susceptibility fitting.
+
+**Applicability:**  
+Used in susceptibility fitting workflows.
+
+.. code-block:: yaml
+
+    # linewidth block schema (reference):
+    linewidth:
+        # Linewidth source for moment fitting [Optional]
+        # Default: experimental
+        method: experimental # Use experimental peak-table linewidths
+                r6 # Use r^-6 calculated linewidths
+
+        # Required for method: r6
+        variables:
+          p1: [fit, 1.0, [0.0, .inf]]
+          p2: [fix, 0.0]
+
+``experimental``
+    Uses linewidths from the experimental peak table. This is the default.
+
+``r6``
+    Uses linewidths calculated as ``p1 * mean(1/r^6) + p2`` for each
+    calculated signal package. The ``p1`` and ``p2`` variables may use either
+    ``fix`` mode with a non-negative value or ``fit`` mode with a non-negative
+    initial guess and explicit bounds.
 
 Magnetic Susceptibility Fitting
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -464,10 +519,8 @@ Used in susceptibility fitting workflows.
     susc_fit:
         # Susceptibility model type [Required]
         type: isoaxrho # Isotropic + axial + rhombic susceptibility model
-              split # Split axial/rhombic susceptibility model
-              full # Full anisotropic susceptibility tensor
-              eigen # Eigenvalue-based susceptibility model
-              isoeigen # Isotropic susceptibility in the eigenframe
+              split # Split isotropic/anisotropic susceptibility model
+              isoaxrho_euler # Iso/ax/rho model with fitted Euler angles
 
         # Optional input units for the susceptibility fit variables
         # Default: A3
@@ -480,6 +533,15 @@ Used in susceptibility fitting workflows.
           ax:  [fit, 0.1]
           rho_over_ax: [fix, 0.0]
 
+        # Fit variables definition [Required for type: isoaxrho_euler]
+        variables:
+          iso: [fit, 0.2]
+          ax:  [fit, 0.1]
+          rho_over_ax: [fix, 0.0]
+          alpha: [fit, 0.0]
+          beta: [fit, 90.0]
+          gamma: [fit, 0.0]
+
         # Fit variables definition [Required for type: split]
         variables:
           iso: [fix, 0.0]
@@ -489,35 +551,13 @@ Used in susceptibility fitting workflows.
           dyy: [fit, 0.1]
           dyz: [fit, 0.1]
 
-        # Fit variables definition [Required for type: full]
-        variables:
-          dxx: [fit, 0.1]
-          dyy: [fit, 0.1]
-          dzz: [fit, 0.1]
-          dxy: [fix, 0.0]
-          dxz: [fix, 0.0]
-          dyz: [fit, 0.1]
-
-        # Fit variables definition [Required for type: eigen]
-        variables:
-          x: [fit, 0.00]
-          y: [fit, 0.01]
-          z: [fix, 0.02]
-
-        # Fit variables definition [Required for type: eigen]
-        variables:
-          dxx: [fit, 0.02]
-          dxy: [fit, 0.01]
-          iso: [fix, 0.00]
-        
-        average_shifts: 'all' # Average shifts over all chemical labels
-                        ["Me1", "Me2"] # Average shifts over the specified chemical labels
+        average_shifts: 'all' # Average shifts over all signal labels
+                        ["Me1", "Me2"] # Average shifts over the specified signal labels
 
 .. note::
 
    The required fit variables depend on the selected susceptibility model type.
-   No automatic consistency checks are performed between the chosen model and the
-   provided variable definitions.
+   Configuration loading validates the selected model type and variable names.
 
 .. note::
 

@@ -38,7 +38,7 @@ def fit_susc_cli(uargs: argparse.Namespace, runtime: RuntimeSettings) -> int:
     """Thin CLI wrapper for the fit_susc pipeline."""
 
     from paranmr.app.params.options import FitSuscRunOptions
-    from paranmr.app.pipelines.fit.susc_fit import run_fit_susc
+    from paranmr.app.pipelines.fit.susc import run_fit_susc
 
     config = cfg.FitSuscConfig.from_file(uargs.input_file)
     options = FitSuscRunOptions.from_namespace(uargs)
@@ -110,7 +110,7 @@ def calc_pdip_cli(uargs: argparse.Namespace, runtime: RuntimeSettings) -> int:
         structure_file=uargs.structure_file,
         centres=uargs.centres,
         elements=uargs.elements,
-        chem_labels=uargs.chem_labels,
+        signal_labels=uargs.signal_labels,
         plot_components=uargs.plot_components,
         options=options,
     )
@@ -138,7 +138,7 @@ def plot_hfc_cli(uargs: argparse.Namespace, runtime: RuntimeSettings) -> int:
     return run_plot_hfc(
         calculation_data=uargs.calculation_data,
         components=uargs.components,
-        chem_labels=uargs.chem_labels,
+        signal_labels=uargs.signal_labels,
         elements=uargs.elements,
         options=options,
     )
@@ -491,7 +491,7 @@ def read_args(arg_list=None):
     )
 
     plot_hfc.add_argument(
-        "--chem_labels", type=str, help=("chemical label file (.csv)")
+        "--signal_labels", type=str, help=("signal label file (.csv)")
     )
 
     plot_hfc.add_argument(
@@ -549,7 +549,7 @@ def read_args(arg_list=None):
     )
 
     calc_pdip.add_argument(
-        "--chem_labels", type=str, help=("chemical label file (.csv)")
+        "--signal_labels", type=str, help=("signal label file (.csv)")
     )
 
     calc_pdip.add_argument(

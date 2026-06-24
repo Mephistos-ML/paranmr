@@ -32,8 +32,8 @@ class Nucleus:
         coord: Cartesian coordinates of the nucleus.
         A: Hyperfine coupling as a `Hyperfine` instance.
         shift: Chemical shift container. Defaults to a zeroed `Shift`.
-        chem_label: Optional chemical label (e.g., ``"tBu3"``).
-        chem_math_label: Optional mathtext (LaTeX-like) label used in plots,
+        signal_label: Optional signal label (e.g., ``"tBu3"``).
+        signal_math_label: Optional mathtext (LaTeX-like) label used in plots,
             e.g. ``$\\mathregular{tBu_3}$``.
         isotope: Isotope label formatted as nucleon number then symbol
             (e.g., ``"13C"``).
@@ -41,9 +41,9 @@ class Nucleus:
     Attributes:
         label: Atomic label with index (e.g., ``"H2"``).
         label_nn: Atomic label without the index (e.g., ``"H"``).
-        chem_label: Chemical label if provided, otherwise falls back to `label`.
-        chem_math_label: Mathtext label if provided, otherwise falls back to
-            `chem_label`.
+        signal_label: Signal label if provided, otherwise falls back to `label`.
+        signal_math_label: Mathtext label if provided, otherwise falls back to
+            `signal_label`.
         coord: Coordinates as a length-3 NumPy array.
         A: Hyperfine coupling container.
         shift: Chemical shift container.
@@ -56,8 +56,8 @@ class Nucleus:
         coord: list[float],
         A: Hyperfine,
         shift: Shift = Shift(),  # TODO: switch to Shift | None = None once deepcopy removed #noqa
-        chem_label: str = None,
-        chem_math_label: str = None,
+        signal_label: str = None,
+        signal_math_label: str = None,
         isotope: str = None,
     ) -> None:
         # Label with and without indexing
@@ -73,15 +73,15 @@ class Nucleus:
         # Coordinates of nucleus
         self.coord = coord
 
-        # Chemical labels, normal and mathtext
-        if chem_label is None:
-            self._chem_label = None
+        # Signal labels, normal and mathtext
+        if signal_label is None:
+            self._signal_label = None
         else:
-            self.chem_label = chem_label
-        if chem_math_label is None:
-            self._chem_math_label = None
+            self.signal_label = signal_label
+        if signal_math_label is None:
+            self._signal_math_label = None
         else:
-            self.chem_math_label = chem_math_label
+            self.signal_math_label = signal_math_label
 
         # If isotope is provided then set, else set as default
         if isotope is None:
@@ -101,29 +101,29 @@ class Nucleus:
         return
 
     @property
-    def chem_label(self) -> str:
-        if self._chem_label is None:
+    def signal_label(self) -> str:
+        if self._signal_label is None:
             return self.label
-        return self._chem_label
+        return self._signal_label
 
-    @chem_label.setter
-    def chem_label(self, inchem_label: str):
-        if not isinstance(inchem_label, (type(None), str)):
-            raise TypeError("chem_label must be string")
-        self._chem_label = inchem_label
+    @signal_label.setter
+    def signal_label(self, insignal_label: str):
+        if not isinstance(insignal_label, (type(None), str)):
+            raise TypeError("signal_label must be string")
+        self._signal_label = insignal_label
         return
 
     @property
-    def chem_math_label(self) -> str:
-        if self._chem_math_label is None:
-            return self.chem_label
-        return self._chem_math_label
+    def signal_math_label(self) -> str:
+        if self._signal_math_label is None:
+            return self.signal_label
+        return self._signal_math_label
 
-    @chem_math_label.setter
-    def chem_math_label(self, inchem_math_label: str):
-        if not isinstance(inchem_math_label, (type(None), str)):
-            raise TypeError("chem_math_label must be string")
-        self._chem_math_label = inchem_math_label
+    @signal_math_label.setter
+    def signal_math_label(self, insignal_math_label: str):
+        if not isinstance(insignal_math_label, (type(None), str)):
+            raise TypeError("signal_math_label must be string")
+        self._signal_math_label = insignal_math_label
         return
 
     @property
@@ -507,20 +507,20 @@ class Molecule:
         string += subtitle("Isotropic A values (ppm Å^-3)")
 
         for nuc in self.nuclei:
-            if not len(nuc.chem_label):
+            if not len(nuc.signal_label):
                 label = nuc.label
             else:
-                label = f"{nuc.chem_label} ({nuc.label})"
+                label = f"{nuc.signal_label} ({nuc.label})"
             a_iso = 1.0 / 3.0 * np.trace(nuc.A.fc)
             string += f"{label} {a_iso: .6f}\n"
 
         string += subtitle("Anisotropic (traceless) A Tensor (ppm Å^-3)")
 
         for nuc in self.nuclei:
-            if not len(nuc.chem_label):
+            if not len(nuc.signal_label):
                 label = nuc.label
             else:
-                label = f"{nuc.chem_label} ({nuc.label})"
+                label = f"{nuc.signal_label} ({nuc.label})"
 
             string += "\n{:} {: .6f} {: .6f} {: .6f}\n".format(
                 " " * len(label), *nuc.A.sd[0]
@@ -675,46 +675,49 @@ class Molecule:
         self.metadata["frame"] = "chi"
 
     def average_shifts(self):
-        """Average total shifts over nuclei sharing the same chemical label.
+        """Average total shifts over nuclei sharing the same signal label.
 
         The mean value is stored in `Nucleus.shift.avg`.
         """
 
-        cl_to_shifts = {nuc.chem_label for nuc in self.nuclei}
-        cl_to_shifts = {cl: [] for cl in cl_to_shifts}
+        signal_to_shifts = {nuc.signal_label for nuc in self.nuclei}
+        signal_to_shifts = {signal_label: [] for signal_label in signal_to_shifts}
         for nuc in self.nuclei:
-            cl_to_shifts[nuc.chem_label].append(nuc.shift.total)
+            signal_to_shifts[nuc.signal_label].append(nuc.shift.total)
 
-        cl_to_shifts = {cl: np.mean(shifts) for cl, shifts in cl_to_shifts.items()}
+        signal_to_shifts = {
+            signal_label: np.mean(shifts)
+            for signal_label, shifts in signal_to_shifts.items()
+        }
         for nuc in self.nuclei:
-            nuc.shift.avg = cl_to_shifts[nuc.chem_label]
+            nuc.shift.avg = signal_to_shifts[nuc.signal_label]
 
         return
 
-    def average_hyperfine(self, av_chemlabels: list[str] | list[list[str]]):
+    def average_hyperfine(self, signal_labels: list[str] | list[list[str]]):
         """Average hyperfine tensors for specified nuclei.
 
         Args:
-            av_chemlabels: Chemical labels specifying which nuclei are averaged.
+            signal_labels: Signal labels specifying which nuclei are averaged.
                 If a flat list is provided, each entry is averaged separately.
                 If a list of lists is provided, each sublist defines a group of
                 labels that are averaged together.
 
         Raises:
-            TypeError: If `av_chemlabels` contains unsupported types.
+            TypeError: If `signal_labels` contains unsupported types.
             ValueError: If any requested label is not present in the molecule.
         """
 
         # Convert all entries into lists
-        av_chemlabels = [
-            [ent] if not isinstance(ent, list) else ent for ent in av_chemlabels
+        signal_labels = [
+            [ent] if not isinstance(ent, list) else ent for ent in signal_labels
         ]
 
         # Check formatting - either list of lists or just list
         # list of lists - sublists group dissimilar labels which will be
         # averaged together
         # list - entries are averaged separately
-        if not all(isinstance(ent, (list, str)) for ent in av_chemlabels):
+        if not all(isinstance(ent, (list, str)) for ent in signal_labels):
             raise TypeError(
                 "Unknown type passed to average_hyperfine, "
                 "labels should be list[list[str]] or list[str]"
@@ -722,7 +725,7 @@ class Molecule:
 
         # Check sublists are all string
         if any(
-            [not isinstance(subent, str) for ent in av_chemlabels for subent in ent]
+            [not isinstance(subent, str) for ent in signal_labels for subent in ent]
         ):
             raise TypeError(
                 "Unknown type passed to average_hyperfine, "
@@ -730,15 +733,15 @@ class Molecule:
             )
 
         # Check labels exist in molecule
-        _fl_av_chemlabels = flatten(av_chemlabels)
-        all_chemlabels = [nuc.chem_label for nuc in self.nuclei]
-        if any([cl not in all_chemlabels for cl in _fl_av_chemlabels]):
-            print(set(all_chemlabels).difference(set(_fl_av_chemlabels)))
-            raise ValueError("Attempted average using unknown chem_label")
+        flat_signal_labels = flatten(signal_labels)
+        all_signal_labels = [nuc.signal_label for nuc in self.nuclei]
+        if any([sl not in all_signal_labels for sl in flat_signal_labels]):
+            print(set(all_signal_labels).difference(set(flat_signal_labels)))
+            raise ValueError("Attempted average using unknown signal_label")
 
         # Average hyperfines and diamagnetic shifts
-        for ents in av_chemlabels:
-            group = [nuc for nuc in self.nuclei if nuc.chem_label in ents]
+        for ents in signal_labels:
+            group = [nuc for nuc in self.nuclei if nuc.signal_label in ents]
 
             avg_fc = np.mean([nuc.A.fc for nuc in group], axis=0)
             avg_sd = np.mean([nuc.A.sd for nuc in group], axis=0)
@@ -872,8 +875,8 @@ class Molecule:
 
         Args:
             dia_by_key: Mapping from label key -> dia shift.
-            key_kind: 'atom_label' (uses nuc.label) or 'chem_label'
-            (uses nuc.chem_label).
+            key_kind: 'atom_label' (uses nuc.label) or 'signal_label'
+            (uses nuc.signal_label).
             ref_avg_by_label_nn: Optional mapping nuc.label_nn -> averaged
             reference shift.
                 If provided, applies: dia := ref - dia.
@@ -882,11 +885,11 @@ class Molecule:
             KeyError: If a required key is missing in the provided mapping(s).
             ValueError: If key_kind is unsupported.
         """
-        if key_kind not in ("atom_label", "chem_label"):
-            raise ValueError("key_kind must be 'atom_label' or 'chem_label'")
+        if key_kind not in ("atom_label", "signal_label"):
+            raise ValueError("key_kind must be 'atom_label' or 'signal_label'")
 
         for nuc in self.nuclei:
-            key = nuc.label if key_kind == "atom_label" else nuc.chem_label
+            key = nuc.label if key_kind == "atom_label" else nuc.signal_label
             try:
                 nuc.shift.dia = float(dia_by_key[key])
             except KeyError as exc:
@@ -908,40 +911,38 @@ class Molecule:
 
         return
 
-    def apply_chem_labels(
+    def apply_signal_labels(
         self,
-        al_to_cl: dict[str, str],
-        al_to_cml: dict[str, str] | None = None,
+        al_to_sl: dict[str, str],
+        al_to_sml: dict[str, str] | None = None,
     ) -> None:
-        """Apply chemical label mappings to nuclei.
+        """Apply signal label mappings to nuclei.
 
         This is a pure domain operation: callers must provide pre-parsed
         mappings (e.g. from an application loader).
 
         Args:
-            al_to_cl: Mapping atom_label -> chem_label.
-            al_to_cml: Optional mapping atom_label -> chem_math_label.
+            al_to_sl: Mapping atom_label -> signal_label.
+            al_to_sml: Optional mapping atom_label -> signal_math_label.
 
         Returns:
             None.
         """
 
-        # Apply chem_label
         for nuc in self.nuclei:
-            cl = al_to_cl.get(nuc.label)
-            if cl is not None:
-                nuc.chem_label = cl
+            signal_label = al_to_sl.get(nuc.label)
+            if signal_label is not None:
+                nuc.signal_label = signal_label
 
-        # Apply chem_math_label (if provided)
-        if al_to_cml is not None:
+        if al_to_sml is not None:
             for nuc in self.nuclei:
-                cml = al_to_cml.get(nuc.label)
-                if cml is not None:
-                    nuc.chem_math_label = str(cml).strip()
+                signal_math_label = al_to_sml.get(nuc.label)
+                if signal_math_label is not None:
+                    nuc.signal_math_label = str(signal_math_label).strip()
         else:
             # If math labels are not provided, ensure a sensible fallback.
             for nuc in self.nuclei:
-                if not len(nuc.chem_math_label):
-                    nuc.chem_math_label = nuc.chem_label
+                if not len(nuc.signal_math_label):
+                    nuc.signal_math_label = nuc.signal_label
 
         return

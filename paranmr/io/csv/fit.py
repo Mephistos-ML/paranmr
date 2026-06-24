@@ -12,9 +12,50 @@ import logging
 import numpy as np
 import pandas as pd
 
+from paranmr.core.fitting.susceptibility.fitters.moments import MomentFitResult
 from paranmr.io.csv.csv_util import read_csv_safe, write_csv_safe
 
 logger = logging.getLogger(__name__)
+
+
+def save_moment_fit_diagnostics(
+    diagnostics: MomentFitResult,
+    file_name: str,
+    verbose: bool = True,
+) -> None:
+    """Write publication-grade moment fit diagnostics to CSV.
+
+    Args:
+        diagnostics: Moment fit diagnostics returned by the moments fitter.
+        file_name: Output CSV path.
+        verbose: If ``True``, log the output path.
+
+    Returns:
+        None.
+    """
+
+    moment_names = list(diagnostics.observed_moments)
+    rows = [
+        {
+            "quantity": "observed",
+            **{name: diagnostics.observed_moments[name] for name in moment_names},
+        },
+        {
+            "quantity": "calculated",
+            **{name: diagnostics.calculated_moments[name] for name in moment_names},
+        },
+    ]
+    comment = [
+        f"T = {diagnostics.temperature:.2f} K",
+        f"objective = {diagnostics.objective_type}",
+        f"weighted_score = {diagnostics.weighted_score:.6g}",
+    ]
+    write_csv_safe(pd.DataFrame(rows), file_name, comment)
+
+    if verbose:
+        logger.info("Moment fit diagnostics written to %s", file_name)
+
+    return
 
 
 def save_slope_intercept(

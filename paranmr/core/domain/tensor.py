@@ -518,15 +518,39 @@ class Susceptibility:
     def calc_euler(self):
         """Computes and stores ZYZ Euler angles mapping input frame to eigenframe.
 
-        Angles are stored in degrees.
+        Eigenvectors are sorted by deviation from iso (|λ − iso|), then their
+        signs are canonicalized so the dominant component of each vector is
+        positive. If the resulting basis is a reflection, the first axis is
+        flipped to restore a proper rotation matrix.
+
+        Angles are stored in degrees using the same ZYZ convention as the
+        Euler-oriented susceptibility fitter.
         """
         _ev = np.abs(self.eigvals - self.iso)
         order = np.argsort(_ev)
-        _vecs = self.eigvecs[:, order]
+        _ev_sorted = _ev[order]
+        _vecs = self.eigvecs[:, order].copy()
 
-        self.alpha = np.rad2deg(np.arctan2(_vecs[2, 1], -_vecs[0, 1]))
-        self.beta = np.rad2deg(np.arccos(_vecs[1, 1]))
-        self.gamma = np.rad2deg(np.arctan2(-_vecs[1, 2], _vecs[1, 0]))
+        for j in range(3):
+            idx = np.argmax(np.abs(_vecs[:, j]))
+            if _vecs[idx, j] < 0:
+                _vecs[:, j] = -_vecs[:, j]
+
+        if np.linalg.det(_vecs) < 0:
+            _vecs[:, 0] = -_vecs[:, 0]
+
+        self.alpha = np.float64(
+            np.rad2deg(np.arctan2(_vecs[1, 2], _vecs[0, 2])) % 360
+        )
+        self.beta = np.float64(
+            np.rad2deg(np.arccos(np.clip(_vecs[2, 2], -1.0, 1.0)))
+        )
+        if np.isclose(_ev_sorted[0], _ev_sorted[1], rtol=1e-8):
+            self.gamma = np.float64(0.0)
+        else:
+            self.gamma = np.float64(
+                np.rad2deg(np.arctan2(_vecs[2, 1], -_vecs[2, 0])) % 360
+            )
         return
 
     @property

@@ -220,7 +220,7 @@ def plot_hyperfine_spread(
     window_title: str = "Hyperfine Components",
     verbose: bool = True,
 ) -> tuple[plt.Figure, plt.Axes]:
-    """Plots the spread of hyperfine components for each chemical label.
+    """Plots the spread of hyperfine components for each signal label.
 
     Args:
         nuclei: Nuclei to plot.
@@ -242,46 +242,46 @@ def plot_hyperfine_spread(
     legend_labels = {component: "" for component in components}
 
     a_comps = {
-        component: {nuc.chem_math_label: [] for nuc in nuclei}
+        component: {nuc.signal_math_label: [] for nuc in nuclei}
         for component in components
     }
 
     for component in components:
         if component == "iso":
             for nuc in nuclei:
-                a_comps[component][nuc.chem_math_label].append(
+                a_comps[component][nuc.signal_math_label].append(
                     (1.0 / 3.0) * np.trace(nuc.A.fc)
                 )
                 legend_labels[component] = r"$A_\mathregular{iso}$"
         elif component == "ax":
             for nuc in nuclei:
-                a_comps[component][nuc.chem_math_label].append(
+                a_comps[component][nuc.signal_math_label].append(
                     nuc.A.sd[0, 0] - nuc.A.sd[1, 1]
                 )
                 legend_labels[component] = r"$dA_\mathregular{ax}$"
         elif component == "rho":
             for nuc in nuclei:
-                a_comps[component][nuc.chem_math_label].append(
+                a_comps[component][nuc.signal_math_label].append(
                     nuc.A.sd[0, 0] + nuc.A.sd[1, 1]
                 )
                 legend_labels[component] = r"$dA_\mathregular{rho}$"
         elif "d" in component:
             for nuc in nuclei:
-                a_comps[component][nuc.chem_math_label].append(
+                a_comps[component][nuc.signal_math_label].append(
                     nuc.A.sd[comp2ind(component[1:])]
                 )
                 legend_labels[component] = rf"$dA_{{\mathregular{{{component[1:]}}}}}$"
         else:
             for nuc in nuclei:
-                a_comps[component][nuc.chem_math_label].append(
+                a_comps[component][nuc.signal_math_label].append(
                     nuc.A.sd[comp2ind(component)]
                 )
                 legend_labels[component] = rf"$A_\mathregular{{{component}}}$"
 
-    unique_chemlabels = []
+    unique_signal_labels = []
     for nuc in nuclei:
-        if nuc.chem_math_label not in unique_chemlabels:
-            unique_chemlabels.append(nuc.chem_math_label)
+        if nuc.signal_math_label not in unique_signal_labels:
+            unique_signal_labels.append(nuc.signal_math_label)
 
     fig, ax = create_canvas(
         spec.profile,
@@ -294,7 +294,7 @@ def plot_hyperfine_spread(
     spec.skin_axes(ax)
     palette = spec.palette
 
-    xvals = np.arange(1, len(unique_chemlabels) + 1)
+    xvals = np.arange(1, len(unique_signal_labels) + 1)
 
     legend_markers = []
     for comp_values in a_comps.values():
@@ -315,7 +315,7 @@ def plot_hyperfine_spread(
 
     ax.xaxis.set_minor_locator(ticker.MultipleLocator(1))
     ax.set_xticks(xvals[::step] + 0.5)
-    labels = list(unique_chemlabels)
+    labels = list(unique_signal_labels)
     ax.set_xticklabels(labels[::step])
     ax.grid(axis="x", ls="--", which="minor")
     ax.set_xlim(0.5, len(labels) + 1.5)

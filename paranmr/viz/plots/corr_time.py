@@ -25,7 +25,7 @@ def plot_corr_time_scatter(
     *,
     theory_r1: np.ndarray,
     exp_r1: np.ndarray,
-    chem_labels: list[str],
+    signal_labels: list[str],
     rsquared: float,
     fix_param: str | None = None,
     tau_R_fit: float | None = None,
@@ -45,7 +45,7 @@ def plot_corr_time_scatter(
     Args:
         theory_r1: Fitted theoretical ``R1`` values.
         exp_r1: Experimental ``R1`` values.
-        chem_labels: Chemical labels corresponding to the plotted points.
+        signal_labels: Signal labels corresponding to the plotted points.
         rsquared: Coefficient of determination for the fit.
         fix_param: Optional fit mode. Supported values are ``"tau_r"``,
             ``"tau_e"``, ``"none"``, ``""``, or ``None``.
@@ -140,7 +140,7 @@ def plot_corr_time_scatter(
 
     label_entries = [
         (label, float(theory_val), float(exp_val))
-        for label, theory_val, exp_val in zip(chem_labels, theory_r1, exp_r1)
+        for label, theory_val, exp_val in zip(signal_labels, theory_r1, exp_r1)
     ]
     resolve_label_layout(
         ax,
@@ -171,20 +171,20 @@ def plot_corr_time_contrib(
     theory_r1_contact: np.ndarray | None = None,
     theory_r1_curie: np.ndarray | None = None,
     exp_r1: np.ndarray,
-    chem_labels: list[str],
+    signal_labels: list[str],
     spec: PlotSpec,
     save: bool = True,
     show: bool = True,
     save_name: str = "r1_fit_contributions.pdf",
     verbose: bool = True,
 ) -> tuple[plt.Figure, plt.Axes]:
-    """Plot decomposed fitted ``R1`` contributions by chemical label.
+    """Plot decomposed fitted ``R1`` contributions by signal label.
 
     This helper renders a component-style comparison plot for fitted ``R1``
     values, analogous to the shift-contribution visualisation used elsewhere in
     the codebase. Experimental and total fitted ``R1`` values are shown as
     markers, while individual fitted ``R1`` contributions are shown as separate
-    component series by chemical label.
+    component series by signal label.
 
     Args:
         theory_r1: Fitted theoretical ``R1`` values.
@@ -192,7 +192,7 @@ def plot_corr_time_contrib(
         theory_r1_contact: Optional fitted contact contribution to ``R1``.
         theory_r1_curie: Optional fitted Curie contribution to ``R1``.
         exp_r1: Experimental ``R1`` values.
-        chem_labels: Chemical labels corresponding to the plotted points.
+        signal_labels: Signal labels corresponding to the plotted points.
         spec: Optional plot specification used for styling.
         save: Whether to save the figure.
         show: Whether to display the figure interactively.
@@ -206,10 +206,10 @@ def plot_corr_time_contrib(
     glyphs = spec.glyphs
     palette = spec.palette
 
-    xvals = np.arange(len(chem_labels), dtype=float)
+    xvals = np.arange(len(signal_labels), dtype=float)
 
     order_idx = np.argsort(exp_r1)[::-1]
-    chem_labels_ordered = [chem_labels[idx] for idx in order_idx]
+    signal_labels_ordered = [signal_labels[idx] for idx in order_idx]
     theory_r1_ordered = theory_r1[order_idx]
     exp_r1_ordered = exp_r1[order_idx]
 
@@ -284,7 +284,7 @@ def plot_corr_time_contrib(
     ax.hlines(
         0.0,
         0,
-        len(chem_labels_ordered),
+        len(signal_labels_ordered),
         color=palette.primary,
         lw=(glyphs.line_lw if glyphs is not None else 0.5),
     )
@@ -296,7 +296,7 @@ def plot_corr_time_contrib(
     ax.set_xlim([-0.5, xvals[-1] + 1.5])
 
     ax.set_xticks(xvals + 0.5)
-    ax.set_xticklabels(chem_labels_ordered, rotation=45)
+    ax.set_xticklabels(signal_labels_ordered, rotation=45)
     ax.tick_params(axis="x", labelsize=scale.axis_label)
 
     ax.yaxis.set_major_locator(ticker.AutoLocator())

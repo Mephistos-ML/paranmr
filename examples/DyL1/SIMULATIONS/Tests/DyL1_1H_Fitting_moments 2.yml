@@ -1,0 +1,47 @@
+project:
+  name: DyL1_1H_Fitting_Moments
+    
+hyperfine:
+  method: pdip
+  file: ../../DATA/HFC/DyL1.xyz
+  paramagnetic_centre: [0.006857, -0.008695, 0.057882]
+  spin: 2.5
+  orbit: 5
+  total_momentum_J: 7.5
+
+nuclei:
+  include: H
+      
+diamagnetic:
+  method: csv
+  file: ../../DATA/DIA/YL1.csv
+
+experiment:
+  files: ../../DATA/PARA/DyL1_Exp_Decomposition.csv
+  
+signal_labels:
+  file: ../../DATA/LABELS/DyL1_1H_Labels.csv
+  
+assignment:
+  method: moments
+  moment_weights:
+    mean: 1.0
+    std: 10.0
+    # skewness: 1.0
+    # kurtosis: 1.0
+    # standardized_5: 1.0
+    # standardized_6: 1.0
+    skewness: 1.0
+    kurtosis: 0.0
+    standardized_5: 0.0
+    standardized_6: 0.0
+susc_fit:
+  type: split
+  variables:
+    iso: [fix, 0.0]
+    dxx: [fit, 0.001]
+    dxy: [fix, 0.0]
+    dxz: [fix, 0.0]
+    dyy: [fit, 0.001]
+    dyz: [fix, 0.0]
+  average_shifts: 'all'

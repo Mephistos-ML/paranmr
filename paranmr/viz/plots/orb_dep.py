@@ -84,7 +84,7 @@ def _build_orbital_distance_rows(
 
         coord = np.asarray(nuc.coord, dtype=float)
         distance = _distance_to_paramagnetic_centre(coord, paramagnetic_centre)
-        grouped_rows.setdefault(nuc.chem_math_label, []).append(
+        grouped_rows.setdefault(nuc.signal_math_label, []).append(
             (distance, float(orb_iso), float(orb_aniso), float(orb_iso + orb_aniso))
         )
 

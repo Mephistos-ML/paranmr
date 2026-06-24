@@ -58,7 +58,7 @@ Optional Additions
 You may additionally supply optional blocks to refine the prediction workflow.
 Refer to :ref:`input_files` for the full contract and conditional requirements.
 
-- ``chem_labels``: provide chemical grouping labels (enables averaging).
+- ``signal_labels``: provide chemical grouping labels (enables averaging).
 - ``diamagnetic`` / ``diamagnetic_ref``: include diamagnetic corrections.
 - ``relaxation``: apply relaxation-based line broadening or weighting.
 
@@ -86,8 +86,8 @@ Minimal input example
      method: dft
      file: hfc/file.out
 
-   chem_labels:
-     file: chem_labels.csv
+   signal_labels:
+     file: signal_labels.csv
 
    nuclei:
      include: H
@@ -111,7 +111,7 @@ Optional additions
 
 - ``susc_vt``: temperature-dependent susceptibility fitting (optional and model-dependent).
 - ``diamagnetic`` / ``diamagnetic_ref``: include diamagnetic corrections.
-- ``assignment`` with ``permute``: explore assignments within user-defined groups.
+- ``assignment`` with ``permute``: explore signal_labels within user-defined groups.
 - ``susc_fit:input_units``: optionally specify YAML fit-variable units as ``A3``,
   ``cm3 mol-1``, or Curie-normalised ``reduced`` values.
 

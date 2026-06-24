@@ -9,9 +9,12 @@ them back to CSV.
 
 from __future__ import annotations
 
+import logging
 from typing import Iterable
 
 from paranmr.core.domain.exp import Experiment
+
+logger = logging.getLogger(__name__)
 
 
 def load_experiments(file_names: str | Iterable[str]) -> list[Experiment]:
@@ -29,7 +32,14 @@ def load_experiments(file_names: str | Iterable[str]) -> list[Experiment]:
     """
     from paranmr.io.csv.exp import load_experiments_from_csv
 
-    return load_experiments_from_csv(file_names)
+    experiments = load_experiments_from_csv(file_names)
+    for experiment in experiments:
+        if any(signal.l_to_g != 0.0 for signal in experiment.signals):
+            logger.warning(
+                "Gaussian peak projection at %.2f K ignores nonzero L/G values.",
+                experiment.temperature,
+            )
+    return experiments
 
 
 def save_experiment(

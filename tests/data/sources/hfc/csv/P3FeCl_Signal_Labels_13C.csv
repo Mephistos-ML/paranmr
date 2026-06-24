@@ -1,4 +1,4 @@
-atom_label,chem_label,chem_math_label
+atom_label,signal_label,signal_math_label
 C1,C3,$\mathbf{C}_{\mathit{3}}$
 C2,C3,$\mathbf{C}_{\mathit{3}}$
 C3,C3,$\mathbf{C}_{\mathit{3}}$

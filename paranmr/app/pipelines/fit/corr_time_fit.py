@@ -20,12 +20,12 @@ from scipy.optimize import curve_fit
 from paranmr.app.loaders.elstate_load import load_electronic_state
 from paranmr.app.loaders.exp_load import load_experiments
 from paranmr.app.loaders.hfc_load import load_hyperfines
-from paranmr.app.loaders.labels_load import load_chem_labels_from_csv
+from paranmr.app.loaders.labels_load import load_signal_labels_from_csv
 from paranmr.app.loaders.mol_load import load_base_molecule
 from paranmr.app.loaders.paramag_centre_load import load_paramagnetic_centre
 from paranmr.app.params.options import FitCorrTimeRunOptions
-from paranmr.app.policies.hfc import has_missing_selected_chem_labels
-from paranmr.app.policies.relax import average_relaxation_rates_by_chem_label
+from paranmr.app.policies.hfc import has_missing_selected_signal_labels
+from paranmr.app.policies.relax import average_relaxation_rates_by_signal_label
 
 # Core / domain
 from paranmr.core.const.gammas import NUCLEAR_GAMMAS
@@ -67,7 +67,7 @@ def _assemble_relaxation_rows(
 
     This helper evaluates the canonical per-nucleus relaxation decomposition for
     the supplied correlation times, projects the selected observable onto
-    chemical labels, and returns row-aligned arrays matching the diagnostic and
+    signal labels, and returns row-aligned arrays matching the diagnostic and
     fitting order used by ``exp_blocks``.
 
     Args:
@@ -83,7 +83,7 @@ def _assemble_relaxation_rows(
         orbit: Electronic orbital angular momentum quantum number.
         total_momentum_J: Total angular momentum quantum number.
         A_fc_dict: Mapping from atom label to isotropic hyperfine coupling.
-        base_molecule: Molecule providing chemical-label mappings.
+        base_molecule: Molecule providing signal-label mappings.
         tau_R: Rotational correlation time.
         tau_E: Electronic correlation time.
 
@@ -111,7 +111,7 @@ def _assemble_relaxation_rows(
     has_contact = False
     has_curie = False
 
-    for experiment, chem_labels_block, _exp_r1_block in exp_blocks:
+    for experiment, signal_labels_block, _exp_r1_block in exp_blocks:
         b0 = experiment.magnetic_field
         temperature = experiment.temperature
         omega_I_dict = {label: -gamma_I_dict[label] * b0 for label in nuclei_coords}
@@ -145,42 +145,42 @@ def _assemble_relaxation_rows(
                 f"observable={observable!r}"
             )
 
-        avg_total_by_chem_label = average_relaxation_rates_by_chem_label(
+        avg_total_by_signal_label = average_relaxation_rates_by_signal_label(
             base_molecule, rates_total
         )
-        avg_dipolar_by_chem_label = average_relaxation_rates_by_chem_label(
+        avg_dipolar_by_signal_label = average_relaxation_rates_by_signal_label(
             base_molecule, channels.dipolar
         )
-        avg_contact_by_chem_label = average_relaxation_rates_by_chem_label(
+        avg_contact_by_signal_label = average_relaxation_rates_by_signal_label(
             base_molecule, channels.contact
         )
-        avg_curie_by_chem_label = average_relaxation_rates_by_chem_label(
+        avg_curie_by_signal_label = average_relaxation_rates_by_signal_label(
             base_molecule, channels.curie
         )
 
-        if avg_dipolar_by_chem_label is not None:
+        if avg_dipolar_by_signal_label is not None:
             has_dipolar = True
-        if avg_contact_by_chem_label is not None:
+        if avg_contact_by_signal_label is not None:
             has_contact = True
-        if avg_curie_by_chem_label is not None:
+        if avg_curie_by_signal_label is not None:
             has_curie = True
 
-        for chem_label in chem_labels_block:
-            total_all.append(avg_total_by_chem_label.get(chem_label, np.nan))
+        for signal_label in signal_labels_block:
+            total_all.append(avg_total_by_signal_label.get(signal_label, np.nan))
             dipolar_all.append(
                 np.nan
-                if avg_dipolar_by_chem_label is None
-                else avg_dipolar_by_chem_label.get(chem_label, np.nan)
+                if avg_dipolar_by_signal_label is None
+                else avg_dipolar_by_signal_label.get(signal_label, np.nan)
             )
             contact_all.append(
                 np.nan
-                if avg_contact_by_chem_label is None
-                else avg_contact_by_chem_label.get(chem_label, np.nan)
+                if avg_contact_by_signal_label is None
+                else avg_contact_by_signal_label.get(signal_label, np.nan)
             )
             curie_all.append(
                 np.nan
-                if avg_curie_by_chem_label is None
-                else avg_curie_by_chem_label.get(chem_label, np.nan)
+                if avg_curie_by_signal_label is None
+                else avg_curie_by_signal_label.get(signal_label, np.nan)
             )
 
     return {
@@ -393,17 +393,17 @@ def run_fit_corr_time(config, options: FitCorrTimeRunOptions | None = None) -> i
 
         exp_blocks = []
         for experiment in experiments:
-            chem_labels_block = []
+            signal_labels_block = []
             exp_r1_block = []
             for signal in experiment.signals:
                 if signal.r1 is not None and np.isfinite(signal.r1):
-                    chem_labels_block.append(signal.assignment)
+                    signal_labels_block.append(signal.signal_label)
                     exp_r1_block.append(signal.r1)
-            if len(chem_labels_block) > 0:
+            if len(signal_labels_block) > 0:
                 exp_blocks.append(
                     (
                         experiment,
-                        np.array(chem_labels_block),
+                        np.array(signal_labels_block),
                         np.array(exp_r1_block),
                     )
                 )
@@ -411,10 +411,10 @@ def run_fit_corr_time(config, options: FitCorrTimeRunOptions | None = None) -> i
         if not exp_blocks:
             raise ValueError("No valid experimental R1 values found for fitting.")
 
-        chem_labels = np.concatenate([blk[1] for blk in exp_blocks])
+        signal_labels = np.concatenate([blk[1] for blk in exp_blocks])
         exp_r1 = np.concatenate([blk[2] for blk in exp_blocks])
         xdata = np.arange(len(exp_r1))
-        plot_chem_labels = None
+        plot_signal_labels = None
 
         # Load Molecule
         base_molecule = load_base_molecule(config)
@@ -431,23 +431,23 @@ def run_fit_corr_time(config, options: FitCorrTimeRunOptions | None = None) -> i
             config=config,
         )
 
-        # Add chemical labels if provided
-        if len(config.chem_labels_file):
-            al_to_cl, al_to_cml = load_chem_labels_from_csv(config.chem_labels_file)
-            if has_missing_selected_chem_labels(base_molecule, al_to_cl):
+        # Add signal labels if provided
+        if len(config.signal_labels_file):
+            al_to_sl, al_to_sml = load_signal_labels_from_csv(config.signal_labels_file)
+            if has_missing_selected_signal_labels(base_molecule, al_to_sl):
                 logger.warning(
-                    "Chemical labels file does not define labels for all selected "
+                    "Signal labels file does not define labels for all selected "
                     "nuclei; missing labels will use atom labels."
                 )
-            base_molecule.apply_chem_labels(al_to_cl, al_to_cml)
+            base_molecule.apply_signal_labels(al_to_sl, al_to_sml)
 
-        chem_label_to_math_label = {}
+        signal_label_to_math_label = {}
         for nuc in base_molecule.nuclei:
-            if nuc.chem_label and nuc.chem_math_label:
-                chem_label_to_math_label[nuc.chem_label] = nuc.chem_math_label
+            if nuc.signal_label and nuc.signal_math_label:
+                signal_label_to_math_label[nuc.signal_label] = nuc.signal_math_label
 
-        plot_chem_labels = [
-            chem_label_to_math_label.get(label, label) for label in chem_labels
+        plot_signal_labels = [
+            signal_label_to_math_label.get(label, label) for label in signal_labels
         ]
 
         # Prepare relaxation model inputs
@@ -516,7 +516,7 @@ def run_fit_corr_time(config, options: FitCorrTimeRunOptions | None = None) -> i
         save_corr_time_fit_data(
             exp_r1=exp_r1,
             theory_r1=theory_r1,
-            chem_labels=chem_labels,
+            signal_labels=signal_labels,
             file_name=os.path.join(project_dir, "corr_time_fit_diagnostics.csv"),
             fitted_tau_r=tau_R_fit,
             fitted_tau_e=tau_E_fit,
@@ -533,7 +533,7 @@ def run_fit_corr_time(config, options: FitCorrTimeRunOptions | None = None) -> i
             plot_corr_time_scatter(
                 theory_r1=theory_r1,
                 exp_r1=exp_r1,
-                chem_labels=plot_chem_labels,
+                signal_labels=plot_signal_labels,
                 rsquared=rsquared,
                 fix_param=fix_param,
                 tau_R_fit=tau_R_fit,
@@ -550,7 +550,7 @@ def run_fit_corr_time(config, options: FitCorrTimeRunOptions | None = None) -> i
                 theory_r1_dipolar=fitted_rows["dipolar"],
                 theory_r1_contact=fitted_rows["contact"],
                 theory_r1_curie=fitted_rows["curie"],
-                chem_labels=plot_chem_labels,
+                signal_labels=plot_signal_labels,
                 spec=spec,
                 save=True,
                 show=show_plots,
@@ -558,12 +558,12 @@ def run_fit_corr_time(config, options: FitCorrTimeRunOptions | None = None) -> i
                 verbose=True,
             )
 
-        if len(config.chem_labels_file):
+        if len(config.signal_labels_file):
             xyz_write.save_chemcraft_xyz(
                 file_name=os.path.join(project_dir, "chemcraft_structure.xyz"),
                 labels=base_molecule.labels,
                 coords=base_molecule.coords,
-                chem_labels={nuc.label: nuc.chem_label for nuc in base_molecule.nuclei},
+                signal_labels={nuc.label: nuc.signal_label for nuc in base_molecule.nuclei},
             )
 
         xyz_write.save_xyz(

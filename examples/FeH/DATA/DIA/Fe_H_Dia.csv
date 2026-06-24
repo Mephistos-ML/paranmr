@@ -1,4 +1,4 @@
-chem_label, shift, weight
+signal_label, shift, weight
 C1,125.7,1
 C2,127,1
 C3,145,1

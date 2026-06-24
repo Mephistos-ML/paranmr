@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 def save_corr_time_fit_data(
     exp_r1: np.ndarray,
     theory_r1: np.ndarray,
-    chem_labels: np.ndarray,
+    signal_labels: np.ndarray,
     file_name: str,
     fitted_tau_r: float | None = None,
     fitted_tau_e: float | None = None,
@@ -40,17 +40,17 @@ def save_corr_time_fit_data(
     Args:
         exp_r1: Experimental R1 values (s^-1).
         theory_r1: Theoretical fitted R1 values (s^-1).
-        chem_labels: Chemical labels corresponding to each data point.
+        signal_labels: Signal labels corresponding to each data point.
         file_name: Output CSV file path.
         fitted_tau_r: Optional fitted rotational correlation time ``tau_R`` (s).
         fitted_tau_e: Optional fitted electronic correlation time ``tau_E`` (s).
         rsquared: Optional coefficient of determination ``R^2`` for the fit.
         theory_r1_dipolar: Optional fitted dipolar contribution to ``R1``
-            written row-wise in the same order as ``chem_labels``.
+            written row-wise in the same order as ``signal_labels``.
         theory_r1_contact: Optional fitted contact contribution to ``R1``
-            written row-wise in the same order as ``chem_labels``.
+            written row-wise in the same order as ``signal_labels``.
         theory_r1_curie: Optional fitted Curie contribution to ``R1``
-            written row-wise in the same order as ``chem_labels``.
+            written row-wise in the same order as ``signal_labels``.
         comment: Optional comment line appended to the file header. If provided,
             it must begin with ``#`` (or will be prefixed automatically).
         verbose: If ``True``, logs the output file path.
@@ -58,7 +58,7 @@ def save_corr_time_fit_data(
     Returns:
         None.
     """
-    n_rows = len(chem_labels)
+    n_rows = len(signal_labels)
 
     fitted_tau_r_value = (
         f"{float(fitted_tau_r):.6e}" if fitted_tau_r is not None else np.nan
@@ -69,7 +69,7 @@ def save_corr_time_fit_data(
     rsquared_value = float(rsquared) if rsquared is not None else np.nan
 
     out: dict[str, list] = {
-        "chem_label": list(chem_labels),
+        "signal_label": list(signal_labels),
         "R1_exp (s^-1)": list(exp_r1),
         "R1_theory (s^-1)": list(theory_r1),
         "R^2": [rsquared_value] * n_rows,

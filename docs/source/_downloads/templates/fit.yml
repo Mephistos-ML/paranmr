@@ -12,14 +12,14 @@ diamagnetic:
   method: <insert method>
   file: <insert filename>
 
-chem_labels:
+signal_labels:
   file: <insert filename>
 
 nuclei:
   include: <insert nucleus> # e.g. H or C
 
 susc_fit:
-  type: <insert fit type>
+  type: <split|isoaxrho|isoaxrho_euler>
   variables:
     <insert variable 1>: [<fit|fix>, <initial value>]
     <insert variable 2>: [<fit|fix>, <initial value>]
@@ -27,3 +27,9 @@ susc_fit:
 
 assignment:
   method: <insert method>
+
+linewidth:
+  method: experimental
+  # variables:
+  #   p1: [fit, <initial value>, [<lower>, <upper>]]
+  #   p2: [fix, <value>]

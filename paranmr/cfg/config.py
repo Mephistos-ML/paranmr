@@ -78,19 +78,21 @@ class Config(ABC):
                 parsed[key] = value
             parsed.pop("master")
 
-        # Check for unsupported keywords
-        unsupported = [key for key in parsed if key not in cls.KEYWORDS]
-        # and subkeywords
-        unsupported += [
-            subkey
+        # Check for unsupported keywords and subkeywords.
+        unsupported_keywords = [key for key in parsed if key not in cls.KEYWORDS]
+        unsupported_subkeywords = [
+            (key, subkey)
             for key in parsed
+            if key in cls.KEYWORDS
             for subkey in parsed[key]
             if subkey not in cls.KEYWORDS[key]
         ]
-        if any(unsupported):
-            for us in unsupported:
-                logger.warning("Input keyword %s unknown", us)
-                parsed.pop(us)
+        for key in unsupported_keywords:
+            logger.warning("Input keyword %s unknown", key)
+            parsed.pop(key)
+        for key, subkey in unsupported_subkeywords:
+            logger.warning("Input keyword %s:%s unknown", key, subkey)
+            parsed[key].pop(subkey)
 
         # missing required (mandatory) keywords
         for keyword in cls.REQ_KEYWORDS:
@@ -140,13 +142,9 @@ class FitSuscConfig(Config):
     REQ_KEYWORDS = {
         "hyperfine": ["method", "file"],
         "experiment": ["files"],
-        "assignment": [
-            "method",
-        ],
         "nuclei": ["include"],
         "susc_fit": ["type", "variables"],
         "project": ["name"],
-        "chem_labels": ["file"],
     }
 
     KEYWORDS = {
@@ -165,11 +163,21 @@ class FitSuscConfig(Config):
             "method",
             "groups",
             "search",
+            "moment_objective",
+        ],
+        "linewidth": [
+            "method",
+            "variables",
         ],
         "nuclei": ["include", "include_groups"],
-        "susc_fit": ["type", "variables", "input_units", "average_shifts"],
+        "susc_fit": [
+            "type",
+            "variables",
+            "input_units",
+            "average_shifts",
+        ],
         "project": ["name"],
-        "chem_labels": ["file"],
+        "signal_labels": ["file"],
         "diamagnetic": [
             "method",
             "file",
@@ -215,13 +223,16 @@ class FitSuscConfig(Config):
         self._assignment_n_attempts = None
         self._assignment_max_iter = None
         self._assignment_r2_threshold = None
+        self._assignment_moment_objective = {}
+        self._linewidth_method = "experimental"
+        self._linewidth_variables = None
         self._nuclei_include = ""
         self._nuclei_include_groups = []
         self._susc_fit_type = ""
         self._susc_fit_variables = ""
         self._susc_fit_input_units = "A3"
         self._susc_fit_average_shifts = []
-        self._chem_labels_file = ""
+        self._signal_labels_file = ""
         self._spin_S = None
         self._spin_multiplicity = None
         self._spin_file = ""
@@ -322,7 +333,7 @@ class FitSuscConfig(Config):
 
     @nuclei_include_groups.setter
     def nuclei_include_groups(self, values: list | str):
-        # Accept a single string or a list of strings representing chem_labels
+        # Accept a single string or a list of strings representing signal_labels
         if isinstance(values, str):
             self._nuclei_include_groups = [values]
         else:
@@ -332,14 +343,14 @@ class FitSuscConfig(Config):
     def _resolve_nuclei_include_groups(self):
         """Expands `nuclei:include_groups` into atom labels.
 
-        Uses `chem_labels_file` to map `chem_label` values to `atom_label` values.
+        Uses `signal_labels_file` to map `signal_label` values to `atom_label` values.
         The expanded atoms are merged into `self._nuclei_include` with duplicates
         removed while preserving order.
 
         This method is safe to call multiple times.
 
         Raises:
-            FileNotFoundError: If `chem_labels_file` does not exist.
+            FileNotFoundError: If `signal_labels_file` does not exist.
         """
         raw_groups = getattr(self, "_nuclei_include_groups", [])
         if raw_groups is None:
@@ -350,13 +361,13 @@ class FitSuscConfig(Config):
         groups = [str(g).strip() for g in raw_groups if str(g).strip()]
         if not groups:
             return
-        # If chem_labels_file is not set yet, skip silently
-        chem_file = getattr(self, "_chem_labels_file", "")
-        if not chem_file:
+        # If signal_labels_file is not set yet, skip silently
+        signal_labels_file = getattr(self, "_signal_labels_file", "")
+        if not signal_labels_file:
             return
         expanded_atoms: list[str] = []
         try:
-            with open(chem_file, newline="") as csvfile:
+            with open(signal_labels_file, newline="") as csvfile:
                 reader = csv.DictReader(csvfile, skipinitialspace=True)
 
                 # Strip header whitespace by matching keys after .strip().
@@ -367,18 +378,20 @@ class FitSuscConfig(Config):
                     return None
 
                 for row in reader:
-                    clabel = (_get(row, "chem_label") or "").strip()
-                    alabel = (_get(row, "atom_label") or "").strip()
-                    if clabel in groups and alabel:
-                        expanded_atoms.append(alabel)
+                    signal_label = (_get(row, "signal_label") or "").strip()
+                    atom_label = (_get(row, "atom_label") or "").strip()
+                    if signal_label in groups and atom_label:
+                        expanded_atoms.append(atom_label)
         except FileNotFoundError:
-            raise FileNotFoundError(f"chem_labels_file not found: {chem_file}")
+            raise FileNotFoundError(
+                f"signal_labels_file not found: {signal_labels_file}"
+            )
         except Exception as e:
             raise e
         if not expanded_atoms:
             raise ValueError(
                 "No nuclei selected: nuclei:include_groups did not match any "
-                "chem_label entries in chem_labels_file. "
+                "signal_label entries in signal_labels_file. "
                 f"Requested groups={groups}."
             )
         # Merge with existing nuclei_include
@@ -458,11 +471,13 @@ class FitSuscConfig(Config):
         return
 
     @property
-    def susc_fit_type(self) -> bool:
+    def susc_fit_type(self) -> str:
         return self._susc_fit_type
 
     @susc_fit_type.setter
-    def susc_fit_type(self, value: bool):
+    def susc_fit_type(self, value: str):
+        if value not in ["split", "isoaxrho", "isoaxrho_euler"]:
+            raise ValueError(f"Unknown susc_fit:type {value}")
         self._susc_fit_type = value
         return
 
@@ -486,9 +501,14 @@ class FitSuscConfig(Config):
 
     @assignment_method.setter
     def assignment_method(self, value: str):
-        if value not in ["fixed", "permute", "hungarian"]:
+        if value not in ["fixed", "permute", "hungarian", "moments"]:
             raise ValueError(f"Unknown assignment:method {value}")
         self._assignment_method = value
+        if self._assignment_method == "moments" and self._susc_fit_average_shifts:
+            raise ValueError(
+                "susc_fit:average_shifts cannot be used with "
+                "assignment:method 'moments'"
+            )
         return None
 
     @property
@@ -626,14 +646,14 @@ class FitSuscConfig(Config):
         return None
 
     @property
-    def chem_labels_file(self) -> str:
-        return self._chem_labels_file
+    def signal_labels_file(self) -> str:
+        return self._signal_labels_file
 
-    @chem_labels_file.setter
-    def chem_labels_file(self, value: str):
+    @signal_labels_file.setter
+    def signal_labels_file(self, value: str):
         if not isinstance(value, str):
-            raise ValueError("chem_labels_file file should be string")
-        self._chem_labels_file = os.path.abspath(value)
+            raise ValueError("signal_labels_file file should be string")
+        self._signal_labels_file = os.path.abspath(value)
         return None
 
     @property
@@ -669,7 +689,169 @@ class FitSuscConfig(Config):
     def susc_fit_average_shifts(self, values: list[str]):
         if isinstance(values, str):
             self.susc_fit_average_shifts = [values]
+            return
+        if self._assignment_method == "moments" and values:
+            raise ValueError(
+                "susc_fit:average_shifts cannot be used with "
+                "assignment:method 'moments'"
+            )
         self._susc_fit_average_shifts = values
+        return
+
+    @property
+    def assignment_moment_objective(self) -> dict:
+        return self._assignment_moment_objective
+
+    @assignment_moment_objective.setter
+    def assignment_moment_objective(self, value: dict | None):
+        if value is None or value == "":
+            self._assignment_moment_objective = {}
+            return
+        if not isinstance(value, dict):
+            raise ValueError("assignment:moment_objective must be a mapping")
+
+        objective_type = str(value.get("type", "weighted_ls")).strip().lower()
+        allowed = {"weighted_ls"}
+        if objective_type not in allowed:
+            raise ValueError(
+                "assignment:moment_objective:type must be one of "
+                + ", ".join(sorted(allowed))
+            )
+
+        unknown = set(value) - {"type", "weights"}
+        if unknown:
+            raise ValueError(
+                "assignment:moment_objective contains unknown key(s): "
+                + ", ".join(sorted(unknown))
+            )
+        weights = value.get("weights", {})
+        if weights is None or weights == "":
+            weights = {}
+        if not isinstance(weights, dict):
+            raise ValueError("assignment:moment_objective:weights must be a mapping")
+        self._assignment_moment_objective = {
+            "type": objective_type,
+            "weights": {
+                moment_name: float(weight)
+                for moment_name, weight in weights.items()
+            },
+        }
+        return
+
+    @property
+    def linewidth_method(self) -> str:
+        return self._linewidth_method
+
+    @linewidth_method.setter
+    def linewidth_method(self, value: str | None):
+        if value is None or value == "":
+            self._linewidth_method = "experimental"
+            return
+        if not isinstance(value, str):
+            raise ValueError("linewidth:method must be a string")
+
+        method = value.strip().lower()
+        allowed = {"experimental", "r6"}
+        if method not in allowed:
+            raise ValueError(
+                "Invalid linewidth:method '"
+                + str(value)
+                + "'. Allowed values are: 'experimental' or 'r6'."
+            )
+        self._linewidth_method = method
+        return
+
+    @property
+    def linewidth_variables(self) -> dict[str, list[object]] | None:
+        return self._linewidth_variables
+
+    @linewidth_variables.setter
+    def linewidth_variables(self, value: dict[str, object] | None):
+        if value is None or value == "":
+            self._linewidth_variables = None
+            return
+        if not isinstance(value, dict):
+            raise ValueError("linewidth:variables must be a mapping")
+
+        required = {"p1", "p2"}
+        unknown = set(value) - required
+        if unknown:
+            raise ValueError(
+                "linewidth:variables contains unknown variable(s): "
+                + ", ".join(sorted(unknown))
+            )
+        missing = required - set(value)
+        if missing:
+            raise ValueError(
+                "linewidth:variables is missing variable(s): "
+                + ", ".join(sorted(missing))
+            )
+
+        variables: dict[str, list[object]] = {}
+        for name in ["p1", "p2"]:
+            entry = value[name]
+            if not (isinstance(entry, (list, tuple)) and len(entry) in {2, 3}):
+                raise ValueError(
+                    "linewidth:variables entries must be [fix, value] or "
+                    "[fit, guess, [lower, upper]]; "
+                    f"bad entry for {name}: {entry!r}"
+                )
+            mode, raw_value = entry[0], entry[1]
+            if not isinstance(mode, str):
+                raise ValueError(
+                    f"linewidth:variables:{name} mode must be 'fit' or 'fix'"
+                )
+            mode = mode.strip().lower()
+            if mode not in {"fit", "fix"}:
+                raise ValueError(
+                    f"linewidth:variables:{name} mode must be 'fit' or 'fix'"
+                )
+            try:
+                numeric_value = float(raw_value)
+            except (TypeError, ValueError) as exc:
+                raise ValueError(
+                    f"linewidth:variables:{name} value must be numeric"
+                ) from exc
+            if not np.isfinite(numeric_value) or numeric_value < 0.0:
+                raise ValueError(
+                    f"linewidth:variables:{name} must be finite and non-negative"
+                )
+            if mode == "fix":
+                if len(entry) != 2:
+                    raise ValueError(
+                        f"linewidth:variables:{name} fixed entries must be "
+                        "[fix, value]"
+                    )
+                variables[name] = ["fix", numeric_value]
+                continue
+
+            if len(entry) != 3:
+                raise ValueError(
+                    f"linewidth:variables:{name} fitted entries must be "
+                    "[fit, guess, [lower, upper]]"
+                )
+            bounds = entry[2]
+            if not (isinstance(bounds, (list, tuple)) and len(bounds) == 2):
+                raise ValueError(
+                    f"linewidth:variables:{name} bounds must be [lower, upper]"
+                )
+            lower, upper = (float(bounds[0]), float(bounds[1]))
+            if not np.isfinite(lower) or lower < 0.0:
+                raise ValueError(
+                    f"linewidth:variables:{name} lower bound must be finite "
+                    "and non-negative"
+                )
+            if np.isnan(upper) or upper < lower:
+                raise ValueError(
+                    f"linewidth:variables:{name} upper bound must be numeric "
+                    "and greater than or equal to the lower bound"
+                )
+            if numeric_value < lower or numeric_value > upper:
+                raise ValueError(
+                    f"linewidth:variables:{name} guess must be inside bounds"
+                )
+            variables[name] = ["fit", numeric_value, [lower, upper]]
+        self._linewidth_variables = variables
         return
 
     @property
@@ -1062,6 +1244,12 @@ class FitSuscConfig(Config):
 
         config = super().from_file(file_name)
 
+        if config.nuclei_include_groups and not config.signal_labels_file:
+            raise ValueError(
+                "Invalid nuclei configuration: 'nuclei:include_groups' requires "
+                "'signal_labels:file' to map signal labels to atom labels."
+            )
+
         # If an optional VT susceptibility file is provided, require a ab_initio_format.
         if getattr(config, "susc_vt_ab_initio_file", ""):
             if not getattr(config, "susc_vt_ab_initio_format", ""):
@@ -1166,6 +1354,50 @@ class FitSuscConfig(Config):
                     "assignment:method is 'hungarian'"
                 )
 
+        elif config.assignment_method == "moments":
+            if config.nuclei_include_groups:
+                raise ValueError(
+                    "nuclei:include_groups is not supported when "
+                    "assignment:method is 'moments'; moment matching does not "
+                    "use signal-label atom grouping."
+                )
+            if len(config.assignment_groups):
+                raise ValueError(
+                    "assignment:groups is not supported when "
+                    "assignment:method is 'moments'"
+                )
+            if config.assignment_search:
+                logger.warning(
+                    "Ignoring Hungarian-only assignment:search mapping for "
+                    "assignment method 'moments'"
+                )
+            if not config.assignment_moment_objective:
+                raise ValueError(
+                    "assignment:moment_objective is required when "
+                    "assignment:method is 'moments'"
+                )
+
+        if (
+            config.assignment_method != "moments"
+            and config.assignment_moment_objective
+        ):
+            raise ValueError(
+                "assignment:moment_objective is only supported when "
+                "assignment:method is 'moments'"
+            )
+
+        if config.linewidth_method == "experimental":
+            if config.linewidth_variables is not None:
+                raise ValueError(
+                    "linewidth:variables is only supported when "
+                    "linewidth:method is 'r6'"
+                )
+        elif config.linewidth_method == "r6":
+            if config.linewidth_variables is None:
+                raise ValueError(
+                    "linewidth:variables is required when linewidth:method is 'r6'"
+                )
+
         return config
 
 
@@ -1193,7 +1425,7 @@ class PredictConfig(FitSuscConfig):
         "experiment": ["files", "spectrum_files", "exp_reference"],
         "nuclei": ["include"],
         "project": ["name"],
-        "chem_labels": ["file"],
+        "signal_labels": ["file"],
         "diamagnetic": [
             "method",
             "file",
@@ -1439,7 +1671,7 @@ class FitCorrTimeConfig(FitSuscConfig):
             "model",
         ],
         "project": ["name"],
-        "chem_labels": ["file"],
+        "signal_labels": ["file"],
     }
 
     KEYWORDS = {
@@ -1462,7 +1694,7 @@ class FitCorrTimeConfig(FitSuscConfig):
             "model",
         ],
         "project": ["name"],
-        "chem_labels": ["file"],
+        "signal_labels": ["file"],
     }
 
     def __init__(self, **kwargs):
@@ -1643,7 +1875,7 @@ class PlotHFCConfig(FitSuscConfig):
         ],
         "nuclei": ["include", "include_groups"],
         "project": ["name"],
-        "chem_labels": ["file"],
+        "signal_labels": ["file"],
     }
 
     @property

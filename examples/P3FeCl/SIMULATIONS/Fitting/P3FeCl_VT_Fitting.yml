@@ -10,8 +10,8 @@ diamagnetic:
   method: csv
   file: ../../DATA/DIA/P3FeCl_Diamagnetic_Shifts_13C.csv
   
-chem_labels:
-  file: ../../DATA/LABELS/P3FeCl_Chemical_Labels_13C.csv
+signal_labels:
+  file: ../../DATA/LABELS/P3FeCl_Signal_Labels_13C.csv
   
 experiment:
   files: [../../DATA/PARA/*csv]

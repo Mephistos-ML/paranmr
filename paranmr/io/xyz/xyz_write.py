@@ -102,24 +102,24 @@ def save_chemcraft_xyz(
     file_name: str,
     labels: ArrayLike,
     coords: ArrayLike,
-    chem_labels: dict[str, str] | None = None,
+    signal_labels: dict[str, str] | None = None,
     verbose: bool = True,
 ) -> None:
-    """Save an XYZ file with ChemCraft-compatible chemical labels.
+    """Save an XYZ file with ChemCraft-compatible signal labels.
 
     ChemCraft can display per-atom labels if an extra quoted string is appended to
-    each coordinate line. This writer appends per-atom chemical labels when provided.
+    each coordinate line. This writer appends per-atom signal labels when provided.
     """
     coords = np.asarray(coords)
-    chem_labels = chem_labels or {}
+    signal_labels = signal_labels or {}
 
     with open(file_name, "w") as f:
         for lab, trio in zip(labels, coords):
             f.write(
                 "{:5} {:15.7f} {:15.7f} {:15.7f}".format(xyzf.lab_to_num(lab), *trio)
             )
-            if lab in chem_labels:
-                f.write(f'      "{chem_labels[lab]}"\n')
+            if lab in signal_labels:
+                f.write(f'      "{signal_labels[lab]}"\n')
             else:
                 f.write("\n")
 

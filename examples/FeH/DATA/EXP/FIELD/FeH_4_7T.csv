@@ -1,7 +1,7 @@
 #temperature 298.0
 #magnetic_field 4.7
 #isotope 1H 13C
-assignment,shift,width,area,r1
+signal_label,shift,width,area,r1
 C1,1,1,1,5.2
 C2,1,1,1,2.3
 C3,1,1,1,2.8

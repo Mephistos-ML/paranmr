@@ -17,12 +17,11 @@ import matplotlib.ticker as ticker
 import numpy as np
 from numpy.typing import ArrayLike
 
-from paranmr.core.const.gammas import NUCLEAR_GAMMAS
+from paranmr.core.conv.freq_to_ppm import signal_widths_hz_to_ppm
 from paranmr.core.domain.exp import Experiment
 from paranmr.core.domain.mol import Molecule
 from paranmr.core.spectrum.kernels import gaussian, lorentzian
 from paranmr.core.util.arrays import find_index_of_nearest
-from paranmr.core.util.strings import remove_numbers
 from paranmr.io.csv.spec import write_spectrum
 from paranmr.viz.layout.canvas import create_canvas, create_stacked_canvas
 from paranmr.viz.layout.export import render_figure
@@ -112,14 +111,11 @@ def plot_pred_spectrum(
     # Spectrum trace
     ax.plot(x_grid, y_intensity, color=palette.primary, lw=glyphs.line_lw * 0.75)
 
-    # Labels
     avg_shifts = {
-        nucleus.chem_math_label: nucleus.shift.avg
+        nucleus.signal_math_label: nucleus.shift.avg
         for nucleus in molecule.nuclei
         if nucleus.isotope == isotope
     }
-
-    # Ensure labels match shifts in sorted order
     sorted_shifts_labels = sorted(avg_shifts.items(), key=lambda x: x[1])
     sorted_labels = [label for label, _ in sorted_shifts_labels]
     sorted_shifts = [shift for _, shift in sorted_shifts_labels]
@@ -236,7 +232,7 @@ def plot_raw_deconv_pred(
 
     # Map each nucleus text-label to its simulated (predicted) peak position
     avg_shifts = {
-        nucleus.chem_math_label: nucleus.shift.avg
+        nucleus.signal_math_label: nucleus.shift.avg
         for nucleus in molecule.nuclei
         if nucleus.isotope == isotope
     }
@@ -255,11 +251,13 @@ def plot_raw_deconv_pred(
     y_deconv_intensity = np.zeros_like(x_grid)
 
     # Accumulate deconvoluted spectrum intensities
-    for signal in experiment.signals:
-        # Convert experimental linewidth from Hz to ppm
-        exp_width_ppm = signal.width / (
-            NUCLEAR_GAMMAS[remove_numbers(isotope)] * experiment.magnetic_field
-        )
+    widths_hz = [signal.width for signal in experiment.signals]
+    widths_ppm = signal_widths_hz_to_ppm(
+        widths_hz,
+        experiment.isotope,
+        experiment.magnetic_field,
+    )
+    for signal, exp_width_ppm in zip(experiment.signals, widths_ppm):
         # Add Lorentzian contribution
         y_deconv_intensity += signal.l_to_g * lorentzian(
             x_grid, exp_width_ppm, signal.shift, signal.area
@@ -385,9 +383,9 @@ def plot_raw_deconv_pred(
         if nucleus.isotope != isotope:
             continue
 
-        # Prefer the plain chemical label if available.
-        plain = getattr(nucleus, "chem_label", None)
-        latex = getattr(nucleus, "chem_math_label", None)
+        # Prefer the plain signal label if available.
+        plain = getattr(nucleus, "signal_label", None)
+        latex = getattr(nucleus, "signal_math_label", None)
         if plain and latex:
             latex_label_map[str(plain)] = str(latex)
 
@@ -409,7 +407,7 @@ def plot_raw_deconv_pred(
 
     pm_sorted = sorted(
         [
-            (signal.shift, _map_assignment_to_latex(signal.assignment))
+            (signal.shift, _map_assignment_to_latex(signal.signal_label))
             for signal in experiment.signals
         ],
         key=lambda x: x[0],

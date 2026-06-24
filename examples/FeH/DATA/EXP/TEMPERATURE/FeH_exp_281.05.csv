@@ -1,7 +1,7 @@
 #temperature 281.05
 #larmor 600
 #isotope 1H 13C
-assignment,shift,width,area
+signal_label,shift,width,area
 C1,191.8,1,1
 C2,51.7,1,1
 C3,242.1,1,1

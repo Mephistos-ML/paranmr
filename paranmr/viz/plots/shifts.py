@@ -71,20 +71,20 @@ def plot_shift_spread(
     palette = spec.palette
     shift_colours = spec.shift_colours
 
-    unique_chemlabels = {nuc.chem_math_label for nuc in molecule.nuclei}
+    unique_signal_labels = {nuc.signal_math_label for nuc in molecule.nuclei}
 
-    xvals = np.arange(1, len(unique_chemlabels) + 1)
+    xvals = np.arange(1, len(unique_signal_labels) + 1)
 
     # width of bars, and shift to apply for starting positions
     width = 1 / (len(terms) + 2)
     widthscaler = 1.0
 
     # Total theoretical
-    total = {nuc.chem_math_label: [] for nuc in molecule.nuclei}
-    # Grouped by chem_label
+    total = {nuc.signal_math_label: [] for nuc in molecule.nuclei}
+    # Grouped by signal_label
     # Remove diamagnetic part if diamagnetic term not included
     for nuc in molecule.nuclei:
-        total[nuc.chem_math_label].append(nuc.shift.total)
+        total[nuc.signal_math_label].append(nuc.shift.total)
 
     # Order using total theoretical shift
     if experiment is None:
@@ -100,14 +100,14 @@ def plot_shift_spread(
     # or order using experimental shift
     else:
         exps = {
-            nuc.chem_math_label: experiment[nuc.chem_label].shift
+            nuc.signal_math_label: experiment[nuc.signal_label].shift
             for nuc in molecule.nuclei
         }
 
         # Remove diamagnetic part of experiment if not included in terms list
         if "d" not in terms:
             for nuc in molecule.nuclei:
-                exps[nuc.chem_math_label] -= nuc.shift.dia
+                exps[nuc.signal_math_label] -= nuc.shift.dia
 
         # Order by low to high experimental shift
         # and store order as list of chemical math labels
@@ -162,9 +162,9 @@ def plot_shift_spread(
 
     # Fermi contact shift violin plot
     if "fc" in terms:
-        fc = {nuc.chem_math_label: [] for nuc in molecule.nuclei}
+        fc = {nuc.signal_math_label: [] for nuc in molecule.nuclei}
         for nuc in molecule.nuclei:
-            fc[nuc.chem_math_label].append(nuc.shift.fc)
+            fc[nuc.signal_math_label].append(nuc.shift.fc)
         _violin = ax.violinplot(
             dataset=[fc[o] for o in _order],
             positions=(xvals + width * widthscaler),
@@ -181,9 +181,9 @@ def plot_shift_spread(
 
     # Pseudo contact shift violin plot
     if "pc" in terms:
-        pc = {nuc.chem_math_label: [] for nuc in molecule.nuclei}
+        pc = {nuc.signal_math_label: [] for nuc in molecule.nuclei}
         for nuc in molecule.nuclei:
-            pc[nuc.chem_math_label].append(nuc.shift.pc)
+            pc[nuc.signal_math_label].append(nuc.shift.pc)
         _violin = ax.violinplot(
             dataset=[pc[o] for o in _order],
             positions=(xvals + width * widthscaler),
@@ -200,9 +200,9 @@ def plot_shift_spread(
 
     # Diamagnetic shift violin plot
     if "d" in terms:
-        dia = {nuc.chem_math_label: [] for nuc in molecule.nuclei}
+        dia = {nuc.signal_math_label: [] for nuc in molecule.nuclei}
         for nuc in molecule.nuclei:
-            dia[nuc.chem_math_label].append(nuc.shift.dia)
+            dia[nuc.signal_math_label].append(nuc.shift.dia)
         _violin = ax.violinplot(
             dataset=[dia[o] for o in _order],
             positions=(xvals + width * widthscaler),
@@ -222,7 +222,7 @@ def plot_shift_spread(
     ax.hlines(
         0.0,
         1,
-        len(unique_chemlabels) + 1,
+        len(unique_signal_labels) + 1,
         color=palette.primary,
         lw=(glyphs.line_lw if glyphs is not None else 0.5),
     )
@@ -296,32 +296,33 @@ def plot_shift_contrib(
         A tuple ``(fig, ax)``.
     """
 
-    # Chemical math label to list of nuclei labels
-    cl_to_al = {
-        nuc.chem_math_label: len(
+    # Signal math label to number of atom labels represented by it.
+    signal_math_counts = {
+        nuc.signal_math_label: len(
             [
                 nnuc.label
                 for nnuc in molecule.nuclei
-                if nnuc.chem_math_label == nuc.chem_math_label
+                if nnuc.signal_math_label == nuc.signal_math_label
             ]
         )
         for nuc in molecule.nuclei
     }
-    xvals = np.arange(len(cl_to_al))
+    xvals = np.arange(len(signal_math_counts))
 
     # Experiment
     if experiment is not None:
         # Take average
-        exps = dict.fromkeys(cl_to_al, 0)
+        exps = dict.fromkeys(signal_math_counts, 0)
         for nuc in molecule.nuclei:
-            exps[nuc.chem_math_label] += (
-                experiment[nuc.chem_label].shift / cl_to_al[nuc.chem_math_label]
+            exps[nuc.signal_math_label] += (
+                experiment[nuc.signal_label].shift
+                / signal_math_counts[nuc.signal_math_label]
             )
 
         if "d" not in terms:
             for nuc in molecule.nuclei:
-                exps[nuc.chem_math_label] -= (
-                    nuc.shift.dia / cl_to_al[nuc.chem_math_label]
+                exps[nuc.signal_math_label] -= (
+                    nuc.shift.dia / signal_math_counts[nuc.signal_math_label]
                 )
 
         # Order by low to high experimental shift
@@ -349,30 +350,34 @@ def plot_shift_contrib(
     palette = spec.palette
     shift_colours = spec.shift_colours
 
-    # Chemical math label to list of nuclei labels
-    cl_to_al = {
-        nuc.chem_math_label: len(
+    # Signal math label to number of atom labels represented by it.
+    signal_math_counts = {
+        nuc.signal_math_label: len(
             [
                 nnuc.label
                 for nnuc in molecule.nuclei
-                if nnuc.chem_math_label == nuc.chem_math_label
+                if nnuc.signal_math_label == nuc.signal_math_label
             ]
         )
         for nuc in molecule.nuclei
     }
-    xvals = np.arange(len(cl_to_al))
+    xvals = np.arange(len(signal_math_counts))
 
     widthscaler = 1
 
     # Total theoretical
     # Take average
-    total = dict.fromkeys(cl_to_al, 0)
+    total = dict.fromkeys(signal_math_counts, 0)
     for nuc in molecule.nuclei:
-        total[nuc.chem_math_label] += nuc.shift.total / cl_to_al[nuc.chem_math_label]
+        total[nuc.signal_math_label] += (
+            nuc.shift.total / signal_math_counts[nuc.signal_math_label]
+        )
 
     if "d" not in terms:
         for nuc in molecule.nuclei:
-            total[nuc.chem_math_label] -= nuc.shift.dia / cl_to_al[nuc.chem_math_label]
+            total[nuc.signal_math_label] -= (
+                nuc.shift.dia / signal_math_counts[nuc.signal_math_label]
+            )
 
     if experiment is None:
         if order.lower() == "ascending":
@@ -398,9 +403,11 @@ def plot_shift_contrib(
     # Fermi contact part
     if "fc" in terms:
         # Take average
-        fc = dict.fromkeys(cl_to_al, 0)
+        fc = dict.fromkeys(signal_math_counts, 0)
         for nuc in molecule.nuclei:
-            fc[nuc.chem_math_label] += nuc.shift.fc / cl_to_al[nuc.chem_math_label]
+            fc[nuc.signal_math_label] += (
+                nuc.shift.fc / signal_math_counts[nuc.signal_math_label]
+            )
         ax.bar(
             (xvals + width * widthscaler),
             [fc[o] for o in order],
@@ -413,9 +420,11 @@ def plot_shift_contrib(
     # Pseudocontact part
     if "pc" in terms:
         # Take average
-        pc = dict.fromkeys(cl_to_al, 0)
+        pc = dict.fromkeys(signal_math_counts, 0)
         for nuc in molecule.nuclei:
-            pc[nuc.chem_math_label] += nuc.shift.pc / cl_to_al[nuc.chem_math_label]
+            pc[nuc.signal_math_label] += (
+                nuc.shift.pc / signal_math_counts[nuc.signal_math_label]
+            )
         ax.bar(
             (xvals + width * widthscaler),
             [pc[o] for o in order],
@@ -428,9 +437,11 @@ def plot_shift_contrib(
     # Diamagnetic part
     if "d" in terms:
         # Take average
-        dia = dict.fromkeys(cl_to_al, 0)
+        dia = dict.fromkeys(signal_math_counts, 0)
         for nuc in molecule.nuclei:
-            dia[nuc.chem_math_label] += nuc.shift.dia / cl_to_al[nuc.chem_math_label]
+            dia[nuc.signal_math_label] += (
+                nuc.shift.dia / signal_math_counts[nuc.signal_math_label]
+            )
         ax.bar(
             (xvals + width * widthscaler),
             [dia[o] for o in order],
@@ -543,7 +554,7 @@ def plot_shift_tdep(
     )
 
     # Group signals of each experiment by assignment label
-    labels = {signal.assignment for experiment in experiments for signal in experiment}
+    labels = {signal.signal_label for experiment in experiments for signal in experiment}
 
     colour_cycle_len = len(colour_cycle)
     colours = {
@@ -559,8 +570,8 @@ def plot_shift_tdep(
                 lw=0,
                 marker="x",
                 markersize=(glyphs.ms if glyphs is not None else 7),
-                label=signal.assignment,
-                color=colours[signal.assignment],
+                label=signal.signal_label,
+                color=colours[signal.signal_label],
             )
 
     ax.spines[["right", "top"]].set_visible(False)

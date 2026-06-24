@@ -6,7 +6,7 @@ hyperfine:
   file: <insert filename>
   spin: <insert spin>
 
-chem_labels:
+signal_labels:
   file: <insert filename>
 
 nuclei:

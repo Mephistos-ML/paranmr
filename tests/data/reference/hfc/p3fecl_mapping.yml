@@ -1,25 +1,25 @@
 expected_atoms:
   C1:
-    chem_label: C3
+    signal_label: C3
     coords: [10.229852, -7.932649, 11.157257]
     a_fc_iso: 5228.864189
 
   C2:
-    chem_label: C3
+    signal_label: C3
     coords: [9.449686, -8.259930, 14.161375]
     a_fc_iso: 1908.099211
 
   C3:
-    chem_label: C3
+    signal_label: C3
     coords: [11.484680, -6.038566, 13.336697]
     a_fc_iso: 4078.321667
 
   C4:
-    chem_label: C1
+    signal_label: C1
     coords: [8.790431, -6.556953, 8.985663]
     a_fc_iso: 3432.417490
 
   C5:
-    chem_label: C2_up
+    signal_label: C2_up
     coords: [7.485806, -5.979923, 8.424445]
     a_fc_iso: -323.752576

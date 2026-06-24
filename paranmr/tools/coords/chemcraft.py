@@ -3,7 +3,7 @@
 
 """Extract ChemCraft atom labels from annotated XYZ files.
 
-Reads ChemCraft-style XYZ files and writes per-atom chemical labels to CSV format.
+Reads ChemCraft-style XYZ files and writes per-atom signal labels to CSV format.
 """
 
 import argparse
@@ -52,7 +52,7 @@ def load_chemcraft_xyz(file_name: str):
 
     chem_dict = dict.fromkeys(indexed_labels, "")
 
-    # Read chemical labels
+    # Read signal labels
     with open(file_name, "r") as f:
         for it, line in enumerate(f):
             if it < 2:
@@ -73,7 +73,7 @@ def main():
     parser = argparse.ArgumentParser(
         description=(
             "This script converts annotated chemcraft .xyz files into a\n"
-            "chemlabels csv file for use with ParaNMR"
+            "signal_labels csv file for use with ParaNMR"
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
@@ -88,28 +88,28 @@ def main():
         "-m",
         "--math_placeholder",
         action="store_true",
-        help="Add placeholder column for chem_math_labels",
+        help="Add placeholder column for signal_math_labels",
     )
 
     uargs = parser.parse_args()
 
-    # Get chemical labels from chemcraft xyz file
+    # Get signal labels from chemcraft xyz file
     chem_dict, _, _ = load_chemcraft_xyz(uargs.input_file)
 
-    # Remove entries with no chemlabel
+    # Remove entries with no signal_label
     chem_dict = {k: v for k, v in chem_dict.items() if v}
 
     # Create placeholder math labels
     if uargs.math_placeholder:
         math_dict = {k: f"${v}$" for k, v in chem_dict.items()}
 
-    # Save new chemlabels file
-    with open("chemlabels.csv", "w", newline="") as csvfile:
+    # Save new signal_labels file
+    with open("signal_labels.csv", "w", newline="") as csvfile:
         writer = csv.writer(csvfile, delimiter=",")
         if uargs.math_placeholder:
-            writer.writerow(["atom_label", "chem_label", "chem_math_label"])
+            writer.writerow(["atom_label", "signal_label", "signal_math_label"])
         else:
-            writer.writerow(["atom_label", "chem_label"])
+            writer.writerow(["atom_label", "signal_label"])
 
         for k, v in chem_dict.items():
             row = [k, v]
@@ -117,4 +117,4 @@ def main():
                 row.append(math_dict[k])
             writer.writerow(row)
 
-    logger.info("Chemical labels written to chemlabels.csv")
+    logger.info("Signal labels written to signal_labels.csv")
