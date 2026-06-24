@@ -15,12 +15,15 @@ from scipy.optimize import least_squares
 from scipy.optimize._optimize import OptimizeResult
 
 from paranmr.core.domain.mol import Nucleus
-from paranmr.core.fitting.linewidth import predict_r6_linewidths
 from paranmr.core.fitting.susceptibility.moments.descriptors import (
     normalize_gaussian_mixture_moment_vectors,
 )
 from paranmr.core.fitting.susceptibility.moments.forward import (
     calculated_moments_from_parameters,
+)
+from paranmr.core.fitting.susceptibility.linewidths import (
+    SusceptibilityLinewidthInputs,
+    predict_r6_widths_by_atom_label,
 )
 from paranmr.core.fitting.susceptibility.models.base import SusceptibilityModel
 from paranmr.core.fitting.susceptibility.objectives.moments.api import (
@@ -53,7 +56,7 @@ class MomentFitInputs:
     temperature: float
     observed_moments: dict[str, float]
     moment_objective_state: dict
-    linewidth_mean_inv_r6_by_label: dict[str, float] | None
+    linewidth_inputs: SusceptibilityLinewidthInputs
     linewidth_fit_names: tuple[str, ...]
     linewidth_fix_vars: dict[str, float]
     fit_var_names: tuple[str, ...]
@@ -152,18 +155,18 @@ def fit_moment_model(
     )
 
     # Recompute calculated moments using the fitted model parameters.
-    final_linewidths_by_label = _predict_r6_widths(
-        linewidth_mean_inv_r6_by_label=inputs.linewidth_mean_inv_r6_by_label,
-        linewidth_vars=final_linewidth_vars,
+    final_linewidths_by_atom_label = predict_r6_widths_by_atom_label(
+        linewidth_inputs=inputs.linewidth_inputs,
+        linewidth_vars_by_name=final_linewidth_vars,
     )
     calculated_moments = calculated_moments_from_parameters(
         model=model,
         parameters=model.final_var_values,
         nuclei=inputs.nuclei,
-        linewidths_by_label=final_linewidths_by_label,
+        linewidths_by_label=final_linewidths_by_atom_label,
         include_diamagnetic=inputs.use_diamagnetic,
     )
-    
+
     # Package the final comparison between experimental and calculated moments.
     weighted_score = _weighted_moment_score(
         observed_moments=inputs.observed_moments,
@@ -200,15 +203,15 @@ def _moment_residual_from_float_list(
             for name, value in zip(inputs.linewidth_fit_names, linewidth_vals)
         },
     }
-    calculated_widths_by_label = _predict_r6_widths(
-        linewidth_mean_inv_r6_by_label=inputs.linewidth_mean_inv_r6_by_label,
-        linewidth_vars=linewidth_vars,
+    calculated_widths_by_atom_label = predict_r6_widths_by_atom_label(
+        linewidth_inputs=inputs.linewidth_inputs,
+        linewidth_vars_by_name=linewidth_vars,
     )
     calculated_moments = calculated_moments_from_parameters(
         model=inputs.model,
         parameters=all_vars,
         nuclei=inputs.nuclei,
-        linewidths_by_label=calculated_widths_by_label,
+        linewidths_by_label=calculated_widths_by_atom_label,
         include_diamagnetic=inputs.use_diamagnetic,
     )
     return list(
@@ -217,28 +220,6 @@ def _moment_residual_from_float_list(
             calculated_moments=calculated_moments,
             moment_objective_state=inputs.moment_objective_state,
         ).values()
-    )
-
-
-def _predict_r6_widths(
-    *,
-    linewidth_mean_inv_r6_by_label: dict[str, float] | None,
-    linewidth_vars: dict[str, float],
-) -> dict[str, float]:
-    if linewidth_mean_inv_r6_by_label is None:
-        raise ValueError(
-            "Moment fitting requires an R6 linewidth model for calculated "
-            "packages."
-        )
-    if "p1" not in linewidth_vars or "p2" not in linewidth_vars:
-        raise ValueError(
-            "Moment fitting requires linewidth variables p1 and p2 for the R6 "
-            "linewidth model."
-        )
-    return predict_r6_linewidths(
-        linewidth_mean_inv_r6_by_label,
-        linewidth_vars["p1"],
-        linewidth_vars["p2"],
     )
 
 
