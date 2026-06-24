@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v1.12.1 (2026-06-24)
+
+### Bug Fixes
+
+- **release**: Publish semantic release output to PyPI
+  ([`30fb34e`](https://github.com/Mephistos-ML/paranmr/commit/30fb34ea6a92616a24c3415bafb1a43ac1c6dc4b))
+
+
 ## v1.12.0 (2026-06-24)
 
 ### Features
