@@ -11,6 +11,8 @@ import os
 import subprocess
 from pathlib import Path
 
+import numpy as np
+import pandas as pd
 import pytest
 
 
@@ -80,3 +82,56 @@ def test_fit_susc_with_qc_hfc_split_model_and_hungarian_assignment(tmp_path: Pat
 
     expected_output = cwd / "P3FeCl_VT_Fitting" / "susceptibility_tensor.csv"
     assert expected_output.exists(), f"Expected output file missing: {expected_output}"
+
+
+@pytest.mark.integration
+def test_fit_susc_moments_weighted_ls_smoke(tmp_path: Path):
+    """Run the canonical ``fit_susc`` moments workflow using weighted LS.
+
+    This public happy-path case exercises the assignment-free moments branch
+    with the ``isoaxrho_euler`` susceptibility model and the ``Weighted_LS_Obj``
+    example dataset. It asserts that the workflow completes, writes diagnostics,
+    and produces finite moment outputs with a small weighted score.
+    """
+    cwd = Path("examples/DyL1/SIMULATIONS/Fitting/Moments/Weighted_LS_Obj")
+    cmd = ["paranmr", "--hide", "fit_susc", "DyL1_1H_Fitting_moments_iso_ax_rho.yml"]
+    result = subprocess.run(
+        cmd, capture_output=True, text=True, cwd=cwd, env=_cli_env(tmp_path)
+    )
+
+    if result.returncode != 0 and "missing" in result.stderr.lower():
+        pytest.xfail(f"Test failed due to missing dependency:\n{result.stderr}")
+
+    assert result.returncode == 0, (
+        f"Command failed with return code {result.returncode}\nstdout:\n"
+        f"{result.stdout}\nstderr:\n{result.stderr}"
+    )
+
+    expected_output = (
+        cwd
+        / "DyL1_1H_Fitting_Moments_iso_ax_rho"
+        / "moment_fit_diagnostics_302.15_K.csv"
+    )
+    assert expected_output.exists(), f"Expected output file missing: {expected_output}"
+
+    diagnostics = pd.read_csv(expected_output, comment="#", encoding="utf-8-sig")
+    assert set(diagnostics["quantity"]) == {"observed", "calculated"}
+
+    numeric_cols = [column for column in diagnostics.columns if column != "quantity"]
+    assert np.isfinite(diagnostics[numeric_cols].to_numpy(dtype=float)).all()
+
+    file_text = expected_output.read_text(encoding="utf-8-sig")
+    weighted_score_line = next(
+        line for line in file_text.splitlines() if line.startswith("# weighted_score = ")
+    )
+    weighted_score = float(weighted_score_line.split("=", maxsplit=1)[1].strip())
+    assert weighted_score < 0.2
+
+    susc_output = (
+        cwd / "DyL1_1H_Fitting_Moments_iso_ax_rho" / "susceptibility_tensor.csv"
+    )
+    assert susc_output.exists(), f"Expected output file missing: {susc_output}"
+
+    susc = pd.read_csv(susc_output, comment="#", encoding="utf-8-sig")
+    chi_ax = float(susc["chi_ax (Å^3)"].iloc[0])
+    assert -0.16 <= chi_ax <= -0.15
