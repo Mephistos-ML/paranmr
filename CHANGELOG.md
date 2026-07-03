@@ -2,6 +2,27 @@
 
 <!-- version list -->
 
+## v1.12.3 (2026-07-03)
+
+### Bug Fixes
+
+- **diamagnetic**: Restrict csv inputs and tighten moments/dft validation
+  ([`1997a3c`](https://github.com/Mephistos-ML/paranmr/commit/1997a3c1fb5e681768d61dbedf681ef8748a59d3))
+
+### Chores
+
+- **examples**: Add YbL8 example
+  ([`204c1cb`](https://github.com/Mephistos-ML/paranmr/commit/204c1cb61873101502a6d90324b1b32b21e9596a))
+
+- **examples**: Remove obsolete DyL1 moment-fitting configs
+  ([`e0fbcd8`](https://github.com/Mephistos-ML/paranmr/commit/e0fbcd8b6bacda20fcb41857660b153023f1797c))
+
+### Testing
+
+- **examples**: Add DyL1 diamagnetic dft input files
+  ([`fa7de14`](https://github.com/Mephistos-ML/paranmr/commit/fa7de14c5b5e8d2fe5dd06a3188f69b0ac262154))
+
+
 ## v1.12.2 (2026-06-24)
 
 ### Bug Fixes
