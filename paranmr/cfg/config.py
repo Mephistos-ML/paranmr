@@ -1250,6 +1250,18 @@ class FitSuscConfig(Config):
                 "'signal_labels:file' to map signal labels to atom labels."
             )
 
+        if config.diamagnetic_file and config.diamagnetic_method == "dft":
+            if not config.diamagnetic_ref_file:
+                raise ValueError(
+                    "Invalid diamagnetic configuration: 'diamagnetic:method' set "
+                    "to 'dft' requires 'diamagnetic_ref:file'."
+                )
+            if config.diamagnetic_ref_method != "dft":
+                raise ValueError(
+                    "Invalid diamagnetic configuration: 'diamagnetic:method' set "
+                    "to 'dft' requires 'diamagnetic_ref:method' to also be 'dft'."
+                )
+
         # If an optional VT susceptibility file is provided, require a ab_initio_format.
         if getattr(config, "susc_vt_ab_initio_file", ""):
             if not getattr(config, "susc_vt_ab_initio_format", ""):
@@ -1375,6 +1387,15 @@ class FitSuscConfig(Config):
                 raise ValueError(
                     "assignment:moment_objective is required when "
                     "assignment:method is 'moments'"
+                )
+            if (
+                config.diamagnetic_file
+                and config.diamagnetic_method == "csv"
+            ):
+                raise ValueError(
+                    "diamagnetic:method 'csv' is not supported when "
+                    "assignment:method is 'moments'; use DFT diamagnetic "
+                    "input or disable diamagnetic shifts."
                 )
 
         if (
