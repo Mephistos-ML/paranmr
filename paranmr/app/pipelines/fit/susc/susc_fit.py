@@ -116,15 +116,6 @@ def run_fit_susc(config, options: FitSuscRunOptions | None = None) -> int:
     # Load experiments
     experiments = load_experiments(config.experiment_files)
 
-    # Load diamagnetic shift file
-    if len(config.diamagnetic_file):
-        load_diamagnetic_shifts(
-            file_name=config.diamagnetic_file,
-            file_type=config.diamagnetic_method,
-            ref_file_name=config.diamagnetic_ref_file,
-            ref_file_type=config.diamagnetic_ref_method,
-        )
-
     # Add signal labels for assignment-based workflows before any assignment
     # or shift-fit logic consumes `molecule.nuclei`.
     if config.assignment_method != "moments" and len(config.signal_labels_file):
@@ -141,6 +132,19 @@ def run_fit_susc(config, options: FitSuscRunOptions | None = None) -> int:
         except KeyError as err:
             # treat missing labels/keys as a user input error
             raise ValueError(str(err))
+
+    if len(config.diamagnetic_file):
+        dia_by_key, key_kind, ref_avg_by_label_nn = load_diamagnetic_shifts(
+            file_name=config.diamagnetic_file,
+            file_type=config.diamagnetic_method,
+            ref_file_name=config.diamagnetic_ref_file,
+            ref_file_type=config.diamagnetic_ref_method,
+        )
+        base_molecule.apply_diamagnetic_shifts(
+            dia_by_key=dia_by_key,
+            key_kind=key_kind,
+            ref_avg_by_label_nn=ref_avg_by_label_nn,
+        )
 
     # Rotationally average hyperfines
     if len(config.hyperfine_average):
