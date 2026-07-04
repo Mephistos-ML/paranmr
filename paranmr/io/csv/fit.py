@@ -58,6 +58,39 @@ def save_moment_fit_diagnostics(
     return
 
 
+def save_fit_linewidth_model(
+    diagnostics: MomentFitResult,
+    file_name: str,
+    verbose: bool = True,
+) -> None:
+    """Write fitted linewidth-model parameters for a fit to CSV.
+
+    Args:
+        diagnostics: Fit diagnostics returned by the moments fitter.
+        file_name: Output CSV path.
+        verbose: If ``True``, log the output path.
+
+    Returns:
+        None.
+    """
+
+    out = {
+        "linewidth_method": [diagnostics.linewidth_method],
+        "p1": [diagnostics.linewidth_vars_by_name["p1"]],
+        "p2": [diagnostics.linewidth_vars_by_name["p2"]],
+    }
+    comment = [
+        f"T = {diagnostics.temperature:.2f} K",
+        f"objective = {diagnostics.objective_type}",
+    ]
+    write_csv_safe(pd.DataFrame(data=out), file_name, comment)
+
+    if verbose:
+        logger.info("Fit linewidth model written to %s", file_name)
+
+    return
+
+
 def save_slope_intercept(
     fits,
     spin: float | None = None,

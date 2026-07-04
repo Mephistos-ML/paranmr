@@ -41,6 +41,7 @@ from paranmr.core.pcs.isosurf import compute_pcs_isosurface
 
 # IO layer
 from paranmr.io.csv.mol import save_molecule_to_csv
+from paranmr.io.csv.peaks import save_peak_data_to_csv
 from paranmr.io.csv.susc import save_susc
 from paranmr.io.cube.pcs_iso_write import write_pcs_cube
 from paranmr.io.xyz import xyz_write
@@ -204,10 +205,13 @@ def run_fit_susc(config, options: FitSuscRunOptions | None = None) -> int:
 
     fitted_molecules: list[Molecule] = []
     fitted_susc_models: list[SusceptibilityModel] = []
+    fitted_linewidth_outputs = []
 
     # Run fit for all experiments
     for molecule, susc_model, experiment in zip(molecules, susc_models, experiments):
         model_already_fitted = False
+        fitted_linewidth_by_label: dict[str, float] | None = None
+        fitted_linewidth_method: str | None = None
 
         # If permuting assignments, then first
         # run all assignment permutations to find best one
@@ -224,7 +228,7 @@ def run_fit_susc(config, options: FitSuscRunOptions | None = None) -> int:
             )
 
         elif config.assignment_method == "moments":
-            fit_moment_assignment(
+            moment_fit_result = fit_moment_assignment(
                 model=susc_model,
                 molecule=molecule,
                 experiment=experiment,
@@ -232,6 +236,13 @@ def run_fit_susc(config, options: FitSuscRunOptions | None = None) -> int:
                 assignment_moment_objective=config.assignment_moment_objective,
                 linewidth_variables=config.linewidth_variables,
             )
+            if moment_fit_result is None:
+                fitted_linewidth_by_label = None
+            else:
+                fitted_linewidth_by_label = (
+                    moment_fit_result.calculated_linewidths_by_label
+                )
+                fitted_linewidth_method = moment_fit_result.linewidth_method
             model_already_fitted = True
 
         elif config.assignment_method == "hungarian":
@@ -267,6 +278,27 @@ def run_fit_susc(config, options: FitSuscRunOptions | None = None) -> int:
         # Calculate shifts using new susceptibility tensor
         molecule.calculate_shifts()
         molecule.average_shifts()
+
+        shift_range = [
+            np.min([nuc.shift.avg for nuc in molecule.nuclei]),
+            np.max([nuc.shift.avg for nuc in molecule.nuclei]),
+        ]
+        extras = [0.1 * abs(shift_range[0]), 0.1 * abs(shift_range[1])]
+        shift_range = [
+            shift_range[0] + np.negative(np.max(extras)),
+            shift_range[1] + np.positive(np.max(extras)),
+        ]
+        linewidth_output = resolve_output_linewidths(
+            molecule,
+            shift_range,
+            experiment=experiment,
+            explicit_linewidth_by_label=fitted_linewidth_by_label,
+            explicit_column_name=(
+                None
+                if fitted_linewidth_by_label is None or fitted_linewidth_method is None
+                else f"linewidth_{fitted_linewidth_method}_fit (ppm)"
+            ),
+        )
 
         if not config.assignment_method == "moments":
             with spec.context():
@@ -328,6 +360,7 @@ def run_fit_susc(config, options: FitSuscRunOptions | None = None) -> int:
 
         fitted_molecules.append(molecule)
         fitted_susc_models.append(susc_model)
+        fitted_linewidth_outputs.append(linewidth_output)
 
     # Write shift data to file
     if not fitted_molecules:
@@ -345,7 +378,7 @@ def run_fit_susc(config, options: FitSuscRunOptions | None = None) -> int:
             f"Diamagnetic reference from file {config.diamagnetic_ref_file}\n"
         )
 
-    for molecule in fitted_molecules:
+    for molecule, linewidth_output in zip(fitted_molecules, fitted_linewidth_outputs):
         comment = _comment_base + f"T = {molecule.susc.temperature:.2f} K"
         save_molecule_to_csv(
             molecule=molecule,
@@ -355,6 +388,17 @@ def run_fit_susc(config, options: FitSuscRunOptions | None = None) -> int:
             ),
             delimiter=delimiter,
             comment=comment,
+            verbose=True,
+        )
+        save_peak_data_to_csv(
+            molecule=molecule,
+            file_name=os.path.join(
+                config.project_name,
+                f"peak_data_{molecule.susc.temperature:.2f}_K.csv",
+            ),
+            linewidth_by_label=linewidth_output.values_by_label,
+            linewidth_column_name=linewidth_output.column_name,
+            comment=f"T = {molecule.susc.temperature:.2f} K",
             verbose=True,
         )
 
@@ -407,20 +451,18 @@ def run_fit_susc(config, options: FitSuscRunOptions | None = None) -> int:
 
             logger.info("PCS isosurface written to %s", file_name)
 
-    mol = molecules[-1]
+    mol = fitted_molecules[-1]
+    linewidth_output = fitted_linewidth_outputs[-1]
 
     shift_range = [
         np.min([nuc.shift.avg for nuc in mol.nuclei]),
         np.max([nuc.shift.avg for nuc in mol.nuclei]),
     ]
-
     extras = [0.1 * abs(shift_range[0]), 0.1 * abs(shift_range[1])]
-
     shift_range = [
         shift_range[0] + np.negative(np.max(extras)),
         shift_range[1] + np.positive(np.max(extras)),
     ]
-    linewidth_output = resolve_output_linewidths(mol, shift_range)
 
     if base_molecule.electronic.spin_S is not None:
         temps_fit = np.array([mol.susc.temperature for mol in molecules], dtype=float)

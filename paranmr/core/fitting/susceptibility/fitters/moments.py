@@ -44,6 +44,9 @@ class MomentFitResult:
     objective_type: str
     observed_moments: dict[str, float]
     calculated_moments: dict[str, float]
+    linewidth_method: str
+    linewidth_vars_by_name: dict[str, float]
+    calculated_linewidths_by_label: dict[str, float]
     weighted_score: float
 
 
@@ -180,6 +183,13 @@ def fit_moment_model(
             k: float(v) for k, v in inputs.observed_moments.items()
         },
         calculated_moments={k: float(v) for k, v in calculated_moments.items()},
+        linewidth_method="r6",
+        linewidth_vars_by_name={
+            k: float(v) for k, v in final_linewidth_vars.items()
+        },
+        calculated_linewidths_by_label={
+            k: float(v) for k, v in final_linewidths_by_atom_label.items()
+        },
         weighted_score=weighted_score,
     )
 

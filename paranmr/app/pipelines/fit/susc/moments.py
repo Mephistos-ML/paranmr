@@ -28,7 +28,10 @@ from paranmr.core.fitting.susceptibility.models.base import SusceptibilityModel
 from paranmr.core.fitting.susceptibility.objectives.moments.api import (
     prepare_moment_objective,
 )
-from paranmr.io.csv.fit import save_moment_fit_diagnostics
+from paranmr.io.csv.fit import (
+    save_moment_fit_diagnostics,
+    save_fit_linewidth_model,
+)
 
 def fit_moment_assignment(
     *,
@@ -111,11 +114,24 @@ def fit_moment_assignment(
 
     # Persist fit diagnostics next to the project outputs.
     if moment_fit_result is not None:
+        for nucleus in molecule.nuclei:
+            linewidth = moment_fit_result.calculated_linewidths_by_label.get(
+                nucleus.label
+            )
+            if linewidth is not None:
+                nucleus.shift.lw = float(linewidth)
         save_moment_fit_diagnostics(
             diagnostics=moment_fit_result,
             file_name=os.path.join(
                 project_name,
                 f"moment_fit_diagnostics_{experiment.temperature:.2f}_K.csv",
+            ),
+        )
+        save_fit_linewidth_model(
+            diagnostics=moment_fit_result,
+            file_name=os.path.join(
+                project_name,
+                f"linewidth_model_{experiment.temperature:.2f}_K.csv",
             ),
         )
     return moment_fit_result
