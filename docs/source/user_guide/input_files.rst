@@ -490,6 +490,10 @@ Used in susceptibility fitting workflows.
         method: experimental # Use experimental peak-table linewidths
                 r6 # Use r^-6 calculated linewidths
 
+        # Optional fixed-assignment linewidth calibration [Optional]
+        estimate: p1_p2 # Fit global p1 and p2 from experimental widths
+                           # and mean(1/r^6); only supported for fixed assignment
+
         # Required for method: r6
         variables:
           p1: [fit, 1.0, [0.0, .inf]]
@@ -503,6 +507,12 @@ Used in susceptibility fitting workflows.
     calculated signal package. The ``p1`` and ``p2`` variables may use either
     ``fix`` mode with a non-negative value or ``fit`` mode with a non-negative
     initial guess and explicit bounds.
+
+``estimate: p1_p2``
+    Fits a global ``p1`` and ``p2`` linewidth model against the experimental
+    peak-table widths after conversion from Hz to ppm. The parameter estimate is
+    written to ``linewidth_estimate_<TEMPERATURE>_K.csv`` and is currently
+    supported only for fixed-assignment susceptibility fits.
 
 Magnetic Susceptibility Fitting
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

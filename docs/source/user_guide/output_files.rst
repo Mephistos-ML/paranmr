@@ -45,3 +45,10 @@ For susceptibility fitting workflows (``fit_susc``), the names of all generated 
    Fitted magnetic susceptibility tensors.
 
    Contains susceptibility tensors as a function of temperature, standard deviations of fitted parameters, goodness-of-fit metrics (:math:`r^2`, :math:`r^2_\mathrm{adj}`, MAE), eigenvalues of the susceptibility tensor, and an eigenvector representation using Euler angles.
+
+8. ``linewidth_estimate_<TEMPERATURE>_K.csv``  
+   Estimated ``r^-6`` linewidth-model parameters for a fixed-assignment fit.
+
+   Generated only when ``linewidth: estimate: p1_p2`` is enabled. Reports
+   the fitted global ``p1`` and ``p2`` coefficients together with the
+   estimation RMSE in ppm.
