@@ -12,6 +12,7 @@ import logging
 import numpy as np
 import pandas as pd
 
+from paranmr.core.fitting.linewidth import R6LinewidthParameterEstimate
 from paranmr.core.fitting.susceptibility.fitters.moments import MomentFitResult
 from paranmr.io.csv.csv_util import read_csv_safe, write_csv_safe
 
@@ -87,6 +88,44 @@ def save_fit_linewidth_model(
 
     if verbose:
         logger.info("Fit linewidth model written to %s", file_name)
+
+    return
+
+
+def save_linewidth_parameter_estimate(
+    estimate: R6LinewidthParameterEstimate,
+    file_name: str,
+    *,
+    temperature: float,
+    verbose: bool = True,
+) -> None:
+    """Write estimated linewidth-model parameters for fixed-assignment fits.
+
+    Args:
+        estimate: Structured linewidth parameter estimate.
+        file_name: Output CSV path.
+        temperature: Experiment temperature in Kelvin.
+        verbose: If ``True``, log the output path.
+
+    Returns:
+        None.
+    """
+
+    out = {
+        "linewidth_method": [estimate.linewidth_method],
+        "estimate_mode": [estimate.estimate_mode],
+        "p1": [estimate.p1],
+        "p2": [estimate.p2],
+        "rmse (ppm)": [estimate.rmse],
+    }
+    comment = [
+        f"T = {temperature:.2f} K",
+        "Experimental linewidths were converted to ppm before parameter estimation.",
+    ]
+    write_csv_safe(pd.DataFrame(data=out), file_name, comment)
+
+    if verbose:
+        logger.info("Linewidth parameter estimate written to %s", file_name)
 
     return
 

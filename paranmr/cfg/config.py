@@ -168,6 +168,7 @@ class FitSuscConfig(Config):
         "linewidth": [
             "method",
             "variables",
+            "estimate",
         ],
         "nuclei": ["include", "include_groups"],
         "susc_fit": [
@@ -226,6 +227,7 @@ class FitSuscConfig(Config):
         self._assignment_moment_objective = {}
         self._linewidth_method = "experimental"
         self._linewidth_variables = None
+        self._linewidth_estimate = ""
         self._nuclei_include = ""
         self._nuclei_include_groups = []
         self._susc_fit_type = ""
@@ -855,6 +857,28 @@ class FitSuscConfig(Config):
         return
 
     @property
+    def linewidth_estimate(self) -> str:
+        return self._linewidth_estimate
+
+    @linewidth_estimate.setter
+    def linewidth_estimate(self, value: str | None):
+        if value is None or value == "":
+            self._linewidth_estimate = ""
+            return
+        if not isinstance(value, str):
+            raise ValueError("linewidth:estimate must be a string")
+
+        mode = value.strip().lower()
+        if mode != "p1_p2":
+            raise ValueError(
+                "Invalid linewidth:estimate '"
+                + str(value)
+                + "'. Allowed value is: 'p1_p2'."
+            )
+        self._linewidth_estimate = mode
+        return
+
+    @property
     def nuclei_include(self) -> list | str:
         return self._nuclei_include
 
@@ -1417,6 +1441,18 @@ class FitSuscConfig(Config):
             if config.linewidth_variables is None:
                 raise ValueError(
                     "linewidth:variables is required when linewidth:method is 'r6'"
+                )
+
+        if config.linewidth_estimate:
+            if config.assignment_method not in {"", "fixed"}:
+                raise ValueError(
+                    "linewidth:estimate is only supported for fixed-assignment "
+                    "susceptibility fits"
+                )
+            if config.linewidth_estimate != "p1_p2":
+                raise ValueError(
+                    "Unsupported linewidth:estimate mode "
+                    f"{config.linewidth_estimate!r}"
                 )
 
         return config

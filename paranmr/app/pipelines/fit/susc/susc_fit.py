@@ -22,6 +22,9 @@ from paranmr.app.params.options import FitSuscRunOptions
 from paranmr.app.pipelines.fit.vt_fit import fit_vt
 from paranmr.app.pipelines.fit.susc.fixed import fit_assigned_shifts
 from paranmr.app.pipelines.fit.susc.hungarian import fit_hungarian_assignment
+from paranmr.app.pipelines.fit.susc.lw_estimation import (
+    run_fixed_assignment_linewidth_estimation,
+)
 from paranmr.app.pipelines.fit.susc.moments import fit_moment_assignment
 from paranmr.app.pipelines.fit.susc.permute import fit_permuted_assignments
 from paranmr.app.policies.hfc import has_missing_selected_signal_labels
@@ -41,6 +44,7 @@ from paranmr.core.pcs.isosurf import compute_pcs_isosurface
 
 # IO layer
 from paranmr.io.csv.mol import save_molecule_to_csv
+from paranmr.io.csv.spec import read_spectrum
 from paranmr.io.csv.peaks import save_peak_data_to_csv
 from paranmr.io.csv.susc import save_susc
 from paranmr.io.cube.pcs_iso_write import write_pcs_cube
@@ -49,7 +53,7 @@ from paranmr.viz.plots.fitted_shifts import plot_fitted_shifts
 
 # Visualisation
 from paranmr.viz.plots.shifts import plot_shift_contrib, plot_shift_spread
-from paranmr.viz.plots.spect import plot_pred_spectrum
+from paranmr.viz.plots.spect import plot_pred_spectrum, plot_raw_deconv_pred
 from paranmr.viz.style.theme import apply_profile
 
 logger = logging.getLogger(__name__)
@@ -116,6 +120,12 @@ def run_fit_susc(config, options: FitSuscRunOptions | None = None) -> int:
 
     # Load experiments
     experiments = load_experiments(config.experiment_files)
+
+    if len(config.experiment_spectrum_files):
+        for experiment, spectrum in zip(experiments, config.experiment_spectrum_files):
+            spectrum_array = read_spectrum(spectrum)
+            experiment.exp_reference = config.experiment_exp_reference
+            experiment.spectrum = spectrum_array
 
     # Add signal labels for assignment-based workflows before any assignment
     # or shift-fit logic consumes `molecule.nuclei`.
@@ -259,6 +269,16 @@ def run_fit_susc(config, options: FitSuscRunOptions | None = None) -> int:
                 delimiter=delimiter,
             )
 
+        if (
+            config.linewidth_estimate == "p1_p2"
+            and config.assignment_method in {"", "fixed"}
+        ):
+            run_fixed_assignment_linewidth_estimation(
+                molecule=molecule,
+                experiment=experiment,
+                project_name=config.project_name,
+            )
+
         # Fit susceptibility model to experimental chemical shifts.
         if not model_already_fitted:
             fit_assigned_shifts(
@@ -299,6 +319,36 @@ def run_fit_susc(config, options: FitSuscRunOptions | None = None) -> int:
                 else f"linewidth_{fitted_linewidth_method}_fit (ppm)"
             ),
         )
+
+        with spec.context():
+            plot_pred_spectrum(
+                molecule,
+                isotope=molecule.nuclei[0].isotope,
+                shift_range=shift_range,
+                spec=spec,
+                effective_linewidths_by_label=linewidth_output.values_by_label,
+                save=True,
+                show=options.runtime.show_plots,
+                save_name=os.path.join(
+                    config.project_name,
+                    f"pred_spectrum_{molecule.susc.temperature:.2f}_K",
+                ),
+            )
+                        
+            plot_raw_deconv_pred(
+                molecule=molecule,
+                isotope=molecule.nuclei[0].isotope,
+                shift_range=shift_range,
+                experiment=experiment,
+                spec=spec,
+                effective_linewidths_by_label=linewidth_output.values_by_label,
+                save=True,
+                show=options.runtime.show_plots,
+                save_name=os.path.join(
+                    config.project_name,
+                    f"pred_and_exp_spectrum_{molecule.susc.temperature:.2f}_K",
+                ),
+            )
 
         if not config.assignment_method == "moments":
             with spec.context():
@@ -451,19 +501,6 @@ def run_fit_susc(config, options: FitSuscRunOptions | None = None) -> int:
 
             logger.info("PCS isosurface written to %s", file_name)
 
-    mol = fitted_molecules[-1]
-    linewidth_output = fitted_linewidth_outputs[-1]
-
-    shift_range = [
-        np.min([nuc.shift.avg for nuc in mol.nuclei]),
-        np.max([nuc.shift.avg for nuc in mol.nuclei]),
-    ]
-    extras = [0.1 * abs(shift_range[0]), 0.1 * abs(shift_range[1])]
-    shift_range = [
-        shift_range[0] + np.negative(np.max(extras)),
-        shift_range[1] + np.positive(np.max(extras)),
-    ]
-
     if base_molecule.electronic.spin_S is not None:
         temps_fit = np.array([mol.susc.temperature for mol in molecules], dtype=float)
         if temps_fit.size > 1:
@@ -475,21 +512,6 @@ def run_fit_susc(config, options: FitSuscRunOptions | None = None) -> int:
                 plot_profile=options.runtime.plot_profile,
                 show_plots=options.runtime.show_plots,
             )
-
-    with spec.context():
-        plot_pred_spectrum(
-            mol,
-            isotope=mol.nuclei[0].isotope,
-            shift_range=shift_range,
-            spec=spec,
-            effective_linewidths_by_label=linewidth_output.values_by_label,
-            save=True,
-            show=options.runtime.show_plots,
-            save_name=os.path.join(
-                config.project_name,
-                f"pred_spectrum_{molecule.susc.temperature:.2f}_K",
-            ),
-        )
 
     # Save xyz file with signal labels for chemcraft
     if len(config.signal_labels_file):
