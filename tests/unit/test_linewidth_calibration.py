@@ -99,3 +99,46 @@ def test_fit_susc_config_rejects_linewidth_estimate_for_moments(tmp_path):
 
     with pytest.raises(ValueError, match="linewidth:estimate"):
         FitSuscConfig.from_file(config_file)
+
+
+@pytest.mark.unit
+def test_fit_susc_config_rejects_unknown_moment_weight_name(tmp_path):
+    config_file = tmp_path / "fit.yml"
+    config_file.write_text(
+        "\n".join(
+            [
+                "project:",
+                "  name: test",
+                "hyperfine:",
+                "  method: pdip",
+                "  file: hf.xyz",
+                "  paramagnetic_centre: [0.0, 0.0, 0.0]",
+                "experiment:",
+                "  files: exp.csv",
+                "nuclei:",
+                "  include: H",
+                "diamagnetic:",
+                "  method: dft",
+                "  file: dia.out",
+                "diamagnetic_ref:",
+                "  method: dft",
+                "  file: ref.out",
+                "susc_fit:",
+                "  type: isoaxrho",
+                "  variables:",
+                "    iso: [fit, 0.0]",
+                "assignment:",
+                "  method: moments",
+                "  moment_objective:",
+                "    type: weighted_ls",
+                "    weights:",
+                "      m7: 1.0",
+                "linewidth:",
+                "  method: experimental",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="unknown moment"):
+        FitSuscConfig.from_file(config_file)

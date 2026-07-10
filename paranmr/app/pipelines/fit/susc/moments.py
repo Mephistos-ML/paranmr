@@ -19,7 +19,7 @@ from paranmr.core.fitting.susceptibility.fitters.moments import (
     fit_moment_model,
 )
 from paranmr.core.fitting.susceptibility.moments.descriptors import (
-    gaussian_mixture_moments,
+    compute_gaussian_mixture_moments,
 )
 from paranmr.core.fitting.susceptibility.moments.gaussian import (
     gaussian_peak_representation,
@@ -156,7 +156,7 @@ def _experimental_moments_from_experiment(
         fwhm=widths_ppm[sort_idx],
         areas=areas[sort_idx],
     )
-    return gaussian_mixture_moments(
+    return compute_gaussian_mixture_moments(
         centers=observed_peaks["center"],
         sigmas=observed_peaks["sigma"],
         area_norm=observed_peaks["area_norm"],

@@ -52,3 +52,17 @@ For susceptibility fitting workflows (``fit_susc``), the names of all generated 
    Generated only when ``linewidth: estimate: p1_p2`` is enabled. Reports
    the fitted global ``p1`` and ``p2`` coefficients together with the
    estimation RMSE in ppm.
+
+9. ``moment_fit_diagnostics_<TEMPERATURE>_K.csv``  
+   Normalized moment descriptors for moment-based susceptibility fitting.
+
+   Generated for ``assignment: method: moments``. Reports the observed and
+   calculated normalized descriptor vectors as ``m1_norm`` to ``m6_norm``,
+   together with the objective type and weighted score.
+
+10. ``linewidth_model_<TEMPERATURE>_K.csv``  
+    Fitted ``r^-6`` linewidth-model parameters used in a moment-based fit.
+
+    Generated for ``assignment: method: moments`` when the ``r6`` linewidth
+    model is active. Reports the final fitted ``p1`` and ``p2`` values used to
+    generate the calculated spectrum.

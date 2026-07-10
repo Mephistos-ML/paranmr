@@ -171,6 +171,12 @@ def fit_moment_model(
     )
 
     # Package the final comparison between experimental and calculated moments.
+    normalized_observed_moments, normalized_calculated_moments = (
+        normalize_gaussian_mixture_moment_vectors(
+            observed=inputs.observed_moments,
+            calculated=calculated_moments,
+        )
+    )
     weighted_score = _weighted_moment_score(
         observed_moments=inputs.observed_moments,
         calculated_moments=calculated_moments,
@@ -180,9 +186,13 @@ def fit_moment_model(
         temperature=float(inputs.temperature),
         objective_type=str(inputs.moment_objective_state["type"]),
         observed_moments={
-            k: float(v) for k, v in inputs.observed_moments.items()
+            f"{k}_norm": float(v)
+            for k, v in normalized_observed_moments.items()
         },
-        calculated_moments={k: float(v) for k, v in calculated_moments.items()},
+        calculated_moments={
+            f"{k}_norm": float(v)
+            for k, v in normalized_calculated_moments.items()
+        },
         linewidth_method="r6",
         linewidth_vars_by_name={
             k: float(v) for k, v in final_linewidth_vars.items()

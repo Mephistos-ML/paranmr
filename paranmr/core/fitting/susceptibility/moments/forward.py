@@ -12,7 +12,7 @@ from numpy.typing import NDArray
 
 from paranmr.core.domain.mol import Nucleus
 from paranmr.core.fitting.susceptibility.moments.descriptors import (
-    gaussian_mixture_moments,
+    compute_gaussian_mixture_moments,
 )
 from paranmr.core.fitting.susceptibility.moments.gaussian import (
     gaussian_peak_representation,
@@ -127,7 +127,7 @@ def calculated_moments_from_parameters(
         fwhm=calculated_widths_ppm,
         areas=np.ones(len(sorted_packages), dtype=float),
     )
-    return gaussian_mixture_moments(
+    return compute_gaussian_mixture_moments(
         centers=calculated_peaks["center"],
         sigmas=calculated_peaks["sigma"],
         area_norm=calculated_peaks["area_norm"],

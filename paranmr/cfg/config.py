@@ -20,6 +20,7 @@ import yaml_include
 
 from paranmr.cfg.benchmarks import AfcBenchmarkConfig as AfcBenchmarkConfig
 from paranmr.cfg.benchmarks import AsdBenchmarkConfig as AsdBenchmarkConfig
+from paranmr.core.fitting.susceptibility.moments.descriptors import MOMENT_NAMES
 
 logger = logging.getLogger(__name__)
 
@@ -731,6 +732,12 @@ class FitSuscConfig(Config):
             weights = {}
         if not isinstance(weights, dict):
             raise ValueError("assignment:moment_objective:weights must be a mapping")
+        unknown_weight_names = set(weights) - set(MOMENT_NAMES)
+        if unknown_weight_names:
+            raise ValueError(
+                "assignment:moment_objective:weights contains unknown moment(s): "
+                + ", ".join(sorted(unknown_weight_names))
+            )
         self._assignment_moment_objective = {
             "type": objective_type,
             "weights": {
