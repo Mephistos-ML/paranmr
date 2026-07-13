@@ -395,14 +395,14 @@ Used in susceptibility fitting workflows that require assignment handling.
 
         # Moment objective [Required for moments only]
         moment_objective:
-          type: weighted_ls
-          weights:           # Required for type: weighted_ls
-            mean: 1.0
-            std: 5.0
-            skewness: 0.5
-            kurtosis: 0.25
-            standardized_5: 0.1
-            standardized_6: 0.0
+          type: ls
+          weights:           # Required for type: ls
+            m1: 1.0
+            m2: 5.0
+            m3: 0.5
+            m4: 0.25
+            m5: 0.1
+            m6: 0.0
 
 The supported strategies are:
 
@@ -452,7 +452,13 @@ Moment-based fitting is selected with ``assignment:method: moments``. The
 
 The moment objective controls how the normalized moment residual vector is
 transformed before least-squares optimization. The supported objective is
-``weighted_ls``, which uses user-provided per-moment weights.
+``ls``, which uses user-provided per-moment weights. Here ``m1`` and
+``m2`` correspond to the spectral mean and second central moment, while ``m3``
+to ``m6`` correspond to the third to sixth central moments. The current
+normalization is component-wise, i.e. each calculated descriptor is divided by
+the corresponding observed descriptor value. This ratio-based normalization
+fails explicitly if any observed descriptor is zero or numerically too close to
+zero.
 
 .. _Hungarian algorithm: https://en.wikipedia.org/wiki/Hungarian_algorithm
 
@@ -490,6 +496,10 @@ Used in susceptibility fitting workflows.
         method: experimental # Use experimental peak-table linewidths
                 r6 # Use r^-6 calculated linewidths
 
+        # Optional fixed-assignment linewidth calibration [Optional]
+        estimate: p1_p2 # Fit global p1 and p2 from experimental widths
+                           # and mean(1/r^6); only supported for fixed assignment
+
         # Required for method: r6
         variables:
           p1: [fit, 1.0, [0.0, .inf]]
@@ -503,6 +513,12 @@ Used in susceptibility fitting workflows.
     calculated signal package. The ``p1`` and ``p2`` variables may use either
     ``fix`` mode with a non-negative value or ``fit`` mode with a non-negative
     initial guess and explicit bounds.
+
+``estimate: p1_p2``
+    Fits a global ``p1`` and ``p2`` linewidth model against the experimental
+    peak-table widths after conversion from Hz to ppm. The parameter estimate is
+    written to ``linewidth_estimate_<TEMPERATURE>_K.csv`` and is currently
+    supported only for fixed-assignment susceptibility fits.
 
 Magnetic Susceptibility Fitting
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

@@ -30,6 +30,7 @@ assignment:
 
 linewidth:
   method: experimental
+  # calibration: p1_p2
   # variables:
   #   p1: [fit, <initial value>, [<lower>, <upper>]]
   #   p2: [fix, <value>]

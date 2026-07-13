@@ -45,3 +45,28 @@ For susceptibility fitting workflows (``fit_susc``), the names of all generated 
    Fitted magnetic susceptibility tensors.
 
    Contains susceptibility tensors as a function of temperature, standard deviations of fitted parameters, goodness-of-fit metrics (:math:`r^2`, :math:`r^2_\mathrm{adj}`, MAE), eigenvalues of the susceptibility tensor, and an eigenvector representation using Euler angles.
+
+8. ``linewidth_estimate_<TEMPERATURE>_K.csv``  
+   Estimated ``r^-6`` linewidth-model parameters for a fixed-assignment fit.
+
+   Generated only when ``linewidth: estimate: p1_p2`` is enabled. Reports
+   the fitted global ``p1`` and ``p2`` coefficients together with the
+   estimation RMSE in ppm.
+
+9. ``moment_fit_diagnostics_<TEMPERATURE>_K.csv``  
+   Normalized moment descriptors for moment-based susceptibility fitting.
+
+   Generated for ``assignment: method: moments``. Reports the observed and
+   calculated normalized descriptor vectors as ``m1_norm`` to ``m6_norm``,
+   together with the objective type and weighted score. In the current
+   definition, ``m1`` is the spectral mean and ``m2`` to ``m6`` are the second
+   to sixth central moments. The normalized observed vector is therefore unity
+   by definition, while the calculated normalized vector reports the
+   component-wise ratios relative to the observed descriptor values.
+
+10. ``linewidth_model_<TEMPERATURE>_K.csv``  
+    Fitted ``r^-6`` linewidth-model parameters used in a moment-based fit.
+
+    Generated for ``assignment: method: moments`` when the ``r6`` linewidth
+    model is active. Reports the final fitted ``p1`` and ``p2`` values used to
+    generate the calculated spectrum.

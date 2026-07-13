@@ -5,6 +5,7 @@
 
 from __future__ import annotations
 
+import logging
 import os
 
 import numpy as np
@@ -19,7 +20,7 @@ from paranmr.core.fitting.susceptibility.fitters.moments import (
     fit_moment_model,
 )
 from paranmr.core.fitting.susceptibility.moments.descriptors import (
-    gaussian_mixture_moments,
+    compute_gaussian_mixture_moments,
 )
 from paranmr.core.fitting.susceptibility.moments.gaussian import (
     gaussian_peak_representation,
@@ -28,7 +29,13 @@ from paranmr.core.fitting.susceptibility.models.base import SusceptibilityModel
 from paranmr.core.fitting.susceptibility.objectives.moments.api import (
     prepare_moment_objective,
 )
-from paranmr.io.csv.fit import save_moment_fit_diagnostics
+from paranmr.io.csv.fit import (
+    save_moment_fit_diagnostics,
+    save_fit_linewidth_model,
+)
+
+logger = logging.getLogger(__name__)
+
 
 def fit_moment_assignment(
     *,
@@ -61,8 +68,16 @@ def fit_moment_assignment(
         widths_ppm=observed_widths_ppm,
     )
 
-    # Prepare the residual transform and weighting scheme for the objective.
-    moment_objective_state = prepare_moment_objective(
+    # Build the configured moment objective before assembling optimizer inputs.
+    objective_type = str(
+        (assignment_moment_objective or {}).get("type", "ls")
+    ).lower()
+    if objective_type == "gmm":
+        logger.error(
+            "Moment objective 'gmm' is not implemented yet. "
+            "Use assignment:moment_objective:type 'ls' instead."
+        )
+    moment_objective = prepare_moment_objective(
         observed_moments=experimental_moments,
         objective_config=assignment_moment_objective,
     )
@@ -96,7 +111,7 @@ def fit_moment_assignment(
         nuclei=tuple(molecule.nuclei),
         temperature=float(experiment.temperature),
         observed_moments=experimental_moments,
-        moment_objective_state=moment_objective_state,
+        moment_objective=moment_objective,
         linewidth_inputs=linewidth_inputs,
         linewidth_fit_names=linewidth_fit_names,
         linewidth_fix_vars=linewidth_fix_vars,
@@ -111,11 +126,24 @@ def fit_moment_assignment(
 
     # Persist fit diagnostics next to the project outputs.
     if moment_fit_result is not None:
+        for nucleus in molecule.nuclei:
+            linewidth = moment_fit_result.calculated_linewidths_by_label.get(
+                nucleus.label
+            )
+            if linewidth is not None:
+                nucleus.shift.lw = float(linewidth)
         save_moment_fit_diagnostics(
             diagnostics=moment_fit_result,
             file_name=os.path.join(
                 project_name,
                 f"moment_fit_diagnostics_{experiment.temperature:.2f}_K.csv",
+            ),
+        )
+        save_fit_linewidth_model(
+            diagnostics=moment_fit_result,
+            file_name=os.path.join(
+                project_name,
+                f"linewidth_model_{experiment.temperature:.2f}_K.csv",
             ),
         )
     return moment_fit_result
@@ -140,7 +168,7 @@ def _experimental_moments_from_experiment(
         fwhm=widths_ppm[sort_idx],
         areas=areas[sort_idx],
     )
-    return gaussian_mixture_moments(
+    return compute_gaussian_mixture_moments(
         centers=observed_peaks["center"],
         sigmas=observed_peaks["sigma"],
         area_norm=observed_peaks["area_norm"],

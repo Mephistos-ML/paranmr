@@ -27,9 +27,7 @@ from paranmr.core.fitting.susceptibility.linewidths import (
 )
 from paranmr.core.fitting.susceptibility.models.base import SusceptibilityModel
 from paranmr.core.fitting.susceptibility.objectives.moments.api import (
-    active_moment_objective_mask,
-    apply_moment_objective,
-    count_active_moment_objective_residuals,
+    MomentObjective,
 )
 from paranmr.core.fitting.susceptibility.stats import svd_stdev
 
@@ -44,6 +42,9 @@ class MomentFitResult:
     objective_type: str
     observed_moments: dict[str, float]
     calculated_moments: dict[str, float]
+    linewidth_method: str
+    linewidth_vars_by_name: dict[str, float]
+    calculated_linewidths_by_label: dict[str, float]
     weighted_score: float
 
 
@@ -55,7 +56,7 @@ class MomentFitInputs:
     nuclei: tuple[Nucleus, ...]
     temperature: float
     observed_moments: dict[str, float]
-    moment_objective_state: dict
+    moment_objective: MomentObjective
     linewidth_inputs: SusceptibilityLinewidthInputs
     linewidth_fit_names: tuple[str, ...]
     linewidth_fix_vars: dict[str, float]
@@ -71,7 +72,7 @@ def fit_moment_model(
 ) -> MomentFitResult | None:
     """Optimize a susceptibility model against moment constraints."""
 
-    # Solve the constrained least-squares problem over susceptibility and linewidth variables.
+    # Solve over susceptibility and linewidth variables.
     curr_fit = least_squares(
         fun=_moment_residual_from_float_list,
         args=(inputs,),
@@ -108,14 +109,12 @@ def fit_moment_model(
         return None
 
     # Estimate parameter uncertainty only when there are enough active residuals.
-    effective_residual_count = count_active_moment_objective_residuals(
-        inputs.moment_objective_state
-    )
+    active_mask = inputs.moment_objective.active_mask
+    effective_residual_count = int(np.sum(active_mask))
     if effective_residual_count <= curr_fit.x.size:
         model.fit_stdev = {label: np.nan for label in inputs.fit_var_names}
     else:
         # Build the active Jacobian subset for SVD-based uncertainty estimation.
-        active_mask = active_moment_objective_mask(inputs.moment_objective_state)
         active_fit = OptimizeResult(
             fun=np.asarray(curr_fit.fun, dtype=float)[active_mask],
             jac=np.asarray(curr_fit.jac, dtype=float)[active_mask, :],
@@ -168,18 +167,35 @@ def fit_moment_model(
     )
 
     # Package the final comparison between experimental and calculated moments.
+    normalized_observed_moments, normalized_calculated_moments = (
+        normalize_gaussian_mixture_moment_vectors(
+            observed=inputs.observed_moments,
+            calculated=calculated_moments,
+        )
+    )
     weighted_score = _weighted_moment_score(
         observed_moments=inputs.observed_moments,
         calculated_moments=calculated_moments,
-        moment_objective_state=inputs.moment_objective_state,
+        moment_objective=inputs.moment_objective,
     )
     return MomentFitResult(
         temperature=float(inputs.temperature),
-        objective_type=str(inputs.moment_objective_state["type"]),
+        objective_type=inputs.moment_objective.objective_type,
         observed_moments={
-            k: float(v) for k, v in inputs.observed_moments.items()
+            f"{k}_norm": float(v)
+            for k, v in normalized_observed_moments.items()
         },
-        calculated_moments={k: float(v) for k, v in calculated_moments.items()},
+        calculated_moments={
+            f"{k}_norm": float(v)
+            for k, v in normalized_calculated_moments.items()
+        },
+        linewidth_method="r6",
+        linewidth_vars_by_name={
+            k: float(v) for k, v in final_linewidth_vars.items()
+        },
+        calculated_linewidths_by_label={
+            k: float(v) for k, v in final_linewidths_by_atom_label.items()
+        },
         weighted_score=weighted_score,
     )
 
@@ -218,8 +234,8 @@ def _moment_residual_from_float_list(
         _weighted_moment_residuals(
             observed_moments=inputs.observed_moments,
             calculated_moments=calculated_moments,
-            moment_objective_state=inputs.moment_objective_state,
-        ).values()
+            moment_objective=inputs.moment_objective,
+        )
     )
 
 
@@ -227,32 +243,21 @@ def _weighted_moment_residuals(
     *,
     observed_moments: dict[str, float],
     calculated_moments: dict[str, float],
-    moment_objective_state: dict,
-) -> dict[str, float]:
-    objective_observed_moments, objective_calculated_moments = (
-        normalize_gaussian_mixture_moment_vectors(
-            observed=observed_moments,
-            calculated=calculated_moments,
-        )
+    moment_objective: MomentObjective,
+) -> NDArray[np.float64]:
+    return moment_objective.residuals(
+        observed_moments=observed_moments,
+        calculated_moments=calculated_moments,
     )
-    residuals = {
-        moment_name: objective_calculated_moments[moment_name]
-        - objective_observed_moments[moment_name]
-        for moment_name in objective_observed_moments.keys()
-    }
-    return apply_moment_objective(residuals, moment_objective_state)
 
 
 def _weighted_moment_score(
     *,
     observed_moments: dict[str, float],
     calculated_moments: dict[str, float],
-    moment_objective_state: dict,
+    moment_objective: MomentObjective,
 ) -> float:
-    weighted_residuals = _weighted_moment_residuals(
+    return moment_objective.score(
         observed_moments=observed_moments,
         calculated_moments=calculated_moments,
-        moment_objective_state=moment_objective_state,
     )
-    weighted_values = np.asarray(list(weighted_residuals.values()), dtype=float)
-    return float(np.sqrt(np.sum(weighted_values**2)))

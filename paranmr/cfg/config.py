@@ -20,6 +20,7 @@ import yaml_include
 
 from paranmr.cfg.benchmarks import AfcBenchmarkConfig as AfcBenchmarkConfig
 from paranmr.cfg.benchmarks import AsdBenchmarkConfig as AsdBenchmarkConfig
+from paranmr.core.fitting.susceptibility.moments.descriptors import MOMENT_NAMES
 
 logger = logging.getLogger(__name__)
 
@@ -168,6 +169,7 @@ class FitSuscConfig(Config):
         "linewidth": [
             "method",
             "variables",
+            "estimate",
         ],
         "nuclei": ["include", "include_groups"],
         "susc_fit": [
@@ -226,6 +228,7 @@ class FitSuscConfig(Config):
         self._assignment_moment_objective = {}
         self._linewidth_method = "experimental"
         self._linewidth_variables = None
+        self._linewidth_estimate = ""
         self._nuclei_include = ""
         self._nuclei_include_groups = []
         self._susc_fit_type = ""
@@ -710,8 +713,8 @@ class FitSuscConfig(Config):
         if not isinstance(value, dict):
             raise ValueError("assignment:moment_objective must be a mapping")
 
-        objective_type = str(value.get("type", "weighted_ls")).strip().lower()
-        allowed = {"weighted_ls"}
+        objective_type = str(value.get("type", "ls")).strip().lower()
+        allowed = {"gmm", "ls"}
         if objective_type not in allowed:
             raise ValueError(
                 "assignment:moment_objective:type must be one of "
@@ -729,6 +732,12 @@ class FitSuscConfig(Config):
             weights = {}
         if not isinstance(weights, dict):
             raise ValueError("assignment:moment_objective:weights must be a mapping")
+        unknown_weight_names = set(weights) - set(MOMENT_NAMES)
+        if unknown_weight_names:
+            raise ValueError(
+                "assignment:moment_objective:weights contains unknown moment(s): "
+                + ", ".join(sorted(unknown_weight_names))
+            )
         self._assignment_moment_objective = {
             "type": objective_type,
             "weights": {
@@ -852,6 +861,28 @@ class FitSuscConfig(Config):
                 )
             variables[name] = ["fit", numeric_value, [lower, upper]]
         self._linewidth_variables = variables
+        return
+
+    @property
+    def linewidth_estimate(self) -> str:
+        return self._linewidth_estimate
+
+    @linewidth_estimate.setter
+    def linewidth_estimate(self, value: str | None):
+        if value is None or value == "":
+            self._linewidth_estimate = ""
+            return
+        if not isinstance(value, str):
+            raise ValueError("linewidth:estimate must be a string")
+
+        mode = value.strip().lower()
+        if mode != "p1_p2":
+            raise ValueError(
+                "Invalid linewidth:estimate '"
+                + str(value)
+                + "'. Allowed value is: 'p1_p2'."
+            )
+        self._linewidth_estimate = mode
         return
 
     @property
@@ -1417,6 +1448,18 @@ class FitSuscConfig(Config):
             if config.linewidth_variables is None:
                 raise ValueError(
                     "linewidth:variables is required when linewidth:method is 'r6'"
+                )
+
+        if config.linewidth_estimate:
+            if config.assignment_method not in {"", "fixed"}:
+                raise ValueError(
+                    "linewidth:estimate is only supported for fixed-assignment "
+                    "susceptibility fits"
+                )
+            if config.linewidth_estimate != "p1_p2":
+                raise ValueError(
+                    "Unsupported linewidth:estimate mode "
+                    f"{config.linewidth_estimate!r}"
                 )
 
         return config
