@@ -2,6 +2,38 @@
 
 <!-- version list -->
 
+## v1.13.0 (2026-07-13)
+
+### Documentation
+
+- **config**: Update linewidth estimate examples
+  ([`6ac7e24`](https://github.com/Mephistos-ML/paranmr/commit/6ac7e240d30e0ef109be2f7eb16f0358d80b1fda))
+
+- **user-guide**: Update moments fitting output docs
+  ([`9b5161c`](https://github.com/Mephistos-ML/paranmr/commit/9b5161c61d8a675219ea092940fd5f82c0bae900))
+
+### Features
+
+- **app**: Add unified linewidth outputs for fit pipelines
+  ([`fd64028`](https://github.com/Mephistos-ML/paranmr/commit/fd64028d1158d9bae1335e0badb23143138f1f90))
+
+- **fit**: Add linewidth estimation and spectrum overlays
+  ([`93f8df8`](https://github.com/Mephistos-ML/paranmr/commit/93f8df8c0760b0ee6395b977e4440279408c3b85))
+
+### Refactoring
+
+- **core**: Revise moment descriptor normalization
+  ([`f53c5cc`](https://github.com/Mephistos-ML/paranmr/commit/f53c5cc53b99df68f2eb96d33fa42dd2316dfbd3))
+
+- **moments**: Unify normalization and descriptor handling
+  ([`6e5b5aa`](https://github.com/Mephistos-ML/paranmr/commit/6e5b5aaf207ec47d8b558eaae564fbe55cd6f152))
+
+### Testing
+
+- **app**: Cover fit linewidth outputs
+  ([`b78b220`](https://github.com/Mephistos-ML/paranmr/commit/b78b2202fccc4cc2309abf572ef75b366d7215bf))
+
+
 ## v1.12.3 (2026-07-03)
 
 ### Bug Fixes
