@@ -713,8 +713,8 @@ class FitSuscConfig(Config):
         if not isinstance(value, dict):
             raise ValueError("assignment:moment_objective must be a mapping")
 
-        objective_type = str(value.get("type", "weighted_ls")).strip().lower()
-        allowed = {"weighted_ls"}
+        objective_type = str(value.get("type", "ls")).strip().lower()
+        allowed = {"gmm", "ls"}
         if objective_type not in allowed:
             raise ValueError(
                 "assignment:moment_objective:type must be one of "

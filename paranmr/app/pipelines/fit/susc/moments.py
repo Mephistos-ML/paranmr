@@ -5,6 +5,7 @@
 
 from __future__ import annotations
 
+import logging
 import os
 
 import numpy as np
@@ -32,6 +33,9 @@ from paranmr.io.csv.fit import (
     save_moment_fit_diagnostics,
     save_fit_linewidth_model,
 )
+
+logger = logging.getLogger(__name__)
+
 
 def fit_moment_assignment(
     *,
@@ -64,8 +68,16 @@ def fit_moment_assignment(
         widths_ppm=observed_widths_ppm,
     )
 
-    # Prepare the residual transform and weighting scheme for the objective.
-    moment_objective_state = prepare_moment_objective(
+    # Build the configured moment objective before assembling optimizer inputs.
+    objective_type = str(
+        (assignment_moment_objective or {}).get("type", "ls")
+    ).lower()
+    if objective_type == "gmm":
+        logger.error(
+            "Moment objective 'gmm' is not implemented yet. "
+            "Use assignment:moment_objective:type 'ls' instead."
+        )
+    moment_objective = prepare_moment_objective(
         observed_moments=experimental_moments,
         objective_config=assignment_moment_objective,
     )
@@ -99,7 +111,7 @@ def fit_moment_assignment(
         nuclei=tuple(molecule.nuclei),
         temperature=float(experiment.temperature),
         observed_moments=experimental_moments,
-        moment_objective_state=moment_objective_state,
+        moment_objective=moment_objective,
         linewidth_inputs=linewidth_inputs,
         linewidth_fit_names=linewidth_fit_names,
         linewidth_fix_vars=linewidth_fix_vars,

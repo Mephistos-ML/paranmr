@@ -395,8 +395,8 @@ Used in susceptibility fitting workflows that require assignment handling.
 
         # Moment objective [Required for moments only]
         moment_objective:
-          type: weighted_ls
-          weights:           # Required for type: weighted_ls
+          type: ls
+          weights:           # Required for type: ls
             m1: 1.0
             m2: 5.0
             m3: 0.5
@@ -452,9 +452,13 @@ Moment-based fitting is selected with ``assignment:method: moments``. The
 
 The moment objective controls how the normalized moment residual vector is
 transformed before least-squares optimization. The supported objective is
-``weighted_ls``, which uses user-provided per-moment weights. Here ``m1`` and
-``m2`` correspond to the spectral mean and standard deviation, while ``m3`` to
-``m6`` correspond to the third to sixth central moments.
+``ls``, which uses user-provided per-moment weights. Here ``m1`` and
+``m2`` correspond to the spectral mean and second central moment, while ``m3``
+to ``m6`` correspond to the third to sixth central moments. The current
+normalization is component-wise, i.e. each calculated descriptor is divided by
+the corresponding observed descriptor value. This ratio-based normalization
+fails explicitly if any observed descriptor is zero or numerically too close to
+zero.
 
 .. _Hungarian algorithm: https://en.wikipedia.org/wiki/Hungarian_algorithm
 

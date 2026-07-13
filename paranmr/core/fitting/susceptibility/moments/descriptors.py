@@ -20,36 +20,24 @@ def moment_n(order: int) -> str:
     return f"m{order}"
 
 
-def moment_power(order: int) -> int:
-    """Return the observed-std power used to normalize a moment descriptor."""
-    if order < 1:
-        raise ValueError("Moment order must be positive")
-    return 1 if order in (1, 2) else order
-
-
 MOMENT_ORDERS = tuple(range(1, MAX_MOMENT_ORDER + 1))
 MOMENT_NAMES = tuple(moment_n(order) for order in MOMENT_ORDERS)
 
 
-def _gaussian_component_central_moment(
-    order: int,
-    sigma: np.ndarray,
-) -> np.ndarray:
-    """Return the central moment of one Gaussian component."""
-    if order < 0:
-        raise ValueError("Moment order must be non-negative")
-    if order == 0:
-        return np.ones_like(sigma, dtype=float)
-    if order % 2 == 1:
-        return np.zeros_like(sigma, dtype=float)
+def compute_first_moment(
+    centers: ArrayLike,
+    area_norm: ArrayLike,
+) -> float:
+    """Return the first raw moment (spectral mean) of a Gaussian mixture."""
 
-    double_factorial = 1
-    for value in range(order - 1, 0, -2):
-        double_factorial *= value
-    return double_factorial * sigma**order
+    centers_arr = np.asarray(centers, dtype=float)
+    weights_arr = np.asarray(area_norm, dtype=float)
+    if centers_arr.shape != weights_arr.shape:
+        raise ValueError("Gaussian mixture arrays must have matching shapes")
+    return float(np.sum(weights_arr * centers_arr))
 
 
-def _gaussian_mixture_central_moment(
+def _compute_single_central_moment(
     *,
     weights: np.ndarray,
     delta: np.ndarray,
@@ -59,10 +47,15 @@ def _gaussian_mixture_central_moment(
     """Return a central moment of the Gaussian mixture about the global mean."""
     total = np.zeros_like(weights, dtype=float)
     for inner_order in range(order + 1):
-        component_moment = _gaussian_component_central_moment(
-            inner_order,
-            sigmas,
-        )
+        if inner_order == 0:
+            component_moment = np.ones_like(sigmas, dtype=float)
+        elif inner_order % 2 == 1:
+            component_moment = np.zeros_like(sigmas, dtype=float)
+        else:
+            double_factorial = 1
+            for value in range(inner_order - 1, 0, -2):
+                double_factorial *= value
+            component_moment = double_factorial * sigmas**inner_order
         if np.all(component_moment == 0.0):
             continue
         total += (
@@ -71,6 +64,40 @@ def _gaussian_mixture_central_moment(
             * component_moment
         )
     return float(np.sum(weights * total))
+
+
+def compute_central_moments(
+    *,
+    centers: ArrayLike,
+    sigmas: ArrayLike,
+    area_norm: ArrayLike,
+    mean: float,
+    min_order: int = 2,
+    max_order: int = MAX_MOMENT_ORDER,
+) -> dict[str, float]:
+    """Return Gaussian-mixture central moments for the requested order range."""
+
+    centers_arr = np.asarray(centers, dtype=float)
+    sigmas_arr = np.asarray(sigmas, dtype=float)
+    weights_arr = np.asarray(area_norm, dtype=float)
+
+    if centers_arr.shape != sigmas_arr.shape or centers_arr.shape != weights_arr.shape:
+        raise ValueError("Gaussian mixture arrays must have matching shapes")
+    if min_order < 2:
+        raise ValueError("Central moments must start from order 2")
+    if max_order < min_order:
+        raise ValueError("Maximum moment order must be >= minimum moment order")
+
+    delta = centers_arr - float(mean)
+    return {
+        moment_n(order): _compute_single_central_moment(
+            weights=weights_arr,
+            delta=delta,
+            sigmas=sigmas_arr,
+            order=order,
+        )
+        for order in range(min_order, max_order + 1)
+    }
 
 
 def compute_gaussian_mixture_moments(
@@ -86,8 +113,8 @@ def compute_gaussian_mixture_moments(
         area_norm: Normalized component areas. Values must sum to one.
 
     Returns:
-        Mapping with ``m1`` (mean), ``m2`` (spectral standard deviation),
-        and ``m3``-``mN`` (third to ``MAX_MOMENT_ORDER`` central moments).
+        Mapping with ``m1`` (mean) and ``m2``-``mN`` (second to
+        ``MAX_MOMENT_ORDER`` central moments).
 
     Raises:
         ValueError: If arrays do not have matching shapes, sigmas are not positive,
@@ -108,31 +135,17 @@ def compute_gaussian_mixture_moments(
     if not np.isclose(np.sum(weights_arr), 1.0):
         raise ValueError("Gaussian mixture normalized areas must sum to one")
 
-    mean = float(np.sum(weights_arr * centers_arr))
-    delta = centers_arr - mean
-    variance = _gaussian_mixture_central_moment(
-        weights=weights_arr,
-        delta=delta,
+    mean = compute_first_moment(centers_arr, weights_arr)
+    central_moments = compute_central_moments(
+        centers=centers_arr,
         sigmas=sigmas_arr,
-        order=2,
+        area_norm=weights_arr,
+        mean=mean,
+        min_order=2,
+        max_order=MAX_MOMENT_ORDER,
     )
-    if variance <= 0.0:
-        raise ValueError("Gaussian mixture moments are undefined for zero variance")
 
-    std = float(np.sqrt(variance))
-    raw_moments_by_order = {1: mean, 2: std}
-    for order in range(3, MAX_MOMENT_ORDER + 1):
-        raw_moments_by_order[order] = _gaussian_mixture_central_moment(
-            weights=weights_arr,
-            delta=delta,
-            sigmas=sigmas_arr,
-            order=order,
-        )
-
-    return {
-        moment_n(order): float(raw_moments_by_order[order])
-        for order in MOMENT_ORDERS
-    }
+    return {"m1": mean, **central_moments}
 
 
 def normalize_gaussian_mixture_moment_vectors(
@@ -142,10 +155,8 @@ def normalize_gaussian_mixture_moment_vectors(
 ) -> tuple[dict[str, float], dict[str, float]]:
     """Normalize observed and calculated moments for objective evaluation.
 
-    The observed standard deviation defines the comparison scale for every
-    moment component. Mean and standard deviation are scaled by the first power
-    of the observed standard deviation, while the third to sixth central
-    moments are scaled by the corresponding powers.
+    Each observed and calculated descriptor pair is converted to a ratio
+    against the observed descriptor value.
 
     Args:
         observed: Raw Gaussian-mixture moments from experimental peaks.
@@ -155,22 +166,12 @@ def normalize_gaussian_mixture_moment_vectors(
         ``(normalized_observed, normalized_calculated)`` moment mappings.
 
     Raises:
-        ValueError: If moment keys differ or observed ``m2`` is zero/missing.
+        ValueError: If moment keys differ or any observed descriptor is
+            missing, zero, or numerically too close to zero.
     """
 
     if calculated.keys() != observed.keys():
         raise ValueError("Calculated and observed moment keys must match")
-    if "m2" not in observed:
-        raise ValueError("Cannot normalize moment vectors without observed m2")
-
-    observed_std = float(observed["m2"])
-    if observed_std == 0.0:
-        raise ValueError("Cannot normalize moment vectors with zero observed m2")
-
-    powers = {
-        moment_n(order): moment_power(order)
-        for order in MOMENT_ORDERS
-    }
     missing = set(MOMENT_NAMES) - set(observed)
     if missing:
         raise ValueError(
@@ -178,12 +179,24 @@ def normalize_gaussian_mixture_moment_vectors(
             + ", ".join(sorted(missing))
         )
 
+    zero_like = [
+        name
+        for name in MOMENT_NAMES
+        if np.isclose(float(observed[name]), 0.0, atol=1e-12, rtol=0.0)
+    ]
+    if zero_like:
+        raise ValueError(
+            "Cannot normalize moment vectors by observed descriptor values "
+            "that are zero or too close to zero: "
+            + ", ".join(zero_like)
+        )
+
     normalized_observed = {
-        name: float(observed[name]) / observed_std ** powers[name]
+        name: 1.0
         for name in observed.keys()
     }
     normalized_calculated = {
-        name: float(calculated[name]) / observed_std ** powers[name]
+        name: float(calculated[name]) / float(observed[name])
         for name in calculated.keys()
     }
 

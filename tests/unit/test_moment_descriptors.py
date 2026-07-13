@@ -8,7 +8,6 @@ from paranmr.core.fitting.susceptibility.moments.descriptors import (
     MOMENT_NAMES,
     compute_gaussian_mixture_moments,
     moment_n,
-    moment_power,
     normalize_gaussian_mixture_moment_vectors,
 )
 
@@ -77,21 +76,13 @@ def test_moment_metadata_is_generated_from_max_order():
     assert MAX_MOMENT_ORDER == 6
     assert MOMENT_NAMES == tuple(f"m{order}" for order in range(1, 7))
     assert [moment_n(order) for order in range(1, 7)] == list(MOMENT_NAMES)
-    assert [moment_power(order) for order in range(1, 7)] == [
-        1,
-        1,
-        3,
-        4,
-        5,
-        6,
-    ]
 
 
 @pytest.mark.unit
 def test_normalize_gaussian_mixture_moment_vectors_scales_all_orders():
     observed = {
         "m1": 4.0,
-        "m2": 2.0,
+        "m2": 4.0,
         "m3": 16.0,
         "m4": 32.0,
         "m5": 64.0,
@@ -113,21 +104,47 @@ def test_normalize_gaussian_mixture_moment_vectors_scales_all_orders():
 
     assert norm_observed == pytest.approx(
         {
-            "m1": 2.0,
-            "m2": 1.0,
-            "m3": 2.0,
-            "m4": 2.0,
-            "m5": 2.0,
-            "m6": 2.0,
-        }
-    )
-    assert norm_calculated == pytest.approx(
-        {
             "m1": 1.0,
-            "m2": 0.5,
+            "m2": 1.0,
             "m3": 1.0,
             "m4": 1.0,
             "m5": 1.0,
             "m6": 1.0,
         }
     )
+    assert norm_calculated == pytest.approx(
+        {
+            "m1": 0.5,
+            "m2": 0.25,
+            "m3": 0.5,
+            "m4": 0.5,
+            "m5": 0.5,
+            "m6": 0.5,
+        }
+    )
+
+
+@pytest.mark.unit
+def test_normalize_gaussian_mixture_moment_vectors_fails_loudly_on_zero_observed():
+    observed = {
+        "m1": 4.0,
+        "m2": 4.0,
+        "m3": 0.0,
+        "m4": 32.0,
+        "m5": 64.0,
+        "m6": 128.0,
+    }
+    calculated = {
+        "m1": 2.0,
+        "m2": 1.0,
+        "m3": 8.0,
+        "m4": 16.0,
+        "m5": 32.0,
+        "m6": 64.0,
+    }
+
+    with pytest.raises(ValueError, match="zero or too close to zero: m3"):
+        normalize_gaussian_mixture_moment_vectors(
+            observed=observed,
+            calculated=calculated,
+        )
