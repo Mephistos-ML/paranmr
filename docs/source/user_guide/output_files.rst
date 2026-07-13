@@ -58,7 +58,11 @@ For susceptibility fitting workflows (``fit_susc``), the names of all generated 
 
    Generated for ``assignment: method: moments``. Reports the observed and
    calculated normalized descriptor vectors as ``m1_norm`` to ``m6_norm``,
-   together with the objective type and weighted score.
+   together with the objective type and weighted score. In the current
+   definition, ``m1`` is the spectral mean and ``m2`` to ``m6`` are the second
+   to sixth central moments. The normalized observed vector is therefore unity
+   by definition, while the calculated normalized vector reports the
+   component-wise ratios relative to the observed descriptor values.
 
 10. ``linewidth_model_<TEMPERATURE>_K.csv``  
     Fitted ``r^-6`` linewidth-model parameters used in a moment-based fit.
