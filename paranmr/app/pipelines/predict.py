@@ -169,13 +169,12 @@ def run_predict(config, options: PredictRunOptions | None = None) -> int:
             )
         base_molecule.apply_signal_labels(al_to_sl, al_to_sml)
 
-        # Save xyz file with signal labels for chemcraft
-        xyz_write.save_chemcraft_xyz(
-            file_name=os.path.join(config.project_name, "chemcraft_structure.xyz"),
-            labels=base_molecule.labels,
-            coords=base_molecule.coords,
-            signal_labels={nuc.label: nuc.signal_label for nuc in base_molecule.nuclei},
-        )
+    xyz_write.save_chemcraft_xyz(
+        file_name=os.path.join(config.project_name, "chemcraft_structure.xyz"),
+        labels=base_molecule.labels,
+        coords=base_molecule.coords,
+        signal_labels={nuc.label: nuc.signal_label for nuc in base_molecule.nuclei},
+    )
 
     # Save xyz file with signal labels for chemcraft
     xyz_write.save_xyz(

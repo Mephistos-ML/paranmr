@@ -569,6 +569,15 @@ Used in susceptibility fitting workflows.
 
         average_shifts: 'all' # Average shifts over all signal labels
                         ["Me1", "Me2"] # Average shifts over the specified signal labels
+                        "methyls" # Average automatically detected methyl proton groups
+
+.. note::
+
+   ``susc_fit:average_shifts: "methyls"`` is supported when the selected nuclei
+   are protons only (for example ``nuclei: include: H``). In shift-based fitting
+   it averages predicted methyl proton shifts before residual evaluation. In
+   moment-based fitting it collapses each methyl group into one effective
+   theoretical signal before Gaussian-mixture moments are computed.
 
 .. note::
 

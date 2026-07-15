@@ -558,13 +558,12 @@ def run_fit_corr_time(config, options: FitCorrTimeRunOptions | None = None) -> i
                 verbose=True,
             )
 
-        if len(config.signal_labels_file):
-            xyz_write.save_chemcraft_xyz(
-                file_name=os.path.join(project_dir, "chemcraft_structure.xyz"),
-                labels=base_molecule.labels,
-                coords=base_molecule.coords,
-                signal_labels={nuc.label: nuc.signal_label for nuc in base_molecule.nuclei},
-            )
+        xyz_write.save_chemcraft_xyz(
+            file_name=os.path.join(project_dir, "chemcraft_structure.xyz"),
+            labels=base_molecule.labels,
+            coords=base_molecule.coords,
+            signal_labels={nuc.label: nuc.signal_label for nuc in base_molecule.nuclei},
+        )
 
         xyz_write.save_xyz(
             file_name=os.path.join(project_dir, "structure.xyz"),
