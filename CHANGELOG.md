@@ -2,6 +2,19 @@
 
 <!-- version list -->
 
+## v1.14.0 (2026-07-15)
+
+### Features
+
+- **moments**: Add methyl shift averaging for susceptibility fitting
+  ([`904cefe`](https://github.com/Mephistos-ML/paranmr/commit/904cefe5d2124976ef5c8146058798acf6728309))
+
+### Refactoring
+
+- **pipelines**: Align averaging behavior across fit and predict flows
+  ([`99046ae`](https://github.com/Mephistos-ML/paranmr/commit/99046ae7a526dfdbc758374633383ba18596d29e))
+
+
 ## v1.13.0 (2026-07-13)
 
 ### Documentation
