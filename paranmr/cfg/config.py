@@ -507,11 +507,7 @@ class FitSuscConfig(Config):
         if value not in ["fixed", "permute", "hungarian", "moments"]:
             raise ValueError(f"Unknown assignment:method {value}")
         self._assignment_method = value
-        if self._assignment_method == "moments" and self._susc_fit_average_shifts:
-            raise ValueError(
-                "susc_fit:average_shifts cannot be used with "
-                "assignment:method 'moments'"
-            )
+        self._validate_susc_fit_average_shifts_for_assignment_method()
         return None
 
     @property
@@ -685,21 +681,69 @@ class FitSuscConfig(Config):
         return
 
     @property
-    def susc_fit_average_shifts(self) -> list[str]:
+    def susc_fit_average_shifts(self) -> list[str] | str:
         return self._susc_fit_average_shifts
 
     @susc_fit_average_shifts.setter
-    def susc_fit_average_shifts(self, values: list[str]):
-        if isinstance(values, str):
-            self.susc_fit_average_shifts = [values]
+    def susc_fit_average_shifts(self, values: list[str] | str | None):
+        if values is None or values == "":
+            self._susc_fit_average_shifts = []
             return
-        if self._assignment_method == "moments" and values:
+        if isinstance(values, str):
+            normalized = values.strip().lower()
+            if normalized in {"all", "methyls"}:
+                self._susc_fit_average_shifts = normalized
+            else:
+                self._susc_fit_average_shifts = [values]
+            self._validate_susc_fit_average_shifts_for_assignment_method()
+            return
+        if not isinstance(values, (list, tuple)):
             raise ValueError(
-                "susc_fit:average_shifts cannot be used with "
-                "assignment:method 'moments'"
+                "susc_fit:average_shifts must be a string or a list of strings."
             )
-        self._susc_fit_average_shifts = values
+        normalized_values = [str(value) for value in values]
+        if not normalized_values:
+            self._susc_fit_average_shifts = []
+            return
+        special_modes = {
+            value.strip().lower()
+            for value in normalized_values
+            if value.strip().lower() in {"all", "methyls"}
+        }
+        if len(special_modes) > 1:
+            raise ValueError(
+                "susc_fit:average_shifts cannot combine special modes "
+                "'all' and 'methyls'."
+            )
+        if special_modes:
+            if len(normalized_values) != 1:
+                raise ValueError(
+                    "susc_fit:average_shifts cannot combine "
+                    f"{next(iter(special_modes))!r} with additional values."
+                )
+            self._susc_fit_average_shifts = next(iter(special_modes))
+        else:
+            self._susc_fit_average_shifts = normalized_values
+        self._validate_susc_fit_average_shifts_for_assignment_method()
         return
+
+    def _validate_susc_fit_average_shifts_for_assignment_method(self) -> None:
+        values = self._susc_fit_average_shifts
+        if values in (None, "", []):
+            return
+        if values == "methyls":
+            if self._assignment_method in {"", "moments"}:
+                return
+            raise ValueError(
+                "susc_fit:average_shifts: 'methyls' is only supported for "
+                "assignment:method 'moments'."
+            )
+        if self._assignment_method != "moments":
+            return
+        raise ValueError(
+            "assignment:method 'moments' only supports "
+            "susc_fit:average_shifts: 'methyls'."
+        )
 
     @property
     def assignment_moment_objective(self) -> dict:

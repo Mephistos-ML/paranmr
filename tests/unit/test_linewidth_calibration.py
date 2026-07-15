@@ -187,6 +187,149 @@ def test_fit_susc_config_accepts_gmm_moment_objective_placeholder(tmp_path):
 
 
 @pytest.mark.unit
+def test_fit_susc_config_accepts_methyls_shift_averaging_for_moments(tmp_path):
+    config_file = tmp_path / "fit.yml"
+    config_file.write_text(
+        "\n".join(
+            [
+                "project:",
+                "  name: test",
+                "hyperfine:",
+                "  method: pdip",
+                "  file: hf.xyz",
+                "  paramagnetic_centre: [0.0, 0.0, 0.0]",
+                "experiment:",
+                "  files: exp.csv",
+                "nuclei:",
+                "  include: H",
+                "susc_fit:",
+                "  type: isoaxrho",
+                "  variables:",
+                "    iso: [fit, 0.0]",
+                "  average_shifts: methyls",
+                "assignment:",
+                "  method: moments",
+                "  moment_objective:",
+                "    type: ls",
+                "linewidth:",
+                "  method: experimental",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    config = FitSuscConfig.from_file(config_file)
+
+    assert config.susc_fit_average_shifts == "methyls"
+
+
+@pytest.mark.unit
+def test_fit_susc_config_rejects_methyls_shift_averaging_for_basic_fit(tmp_path):
+    config_file = tmp_path / "fit.yml"
+    config_file.write_text(
+        "\n".join(
+            [
+                "project:",
+                "  name: test",
+                "hyperfine:",
+                "  method: pdip",
+                "  file: hf.xyz",
+                "  paramagnetic_centre: [0.0, 0.0, 0.0]",
+                "experiment:",
+                "  files: exp.csv",
+                "nuclei:",
+                "  include: H",
+                "susc_fit:",
+                "  type: isoaxrho",
+                "  variables:",
+                "    iso: [fit, 0.0]",
+                "  average_shifts: methyls",
+                "assignment:",
+                "  method: fixed",
+                "linewidth:",
+                "  method: experimental",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="only supported"):
+        FitSuscConfig.from_file(config_file)
+
+
+@pytest.mark.unit
+def test_fit_susc_config_rejects_all_shift_averaging_for_moments(tmp_path):
+    config_file = tmp_path / "fit.yml"
+    config_file.write_text(
+        "\n".join(
+            [
+                "project:",
+                "  name: test",
+                "hyperfine:",
+                "  method: pdip",
+                "  file: hf.xyz",
+                "  paramagnetic_centre: [0.0, 0.0, 0.0]",
+                "experiment:",
+                "  files: exp.csv",
+                "nuclei:",
+                "  include: H",
+                "susc_fit:",
+                "  type: isoaxrho",
+                "  variables:",
+                "    iso: [fit, 0.0]",
+                "  average_shifts: all",
+                "assignment:",
+                "  method: moments",
+                "  moment_objective:",
+                "    type: ls",
+                "linewidth:",
+                "  method: experimental",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="only supports"):
+        FitSuscConfig.from_file(config_file)
+
+
+@pytest.mark.unit
+def test_fit_susc_config_rejects_signal_label_averaging_for_moments(tmp_path):
+    config_file = tmp_path / "fit.yml"
+    config_file.write_text(
+        "\n".join(
+            [
+                "project:",
+                "  name: test",
+                "hyperfine:",
+                "  method: pdip",
+                "  file: hf.xyz",
+                "  paramagnetic_centre: [0.0, 0.0, 0.0]",
+                "experiment:",
+                "  files: exp.csv",
+                "nuclei:",
+                "  include: H",
+                "susc_fit:",
+                "  type: isoaxrho",
+                "  variables:",
+                "    iso: [fit, 0.0]",
+                "  average_shifts: [Me1]",
+                "assignment:",
+                "  method: moments",
+                "  moment_objective:",
+                "    type: ls",
+                "linewidth:",
+                "  method: experimental",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="only supports"):
+        FitSuscConfig.from_file(config_file)
+
+
+@pytest.mark.unit
 def test_fit_susc_config_rejects_unknown_moment_objective_type(tmp_path):
     config_file = tmp_path / "fit.yml"
     config_file.write_text(

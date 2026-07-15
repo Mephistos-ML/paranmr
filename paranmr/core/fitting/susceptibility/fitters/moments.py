@@ -64,6 +64,7 @@ class MomentFitInputs:
     fit_guess: list[float]
     fit_bounds: NDArray[np.float64]
     use_diamagnetic: bool
+    average_labels: tuple[tuple[str, ...], ...]
 
 
 def fit_moment_model(
@@ -164,6 +165,7 @@ def fit_moment_model(
         nuclei=inputs.nuclei,
         linewidths_by_label=final_linewidths_by_atom_label,
         include_diamagnetic=inputs.use_diamagnetic,
+        average_labels=inputs.average_labels,
     )
 
     # Package the final comparison between experimental and calculated moments.
@@ -229,6 +231,7 @@ def _moment_residual_from_float_list(
         nuclei=inputs.nuclei,
         linewidths_by_label=calculated_widths_by_atom_label,
         include_diamagnetic=inputs.use_diamagnetic,
+        average_labels=inputs.average_labels,
     )
     return list(
         _weighted_moment_residuals(

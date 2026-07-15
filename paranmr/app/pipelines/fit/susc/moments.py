@@ -45,8 +45,12 @@ def fit_moment_assignment(
     project_name: str,
     assignment_moment_objective: dict | None,
     linewidth_variables: dict | None,
+    average_labels: list[list[str]] | None = None,
 ) -> MomentFitResult | None:
     """Run moment-based susceptibility fitting for one experiment."""
+    if average_labels is None:
+        average_labels = []
+
     # Convert experiment widths from Hz to ppm for moment construction.
     observed_widths_hz = [signal.width for signal in experiment.signals]
     observed_widths_ppm = signal_widths_hz_to_ppm(
@@ -119,6 +123,7 @@ def fit_moment_assignment(
         fit_guess=fit_guess,
         fit_bounds=fit_bounds,
         use_diamagnetic=use_diamagnetic,
+        average_labels=tuple(tuple(group) for group in average_labels),
     )
 
     # Run the core least-squares fit.

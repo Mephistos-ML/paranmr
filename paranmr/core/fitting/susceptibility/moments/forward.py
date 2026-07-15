@@ -33,6 +33,7 @@ def calculated_signal_packages_from_parameters(
     parameters: dict[str, float],
     nuclei: list[Nucleus],
     include_diamagnetic: bool = True,
+    average_labels: tuple[tuple[str, ...], ...] = (),
 ) -> list[CalculatedSignalPackage]:
     """Compute calculated signal packages from model parameters."""
 
@@ -44,7 +45,7 @@ def calculated_signal_packages_from_parameters(
     }
     nucleus_by_label = {nuc.label: nuc for nuc in nuclei}
 
-    return [
+    packages = [
         CalculatedSignalPackage(
             label=nucleus_by_label[label].label,
             atom_labels=(label,),
@@ -52,6 +53,12 @@ def calculated_signal_packages_from_parameters(
         )
         for label, total_shift in label_to_total_shift.items()
     ]
+    if average_labels:
+        packages = average_signal_packages(
+            packages=packages,
+            average_labels=average_labels,
+        )
+    return packages
 
 
 def sort_packages_by_center(
@@ -109,6 +116,7 @@ def calculated_moments_from_parameters(
     nuclei: list[Nucleus],
     linewidths_by_label: dict[str, float],
     include_diamagnetic: bool,
+    average_labels: tuple[tuple[str, ...], ...] = (),
 ) -> dict[str, float]:
     """Compute Gaussian-mixture moments for a calculated parameter set."""
 
@@ -117,6 +125,7 @@ def calculated_moments_from_parameters(
         parameters=parameters,
         nuclei=nuclei,
         include_diamagnetic=include_diamagnetic,
+        average_labels=average_labels,
     )
     sorted_packages = sort_packages_by_center(packages)
     centers = package_centers(sorted_packages)
@@ -143,3 +152,47 @@ def _package_linewidth(
     return float(
         np.mean([linewidths_by_label[label] for label in package.atom_labels])
     )
+
+
+def average_signal_packages(
+    *,
+    packages: list[CalculatedSignalPackage],
+    average_labels: tuple[tuple[str, ...], ...],
+) -> list[CalculatedSignalPackage]:
+    """Collapse equivalent calculated signals into averaged signal packages."""
+
+    if not average_labels:
+        return packages
+
+    package_by_atom_label = {
+        atom_label: package
+        for package in packages
+        for atom_label in package.atom_labels
+    }
+    averaged_atom_labels = {
+        atom_label
+        for group in average_labels
+        for atom_label in group
+    }
+    averaged_packages: list[CalculatedSignalPackage] = []
+    for group in average_labels:
+        missing = [label for label in group if label not in package_by_atom_label]
+        if missing:
+            raise ValueError(
+                "Cannot average calculated shifts for unknown atom label(s): "
+                + ", ".join(missing)
+            )
+        centers = [package_by_atom_label[label].center for label in group]
+        averaged_packages.append(
+            CalculatedSignalPackage(
+                label=group[0],
+                atom_labels=tuple(group),
+                center=float(np.mean(centers)),
+            )
+        )
+
+    for package in packages:
+        if any(label in averaged_atom_labels for label in package.atom_labels):
+            continue
+        averaged_packages.append(package)
+    return averaged_packages
