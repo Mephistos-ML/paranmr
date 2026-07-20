@@ -38,7 +38,6 @@ from paranmr.core.fitting.susceptibility.objectives.moments.gmm.objective import
 from paranmr.core.fitting.susceptibility.objectives.moments.gmm.weighting import (
     build_gmm_weighting_matrix,
     estimate_gmm_covariance_from_jacobian,
-    normalize_moment_jacobian,
 )
 from paranmr.core.fitting.susceptibility.objectives.moments.api import (
     MomentObjective,
@@ -249,13 +248,10 @@ def _run_two_step_gmm_fit(
         nuclei=list(inputs.nuclei),
         linewidth_inputs=inputs.linewidth_inputs,
         linewidth_vars_by_name=stage1_linewidth_vars,
+        observed_moments=inputs.observed_moments,
         average_labels=inputs.average_labels,
     )
-    normalized_stage1_jacobian = normalize_moment_jacobian(
-        jacobian=stage1_jacobian,
-        observed_moments=inputs.observed_moments,
-    )
-    covariance = estimate_gmm_covariance_from_jacobian(normalized_stage1_jacobian)
+    covariance = estimate_gmm_covariance_from_jacobian(stage1_jacobian)
     weighting = build_gmm_weighting_matrix(covariance)
     stage2_objective = GMMMomentObjective.with_weighting_matrix(
         moment_names=tuple(inputs.observed_moments.keys()),

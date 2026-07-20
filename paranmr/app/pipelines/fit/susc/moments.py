@@ -158,6 +158,7 @@ def fit_moment_assignment(
             nuclei=list(molecule.nuclei),
             linewidth_inputs=linewidth_inputs,
             linewidth_vars_by_name=moment_fit_result.linewidth_vars_by_name,
+            observed_moments=experimental_moments,
             average_labels=tuple(tuple(group) for group in average_labels),
         )
         save_moment_jacobian(

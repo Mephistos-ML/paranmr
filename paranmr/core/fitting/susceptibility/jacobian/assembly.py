@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (C) 2026 Suturina Group
 
-"""Assembly helpers for full moment Jacobian matrices."""
+"""Assembly helpers for normalized moment Jacobian matrices."""
 
 from __future__ import annotations
 
@@ -37,9 +37,35 @@ def build_moment_jacobian(
     nuclei: list[Nucleus],
     linewidth_inputs: SusceptibilityLinewidthInputs,
     linewidth_vars_by_name: dict[str, float],
+    observed_moments: dict[str, float],
     average_labels: tuple[tuple[str, ...], ...] = (),
 ) -> MomentJacobianResult:
-    """Build the full canonical ``6 x 8`` moment Jacobian matrix."""
+    """Build the canonical normalized ``6 x 8`` moment Jacobian matrix."""
+
+    raw_jacobian = _build_raw_moment_jacobian(
+        temperature=temperature,
+        parameters=parameters,
+        nuclei=nuclei,
+        linewidth_inputs=linewidth_inputs,
+        linewidth_vars_by_name=linewidth_vars_by_name,
+        average_labels=average_labels,
+    )
+    return _normalize_raw_moment_jacobian(
+        jacobian=raw_jacobian,
+        observed_moments=observed_moments,
+    )
+
+
+def _build_raw_moment_jacobian(
+    *,
+    temperature: float,
+    parameters: dict[str, float],
+    nuclei: list[Nucleus],
+    linewidth_inputs: SusceptibilityLinewidthInputs,
+    linewidth_vars_by_name: dict[str, float],
+    average_labels: tuple[tuple[str, ...], ...] = (),
+) -> MomentJacobianResult:
+    """Build the raw canonical ``6 x 8`` moment Jacobian matrix."""
 
     linewidths_by_label = predict_r6_widths_by_atom_label(
         linewidth_inputs=linewidth_inputs,
@@ -104,6 +130,45 @@ def build_moment_jacobian(
         moment_names=MOMENT_NAMES,
         parameter_names=MOMENT_JACOBIAN_PARAMETER_NAMES,
         values=values,
+    )
+
+
+def _normalize_raw_moment_jacobian(
+    *,
+    jacobian: MomentJacobianResult,
+    observed_moments: dict[str, float],
+) -> MomentJacobianResult:
+    """Return the Jacobian of normalized calculated moments."""
+
+    missing = [name for name in MOMENT_NAMES if name not in observed_moments]
+    if missing:
+        raise ValueError(
+            "Cannot normalize moment Jacobian without observed moments for: "
+            + ", ".join(missing)
+        )
+
+    scales = np.asarray(
+        [float(observed_moments[name]) for name in MOMENT_NAMES],
+        dtype=float,
+    )
+    zero_like = [
+        name
+        for name, scale in zip(MOMENT_NAMES, scales)
+        if np.isclose(scale, 0.0, atol=1e-12, rtol=0.0)
+    ]
+    if zero_like:
+        raise ValueError(
+            "Cannot normalize moment Jacobian by observed moment values "
+            "that are zero or too close to zero: "
+            + ", ".join(zero_like)
+        )
+
+    normalized_values = np.asarray(jacobian.values, dtype=float) / scales[:, None]
+    return MomentJacobianResult(
+        temperature=float(jacobian.temperature),
+        moment_names=MOMENT_NAMES,
+        parameter_names=MOMENT_JACOBIAN_PARAMETER_NAMES,
+        values=normalized_values,
     )
 
 
