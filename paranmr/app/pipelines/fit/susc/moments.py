@@ -19,6 +19,9 @@ from paranmr.core.fitting.susceptibility.fitters.moments import (
     MomentFitResult,
     fit_moment_model,
 )
+from paranmr.core.fitting.susceptibility.jacobian.assembly import (
+    build_moment_jacobian,
+)
 from paranmr.core.fitting.susceptibility.moments.descriptors import (
     compute_gaussian_mixture_moments,
 )
@@ -32,6 +35,7 @@ from paranmr.core.fitting.susceptibility.objectives.moments.api import (
 from paranmr.io.csv.fit import (
     save_moment_fit_diagnostics,
     save_fit_linewidth_model,
+    save_moment_jacobian,
 )
 
 logger = logging.getLogger(__name__)
@@ -67,9 +71,14 @@ def fit_moment_assignment(
     )
 
     # Build experimental moments directly from the measured peaks.
-    experimental_moments = _experimental_moments_from_experiment(
+    observed_peaks = _observed_peak_representation_from_experiment(
         experiment=experiment,
         widths_ppm=observed_widths_ppm,
+    )
+    experimental_moments = compute_gaussian_mixture_moments(
+        centers=observed_peaks["center"],
+        sigmas=observed_peaks["sigma"],
+        area_norm=observed_peaks["area_norm"],
     )
 
     # Build the configured moment objective before assembling optimizer inputs.
@@ -151,14 +160,29 @@ def fit_moment_assignment(
                 f"linewidth_model_{experiment.temperature:.2f}_K.csv",
             ),
         )
+        moment_jacobian = build_moment_jacobian(
+            temperature=float(experiment.temperature),
+            parameters=model.final_var_values,
+            nuclei=list(molecule.nuclei),
+            linewidth_inputs=linewidth_inputs,
+            linewidth_vars_by_name=moment_fit_result.linewidth_vars_by_name,
+            average_labels=tuple(tuple(group) for group in average_labels),
+        )
+        save_moment_jacobian(
+            jacobian=moment_jacobian,
+            file_name=os.path.join(
+                project_name,
+                f"moment_jacobian_{experiment.temperature:.2f}_K.csv",
+            ),
+        )
     return moment_fit_result
 
 
-def _experimental_moments_from_experiment(
+def _observed_peak_representation_from_experiment(
     *,
     experiment: Experiment,
     widths_ppm: np.ndarray,
-) -> dict[str, float]:
+) -> dict[str, np.ndarray]:
     centers_ppm = np.asarray(
         [signal.shift for signal in experiment.signals],
         dtype=float,
@@ -173,11 +197,7 @@ def _experimental_moments_from_experiment(
         fwhm=widths_ppm[sort_idx],
         areas=areas[sort_idx],
     )
-    return compute_gaussian_mixture_moments(
-        centers=observed_peaks["center"],
-        sigmas=observed_peaks["sigma"],
-        area_norm=observed_peaks["area_norm"],
-    )
+    return observed_peaks
 
 
 def _split_linewidth_variables(
