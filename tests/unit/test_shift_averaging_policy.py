@@ -10,7 +10,11 @@ from paranmr.app.policies.averaging import (
 )
 from paranmr.core.domain.mol import Molecule
 from paranmr.core.fitting.susceptibility.moments.forward import (
+    calculated_moments_from_parameters,
     calculated_signal_packages_from_parameters,
+)
+from paranmr.core.fitting.susceptibility.moments.gaussian import (
+    gaussian_peak_representation,
 )
 
 
@@ -92,6 +96,53 @@ def test_moment_forward_collapses_methyl_group_into_one_signal():
     assert packages[0].atom_labels == ("H1", "H2", "H3")
     assert packages[0].center == pytest.approx((1.0 + 2.0 + 4.0) / 3.0)
     assert packages[1].atom_labels == ("H4",)
+
+
+@pytest.mark.unit
+def test_calculated_moments_treat_collapsed_packages_with_equal_weight():
+    molecule = Molecule.from_labels_coords(
+        labels=["C1", "H1", "H2", "H3", "C2", "H4"],
+        coords=[
+            [0.0, 0.0, 0.0],
+            [1.09, 0.0, 0.0],
+            [-0.36, 1.03, 0.0],
+            [-0.36, -0.51, 0.89],
+            [-1.52, 0.0, 0.0],
+            [-2.61, 0.0, 0.0],
+        ],
+        elements="H",
+    )
+    average_labels = resolve_average_shift_groups(
+        molecule=molecule,
+        average_shifts="methyls",
+    )
+    widths_by_label = {
+        "H1": 1.0,
+        "H2": 1.0,
+        "H3": 1.0,
+        "H4": 1.0,
+    }
+
+    moments = calculated_moments_from_parameters(
+        model=_DummyModel(),
+        parameters={"H1": 1.0, "H2": 2.0, "H3": 4.0, "H4": 10.0},
+        nuclei=molecule.nuclei,
+        linewidths_by_label=widths_by_label,
+        include_diamagnetic=False,
+        average_labels=tuple(tuple(group) for group in average_labels),
+    )
+
+    expected_peaks = gaussian_peak_representation(
+        centers=[(1.0 + 2.0 + 4.0) / 3.0, 10.0],
+        fwhm=[1.0, 1.0],
+        areas=[1.0, 1.0],
+    )
+    expected_m1 = float(
+        expected_peaks["area_norm"][0] * expected_peaks["center"][0]
+        + expected_peaks["area_norm"][1] * expected_peaks["center"][1]
+    )
+
+    assert moments["m1"] == pytest.approx(expected_m1)
 
 
 @pytest.mark.unit
