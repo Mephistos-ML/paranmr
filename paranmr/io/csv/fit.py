@@ -13,6 +13,7 @@ import numpy as np
 import pandas as pd
 
 from paranmr.core.fitting.linewidth import R6LinewidthParameterEstimate
+from paranmr.core.fitting.susceptibility.jacobian.types import MomentJacobianResult
 from paranmr.core.fitting.susceptibility.fitters.moments import MomentFitResult
 from paranmr.io.csv.csv_util import read_csv_safe, write_csv_safe
 
@@ -126,6 +127,46 @@ def save_linewidth_parameter_estimate(
 
     if verbose:
         logger.info("Linewidth parameter estimate written to %s", file_name)
+
+    return
+
+
+def save_moment_jacobian(
+    jacobian: MomentJacobianResult,
+    file_name: str,
+    verbose: bool = True,
+) -> None:
+    """Write the moment Jacobian matrix to CSV.
+
+    Args:
+        jacobian: Structured Jacobian result to serialize.
+        file_name: Output CSV path.
+        verbose: If ``True``, log the output path.
+
+    Returns:
+        None.
+    """
+
+    rows = []
+    for row_name, row_values in zip(jacobian.moment_names, jacobian.values):
+        rows.append(
+            {
+                "quantity": row_name,
+                **{
+                    parameter_name: float(value)
+                    for parameter_name, value in zip(
+                        jacobian.parameter_names,
+                        row_values,
+                    )
+                },
+            }
+        )
+
+    comment = [f"T = {jacobian.temperature:.2f} K"]
+    write_csv_safe(pd.DataFrame(rows), file_name, comment)
+
+    if verbose:
+        logger.info("Moment Jacobian written to %s", file_name)
 
     return
 
