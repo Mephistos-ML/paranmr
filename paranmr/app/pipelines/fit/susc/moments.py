@@ -82,14 +82,6 @@ def fit_moment_assignment(
     )
 
     # Build the configured moment objective before assembling optimizer inputs.
-    objective_type = str(
-        (assignment_moment_objective or {}).get("type", "ls")
-    ).lower()
-    if objective_type == "gmm":
-        logger.error(
-            "Moment objective 'gmm' is not implemented yet. "
-            "Use assignment:moment_objective:type 'ls' instead."
-        )
     moment_objective = prepare_moment_objective(
         observed_moments=experimental_moments,
         objective_config=assignment_moment_objective,

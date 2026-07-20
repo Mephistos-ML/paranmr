@@ -13,6 +13,9 @@ from numpy.typing import NDArray
 from paranmr.core.fitting.susceptibility.moments.descriptors import (
     normalize_gaussian_mixture_moment_vectors,
 )
+from paranmr.core.fitting.susceptibility.objectives.moments.conditions import (
+    build_moment_condition_vector,
+)
 
 
 @dataclass(frozen=True)
@@ -67,6 +70,19 @@ class WeightedLSMomentObjective:
         """Return serializable objective diagnostics."""
         return {"weights": dict(self.weights_by_name)}
 
+    def conditions(
+        self,
+        *,
+        observed_moments: dict[str, float],
+        calculated_moments: dict[str, float],
+    ) -> NDArray[np.float64]:
+        """Return the shared raw moment-condition vector ``m_calc - m_exp``."""
+        return build_moment_condition_vector(
+            observed_moments=observed_moments,
+            calculated_moments=calculated_moments,
+            moment_names=self.moment_names,
+        )
+
     def residuals(
         self,
         *,
@@ -84,15 +100,15 @@ class WeightedLSMomentObjective:
                 calculated=calculated_moments,
             )
         )
-        values = [
-            self.weights_by_name[moment_name]
-            * (
-                normalized_calculated[moment_name]
-                - normalized_observed[moment_name]
-            )
-            for moment_name in self.moment_names
-        ]
-        return np.asarray(values, dtype=float)
+        condition_vector = self.conditions(
+            observed_moments=normalized_observed,
+            calculated_moments=normalized_calculated,
+        )
+        weights = np.asarray(
+            [self.weights_by_name[moment_name] for moment_name in self.moment_names],
+            dtype=float,
+        )
+        return weights * condition_vector
 
     def score(
         self,

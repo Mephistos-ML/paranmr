@@ -782,13 +782,17 @@ class FitSuscConfig(Config):
                 "assignment:moment_objective:weights contains unknown moment(s): "
                 + ", ".join(sorted(unknown_weight_names))
             )
-        self._assignment_moment_objective = {
-            "type": objective_type,
-            "weights": {
-                moment_name: float(weight)
-                for moment_name, weight in weights.items()
-            },
+        if objective_type == "gmm" and weights:
+            raise ValueError(
+                "assignment:moment_objective:weights is only supported for type 'ls'"
+            )
+        parsed_weights = {
+            moment_name: float(weight)
+            for moment_name, weight in weights.items()
         }
+        self._assignment_moment_objective = {"type": objective_type}
+        if objective_type == "ls":
+            self._assignment_moment_objective["weights"] = parsed_weights
         return
 
     @property

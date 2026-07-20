@@ -11,7 +11,7 @@ import numpy as np
 from numpy.typing import NDArray
 
 from paranmr.core.fitting.susceptibility.objectives.moments.gmm import (
-    raise_gmm_not_implemented,
+    GMMMomentObjective,
 )
 from paranmr.core.fitting.susceptibility.objectives.moments.weighted_ls import (
     WeightedLSMomentObjective,
@@ -29,6 +29,15 @@ class MomentObjective(Protocol):
     @property
     def active_mask(self) -> NDArray[np.bool_]:
         """Return active residual components for uncertainty estimation."""
+        ...
+
+    def conditions(
+        self,
+        *,
+        observed_moments: dict[str, float],
+        calculated_moments: dict[str, float],
+    ) -> NDArray[np.float64]:
+        """Return the shared moment-condition vector ``m_calc - m_exp``."""
         ...
 
     def residuals(
@@ -83,7 +92,10 @@ def prepare_moment_objective(
         )
 
     if objective_type == "gmm":
-        raise_gmm_not_implemented()
+        return GMMMomentObjective.from_config(
+            moment_names=moment_names,
+            objective_config=objective_config,
+        )
 
     raise ValueError(
         "Unknown moment objective type "

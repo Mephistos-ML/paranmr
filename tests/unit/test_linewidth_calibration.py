@@ -185,6 +185,47 @@ def test_fit_susc_config_accepts_gmm_moment_objective_placeholder(tmp_path):
 
     assert config.assignment_moment_objective["type"] == "gmm"
 
+@pytest.mark.unit
+def test_fit_susc_config_rejects_gmm_moment_weights(tmp_path):
+    config_file = tmp_path / "fit.yml"
+    config_file.write_text(
+        "\n".join(
+            [
+                "project:",
+                "  name: test",
+                "hyperfine:",
+                "  method: pdip",
+                "  file: dummy.xyz",
+                "  paramagnetic_centre: [0.0, 0.0, 0.0]",
+                "  spin: 0.5",
+                "  orbit: 0",
+                "  total_momentum_J: 0.5",
+                "experiment:",
+                "  files: exp.csv",
+                "nuclei:",
+                "  include: [H]",
+                "assignment:",
+                "  method: moments",
+                "  moment_objective:",
+                "    type: gmm",
+                "    weights:",
+                "      m1: 1.0",
+                "susc_fit:",
+                "  type: isoaxrho",
+                "  average_shifts: methyls",
+                "  variables:",
+                "    iso: [fit, 0.0]",
+                "    ax: [fit, 0.1]",
+                "    rho_over_ax: [fit, 0.0]",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="only supported for type 'ls'"):
+        FitSuscConfig.from_file(config_file)
+
+
 
 @pytest.mark.unit
 def test_fit_susc_config_accepts_methyls_shift_averaging_for_moments(tmp_path):
