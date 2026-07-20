@@ -5,6 +5,7 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from math import comb
 
 import numpy as np
@@ -22,6 +23,14 @@ def moment_n(order: int) -> str:
 
 MOMENT_ORDERS = tuple(range(1, MAX_MOMENT_ORDER + 1))
 MOMENT_NAMES = tuple(moment_n(order) for order in MOMENT_ORDERS)
+
+
+@dataclass(frozen=True)
+class NormalizedMomentVectors:
+    """Normalized observed/calculated moment vectors in canonical order."""
+
+    observed: dict[str, float]
+    calculated: dict[str, float]
 
 
 def compute_first_moment(
@@ -148,12 +157,12 @@ def compute_gaussian_mixture_moments(
     return {"m1": mean, **central_moments}
 
 
-def normalize_gaussian_mixture_moment_vectors(
+def build_normalized_moment_vectors(
     *,
     observed: dict[str, float],
     calculated: dict[str, float],
-) -> tuple[dict[str, float], dict[str, float]]:
-    """Normalize observed and calculated moments for objective evaluation.
+) -> NormalizedMomentVectors:
+    """Build normalized observed/calculated moment vectors for objectives.
 
     Each observed and calculated descriptor pair is converted to a ratio
     against the observed descriptor value.
@@ -163,7 +172,7 @@ def normalize_gaussian_mixture_moment_vectors(
         calculated: Raw Gaussian-mixture moments from calculated peaks.
 
     Returns:
-        ``(normalized_observed, normalized_calculated)`` moment mappings.
+        Structured normalized moment vectors.
 
     Raises:
         ValueError: If moment keys differ or any observed descriptor is
@@ -200,4 +209,8 @@ def normalize_gaussian_mixture_moment_vectors(
         for name in calculated.keys()
     }
 
-    return normalized_observed, normalized_calculated
+    return NormalizedMomentVectors(
+        observed=normalized_observed,
+        calculated=normalized_calculated,
+    )
+

@@ -10,9 +10,6 @@ from dataclasses import dataclass
 import numpy as np
 from numpy.typing import NDArray
 
-from paranmr.core.fitting.susceptibility.moments.descriptors import (
-    normalize_gaussian_mixture_moment_vectors,
-)
 from paranmr.core.fitting.susceptibility.objectives.moments.conditions import (
     build_moment_condition_vector,
 )
@@ -67,7 +64,7 @@ class WeightedLSMomentObjective:
         observed_moments: dict[str, float],
         calculated_moments: dict[str, float],
     ) -> NDArray[np.float64]:
-        """Return the shared raw moment-condition vector ``m_calc - m_exp``."""
+        """Return the shared normalized moment-condition vector ``m_calc - m_exp``."""
         return build_moment_condition_vector(
             observed_moments=observed_moments,
             calculated_moments=calculated_moments,
@@ -80,20 +77,10 @@ class WeightedLSMomentObjective:
         observed_moments: dict[str, float],
         calculated_moments: dict[str, float],
     ) -> NDArray[np.float64]:
-        """Return weighted residuals for the configured moment order.
-
-        The residual for moment ``n`` is
-        ``weight_n * (calculated_n / observed_n - 1)``.
-        """
-        normalized_observed, normalized_calculated = (
-            normalize_gaussian_mixture_moment_vectors(
-                observed=observed_moments,
-                calculated=calculated_moments,
-            )
-        )
+        """Return weighted residuals for normalized moment descriptors."""
         condition_vector = self.conditions(
-            observed_moments=normalized_observed,
-            calculated_moments=normalized_calculated,
+            observed_moments=observed_moments,
+            calculated_moments=calculated_moments,
         )
         weights = build_ls_weight_vector(
             moment_names=self.moment_names,

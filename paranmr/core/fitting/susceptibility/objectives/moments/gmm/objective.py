@@ -81,7 +81,7 @@ class GMMMomentObjective:
         observed_moments: dict[str, float],
         calculated_moments: dict[str, float],
     ) -> NDArray[np.float64]:
-        """Return the shared raw moment-condition vector ``m_calc - m_exp``."""
+        """Return the shared normalized moment-condition vector ``m_calc - m_exp``."""
         return build_moment_condition_vector(
             observed_moments=observed_moments,
             calculated_moments=calculated_moments,

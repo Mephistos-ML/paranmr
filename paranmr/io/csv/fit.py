@@ -50,7 +50,7 @@ def save_moment_fit_diagnostics(
     comment = [
         f"T = {diagnostics.temperature:.2f} K",
         f"objective = {diagnostics.objective_type}",
-        f"weighted_score = {diagnostics.weighted_score:.6g}",
+        f"score = {diagnostics.score:.6g}",
     ]
     write_csv_safe(pd.DataFrame(rows), file_name, comment)
 

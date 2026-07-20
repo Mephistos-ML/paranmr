@@ -8,7 +8,54 @@ from __future__ import annotations
 import numpy as np
 from numpy.typing import NDArray
 
-from paranmr.core.fitting.susceptibility.jacobian.types import MomentJacobianResult
+from paranmr.core.fitting.susceptibility.jacobian.types import (
+    MOMENT_JACOBIAN_PARAMETER_NAMES,
+    MomentJacobianResult,
+)
+from paranmr.core.fitting.susceptibility.moments.descriptors import MOMENT_NAMES
+
+
+def normalize_moment_jacobian(
+    *,
+    jacobian: MomentJacobianResult,
+    observed_moments: dict[str, float],
+) -> MomentJacobianResult:
+    """Return the Jacobian of normalized calculated moments.
+
+    With ``m_n^norm = m_n^calc / m_n^exp``, each Jacobian row is scaled by the
+    corresponding observed raw moment.
+    """
+
+    missing = [name for name in MOMENT_NAMES if name not in observed_moments]
+    if missing:
+        raise ValueError(
+            "Cannot normalize moment Jacobian without observed moments for: "
+            + ", ".join(missing)
+        )
+
+    scales = np.asarray(
+        [float(observed_moments[name]) for name in MOMENT_NAMES],
+        dtype=float,
+    )
+    zero_like = [
+        name
+        for name, scale in zip(MOMENT_NAMES, scales)
+        if np.isclose(scale, 0.0, atol=1e-12, rtol=0.0)
+    ]
+    if zero_like:
+        raise ValueError(
+            "Cannot normalize moment Jacobian by observed moment values "
+            "that are zero or too close to zero: "
+            + ", ".join(zero_like)
+        )
+
+    normalized_values = np.asarray(jacobian.values, dtype=float) / scales[:, None]
+    return MomentJacobianResult(
+        temperature=float(jacobian.temperature),
+        moment_names=MOMENT_NAMES,
+        parameter_names=MOMENT_JACOBIAN_PARAMETER_NAMES,
+        values=normalized_values,
+    )
 
 
 def estimate_gmm_covariance_from_jacobian(

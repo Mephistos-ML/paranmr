@@ -4,6 +4,9 @@
 import numpy as np
 import pytest
 
+from paranmr.core.fitting.susceptibility.moments.descriptors import (
+    build_normalized_moment_vectors,
+)
 from paranmr.core.fitting.susceptibility.objectives.moments.api import (
     prepare_moment_objective,
 )
@@ -42,8 +45,14 @@ def test_weighted_ls_moment_objective_matches_relative_residual_formula():
     }
 
     residuals = objective.residuals(
-        observed_moments=observed,
-        calculated_moments=calculated,
+        observed_moments=build_normalized_moment_vectors(
+            observed=observed,
+            calculated=calculated,
+        ).observed,
+        calculated_moments=build_normalized_moment_vectors(
+            observed=observed,
+            calculated=calculated,
+        ).calculated,
     )
 
     expected = np.asarray(
@@ -59,8 +68,14 @@ def test_weighted_ls_moment_objective_matches_relative_residual_formula():
     )
     assert residuals == pytest.approx(expected)
     assert objective.score(
-        observed_moments=observed,
-        calculated_moments=calculated,
+        observed_moments=build_normalized_moment_vectors(
+            observed=observed,
+            calculated=calculated,
+        ).observed,
+        calculated_moments=build_normalized_moment_vectors(
+            observed=observed,
+            calculated=calculated,
+        ).calculated,
     ) == pytest.approx(float(np.sqrt(np.sum(expected**2))))
 
 

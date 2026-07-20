@@ -19,10 +19,13 @@ from paranmr.core.fitting.susceptibility.jacobian.assembly import (
     build_moment_jacobian,
 )
 from paranmr.core.fitting.susceptibility.moments.descriptors import (
-    normalize_gaussian_mixture_moment_vectors,
+    build_normalized_moment_vectors,
 )
 from paranmr.core.fitting.susceptibility.moments.forward import (
     calculated_moments_from_parameters,
+)
+from paranmr.core.fitting.susceptibility.objectives.moments.conditions import (
+    build_moment_condition_vector,
 )
 from paranmr.core.fitting.susceptibility.linewidths import (
     SusceptibilityLinewidthInputs,
@@ -35,6 +38,7 @@ from paranmr.core.fitting.susceptibility.objectives.moments.gmm.objective import
 from paranmr.core.fitting.susceptibility.objectives.moments.gmm.weighting import (
     build_gmm_weighting_matrix,
     estimate_gmm_covariance_from_jacobian,
+    normalize_moment_jacobian,
 )
 from paranmr.core.fitting.susceptibility.objectives.moments.api import (
     MomentObjective,
@@ -55,7 +59,7 @@ class MomentFitResult:
     linewidth_method: str
     linewidth_vars_by_name: dict[str, float]
     calculated_linewidths_by_label: dict[str, float]
-    weighted_score: float
+    score: float
 
 
 @dataclass(frozen=True)
@@ -143,14 +147,6 @@ def fit_moment_model(
         model.final_var_values[key] = val
     model._post_fit()
 
-    # Compute fit quality metrics directly from the final residual vector.
-    residual_values = np.asarray(curr_fit.fun, dtype=float)
-    model.mae = float(np.sum(np.abs(residual_values)) / len(residual_values))
-    ss_res = float(np.sum(residual_values**2))
-    model.rmse = float(np.sqrt(ss_res / len(residual_values)))
-    model.r2 = np.nan
-    model.adj_r2 = np.nan
-
     # Reconstruct final linewidth values from the fitted optimizer vector.
     final_linewidth_vars = {**inputs.linewidth_fix_vars}
     final_linewidth_vars.update(
@@ -178,27 +174,30 @@ def fit_moment_model(
     )
 
     # Package the final comparison between experimental and calculated moments.
-    normalized_observed_moments, normalized_calculated_moments = (
-        normalize_gaussian_mixture_moment_vectors(
-            observed=inputs.observed_moments,
-            calculated=calculated_moments,
-        )
+    normalized_moments = build_normalized_moment_vectors(
+        observed=inputs.observed_moments,
+        calculated=calculated_moments,
     )
-    weighted_score = _weighted_moment_score(
-        observed_moments=inputs.observed_moments,
-        calculated_moments=calculated_moments,
-        moment_objective=inputs.moment_objective,
+    condition_vector = build_moment_condition_vector(
+        observed_moments=normalized_moments.observed,
+        calculated_moments=normalized_moments.calculated,
+        moment_names=tuple(inputs.observed_moments.keys()),
     )
+    model.mae = float(np.mean(np.abs(condition_vector)))
+    model.rmse = float(np.sqrt(np.mean(condition_vector**2)))
+    model.r2 = np.nan
+    model.adj_r2 = np.nan
+    score = _moment_score(condition_vector)
     return MomentFitResult(
         temperature=float(inputs.temperature),
         objective_type=inputs.moment_objective.objective_type,
         observed_moments={
             f"{k}_norm": float(v)
-            for k, v in normalized_observed_moments.items()
+            for k, v in normalized_moments.observed.items()
         },
         calculated_moments={
             f"{k}_norm": float(v)
-            for k, v in normalized_calculated_moments.items()
+            for k, v in normalized_moments.calculated.items()
         },
         linewidth_method="r6",
         linewidth_vars_by_name={
@@ -207,7 +206,7 @@ def fit_moment_model(
         calculated_linewidths_by_label={
             k: float(v) for k, v in final_linewidths_by_atom_label.items()
         },
-        weighted_score=weighted_score,
+        score=score,
     )
 
 
@@ -252,7 +251,11 @@ def _run_two_step_gmm_fit(
         linewidth_vars_by_name=stage1_linewidth_vars,
         average_labels=inputs.average_labels,
     )
-    covariance = estimate_gmm_covariance_from_jacobian(stage1_jacobian)
+    normalized_stage1_jacobian = normalize_moment_jacobian(
+        jacobian=stage1_jacobian,
+        observed_moments=inputs.observed_moments,
+    )
+    covariance = estimate_gmm_covariance_from_jacobian(normalized_stage1_jacobian)
     weighting = build_gmm_weighting_matrix(covariance)
     stage2_objective = GMMMomentObjective.with_weighting_matrix(
         moment_names=tuple(inputs.observed_moments.keys()),
@@ -336,10 +339,14 @@ def _moment_residual_from_float_list(
         include_diamagnetic=inputs.use_diamagnetic,
         average_labels=inputs.average_labels,
     )
+    normalized_moments = build_normalized_moment_vectors(
+        observed=inputs.observed_moments,
+        calculated=calculated_moments,
+    )
     return list(
         _weighted_moment_residuals(
-            observed_moments=inputs.observed_moments,
-            calculated_moments=calculated_moments,
+            observed_moments=normalized_moments.observed,
+            calculated_moments=normalized_moments.calculated,
             moment_objective=inputs.moment_objective,
         )
     )
@@ -357,13 +364,7 @@ def _weighted_moment_residuals(
     )
 
 
-def _weighted_moment_score(
-    *,
-    observed_moments: dict[str, float],
-    calculated_moments: dict[str, float],
-    moment_objective: MomentObjective,
-) -> float:
-    return moment_objective.score(
-        observed_moments=observed_moments,
-        calculated_moments=calculated_moments,
-    )
+def _moment_score(condition_vector: NDArray[np.float64]) -> float:
+    """Return the standardized score in normalized moment space."""
+
+    return float(np.sqrt(np.sum(np.asarray(condition_vector, dtype=float) ** 2)))

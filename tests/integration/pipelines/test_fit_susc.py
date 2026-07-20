@@ -129,11 +129,11 @@ def test_fit_susc_moments_weighted_ls_smoke(tmp_path: Path):
     assert np.isfinite(diagnostics[numeric_cols].to_numpy(dtype=float)).all()
 
     file_text = expected_output.read_text(encoding="utf-8-sig")
-    weighted_score_line = next(
-        line for line in file_text.splitlines() if line.startswith("# weighted_score = ")
+    score_line = next(
+        line for line in file_text.splitlines() if line.startswith("# score = ")
     )
-    weighted_score = float(weighted_score_line.split("=", maxsplit=1)[1].strip())
-    assert np.isfinite(weighted_score)
+    score = float(score_line.split("=", maxsplit=1)[1].strip())
+    assert np.isfinite(score)
 
     linewidth_model_output = (
         cwd
