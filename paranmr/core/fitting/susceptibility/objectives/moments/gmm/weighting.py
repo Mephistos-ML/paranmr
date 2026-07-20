@@ -8,10 +8,7 @@ from __future__ import annotations
 import numpy as np
 from numpy.typing import NDArray
 
-from paranmr.core.fitting.susceptibility.jacobian.types import (
-    MOMENT_JACOBIAN_PARAMETER_NAMES,
-    MomentJacobianResult,
-)
+from paranmr.core.fitting.susceptibility.jacobian.types import MomentJacobianResult
 def estimate_gmm_covariance_from_jacobian(
     jacobian: MomentJacobianResult,
     *,
