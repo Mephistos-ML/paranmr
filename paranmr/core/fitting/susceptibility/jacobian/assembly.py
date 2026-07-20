@@ -19,10 +19,7 @@ from paranmr.core.fitting.susceptibility.jacobian.susceptibility_moments import 
     differentiate_moments_by_susc_iso,
     differentiate_moments_by_susc_rho_over_ax,
 )
-from paranmr.core.fitting.susceptibility.jacobian.types import (
-    MOMENT_JACOBIAN_PARAMETER_NAMES,
-    MomentJacobianResult,
-)
+from paranmr.core.fitting.susceptibility.jacobian.types import MomentJacobianResult
 from paranmr.core.fitting.susceptibility.linewidths import (
     SusceptibilityLinewidthInputs,
     predict_r6_widths_by_atom_label,
@@ -38,9 +35,10 @@ def build_moment_jacobian(
     linewidth_inputs: SusceptibilityLinewidthInputs,
     linewidth_vars_by_name: dict[str, float],
     observed_moments: dict[str, float],
+    parameter_names: tuple[str, ...],
     average_labels: tuple[tuple[str, ...], ...] = (),
 ) -> MomentJacobianResult:
-    """Build the canonical normalized ``6 x 8`` moment Jacobian matrix."""
+    """Build the normalized moment Jacobian for the active fit parameters."""
 
     raw_jacobian = _build_raw_moment_jacobian(
         temperature=temperature,
@@ -48,6 +46,8 @@ def build_moment_jacobian(
         nuclei=nuclei,
         linewidth_inputs=linewidth_inputs,
         linewidth_vars_by_name=linewidth_vars_by_name,
+        moment_names=tuple(observed_moments.keys()),
+        parameter_names=parameter_names,
         average_labels=average_labels,
     )
     return _normalize_raw_moment_jacobian(
@@ -63,9 +63,11 @@ def _build_raw_moment_jacobian(
     nuclei: list[Nucleus],
     linewidth_inputs: SusceptibilityLinewidthInputs,
     linewidth_vars_by_name: dict[str, float],
+    moment_names: tuple[str, ...],
+    parameter_names: tuple[str, ...],
     average_labels: tuple[tuple[str, ...], ...] = (),
 ) -> MomentJacobianResult:
-    """Build the raw canonical ``6 x 8`` moment Jacobian matrix."""
+    """Build the raw moment Jacobian for the requested active parameter set."""
 
     linewidths_by_label = predict_r6_widths_by_atom_label(
         linewidth_inputs=linewidth_inputs,
@@ -82,53 +84,63 @@ def _build_raw_moment_jacobian(
         linewidth_vars_by_name=linewidth_vars_by_name,
     )
 
-    values = np.column_stack(
-        [
-            linewidth_derivatives[:, 0],
-            linewidth_derivatives[:, 1],
-            differentiate_moments_by_susc_iso(
-                parameters=parameters,
-                nuclei=nuclei,
-                linewidths_by_label=linewidths_by_label,
-                average_labels=average_labels,
-            ),
-            differentiate_moments_by_susc_ax(
-                parameters=parameters,
-                nuclei=nuclei,
-                linewidths_by_label=linewidths_by_label,
-                average_labels=average_labels,
-            ),
-            differentiate_moments_by_susc_rho_over_ax(
-                parameters=parameters,
-                nuclei=nuclei,
-                linewidths_by_label=linewidths_by_label,
-                average_labels=average_labels,
-            ),
-            differentiate_moments_by_alpha(
-                parameters=parameters,
-                nuclei=nuclei,
-                linewidths_by_label=linewidths_by_label,
-                average_labels=average_labels,
-            ),
-            differentiate_moments_by_beta(
-                parameters=parameters,
-                nuclei=nuclei,
-                linewidths_by_label=linewidths_by_label,
-                average_labels=average_labels,
-            ),
-            differentiate_moments_by_gamma(
-                parameters=parameters,
-                nuclei=nuclei,
-                linewidths_by_label=linewidths_by_label,
-                average_labels=average_labels,
-            ),
-        ]
-    )
+    derivatives_by_parameter = {
+        "p1": linewidth_derivatives[:, 0],
+        "p2": linewidth_derivatives[:, 1],
+        "iso": differentiate_moments_by_susc_iso(
+            parameters=parameters,
+            nuclei=nuclei,
+            linewidths_by_label=linewidths_by_label,
+            average_labels=average_labels,
+        ),
+        "ax": differentiate_moments_by_susc_ax(
+            parameters=parameters,
+            nuclei=nuclei,
+            linewidths_by_label=linewidths_by_label,
+            average_labels=average_labels,
+        ),
+        "rho_over_ax": differentiate_moments_by_susc_rho_over_ax(
+            parameters=parameters,
+            nuclei=nuclei,
+            linewidths_by_label=linewidths_by_label,
+            average_labels=average_labels,
+        ),
+        "alpha": differentiate_moments_by_alpha(
+            parameters=parameters,
+            nuclei=nuclei,
+            linewidths_by_label=linewidths_by_label,
+            average_labels=average_labels,
+        ),
+        "beta": differentiate_moments_by_beta(
+            parameters=parameters,
+            nuclei=nuclei,
+            linewidths_by_label=linewidths_by_label,
+            average_labels=average_labels,
+        ),
+        "gamma": differentiate_moments_by_gamma(
+            parameters=parameters,
+            nuclei=nuclei,
+            linewidths_by_label=linewidths_by_label,
+            average_labels=average_labels,
+        ),
+    }
+    missing_parameters = [
+        name for name in parameter_names if name not in derivatives_by_parameter
+    ]
+    if missing_parameters:
+        raise ValueError(
+            "Moment Jacobian is missing derivative builders for parameter(s): "
+            + ", ".join(missing_parameters)
+        )
+
+    values = np.column_stack([derivatives_by_parameter[name] for name in parameter_names])
+    row_indices = [MOMENT_NAMES.index(name) for name in moment_names]
+    values = values[row_indices, :]
 
     return MomentJacobianResult(
         temperature=float(temperature),
-        moment_names=MOMENT_NAMES,
-        parameter_names=MOMENT_JACOBIAN_PARAMETER_NAMES,
+        moment_names=moment_names,
+        parameter_names=parameter_names,
         values=values,
     )
 
@@ -140,7 +152,7 @@ def _normalize_raw_moment_jacobian(
 ) -> MomentJacobianResult:
     """Return the Jacobian of normalized calculated moments."""
 
-    missing = [name for name in MOMENT_NAMES if name not in observed_moments]
+    missing = [name for name in jacobian.moment_names if name not in observed_moments]
     if missing:
         raise ValueError(
             "Cannot normalize moment Jacobian without observed moments for: "
@@ -148,12 +160,12 @@ def _normalize_raw_moment_jacobian(
         )
 
     scales = np.asarray(
-        [float(observed_moments[name]) for name in MOMENT_NAMES],
+        [float(observed_moments[name]) for name in jacobian.moment_names],
         dtype=float,
     )
     zero_like = [
         name
-        for name, scale in zip(MOMENT_NAMES, scales)
+        for name, scale in zip(jacobian.moment_names, scales)
         if np.isclose(scale, 0.0, atol=1e-12, rtol=0.0)
     ]
     if zero_like:
@@ -166,8 +178,8 @@ def _normalize_raw_moment_jacobian(
     normalized_values = np.asarray(jacobian.values, dtype=float) / scales[:, None]
     return MomentJacobianResult(
         temperature=float(jacobian.temperature),
-        moment_names=MOMENT_NAMES,
-        parameter_names=MOMENT_JACOBIAN_PARAMETER_NAMES,
+        moment_names=tuple(jacobian.moment_names),
+        parameter_names=tuple(jacobian.parameter_names),
         values=normalized_values,
     )
 

@@ -10,19 +10,6 @@ from dataclasses import dataclass
 import numpy as np
 from numpy.typing import NDArray
 
-from paranmr.core.fitting.susceptibility.moments.descriptors import MOMENT_NAMES
-
-MOMENT_JACOBIAN_PARAMETER_NAMES = (
-    "p1",
-    "p2",
-    "chi_iso",
-    "chi_ax",
-    "chi_rh_over_ax",
-    "alpha",
-    "beta",
-    "gamma",
-)
-
 
 @dataclass(frozen=True)
 class MomentJacobianResult:
@@ -52,14 +39,12 @@ class MomentJacobianResult:
                 "Moment Jacobian shape does not match the declared row/column "
                 f"labels: expected {expected_shape}, got {values.shape}"
             )
-        if tuple(self.moment_names) != MOMENT_NAMES:
+        if len(set(self.moment_names)) != len(self.moment_names):
             raise ValueError(
-                "Moment Jacobian row labels must match the canonical moment order "
-                f"{MOMENT_NAMES!r}"
+                "Moment Jacobian row labels must be unique"
             )
-        if tuple(self.parameter_names) != MOMENT_JACOBIAN_PARAMETER_NAMES:
+        if len(set(self.parameter_names)) != len(self.parameter_names):
             raise ValueError(
-                "Moment Jacobian column labels must match the canonical parameter "
-                f"order {MOMENT_JACOBIAN_PARAMETER_NAMES!r}"
+                "Moment Jacobian column labels must be unique"
             )
         object.__setattr__(self, "values", values)

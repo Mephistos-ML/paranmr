@@ -9,9 +9,6 @@ from paranmr.core.domain.tensor import Hyperfine
 from paranmr.core.fitting.susceptibility.jacobian.assembly import (
     build_moment_jacobian,
 )
-from paranmr.core.fitting.susceptibility.jacobian.types import (
-    MOMENT_JACOBIAN_PARAMETER_NAMES,
-)
 from paranmr.core.fitting.susceptibility.linewidths import (
     SusceptibilityLinewidthInputs,
 )
@@ -54,7 +51,7 @@ def _test_nuclei() -> list[Nucleus]:
 
 
 @pytest.mark.unit
-def test_build_moment_jacobian_returns_canonical_6x8_contract():
+def test_build_moment_jacobian_returns_active_contract():
     result = build_moment_jacobian(
         temperature=302.15,
         parameters={
@@ -78,10 +75,11 @@ def test_build_moment_jacobian_returns_canonical_6x8_contract():
             "m5": 10.0,
             "m6": 12.0,
         },
+        parameter_names=("ax", "alpha", "p1"),
         average_labels=(),
     )
 
     assert result.temperature == pytest.approx(302.15)
     assert result.moment_names == MOMENT_NAMES
-    assert result.parameter_names == MOMENT_JACOBIAN_PARAMETER_NAMES
-    assert result.values.shape == (6, 8)
+    assert result.parameter_names == ("ax", "alpha", "p1")
+    assert result.values.shape == (6, 3)

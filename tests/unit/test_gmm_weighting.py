@@ -5,7 +5,6 @@ import numpy as np
 import pytest
 
 from paranmr.core.fitting.susceptibility.jacobian.types import (
-    MOMENT_JACOBIAN_PARAMETER_NAMES,
     MomentJacobianResult,
 )
 from paranmr.core.fitting.susceptibility.moments.descriptors import MOMENT_NAMES
@@ -20,7 +19,16 @@ def test_estimate_gmm_covariance_from_jacobian_returns_regularized_symmetric_mat
     jacobian = MomentJacobianResult(
         temperature=302.15,
         moment_names=MOMENT_NAMES,
-        parameter_names=MOMENT_JACOBIAN_PARAMETER_NAMES,
+        parameter_names=(
+            "p1",
+            "p2",
+            "iso",
+            "ax",
+            "rho_over_ax",
+            "alpha",
+            "beta",
+            "gamma",
+        ),
         values=np.asarray(
             [
                 [1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],

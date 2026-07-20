@@ -159,6 +159,7 @@ def fit_moment_assignment(
             linewidth_inputs=linewidth_inputs,
             linewidth_vars_by_name=moment_fit_result.linewidth_vars_by_name,
             observed_moments=experimental_moments,
+            parameter_names=fit_var_names + linewidth_fit_names,
             average_labels=tuple(tuple(group) for group in average_labels),
         )
         save_moment_jacobian(

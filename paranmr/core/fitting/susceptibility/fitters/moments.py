@@ -249,6 +249,7 @@ def _run_two_step_gmm_fit(
         linewidth_inputs=inputs.linewidth_inputs,
         linewidth_vars_by_name=stage1_linewidth_vars,
         observed_moments=inputs.observed_moments,
+        parameter_names=tuple(inputs.fit_var_names) + tuple(inputs.linewidth_fit_names),
         average_labels=inputs.average_labels,
     )
     covariance = estimate_gmm_covariance_from_jacobian(stage1_jacobian)

@@ -165,18 +165,8 @@ def test_fit_susc_moments_weighted_ls_smoke(tmp_path: Path):
     moment_jacobian = pd.read_csv(
         moment_jacobian_output, comment="#", encoding="utf-8-sig"
     )
-    assert list(moment_jacobian.columns) == [
-        "quantity",
-        "p1",
-        "p2",
-        "chi_iso",
-        "chi_ax",
-        "chi_rh_over_ax",
-        "alpha",
-        "beta",
-        "gamma",
-    ]
-    assert moment_jacobian.shape == (6, 9)
+    assert list(moment_jacobian.columns) == ["quantity", "ax"]
+    assert moment_jacobian.shape == (6, 2)
     jacobian_values = moment_jacobian.drop(columns=["quantity"]).to_numpy(
         dtype=float
     )
