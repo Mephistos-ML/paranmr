@@ -10,10 +10,10 @@ from paranmr.core.fitting.susceptibility.objectives.moments.api import (
 from paranmr.core.fitting.susceptibility.objectives.moments.conditions import (
     build_moment_condition_vector,
 )
-from paranmr.core.fitting.susceptibility.objectives.moments.gmm import (
+from paranmr.core.fitting.susceptibility.objectives.moments.gmm.objective import (
     GMMMomentObjective,
 )
-from paranmr.core.fitting.susceptibility.objectives.moments.weighted_ls import (
+from paranmr.core.fitting.susceptibility.objectives.moments.ls.objective import (
     WeightedLSMomentObjective,
 )
 

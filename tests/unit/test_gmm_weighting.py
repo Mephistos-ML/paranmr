@@ -9,7 +9,7 @@ from paranmr.core.fitting.susceptibility.jacobian.types import (
     MomentJacobianResult,
 )
 from paranmr.core.fitting.susceptibility.moments.descriptors import MOMENT_NAMES
-from paranmr.core.fitting.susceptibility.objectives.moments.gmm_weighting import (
+from paranmr.core.fitting.susceptibility.objectives.moments.gmm.weighting import (
     build_gmm_weighting_matrix,
     estimate_gmm_covariance_from_jacobian,
 )

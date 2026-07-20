@@ -29,10 +29,10 @@ from paranmr.core.fitting.susceptibility.linewidths import (
     predict_r6_widths_by_atom_label,
 )
 from paranmr.core.fitting.susceptibility.models.base import SusceptibilityModel
-from paranmr.core.fitting.susceptibility.objectives.moments.gmm import (
+from paranmr.core.fitting.susceptibility.objectives.moments.gmm.objective import (
     GMMMomentObjective,
 )
-from paranmr.core.fitting.susceptibility.objectives.moments.gmm_weighting import (
+from paranmr.core.fitting.susceptibility.objectives.moments.gmm.weighting import (
     build_gmm_weighting_matrix,
     estimate_gmm_covariance_from_jacobian,
 )

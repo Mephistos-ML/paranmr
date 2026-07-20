@@ -10,10 +10,10 @@ from typing import Protocol
 import numpy as np
 from numpy.typing import NDArray
 
-from paranmr.core.fitting.susceptibility.objectives.moments.gmm import (
+from paranmr.core.fitting.susceptibility.objectives.moments.gmm.objective import (
     GMMMomentObjective,
 )
-from paranmr.core.fitting.susceptibility.objectives.moments.weighted_ls import (
+from paranmr.core.fitting.susceptibility.objectives.moments.ls.objective import (
     WeightedLSMomentObjective,
 )
 

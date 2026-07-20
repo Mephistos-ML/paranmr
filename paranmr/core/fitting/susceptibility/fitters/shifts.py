@@ -12,7 +12,7 @@ from scipy.optimize import least_squares, lsq_linear
 
 from paranmr.core.domain.exp import Experiment
 from paranmr.core.domain.mol import Molecule
-from paranmr.core.fitting.susceptibility.objectives.shift_residuals import (
+from paranmr.core.fitting.susceptibility.objectives.shifts.residuals import (
     shift_residual_from_float_list,
 )
 from paranmr.core.fitting.susceptibility.stats import svd_stdev
