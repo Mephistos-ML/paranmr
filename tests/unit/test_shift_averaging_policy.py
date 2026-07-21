@@ -129,6 +129,7 @@ def test_calculated_moments_treat_collapsed_packages_with_equal_weight():
         nuclei=molecule.nuclei,
         linewidths_by_label=widths_by_label,
         include_diamagnetic=False,
+        moment_labels=("m1", "m2", "m3", "m4", "m5", "m6"),
         average_labels=tuple(tuple(group) for group in average_labels),
     )
 

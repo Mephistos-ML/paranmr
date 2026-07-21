@@ -89,6 +89,14 @@ def test_fit_susc_config_rejects_linewidth_estimate_for_moments(tmp_path):
                 "  method: moments",
                 "  moment_objective:",
                 "    type: ls",
+                "    number_of_moments: 6",
+                "    moment_weights:",
+                "      m1: 1.0",
+                "      m2: 1.0",
+                "      m3: 1.0",
+                "      m4: 1.0",
+                "      m5: 1.0",
+                "      m6: 1.0",
                 "linewidth:",
                 "  method: experimental",
                 "  estimate: p1_p2",
@@ -131,7 +139,8 @@ def test_fit_susc_config_rejects_unknown_moment_weight_name(tmp_path):
                 "  method: moments",
                 "  moment_objective:",
                 "    type: ls",
-                "    weights:",
+                "    number_of_moments: 6",
+                "    moment_weights:",
                 "      m7: 1.0",
                 "linewidth:",
                 "  method: experimental",
@@ -141,6 +150,54 @@ def test_fit_susc_config_rejects_unknown_moment_weight_name(tmp_path):
     )
 
     with pytest.raises(ValueError, match="unknown moment"):
+        FitSuscConfig.from_file(config_file)
+
+
+@pytest.mark.unit
+def test_fit_susc_config_rejects_missing_moment_weight_for_ls(tmp_path):
+    config_file = tmp_path / "fit.yml"
+    config_file.write_text(
+        "\n".join(
+            [
+                "project:",
+                "  name: test",
+                "hyperfine:",
+                "  method: pdip",
+                "  file: hf.xyz",
+                "  paramagnetic_centre: [0.0, 0.0, 0.0]",
+                "experiment:",
+                "  files: exp.csv",
+                "nuclei:",
+                "  include: H",
+                "diamagnetic:",
+                "  method: dft",
+                "  file: dia.out",
+                "diamagnetic_ref:",
+                "  method: dft",
+                "  file: ref.out",
+                "susc_fit:",
+                "  type: isoaxrho",
+                "  variables:",
+                "    iso: [fit, 0.0]",
+                "assignment:",
+                "  method: moments",
+                "  moment_objective:",
+                "    type: ls",
+                "    number_of_moments: 3",
+                "    moment_weights:",
+                "      m1: 1.0",
+                "      m2: 1.0",
+                "linewidth:",
+                "  method: experimental",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="must define exactly m1..m3 for type 'ls'",
+    ):
         FitSuscConfig.from_file(config_file)
 
 
@@ -174,6 +231,7 @@ def test_fit_susc_config_accepts_gmm_moment_objective_placeholder(tmp_path):
                 "  method: moments",
                 "  moment_objective:",
                 "    type: gmm",
+                "    number_of_moments: 6",
                 "linewidth:",
                 "  method: experimental",
             ]
@@ -215,6 +273,7 @@ def test_fit_susc_config_accepts_gmm_with_explicit_covariance_specification(tmp_
                 "  method: moments",
                 "  moment_objective:",
                 "    type: gmm",
+                "    number_of_moments: 6",
                 "    covariance:",
                 "      method: monte_carlo",
                 "      n_samples: 500",
@@ -233,6 +292,7 @@ def test_fit_susc_config_accepts_gmm_with_explicit_covariance_specification(tmp_
 
     assert config.assignment_moment_objective == {
         "type": "gmm",
+        "number_of_moments": 6,
         "covariance": {
             "method": "monte_carlo",
             "n_samples": 500,
@@ -267,7 +327,8 @@ def test_fit_susc_config_rejects_gmm_moment_weights(tmp_path):
                 "  method: moments",
                 "  moment_objective:",
                 "    type: gmm",
-                "    weights:",
+                "    number_of_moments: 6",
+                "    moment_weights:",
                 "      m1: 1.0",
                 "susc_fit:",
                 "  type: isoaxrho",
@@ -311,6 +372,14 @@ def test_fit_susc_config_accepts_methyls_shift_averaging_for_moments(tmp_path):
                 "  method: moments",
                 "  moment_objective:",
                 "    type: ls",
+                "    number_of_moments: 6",
+                "    moment_weights:",
+                "      m1: 1.0",
+                "      m2: 1.0",
+                "      m3: 1.0",
+                "      m4: 1.0",
+                "      m5: 1.0",
+                "      m6: 1.0",
                 "linewidth:",
                 "  method: experimental",
             ]
@@ -382,6 +451,7 @@ def test_fit_susc_config_rejects_all_shift_averaging_for_moments(tmp_path):
                 "  method: moments",
                 "  moment_objective:",
                 "    type: ls",
+                "    number_of_moments: 6",
                 "linewidth:",
                 "  method: experimental",
             ]
@@ -418,6 +488,7 @@ def test_fit_susc_config_rejects_signal_label_averaging_for_moments(tmp_path):
                 "  method: moments",
                 "  moment_objective:",
                 "    type: ls",
+                "    number_of_moments: 6",
                 "linewidth:",
                 "  method: experimental",
             ]

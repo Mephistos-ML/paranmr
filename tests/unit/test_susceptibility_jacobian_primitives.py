@@ -23,7 +23,6 @@ from paranmr.core.fitting.susceptibility.jacobian.susceptibility_moments import 
     differentiate_moments_by_susc_rho_over_ax,
 )
 from paranmr.core.fitting.susceptibility.moments.descriptors import (
-    MOMENT_NAMES,
     compute_gaussian_mixture_moments,
 )
 from paranmr.core.fitting.susceptibility.moments.forward import (
@@ -38,6 +37,8 @@ from paranmr.core.fitting.susceptibility.moments.gaussian import (
 from paranmr.core.fitting.susceptibility.models.isoaxrho_euler import (
     IsoAxRhoEulerFitter,
 )
+
+MOMENT_LABELS = tuple(f"m{order}" for order in range(1, 7))
 
 
 def _test_nuclei() -> list[Nucleus]:
@@ -236,6 +237,7 @@ def test_differentiate_moments_by_susc_ax_matches_finite_difference_isoaxrho():
         parameters=parameters,
         nuclei=nuclei,
         linewidths_by_label=linewidths_by_label,
+        moment_labels=MOMENT_LABELS,
     )
 
     def _moment_vector(ax_value: float) -> np.ndarray:
@@ -261,8 +263,9 @@ def test_differentiate_moments_by_susc_ax_matches_finite_difference_isoaxrho():
             centers=peaks["center"],
             sigmas=peaks["sigma"],
             area_norm=peaks["area_norm"],
+            moment_labels=MOMENT_LABELS,
         )
-        return np.asarray([moments[name] for name in MOMENT_NAMES], dtype=float)
+        return np.asarray([moments[name] for name in MOMENT_LABELS], dtype=float)
 
     finite_difference = (
         _moment_vector(parameters["ax"] + step)
@@ -294,6 +297,7 @@ def test_differentiate_moments_by_susc_ax_matches_finite_difference_euler():
         parameters=parameters,
         nuclei=nuclei,
         linewidths_by_label=linewidths_by_label,
+        moment_labels=MOMENT_LABELS,
     )
 
     def _moment_vector(ax_value: float) -> np.ndarray:
@@ -318,8 +322,9 @@ def test_differentiate_moments_by_susc_ax_matches_finite_difference_euler():
             centers=peaks["center"],
             sigmas=peaks["sigma"],
             area_norm=peaks["area_norm"],
+            moment_labels=MOMENT_LABELS,
         )
-        return np.asarray([moments[name] for name in MOMENT_NAMES], dtype=float)
+        return np.asarray([moments[name] for name in MOMENT_LABELS], dtype=float)
 
     finite_difference = (
         _moment_vector(parameters["ax"] + step)
@@ -467,6 +472,7 @@ def test_differentiate_moments_by_susc_rho_over_ax_matches_finite_difference_iso
         parameters=parameters,
         nuclei=nuclei,
         linewidths_by_label=linewidths_by_label,
+        moment_labels=MOMENT_LABELS,
     )
 
     def _moment_vector(rho_value: float) -> np.ndarray:
@@ -492,8 +498,9 @@ def test_differentiate_moments_by_susc_rho_over_ax_matches_finite_difference_iso
             centers=peaks["center"],
             sigmas=peaks["sigma"],
             area_norm=peaks["area_norm"],
+            moment_labels=MOMENT_LABELS,
         )
-        return np.asarray([moments[name] for name in MOMENT_NAMES], dtype=float)
+        return np.asarray([moments[name] for name in MOMENT_LABELS], dtype=float)
 
     finite_difference = (
         _moment_vector(parameters["rho_over_ax"] + step)
@@ -525,6 +532,7 @@ def test_differentiate_moments_by_susc_rho_over_ax_matches_finite_difference_eul
         parameters=parameters,
         nuclei=nuclei,
         linewidths_by_label=linewidths_by_label,
+        moment_labels=MOMENT_LABELS,
     )
 
     def _moment_vector(rho_value: float) -> np.ndarray:
@@ -549,8 +557,9 @@ def test_differentiate_moments_by_susc_rho_over_ax_matches_finite_difference_eul
             centers=peaks["center"],
             sigmas=peaks["sigma"],
             area_norm=peaks["area_norm"],
+            moment_labels=MOMENT_LABELS,
         )
-        return np.asarray([moments[name] for name in MOMENT_NAMES], dtype=float)
+        return np.asarray([moments[name] for name in MOMENT_LABELS], dtype=float)
 
     finite_difference = (
         _moment_vector(parameters["rho_over_ax"] + step)
@@ -579,6 +588,7 @@ def test_differentiate_moments_by_susc_iso_matches_finite_difference_isoaxrho():
         parameters=parameters,
         nuclei=nuclei,
         linewidths_by_label=linewidths_by_label,
+        moment_labels=MOMENT_LABELS,
     )
 
     def _moment_vector(iso_value: float) -> np.ndarray:
@@ -604,8 +614,9 @@ def test_differentiate_moments_by_susc_iso_matches_finite_difference_isoaxrho():
             centers=peaks["center"],
             sigmas=peaks["sigma"],
             area_norm=peaks["area_norm"],
+            moment_labels=MOMENT_LABELS,
         )
-        return np.asarray([moments[name] for name in MOMENT_NAMES], dtype=float)
+        return np.asarray([moments[name] for name in MOMENT_LABELS], dtype=float)
 
     finite_difference = (
         _moment_vector(parameters["iso"] + step)
@@ -696,6 +707,7 @@ def test_differentiate_moments_by_euler_angle_matches_finite_difference(
         parameters=parameters,
         nuclei=nuclei,
         linewidths_by_label=linewidths_by_label,
+        moment_labels=MOMENT_LABELS,
     )
 
     def _moment_vector(angle_value: float) -> np.ndarray:
@@ -718,8 +730,9 @@ def test_differentiate_moments_by_euler_angle_matches_finite_difference(
             centers=peaks["center"],
             sigmas=peaks["sigma"],
             area_norm=peaks["area_norm"],
+            moment_labels=MOMENT_LABELS,
         )
-        return np.asarray([moments[name] for name in MOMENT_NAMES], dtype=float)
+        return np.asarray([moments[name] for name in MOMENT_LABELS], dtype=float)
 
     finite_difference = (
         _moment_vector(parameters[parameter_name] + step)

@@ -12,7 +12,8 @@ from paranmr.core.fitting.susceptibility.jacobian.assembly import (
 from paranmr.core.fitting.susceptibility.linewidths import (
     SusceptibilityLinewidthInputs,
 )
-from paranmr.core.fitting.susceptibility.moments.descriptors import MOMENT_NAMES
+
+MOMENT_LABELS = tuple(f"m{order}" for order in range(1, 7))
 
 
 def _test_nuclei() -> list[Nucleus]:
@@ -80,6 +81,6 @@ def test_build_moment_jacobian_returns_active_contract():
     )
 
     assert result.temperature == pytest.approx(302.15)
-    assert result.moment_names == MOMENT_NAMES
+    assert result.moment_names == MOMENT_LABELS
     assert result.parameter_names == ("ax", "alpha", "p1")
     assert result.values.shape == (6, 3)

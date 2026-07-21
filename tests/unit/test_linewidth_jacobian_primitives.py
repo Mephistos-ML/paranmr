@@ -13,7 +13,6 @@ from paranmr.core.fitting.susceptibility.linewidths import (
     predict_r6_widths_by_atom_label,
 )
 from paranmr.core.fitting.susceptibility.moments.descriptors import (
-    MOMENT_NAMES,
     compute_gaussian_mixture_moments,
 )
 from paranmr.core.fitting.susceptibility.moments.forward import (
@@ -26,6 +25,8 @@ from paranmr.core.fitting.susceptibility.moments.gaussian import (
     gaussian_peak_representation,
 )
 from paranmr.core.spectrum.kernels import gaussian_fwhm_to_sigma
+
+MOMENT_LABELS = tuple(f"m{order}" for order in range(1, 7))
 
 
 def _package_sigmas(
@@ -180,6 +181,7 @@ def test_differentiate_moments_by_linewidth_parameters_matches_finite_difference
         packages=packages,
         linewidth_inputs=linewidth_inputs,
         linewidth_vars_by_name={"p1": p1, "p2": p2},
+        moment_labels=MOMENT_LABELS,
     )
 
     centers = package_centers(packages)
@@ -199,8 +201,9 @@ def test_differentiate_moments_by_linewidth_parameters_matches_finite_difference
             centers=peaks["center"],
             sigmas=peaks["sigma"],
             area_norm=peaks["area_norm"],
+            moment_labels=MOMENT_LABELS,
         )
-        return np.asarray([moments[name] for name in MOMENT_NAMES], dtype=float)
+        return np.asarray([moments[name] for name in MOMENT_LABELS], dtype=float)
 
     finite_difference = np.zeros_like(analytical)
     finite_difference[:, 0] = (

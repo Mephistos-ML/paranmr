@@ -7,11 +7,8 @@ import pytest
 from paranmr.core.fitting.susceptibility.moments.descriptors import (
     build_normalized_moment_vectors,
 )
-from paranmr.core.fitting.susceptibility.objectives.moments.api import (
-    prepare_moment_objective,
-)
-from paranmr.core.fitting.susceptibility.objectives.moments.conditions import (
-    build_moment_condition_vector,
+from paranmr.core.fitting.susceptibility.objectives.moments.differences import (
+    build_moment_difference_vector,
 )
 from paranmr.core.fitting.susceptibility.objectives.moments.gmm.objective import (
     GMMMomentObjective,
@@ -19,6 +16,8 @@ from paranmr.core.fitting.susceptibility.objectives.moments.gmm.objective import
 from paranmr.core.fitting.susceptibility.objectives.moments.ls.objective import (
     WeightedLSMomentObjective,
 )
+
+MOMENT_LABELS = ("m1", "m2", "m3", "m4", "m5", "m6")
 
 
 @pytest.mark.unit
@@ -48,10 +47,12 @@ def test_weighted_ls_moment_objective_matches_relative_residual_formula():
         observed_moments=build_normalized_moment_vectors(
             observed=observed,
             calculated=calculated,
+            moment_names=MOMENT_LABELS,
         ).observed,
         calculated_moments=build_normalized_moment_vectors(
             observed=observed,
             calculated=calculated,
+            moment_names=MOMENT_LABELS,
         ).calculated,
     )
 
@@ -71,10 +72,12 @@ def test_weighted_ls_moment_objective_matches_relative_residual_formula():
         observed_moments=build_normalized_moment_vectors(
             observed=observed,
             calculated=calculated,
+            moment_names=MOMENT_LABELS,
         ).observed,
         calculated_moments=build_normalized_moment_vectors(
             observed=observed,
             calculated=calculated,
+            moment_names=MOMENT_LABELS,
         ).calculated,
     ) == pytest.approx(float(np.sqrt(np.sum(expected**2))))
 
@@ -115,19 +118,9 @@ def test_weighted_ls_moment_objective_exposes_raw_condition_vector():
 
 @pytest.mark.unit
 def test_prepare_moment_objective_builds_gmm_objective_from_weighting_matrix():
-    observed = {
-        "m1": 1.0,
-        "m2": 2.0,
-        "m3": 3.0,
-        "m4": 4.0,
-        "m5": 5.0,
-        "m6": 6.0,
-    }
-
-    objective = prepare_moment_objective(
-        observed_moments=observed,
-        objective_config={"type": "gmm"},
-        gmm_weighting_matrix=np.eye(6, dtype=float),
+    objective = GMMMomentObjective.with_weighting_matrix(
+        moment_names=MOMENT_LABELS,
+        weighting_matrix=np.eye(6, dtype=float),
     )
 
     assert objective.objective_type == "gmm"
@@ -136,28 +129,17 @@ def test_prepare_moment_objective_builds_gmm_objective_from_weighting_matrix():
 
 @pytest.mark.unit
 def test_prepare_moment_objective_rejects_gmm_without_weighting_matrix():
-    observed = {
-        "m1": 1.0,
-        "m2": 2.0,
-        "m3": 3.0,
-        "m4": 4.0,
-        "m5": 5.0,
-        "m6": 6.0,
-    }
-
-    with pytest.raises(ValueError, match="requires an explicit covariance-derived"):
-        prepare_moment_objective(
-            observed_moments=observed,
-            objective_config={"type": "gmm"},
+    with pytest.raises(TypeError):
+        GMMMomentObjective.with_weighting_matrix(  # type: ignore[call-arg]
+            moment_names=MOMENT_LABELS,
         )
 
 
 @pytest.mark.unit
 def test_gmm_moment_objective_returns_raw_condition_residuals_for_identity_weighting():
-    objective = prepare_moment_objective(
-        observed_moments={"m1": 1.0, "m2": 1.0, "m3": 1.0, "m4": 1.0, "m5": 1.0, "m6": 1.0},
-        objective_config={"type": "gmm"},
-        gmm_weighting_matrix=np.eye(6, dtype=float),
+    objective = GMMMomentObjective.with_weighting_matrix(
+        moment_names=MOMENT_LABELS,
+        weighting_matrix=np.eye(6, dtype=float),
     )
     observed = {
         "m1": 2.0,
@@ -207,7 +189,7 @@ def test_gmm_moment_objective_applies_general_weighting_matrix():
 
 
 @pytest.mark.unit
-def test_build_moment_condition_vector_returns_calculated_minus_observed_in_order():
+def test_build_moment_difference_vector_returns_calculated_minus_observed_in_order():
     observed = {
         "m1": 2.0,
         "m2": 4.0,
@@ -225,7 +207,7 @@ def test_build_moment_condition_vector_returns_calculated_minus_observed_in_orde
         "m6": 128.0,
     }
 
-    vector = build_moment_condition_vector(
+    vector = build_moment_difference_vector(
         observed_moments=observed,
         calculated_moments=calculated,
         moment_names=("m1", "m2", "m3", "m4", "m5", "m6"),

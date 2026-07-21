@@ -9,8 +9,9 @@ import pytest
 from paranmr.core.fitting.susceptibility.jacobian.types import (
     MomentJacobianResult,
 )
-from paranmr.core.fitting.susceptibility.moments.descriptors import MOMENT_NAMES
 from paranmr.io.csv.fit import save_moment_jacobian
+
+MOMENT_LABELS = tuple(f"m{order}" for order in range(1, 7))
 
 
 @pytest.mark.unit
@@ -18,12 +19,12 @@ def test_moment_jacobian_result_validates_shape_and_contract():
     parameter_names = ("ax", "rho_over_ax", "alpha")
     values = [
         [10.0 * row + col for col in range(len(parameter_names))]
-        for row in range(len(MOMENT_NAMES))
+        for row in range(len(MOMENT_LABELS))
     ]
 
     result = MomentJacobianResult(
         temperature=302.15,
-        moment_names=MOMENT_NAMES,
+        moment_names=MOMENT_LABELS,
         parameter_names=parameter_names,
         values=values,
     )
@@ -38,7 +39,7 @@ def test_moment_jacobian_result_rejects_duplicate_parameter_names():
     with pytest.raises(ValueError, match="column labels must be unique"):
         MomentJacobianResult(
             temperature=302.15,
-            moment_names=MOMENT_NAMES,
+            moment_names=MOMENT_LABELS,
             parameter_names=("ax", "ax", "alpha"),
             values=values,
         )
@@ -49,11 +50,11 @@ def test_save_moment_jacobian_writes_expected_csv_layout(tmp_path: Path):
     parameter_names = ("ax", "rho_over_ax", "alpha")
     values = [
         [10.0 * row + col for col in range(len(parameter_names))]
-        for row in range(len(MOMENT_NAMES))
+        for row in range(len(MOMENT_LABELS))
     ]
     result = MomentJacobianResult(
         temperature=302.15,
-        moment_names=MOMENT_NAMES,
+        moment_names=MOMENT_LABELS,
         parameter_names=parameter_names,
         values=values,
     )
@@ -66,7 +67,7 @@ def test_save_moment_jacobian_writes_expected_csv_layout(tmp_path: Path):
         "quantity",
         *parameter_names,
     ]
-    assert list(df["quantity"]) == list(MOMENT_NAMES)
+    assert list(df["quantity"]) == list(MOMENT_LABELS)
     assert df.iloc[0]["ax"] == pytest.approx(0.0)
     assert df.iloc[0]["alpha"] == pytest.approx(2.0)
     assert df.iloc[5]["ax"] == pytest.approx(50.0)

@@ -4,13 +4,13 @@
 import pytest
 
 from paranmr.core.fitting.susceptibility.moments.descriptors import (
-    MAX_MOMENT_ORDER,
-    MOMENT_NAMES,
     NormalizedMomentVectors,
     build_normalized_moment_vectors,
     compute_gaussian_mixture_moments,
     moment_n,
 )
+
+MOMENT_LABELS = tuple(f"m{order}" for order in range(1, 7))
 
 
 def _manual_gaussian_mixture_moments_3_to_6():
@@ -47,9 +47,10 @@ def test_compute_gaussian_mixture_moments_returns_raw_central_moments():
         centers=[-1.0, 1.0],
         sigmas=[0.5, 0.5],
         area_norm=[0.5, 0.5],
+        moment_labels=MOMENT_LABELS,
     )
 
-    assert tuple(moments) == MOMENT_NAMES
+    assert tuple(moments) == MOMENT_LABELS
     assert moments["m1"] == pytest.approx(0.0)
     assert moments["m2"] > 0.0
     assert moments["m3"] == pytest.approx(0.0)
@@ -64,6 +65,7 @@ def test_compute_gaussian_mixture_moments_general_formula_matches_manual_3_to_6(
         centers=centers,
         sigmas=sigmas,
         area_norm=weights,
+        moment_labels=MOMENT_LABELS,
     )
 
     assert moments["m3"] == pytest.approx(m3)
@@ -74,9 +76,8 @@ def test_compute_gaussian_mixture_moments_general_formula_matches_manual_3_to_6(
 
 @pytest.mark.unit
 def test_moment_metadata_is_generated_from_max_order():
-    assert MAX_MOMENT_ORDER == 6
-    assert MOMENT_NAMES == tuple(f"m{order}" for order in range(1, 7))
-    assert [moment_n(order) for order in range(1, 7)] == list(MOMENT_NAMES)
+    assert MOMENT_LABELS == tuple(f"m{order}" for order in range(1, 7))
+    assert [moment_n(order) for order in range(1, 7)] == list(MOMENT_LABELS)
 
 
 @pytest.mark.unit
@@ -101,6 +102,7 @@ def test_build_normalized_moment_vectors_scales_all_orders():
     normalized = build_normalized_moment_vectors(
         observed=observed,
         calculated=calculated,
+        moment_names=MOMENT_LABELS,
     )
 
     assert normalized.observed == pytest.approx(
@@ -147,10 +149,11 @@ def test_build_normalized_moment_vectors_returns_structured_normalized_space():
     normalized = build_normalized_moment_vectors(
         observed=observed,
         calculated=calculated,
+        moment_names=MOMENT_LABELS,
     )
 
     assert isinstance(normalized, NormalizedMomentVectors)
-    assert normalized.observed == pytest.approx({name: 1.0 for name in MOMENT_NAMES})
+    assert normalized.observed == pytest.approx({name: 1.0 for name in MOMENT_LABELS})
     assert normalized.calculated == pytest.approx(
         {
             "m1": 0.5,
@@ -186,4 +189,5 @@ def test_build_normalized_moment_vectors_fails_loudly_on_zero_observed():
         build_normalized_moment_vectors(
             observed=observed,
             calculated=calculated,
+            moment_names=MOMENT_LABELS,
         )

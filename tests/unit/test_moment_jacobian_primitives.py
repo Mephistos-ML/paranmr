@@ -9,9 +9,10 @@ from paranmr.core.fitting.susceptibility.jacobian.moments import (
     differentiate_moments_by_sigmas,
 )
 from paranmr.core.fitting.susceptibility.moments.descriptors import (
-    MOMENT_NAMES,
     compute_gaussian_mixture_moments,
 )
+
+MOMENT_LABELS = tuple(f"m{order}" for order in range(1, 7))
 
 
 def _moment_vector(
@@ -24,8 +25,9 @@ def _moment_vector(
         centers=centers,
         sigmas=sigmas,
         area_norm=area_norm,
+        moment_labels=MOMENT_LABELS,
     )
-    return np.asarray([moments[name] for name in MOMENT_NAMES], dtype=float)
+    return np.asarray([moments[name] for name in MOMENT_LABELS], dtype=float)
 
 
 def _finite_difference_by_centers(
@@ -35,7 +37,7 @@ def _finite_difference_by_centers(
     area_norm: np.ndarray,
     step: float = 1e-7,
 ) -> np.ndarray:
-    jacobian = np.zeros((len(MOMENT_NAMES), len(centers)), dtype=float)
+    jacobian = np.zeros((len(MOMENT_LABELS), len(centers)), dtype=float)
     for index in range(len(centers)):
         centers_forward = centers.copy()
         centers_backward = centers.copy()
@@ -63,7 +65,7 @@ def _finite_difference_by_sigmas(
     area_norm: np.ndarray,
     step: float = 1e-7,
 ) -> np.ndarray:
-    jacobian = np.zeros((len(MOMENT_NAMES), len(sigmas)), dtype=float)
+    jacobian = np.zeros((len(MOMENT_LABELS), len(sigmas)), dtype=float)
     for index in range(len(sigmas)):
         sigmas_forward = sigmas.copy()
         sigmas_backward = sigmas.copy()
@@ -94,6 +96,7 @@ def test_differentiate_moments_by_centers_matches_finite_difference():
         centers=centers,
         sigmas=sigmas,
         area_norm=area_norm,
+        moment_labels=MOMENT_LABELS,
     )
     finite_difference = _finite_difference_by_centers(
         centers=centers,
@@ -114,6 +117,7 @@ def test_differentiate_moments_by_sigmas_matches_finite_difference():
         centers=centers,
         sigmas=sigmas,
         area_norm=area_norm,
+        moment_labels=MOMENT_LABELS,
     )
     finite_difference = _finite_difference_by_sigmas(
         centers=centers,
