@@ -28,6 +28,7 @@ assignment:
   method: moments
   moment_objective:
     type: gmm
+    number_of_moments: 6
     covariance:
       method: monte_carlo
       n_samples: 500
