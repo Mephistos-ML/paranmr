@@ -27,6 +27,23 @@ susc_fit:
 
 assignment:
   method: <insert method>
+  # For assignment: {method: moments}, provide:
+  # moment_objective:
+  #   type: <ls|gmm>
+  #   number_of_moments: 6
+  #   moment_weights:      # Required for ls
+  #     m1: 1.0
+  #     m2: 1.0
+  #     m3: 1.0
+  #     m4: 1.0
+  #     m5: 1.0
+  #     m6: 1.0
+  #   covariance:          # Required for gmm
+  #     method: monte_carlo
+  #     n_samples: 200
+  #     perturbation:
+  #       shift_sigma_abs: 0.02
+  #       width_sigma_rel: 0.05
 
 linewidth:
   method: experimental
