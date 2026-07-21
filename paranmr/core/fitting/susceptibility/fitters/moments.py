@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import copy
 import logging
-from dataclasses import dataclass, replace
+from dataclasses import dataclass
 
 import numpy as np
 from numpy.typing import NDArray
@@ -15,9 +15,6 @@ from scipy.optimize import least_squares
 from scipy.optimize._optimize import OptimizeResult
 
 from paranmr.core.domain.mol import Nucleus
-from paranmr.core.fitting.susceptibility.jacobian.assembly import (
-    build_moment_jacobian,
-)
 from paranmr.core.fitting.susceptibility.moments.descriptors import (
     build_normalized_moment_vectors,
 )
@@ -32,13 +29,6 @@ from paranmr.core.fitting.susceptibility.linewidths import (
     predict_r6_widths_by_atom_label,
 )
 from paranmr.core.fitting.susceptibility.models.base import SusceptibilityModel
-from paranmr.core.fitting.susceptibility.objectives.moments.gmm.objective import (
-    GMMMomentObjective,
-)
-from paranmr.core.fitting.susceptibility.objectives.moments.gmm.weighting import (
-    build_gmm_weighting_matrix,
-    estimate_gmm_covariance_from_jacobian,
-)
 from paranmr.core.fitting.susceptibility.objectives.moments.api import (
     MomentObjective,
 )
@@ -87,12 +77,6 @@ def fit_moment_model(
     """Optimize a susceptibility model against moment constraints."""
 
     curr_fit = _run_moment_least_squares(inputs)
-    if inputs.moment_objective.objective_type == "gmm":
-        curr_fit = _run_two_step_gmm_fit(
-            stage1_fit=curr_fit,
-            inputs=inputs,
-            verbose=verbose,
-        )
 
     # Persist the fitted temperature on the mutable model object.
     model = inputs.model
@@ -219,90 +203,6 @@ def _run_moment_least_squares(inputs: MomentFitInputs) -> OptimizeResult:
         bounds=inputs.fit_bounds,
         jac="3-point",
     )
-
-
-def _run_two_step_gmm_fit(
-    *,
-    stage1_fit: OptimizeResult,
-    inputs: MomentFitInputs,
-    verbose: bool,
-) -> OptimizeResult:
-    """Upgrade a stage-1 GMM fit from ``W = I`` to ``W = S^{-1}``."""
-
-    if stage1_fit.status == 0:
-        return stage1_fit
-    if not isinstance(inputs.moment_objective, GMMMomentObjective):
-        return stage1_fit
-
-    stage1_parameters = _resolved_susceptibility_parameters(
-        fit_vector=stage1_fit.x,
-        inputs=inputs,
-    )
-    stage1_linewidth_vars = _resolved_linewidth_parameters(
-        fit_vector=stage1_fit.x,
-        inputs=inputs,
-    )
-    stage1_jacobian = build_moment_jacobian(
-        temperature=float(inputs.temperature),
-        parameters=stage1_parameters,
-        nuclei=list(inputs.nuclei),
-        linewidth_inputs=inputs.linewidth_inputs,
-        linewidth_vars_by_name=stage1_linewidth_vars,
-        observed_moments=inputs.observed_moments,
-        parameter_names=tuple(inputs.fit_var_names) + tuple(inputs.linewidth_fit_names),
-        average_labels=inputs.average_labels,
-    )
-    covariance = estimate_gmm_covariance_from_jacobian(stage1_jacobian)
-    weighting = build_gmm_weighting_matrix(covariance)
-    stage2_objective = GMMMomentObjective.with_weighting_matrix(
-        moment_names=tuple(inputs.observed_moments.keys()),
-        weighting_matrix=weighting,
-    )
-    stage2_inputs = replace(
-        inputs,
-        moment_objective=stage2_objective,
-        fit_guess=list(np.asarray(stage1_fit.x, dtype=float)),
-    )
-    stage2_fit = _run_moment_least_squares(stage2_inputs)
-    if stage2_fit.status == 0:
-        if verbose:
-            logger.warning(
-                "Second-stage GMM fit at %s K failed; falling back to the stage-1 solution",
-                inputs.temperature,
-            )
-        return stage1_fit
-    return stage2_fit
-
-
-def _resolved_susceptibility_parameters(
-    *,
-    fit_vector: NDArray[np.float64],
-    inputs: MomentFitInputs,
-) -> dict[str, float]:
-    """Merge fixed and fitted susceptibility parameters for a fit vector."""
-
-    n_susc_params = len(inputs.fit_var_names)
-    fitted = {
-        name: float(value)
-        for name, value in zip(inputs.fit_var_names, fit_vector[:n_susc_params])
-    }
-    return {**inputs.model.fix_vars, **fitted}
-
-
-def _resolved_linewidth_parameters(
-    *,
-    fit_vector: NDArray[np.float64],
-    inputs: MomentFitInputs,
-) -> dict[str, float]:
-    """Merge fixed and fitted linewidth parameters for a fit vector."""
-
-    n_susc_params = len(inputs.fit_var_names)
-    linewidth_values = fit_vector[n_susc_params:]
-    fitted = {
-        name: float(value)
-        for name, value in zip(inputs.linewidth_fit_names, linewidth_values)
-    }
-    return {**inputs.linewidth_fix_vars, **fitted}
 
 
 def _moment_residual_from_float_list(
