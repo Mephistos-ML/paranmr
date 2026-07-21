@@ -10,8 +10,8 @@ from dataclasses import dataclass
 import numpy as np
 from numpy.typing import NDArray
 
-from paranmr.core.fitting.susceptibility.objectives.moments.conditions import (
-    build_moment_condition_vector,
+from paranmr.core.fitting.susceptibility.objectives.moments.differences import (
+    build_moment_difference_vector,
 )
 from paranmr.core.fitting.susceptibility.objectives.moments.ls.weighting import (
     build_ls_weight_vector,
@@ -56,7 +56,7 @@ class WeightedLSMomentObjective:
     @property
     def diagnostics(self) -> dict[str, dict[str, float]]:
         """Return serializable objective diagnostics."""
-        return {"weights": dict(self.weights_by_name)}
+        return {"moment_weights": dict(self.weights_by_name)}
 
     def conditions(
         self,
@@ -65,7 +65,7 @@ class WeightedLSMomentObjective:
         calculated_moments: dict[str, float],
     ) -> NDArray[np.float64]:
         """Return the shared normalized moment-condition vector ``m_calc - m_exp``."""
-        return build_moment_condition_vector(
+        return build_moment_difference_vector(
             observed_moments=observed_moments,
             calculated_moments=calculated_moments,
             moment_names=self.moment_names,

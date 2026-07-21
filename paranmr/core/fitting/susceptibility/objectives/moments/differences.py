@@ -9,7 +9,7 @@ import numpy as np
 from numpy.typing import NDArray
 
 
-def build_moment_condition_vector(
+def build_moment_difference_vector(
     *,
     observed_moments: dict[str, float],
     calculated_moments: dict[str, float],

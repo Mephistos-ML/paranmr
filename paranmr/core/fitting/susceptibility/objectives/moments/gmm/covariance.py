@@ -68,6 +68,7 @@ def estimate_moment_covariance_from_monte_carlo(
             centers=perturbed_centers,
             sigmas=perturbed_sigmas,
             area_norm=area_norm,
+            moment_labels=moment_names,
         )
         samples[i, :] = np.asarray([moments[name] for name in moment_names], dtype=float)
 

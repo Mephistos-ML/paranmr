@@ -8,6 +8,7 @@ from __future__ import annotations
 import copy
 import logging
 from dataclasses import dataclass
+from typing import Protocol
 
 import numpy as np
 from numpy.typing import NDArray
@@ -21,20 +22,53 @@ from paranmr.core.fitting.susceptibility.moments.descriptors import (
 from paranmr.core.fitting.susceptibility.moments.forward import (
     calculated_moments_from_parameters,
 )
-from paranmr.core.fitting.susceptibility.objectives.moments.conditions import (
-    build_moment_condition_vector,
+from paranmr.core.fitting.susceptibility.objectives.moments.differences import (
+    build_moment_difference_vector,
 )
 from paranmr.core.fitting.susceptibility.linewidths import (
     SusceptibilityLinewidthInputs,
     predict_r6_widths_by_atom_label,
 )
 from paranmr.core.fitting.susceptibility.models.base import SusceptibilityModel
-from paranmr.core.fitting.susceptibility.objectives.moments.api import (
-    MomentObjective,
-)
 from paranmr.core.fitting.susceptibility.stats import svd_stdev
 
 logger = logging.getLogger(__name__)
+
+
+class MomentObjective(Protocol):
+    """Structural contract required from moment objective implementations."""
+
+    @property
+    def objective_type(self) -> str:
+        ...
+
+    @property
+    def active_mask(self) -> NDArray[np.bool_]:
+        ...
+
+    def conditions(
+        self,
+        *,
+        observed_moments: dict[str, float],
+        calculated_moments: dict[str, float],
+    ) -> NDArray[np.float64]:
+        ...
+
+    def residuals(
+        self,
+        *,
+        observed_moments: dict[str, float],
+        calculated_moments: dict[str, float],
+    ) -> NDArray[np.float64]:
+        ...
+
+    def score(
+        self,
+        *,
+        observed_moments: dict[str, float],
+        calculated_moments: dict[str, float],
+    ) -> float:
+        ...
 
 
 @dataclass(frozen=True)
@@ -58,6 +92,7 @@ class MomentFitInputs:
     model: SusceptibilityModel
     nuclei: tuple[Nucleus, ...]
     temperature: float
+    moment_labels: tuple[str, ...]
     observed_moments: dict[str, float]
     moment_objective: MomentObjective
     linewidth_inputs: SusceptibilityLinewidthInputs
@@ -76,7 +111,13 @@ def fit_moment_model(
 ) -> MomentFitResult | None:
     """Optimize a susceptibility model against moment constraints."""
 
-    curr_fit = _run_moment_least_squares(inputs)
+    curr_fit = least_squares(
+        fun=_moment_objective_residuals_from_fit_vector,
+        args=(inputs,),
+        x0=inputs.fit_guess,
+        bounds=inputs.fit_bounds,
+        jac="3-point",
+    )
 
     # Persist the fitted temperature on the mutable model object.
     model = inputs.model
@@ -153,6 +194,7 @@ def fit_moment_model(
         nuclei=inputs.nuclei,
         linewidths_by_label=final_linewidths_by_atom_label,
         include_diamagnetic=inputs.use_diamagnetic,
+        moment_labels=inputs.moment_labels,
         average_labels=inputs.average_labels,
     )
 
@@ -160,17 +202,18 @@ def fit_moment_model(
     normalized_moments = build_normalized_moment_vectors(
         observed=inputs.observed_moments,
         calculated=calculated_moments,
+        moment_names=inputs.moment_labels,
     )
-    condition_vector = build_moment_condition_vector(
+    condition_vector = build_moment_difference_vector(
         observed_moments=normalized_moments.observed,
         calculated_moments=normalized_moments.calculated,
-        moment_names=tuple(inputs.observed_moments.keys()),
+        moment_names=inputs.moment_labels,
     )
     model.mae = float(np.mean(np.abs(condition_vector)))
     model.rmse = float(np.sqrt(np.mean(condition_vector**2)))
     model.r2 = np.nan
     model.adj_r2 = np.nan
-    score = _moment_score(condition_vector)
+    score = float(np.sqrt(np.sum(np.asarray(condition_vector, dtype=float) ** 2)))
     return MomentFitResult(
         temperature=float(inputs.temperature),
         objective_type=inputs.moment_objective.objective_type,
@@ -191,24 +234,11 @@ def fit_moment_model(
         },
         score=score,
     )
-
-
-def _run_moment_least_squares(inputs: MomentFitInputs) -> OptimizeResult:
-    """Run a single least-squares stage for a moment objective."""
-
-    return least_squares(
-        fun=_moment_residual_from_float_list,
-        args=(inputs,),
-        x0=inputs.fit_guess,
-        bounds=inputs.fit_bounds,
-        jac="3-point",
-    )
-
-
-def _moment_residual_from_float_list(
+def _moment_objective_residuals_from_fit_vector(
     new_vals: list[float],
     inputs: MomentFitInputs,
 ) -> list[float]:
+    """Return moment-objective residuals for a flat optimizer fit vector."""
     optimizer_values = np.asarray(new_vals, dtype=float)
     n_susc_params = len(inputs.fit_var_names)
     susc_vals = optimizer_values[:n_susc_params]
@@ -234,34 +264,17 @@ def _moment_residual_from_float_list(
         nuclei=inputs.nuclei,
         linewidths_by_label=calculated_widths_by_atom_label,
         include_diamagnetic=inputs.use_diamagnetic,
+        moment_labels=inputs.moment_labels,
         average_labels=inputs.average_labels,
     )
     normalized_moments = build_normalized_moment_vectors(
         observed=inputs.observed_moments,
         calculated=calculated_moments,
+        moment_names=inputs.moment_labels,
     )
     return list(
-        _weighted_moment_residuals(
+        inputs.moment_objective.residuals(
             observed_moments=normalized_moments.observed,
             calculated_moments=normalized_moments.calculated,
-            moment_objective=inputs.moment_objective,
         )
     )
-
-
-def _weighted_moment_residuals(
-    *,
-    observed_moments: dict[str, float],
-    calculated_moments: dict[str, float],
-    moment_objective: MomentObjective,
-) -> NDArray[np.float64]:
-    return moment_objective.residuals(
-        observed_moments=observed_moments,
-        calculated_moments=calculated_moments,
-    )
-
-
-def _moment_score(condition_vector: NDArray[np.float64]) -> float:
-    """Return the standardized score in normalized moment space."""
-
-    return float(np.sqrt(np.sum(np.asarray(condition_vector, dtype=float) ** 2)))
