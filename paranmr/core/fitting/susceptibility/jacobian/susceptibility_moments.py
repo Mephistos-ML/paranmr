@@ -36,6 +36,7 @@ def differentiate_moments_by_susc_ax(
     parameters: dict[str, float],
     nuclei: list[Nucleus],
     linewidths_by_label: dict[str, float],
+    moment_labels: tuple[str, ...],
     average_labels: tuple[tuple[str, ...], ...] = (),
 ) -> NDArray[np.float64]:
     """Return analytical moment derivatives with respect to susceptibility axiality."""
@@ -44,6 +45,7 @@ def differentiate_moments_by_susc_ax(
         parameters=parameters,
         nuclei=nuclei,
         linewidths_by_label=linewidths_by_label,
+        moment_labels=moment_labels,
         average_labels=average_labels,
         d_centers=differentiate_centers_by_susc_ax(
             parameters=parameters,
@@ -58,6 +60,7 @@ def differentiate_moments_by_susc_iso(
     parameters: dict[str, float],
     nuclei: list[Nucleus],
     linewidths_by_label: dict[str, float],
+    moment_labels: tuple[str, ...],
     average_labels: tuple[tuple[str, ...], ...] = (),
 ) -> NDArray[np.float64]:
     """Return analytical moment derivatives with respect to susceptibility isotropy."""
@@ -66,6 +69,7 @@ def differentiate_moments_by_susc_iso(
         parameters=parameters,
         nuclei=nuclei,
         linewidths_by_label=linewidths_by_label,
+        moment_labels=moment_labels,
         average_labels=average_labels,
         d_centers=differentiate_centers_by_susc_iso(
             parameters=parameters,
@@ -80,6 +84,7 @@ def differentiate_moments_by_susc_rho_over_ax(
     parameters: dict[str, float],
     nuclei: list[Nucleus],
     linewidths_by_label: dict[str, float],
+    moment_labels: tuple[str, ...],
     average_labels: tuple[tuple[str, ...], ...] = (),
 ) -> NDArray[np.float64]:
     """Return analytical moment derivatives with respect to rhombicity ratio."""
@@ -88,6 +93,7 @@ def differentiate_moments_by_susc_rho_over_ax(
         parameters=parameters,
         nuclei=nuclei,
         linewidths_by_label=linewidths_by_label,
+        moment_labels=moment_labels,
         average_labels=average_labels,
         d_centers=differentiate_centers_by_susc_rho_over_ax(
             parameters=parameters,
@@ -102,6 +108,7 @@ def differentiate_moments_by_alpha(
     parameters: dict[str, float],
     nuclei: list[Nucleus],
     linewidths_by_label: dict[str, float],
+    moment_labels: tuple[str, ...],
     average_labels: tuple[tuple[str, ...], ...] = (),
 ) -> NDArray[np.float64]:
     """Return analytical moment derivatives with respect to ``alpha``."""
@@ -110,6 +117,7 @@ def differentiate_moments_by_alpha(
         parameters=parameters,
         nuclei=nuclei,
         linewidths_by_label=linewidths_by_label,
+        moment_labels=moment_labels,
         average_labels=average_labels,
         d_centers=differentiate_centers_by_alpha(
             parameters=parameters,
@@ -124,6 +132,7 @@ def differentiate_moments_by_beta(
     parameters: dict[str, float],
     nuclei: list[Nucleus],
     linewidths_by_label: dict[str, float],
+    moment_labels: tuple[str, ...],
     average_labels: tuple[tuple[str, ...], ...] = (),
 ) -> NDArray[np.float64]:
     """Return analytical moment derivatives with respect to ``beta``."""
@@ -132,6 +141,7 @@ def differentiate_moments_by_beta(
         parameters=parameters,
         nuclei=nuclei,
         linewidths_by_label=linewidths_by_label,
+        moment_labels=moment_labels,
         average_labels=average_labels,
         d_centers=differentiate_centers_by_beta(
             parameters=parameters,
@@ -146,6 +156,7 @@ def differentiate_moments_by_gamma(
     parameters: dict[str, float],
     nuclei: list[Nucleus],
     linewidths_by_label: dict[str, float],
+    moment_labels: tuple[str, ...],
     average_labels: tuple[tuple[str, ...], ...] = (),
 ) -> NDArray[np.float64]:
     """Return analytical moment derivatives with respect to ``gamma``."""
@@ -154,6 +165,7 @@ def differentiate_moments_by_gamma(
         parameters=parameters,
         nuclei=nuclei,
         linewidths_by_label=linewidths_by_label,
+        moment_labels=moment_labels,
         average_labels=average_labels,
         d_centers=differentiate_centers_by_gamma(
             parameters=parameters,
@@ -168,6 +180,7 @@ def differentiate_moments_by_center_derivative(
     parameters: dict[str, float],
     nuclei: list[Nucleus],
     linewidths_by_label: dict[str, float],
+    moment_labels: tuple[str, ...],
     average_labels: tuple[tuple[str, ...], ...],
     d_centers: NDArray[np.float64],
 ) -> NDArray[np.float64]:
@@ -202,6 +215,7 @@ def differentiate_moments_by_center_derivative(
         centers=peaks["center"],
         sigmas=peaks["sigma"],
         area_norm=peaks["area_norm"],
+        moment_labels=moment_labels,
     )
     return d_moments_by_centers @ d_centers
 

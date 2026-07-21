@@ -11,9 +11,8 @@ import numpy as np
 from numpy.typing import ArrayLike, NDArray
 
 from paranmr.core.fitting.susceptibility.moments.descriptors import (
-    MAX_MOMENT_ORDER,
-    MOMENT_ORDERS,
     compute_first_moment,
+    moment_order,
 )
 
 
@@ -22,6 +21,7 @@ def differentiate_moments_by_centers(
     centers: ArrayLike,
     sigmas: ArrayLike,
     area_norm: ArrayLike,
+    moment_labels: tuple[str, ...],
 ) -> NDArray[np.float64]:
     """Return analytical moment derivatives with respect to centers.
 
@@ -36,18 +36,20 @@ def differentiate_moments_by_centers(
     )
     mean = compute_first_moment(centers_arr, weights_arr)
     delta = centers_arr - mean
+    highest_order = max(moment_order(label) for label in moment_labels)
     shifted_moments = _compute_shifted_component_moments(
         delta=delta,
         sigmas=sigmas_arr,
-        max_order=MAX_MOMENT_ORDER - 1,
+        max_order=highest_order - 1,
     )
 
-    jacobian = np.zeros((MAX_MOMENT_ORDER, len(centers_arr)), dtype=float)
+    jacobian = np.zeros((len(moment_labels), len(centers_arr)), dtype=float)
     jacobian[0, :] = weights_arr
-    for order in MOMENT_ORDERS[1:]:
+    for row_index, label in enumerate(moment_labels[1:], start=1):
+        order = moment_order(label)
         component_previous = shifted_moments[order - 1]
         component_average = float(np.sum(weights_arr * component_previous))
-        jacobian[order - 1, :] = (
+        jacobian[row_index, :] = (
             order * weights_arr * (component_previous - component_average)
         )
     return jacobian
@@ -58,6 +60,7 @@ def differentiate_moments_by_sigmas(
     centers: ArrayLike,
     sigmas: ArrayLike,
     area_norm: ArrayLike,
+    moment_labels: tuple[str, ...],
 ) -> NDArray[np.float64]:
     """Return analytical moment derivatives with respect to sigmas.
 
@@ -72,16 +75,18 @@ def differentiate_moments_by_sigmas(
     )
     mean = compute_first_moment(centers_arr, weights_arr)
     delta = centers_arr - mean
+    highest_order = max(moment_order(label) for label in moment_labels)
     shifted_moments = _compute_shifted_component_moments(
         delta=delta,
         sigmas=sigmas_arr,
-        max_order=MAX_MOMENT_ORDER - 2,
+        max_order=highest_order - 2,
     )
 
-    jacobian = np.zeros((MAX_MOMENT_ORDER, len(centers_arr)), dtype=float)
-    for order in MOMENT_ORDERS[1:]:
+    jacobian = np.zeros((len(moment_labels), len(centers_arr)), dtype=float)
+    for row_index, label in enumerate(moment_labels[1:], start=1):
+        order = moment_order(label)
         component_two_lower = shifted_moments[order - 2]
-        jacobian[order - 1, :] = (
+        jacobian[row_index, :] = (
             order
             * (order - 1)
             * weights_arr

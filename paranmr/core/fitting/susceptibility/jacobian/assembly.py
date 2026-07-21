@@ -24,7 +24,6 @@ from paranmr.core.fitting.susceptibility.linewidths import (
     SusceptibilityLinewidthInputs,
     predict_r6_widths_by_atom_label,
 )
-from paranmr.core.fitting.susceptibility.moments.descriptors import MOMENT_NAMES
 
 
 def build_moment_jacobian(
@@ -82,6 +81,7 @@ def _build_raw_moment_jacobian(
         packages=packages,
         linewidth_inputs=linewidth_inputs,
         linewidth_vars_by_name=linewidth_vars_by_name,
+        moment_labels=moment_names,
     )
 
     derivatives_by_parameter = {
@@ -91,36 +91,42 @@ def _build_raw_moment_jacobian(
             parameters=parameters,
             nuclei=nuclei,
             linewidths_by_label=linewidths_by_label,
+            moment_labels=moment_names,
             average_labels=average_labels,
         ),
         "ax": differentiate_moments_by_susc_ax(
             parameters=parameters,
             nuclei=nuclei,
             linewidths_by_label=linewidths_by_label,
+            moment_labels=moment_names,
             average_labels=average_labels,
         ),
         "rho_over_ax": differentiate_moments_by_susc_rho_over_ax(
             parameters=parameters,
             nuclei=nuclei,
             linewidths_by_label=linewidths_by_label,
+            moment_labels=moment_names,
             average_labels=average_labels,
         ),
         "alpha": differentiate_moments_by_alpha(
             parameters=parameters,
             nuclei=nuclei,
             linewidths_by_label=linewidths_by_label,
+            moment_labels=moment_names,
             average_labels=average_labels,
         ),
         "beta": differentiate_moments_by_beta(
             parameters=parameters,
             nuclei=nuclei,
             linewidths_by_label=linewidths_by_label,
+            moment_labels=moment_names,
             average_labels=average_labels,
         ),
         "gamma": differentiate_moments_by_gamma(
             parameters=parameters,
             nuclei=nuclei,
             linewidths_by_label=linewidths_by_label,
+            moment_labels=moment_names,
             average_labels=average_labels,
         ),
     }
@@ -134,8 +140,6 @@ def _build_raw_moment_jacobian(
         )
 
     values = np.column_stack([derivatives_by_parameter[name] for name in parameter_names])
-    row_indices = [MOMENT_NAMES.index(name) for name in moment_names]
-    values = values[row_indices, :]
 
     return MomentJacobianResult(
         temperature=float(temperature),

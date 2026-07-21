@@ -63,6 +63,7 @@ def differentiate_moments_by_linewidth_parameters(
     packages: list[CalculatedSignalPackage],
     linewidth_inputs: SusceptibilityLinewidthInputs,
     linewidth_vars_by_name: dict[str, float],
+    moment_labels: tuple[str, ...],
 ) -> NDArray[np.float64]:
     """Return analytical moment derivatives with respect to ``p1`` and ``p2``.
 
@@ -92,6 +93,7 @@ def differentiate_moments_by_linewidth_parameters(
         centers=peaks["center"],
         sigmas=peaks["sigma"],
         area_norm=peaks["area_norm"],
+        moment_labels=moment_labels,
     )
     d_sigmas_by_linewidth = differentiate_sigmas_by_linewidth_parameters(
         packages=packages,
