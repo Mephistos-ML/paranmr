@@ -29,13 +29,14 @@ from paranmr.core.fitting.susceptibility.moments.gaussian import (
     gaussian_peak_representation,
 )
 from paranmr.core.fitting.susceptibility.models.base import SusceptibilityModel
-from paranmr.core.fitting.susceptibility.objectives.moments.api import (
-    prepare_moment_objective,
-)
 from paranmr.core.fitting.susceptibility.objectives.moments.gmm import (
+    GMMMomentObjective,
     MonteCarloMomentCovarianceConfig,
     build_gmm_weighting_matrix,
     estimate_moment_covariance_from_monte_carlo,
+)
+from paranmr.core.fitting.susceptibility.objectives.moments.ls.objective import (
+    WeightedLSMomentObjective,
 )
 from paranmr.io.csv.fit import (
     save_moment_fit_diagnostics,
@@ -76,6 +77,10 @@ def fit_moment_assignment(
         label_kind="atom_label",
     )
 
+    moment_labels = build_moment_labels_up_to(
+        int(assignment_moment_objective["number_of_moments"])
+    )
+
     # Build experimental moments directly from the measured peaks.
     observed_peaks = _observed_peak_representation_from_experiment(
         experiment=experiment,
@@ -85,6 +90,7 @@ def fit_moment_assignment(
         centers=observed_peaks["center"],
         sigmas=observed_peaks["sigma"],
         area_norm=observed_peaks["area_norm"],
+        moment_labels=moment_labels,
     )
 
     moment_covariance = None
@@ -96,7 +102,7 @@ def fit_moment_assignment(
         covariance_config = assignment_moment_objective["covariance"]
         moment_covariance = estimate_moment_covariance_from_monte_carlo(
             observed_peaks=observed_peaks,
-            moment_names=tuple(experimental_moments.keys()),
+            moment_names=moment_labels,
             config=MonteCarloMomentCovarianceConfig(
                 n_samples=int(covariance_config["n_samples"]),
                 shift_sigma_abs=float(
@@ -117,11 +123,27 @@ def fit_moment_assignment(
         )
 
     # Build the configured moment objective before assembling optimizer inputs.
-    moment_objective = prepare_moment_objective(
-        observed_moments=experimental_moments,
-        objective_config=assignment_moment_objective,
-        gmm_weighting_matrix=gmm_weighting_matrix,
-    )
+    objective_type = str(assignment_moment_objective["type"]).lower()
+    if objective_type == "ls":
+        moment_objective = WeightedLSMomentObjective.from_config(
+            moment_names=moment_labels,
+            weights=assignment_moment_objective.get("moment_weights", {}),
+        )
+    elif objective_type == "gmm":
+        if gmm_weighting_matrix is None:
+            raise ValueError(
+                "GMM moment objective requires an explicit covariance-derived "
+                "weighting matrix"
+            )
+        moment_objective = GMMMomentObjective.with_weighting_matrix(
+            moment_names=moment_labels,
+            weighting_matrix=gmm_weighting_matrix,
+        )
+    else:
+        raise ValueError(
+            "Unknown moment objective type "
+            f"{objective_type!r}. Supported values are 'ls' and 'gmm'."
+        )
 
     # Split linewidth variables into fit, fixed, and bounded subsets.
     linewidth_fit_vars, linewidth_fix_vars, linewidth_bounds = (
@@ -151,6 +173,7 @@ def fit_moment_assignment(
         model=model,
         nuclei=tuple(molecule.nuclei),
         temperature=float(experiment.temperature),
+        moment_labels=moment_labels,
         observed_moments=experimental_moments,
         moment_objective=moment_objective,
         linewidth_inputs=linewidth_inputs,
@@ -215,6 +238,12 @@ def fit_moment_assignment(
             ),
         )
     return moment_fit_result
+
+
+def build_moment_labels_up_to(number_of_moments: int) -> tuple[str, ...]:
+    if number_of_moments <= 0:
+        raise ValueError("number_of_moments must be positive")
+    return tuple(f"m{index}" for index in range(1, number_of_moments + 1))
 
 
 def _observed_peak_representation_from_experiment(

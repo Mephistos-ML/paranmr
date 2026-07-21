@@ -11,8 +11,6 @@ from math import comb
 import numpy as np
 from numpy.typing import ArrayLike
 
-MAX_MOMENT_ORDER = 6
-
 
 def moment_n(order: int) -> str:
     """Return the canonical public name for a moment descriptor order."""
@@ -21,8 +19,17 @@ def moment_n(order: int) -> str:
     return f"m{order}"
 
 
-MOMENT_ORDERS = tuple(range(1, MAX_MOMENT_ORDER + 1))
-MOMENT_NAMES = tuple(moment_n(order) for order in MOMENT_ORDERS)
+def moment_order(label: str) -> int:
+    """Return the integer order encoded in a canonical moment label."""
+    if not isinstance(label, str) or not label.startswith("m"):
+        raise ValueError(f"Invalid moment label {label!r}")
+    try:
+        order = int(label[1:])
+    except ValueError as exc:
+        raise ValueError(f"Invalid moment label {label!r}") from exc
+    if order < 1:
+        raise ValueError(f"Invalid moment label {label!r}")
+    return order
 
 
 @dataclass(frozen=True)
@@ -81,10 +88,9 @@ def compute_central_moments(
     sigmas: ArrayLike,
     area_norm: ArrayLike,
     mean: float,
-    min_order: int = 2,
-    max_order: int = MAX_MOMENT_ORDER,
+    moment_labels: tuple[str, ...],
 ) -> dict[str, float]:
-    """Return Gaussian-mixture central moments for the requested order range."""
+    """Return Gaussian-mixture central moments for the requested labels."""
 
     centers_arr = np.asarray(centers, dtype=float)
     sigmas_arr = np.asarray(sigmas, dtype=float)
@@ -92,27 +98,26 @@ def compute_central_moments(
 
     if centers_arr.shape != sigmas_arr.shape or centers_arr.shape != weights_arr.shape:
         raise ValueError("Gaussian mixture arrays must have matching shapes")
-    if min_order < 2:
-        raise ValueError("Central moments must start from order 2")
-    if max_order < min_order:
-        raise ValueError("Maximum moment order must be >= minimum moment order")
 
     delta = centers_arr - float(mean)
+    central_labels = moment_labels[1:]
     return {
-        moment_n(order): _compute_single_central_moment(
+        label: _compute_single_central_moment(
             weights=weights_arr,
             delta=delta,
             sigmas=sigmas_arr,
-            order=order,
+            order=moment_order(label),
         )
-        for order in range(min_order, max_order + 1)
+        for label in central_labels
     }
 
 
 def compute_gaussian_mixture_moments(
+    *,
     centers: ArrayLike,
     sigmas: ArrayLike,
     area_norm: ArrayLike,
+    moment_labels: tuple[str, ...],
 ) -> dict[str, float]:
     """Compute raw moment descriptors for a normalized Gaussian mixture.
 
@@ -120,10 +125,12 @@ def compute_gaussian_mixture_moments(
         centers: Gaussian component centers.
         sigmas: Gaussian component standard deviations.
         area_norm: Normalized component areas. Values must sum to one.
+        moment_labels: Ordered moment labels requested by the caller.
 
     Returns:
-        Mapping with ``m1`` (mean) and ``m2``-``mN`` (second to
-        ``MAX_MOMENT_ORDER`` central moments).
+        Mapping in the requested label order. The first label receives the
+        spectral mean, and every subsequent label receives the corresponding
+        central moment of that order.
 
     Raises:
         ValueError: If arrays do not have matching shapes, sigmas are not positive,
@@ -143,6 +150,8 @@ def compute_gaussian_mixture_moments(
         raise ValueError("Gaussian mixture normalized areas must be non-negative")
     if not np.isclose(np.sum(weights_arr), 1.0):
         raise ValueError("Gaussian mixture normalized areas must sum to one")
+    if not moment_labels:
+        raise ValueError("At least one moment label is required")
 
     mean = compute_first_moment(centers_arr, weights_arr)
     central_moments = compute_central_moments(
@@ -150,17 +159,17 @@ def compute_gaussian_mixture_moments(
         sigmas=sigmas_arr,
         area_norm=weights_arr,
         mean=mean,
-        min_order=2,
-        max_order=MAX_MOMENT_ORDER,
+        moment_labels=moment_labels,
     )
 
-    return {"m1": mean, **central_moments}
+    return {moment_labels[0]: mean, **central_moments}
 
 
 def build_normalized_moment_vectors(
     *,
     observed: dict[str, float],
     calculated: dict[str, float],
+    moment_names: tuple[str, ...],
 ) -> NormalizedMomentVectors:
     """Build normalized observed/calculated moment vectors for objectives.
 
@@ -181,7 +190,8 @@ def build_normalized_moment_vectors(
 
     if calculated.keys() != observed.keys():
         raise ValueError("Calculated and observed moment keys must match")
-    missing = set(MOMENT_NAMES) - set(observed)
+
+    missing = set(moment_names) - set(observed)
     if missing:
         raise ValueError(
             "Cannot normalize moment vectors without keys: "
@@ -190,7 +200,7 @@ def build_normalized_moment_vectors(
 
     zero_like = [
         name
-        for name in MOMENT_NAMES
+        for name in moment_names
         if np.isclose(float(observed[name]), 0.0, atol=1e-12, rtol=0.0)
     ]
     if zero_like:
@@ -202,15 +212,14 @@ def build_normalized_moment_vectors(
 
     normalized_observed = {
         name: 1.0
-        for name in observed.keys()
+        for name in moment_names
     }
     normalized_calculated = {
         name: float(calculated[name]) / float(observed[name])
-        for name in calculated.keys()
+        for name in moment_names
     }
 
     return NormalizedMomentVectors(
         observed=normalized_observed,
         calculated=normalized_calculated,
     )
-

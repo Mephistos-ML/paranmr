@@ -20,7 +20,6 @@ import yaml_include
 
 from paranmr.cfg.benchmarks import AfcBenchmarkConfig as AfcBenchmarkConfig
 from paranmr.cfg.benchmarks import AsdBenchmarkConfig as AsdBenchmarkConfig
-from paranmr.core.fitting.susceptibility.moments.descriptors import MOMENT_NAMES
 
 logger = logging.getLogger(__name__)
 
@@ -765,26 +764,83 @@ class FitSuscConfig(Config):
                 + ", ".join(sorted(allowed))
             )
 
-        unknown = set(value) - {"type", "weights", "covariance"}
+        unknown = set(value) - {
+            "type",
+            "number_of_moments",
+            "moment_weights",
+            "covariance",
+        }
         if unknown:
             raise ValueError(
                 "assignment:moment_objective contains unknown key(s): "
                 + ", ".join(sorted(unknown))
             )
-        weights = value.get("weights", {})
+        if "number_of_moments" not in value:
+            raise ValueError(
+                "assignment:moment_objective:number_of_moments is required"
+            )
+        number_of_moments = value["number_of_moments"]
+        if not isinstance(number_of_moments, int) or number_of_moments <= 0:
+            raise ValueError(
+                "assignment:moment_objective:number_of_moments must be a positive integer"
+            )
+
+        weights = value.get("moment_weights", {})
         if weights is None or weights == "":
             weights = {}
         if not isinstance(weights, dict):
-            raise ValueError("assignment:moment_objective:weights must be a mapping")
-        unknown_weight_names = set(weights) - set(MOMENT_NAMES)
-        if unknown_weight_names:
             raise ValueError(
-                "assignment:moment_objective:weights contains unknown moment(s): "
-                + ", ".join(sorted(unknown_weight_names))
+                "assignment:moment_objective:moment_weights must be a mapping"
             )
+        invalid_weight_names = []
+        for moment_name in weights:
+            if not isinstance(moment_name, str) or not moment_name.startswith("m"):
+                invalid_weight_names.append(moment_name)
+                continue
+            try:
+                order = int(moment_name[1:])
+            except ValueError:
+                invalid_weight_names.append(moment_name)
+                continue
+            if not 1 <= order <= number_of_moments:
+                invalid_weight_names.append(moment_name)
+        if invalid_weight_names:
+            raise ValueError(
+                "assignment:moment_objective:moment_weights contains unknown moment(s): "
+                + ", ".join(sorted(invalid_weight_names))
+            )
+        if objective_type == "ls":
+            expected_weight_names = {
+                f"m{order}" for order in range(1, number_of_moments + 1)
+            }
+            provided_weight_names = set(weights)
+            if provided_weight_names != expected_weight_names:
+                missing_weight_names = sorted(
+                    expected_weight_names - provided_weight_names
+                )
+                extra_weight_names = sorted(
+                    provided_weight_names - expected_weight_names
+                )
+                details = []
+                if missing_weight_names:
+                    details.append(
+                        "missing moment weight(s): "
+                        + ", ".join(missing_weight_names)
+                    )
+                if extra_weight_names:
+                    details.append(
+                        "unknown moment weight(s): "
+                        + ", ".join(extra_weight_names)
+                    )
+                raise ValueError(
+                    "assignment:moment_objective:moment_weights must define exactly "
+                    f"m1..m{number_of_moments} for type 'ls' ("
+                    + "; ".join(details)
+                    + ")"
+                )
         if objective_type == "gmm" and weights:
             raise ValueError(
-                "assignment:moment_objective:weights is only supported for type 'ls'"
+                "assignment:moment_objective:moment_weights is only supported for type 'ls'"
             )
         covariance = value.get("covariance", {})
         if covariance is None or covariance == "":
@@ -869,9 +925,12 @@ class FitSuscConfig(Config):
             moment_name: float(weight)
             for moment_name, weight in weights.items()
         }
-        self._assignment_moment_objective = {"type": objective_type}
+        self._assignment_moment_objective = {
+            "type": objective_type,
+            "number_of_moments": int(number_of_moments),
+        }
         if objective_type == "ls":
-            self._assignment_moment_objective["weights"] = parsed_weights
+            self._assignment_moment_objective["moment_weights"] = parsed_weights
         else:
             self._assignment_moment_objective["covariance"] = {
                 "method": "monte_carlo",

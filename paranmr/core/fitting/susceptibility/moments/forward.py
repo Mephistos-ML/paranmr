@@ -116,6 +116,7 @@ def calculated_moments_from_parameters(
     nuclei: list[Nucleus],
     linewidths_by_label: dict[str, float],
     include_diamagnetic: bool,
+    moment_labels: tuple[str, ...],
     average_labels: tuple[tuple[str, ...], ...] = (),
 ) -> dict[str, float]:
     """Compute Gaussian-mixture moments for a calculated parameter set."""
@@ -140,6 +141,7 @@ def calculated_moments_from_parameters(
         centers=calculated_peaks["center"],
         sigmas=calculated_peaks["sigma"],
         area_norm=calculated_peaks["area_norm"],
+        moment_labels=moment_labels,
     )
 
 
