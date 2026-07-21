@@ -1,0 +1,59 @@
+project:
+  name: YbL8_1H_PD_fit_Moments
+  
+hyperfine:
+  method: pdip
+  file: ../../../../DATA/HFC/YbL8.xyz
+  paramagnetic_centre: [0.0, 0.0, 0.0]
+  spin: 0.5
+  orbit: 3
+  total_momentum_J: 3.5
+
+nuclei:
+  include: H
+  
+diamagnetic:
+  method: dft
+  file: ../../../../DATA/DIA/LuL8_DIA_NMR.out
+
+diamagnetic_ref:
+  method: dft
+  file: ../../../../DATA/DIA/tms_ref.out
+
+experiment:
+  files: ../../../../DATA/PARA/exp.csv
+
+assignment:
+  method: moments
+  moment_objective:
+    type: gmm
+    covariance:
+      method: monte_carlo
+      n_samples: 500
+      random_seed: 12345
+      perturbation:
+        shift_sigma_abs: 0.02
+        width_sigma_rel: 0.05
+
+linewidth:
+  method: r6
+  variables:
+    # p1: [fix, 705.05]
+    # p2: [fix, 0.248]
+    p1: [fit, 1250.0, [500.0, 2000.0]]
+    p2: [fit, 0.5, [0.0, 1.0]]
+    
+susc_fit:
+  type: isoaxrho_euler
+  variables:
+    iso: [fix, 0.00]
+    ax: [fit, 0.001]
+    # rho_over_ax: [fix, 0.123]
+    rho_over_ax: [fit, 0.0]
+    alpha: [fit, 0.0]
+    beta: [fit, 0.0]
+    gamma: [fit, 0.0]
+    # alpha: [fix, 188.299094]
+    # beta: [fix, 21.860629]
+    # gamma: [fix, 209.965089]
+  average_shifts: 'methyls'
