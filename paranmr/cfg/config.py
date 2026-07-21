@@ -20,7 +20,6 @@ import yaml_include
 
 from paranmr.cfg.benchmarks import AfcBenchmarkConfig as AfcBenchmarkConfig
 from paranmr.cfg.benchmarks import AsdBenchmarkConfig as AsdBenchmarkConfig
-from paranmr.core.fitting.susceptibility.moments.descriptors import MOMENT_NAMES
 
 logger = logging.getLogger(__name__)
 
@@ -765,30 +764,187 @@ class FitSuscConfig(Config):
                 + ", ".join(sorted(allowed))
             )
 
-        unknown = set(value) - {"type", "weights"}
+        unknown = set(value) - {
+            "type",
+            "number_of_moments",
+            "moment_weights",
+            "covariance",
+        }
         if unknown:
             raise ValueError(
                 "assignment:moment_objective contains unknown key(s): "
                 + ", ".join(sorted(unknown))
             )
-        weights = value.get("weights", {})
+        if "number_of_moments" not in value:
+            raise ValueError(
+                "assignment:moment_objective:number_of_moments is required"
+            )
+        number_of_moments = value["number_of_moments"]
+        if not isinstance(number_of_moments, int) or number_of_moments <= 0:
+            raise ValueError(
+                "assignment:moment_objective:number_of_moments must be a positive integer"
+            )
+
+        weights = value.get("moment_weights", {})
         if weights is None or weights == "":
             weights = {}
         if not isinstance(weights, dict):
-            raise ValueError("assignment:moment_objective:weights must be a mapping")
-        unknown_weight_names = set(weights) - set(MOMENT_NAMES)
-        if unknown_weight_names:
             raise ValueError(
-                "assignment:moment_objective:weights contains unknown moment(s): "
-                + ", ".join(sorted(unknown_weight_names))
+                "assignment:moment_objective:moment_weights must be a mapping"
             )
+        invalid_weight_names = []
+        for moment_name in weights:
+            if not isinstance(moment_name, str) or not moment_name.startswith("m"):
+                invalid_weight_names.append(moment_name)
+                continue
+            try:
+                order = int(moment_name[1:])
+            except ValueError:
+                invalid_weight_names.append(moment_name)
+                continue
+            if not 1 <= order <= number_of_moments:
+                invalid_weight_names.append(moment_name)
+        if invalid_weight_names:
+            raise ValueError(
+                "assignment:moment_objective:moment_weights contains unknown moment(s): "
+                + ", ".join(sorted(invalid_weight_names))
+            )
+        if objective_type == "ls":
+            expected_weight_names = {
+                f"m{order}" for order in range(1, number_of_moments + 1)
+            }
+            provided_weight_names = set(weights)
+            if provided_weight_names != expected_weight_names:
+                missing_weight_names = sorted(
+                    expected_weight_names - provided_weight_names
+                )
+                extra_weight_names = sorted(
+                    provided_weight_names - expected_weight_names
+                )
+                details = []
+                if missing_weight_names:
+                    details.append(
+                        "missing moment weight(s): "
+                        + ", ".join(missing_weight_names)
+                    )
+                if extra_weight_names:
+                    details.append(
+                        "unknown moment weight(s): "
+                        + ", ".join(extra_weight_names)
+                    )
+                raise ValueError(
+                    "assignment:moment_objective:moment_weights must define exactly "
+                    f"m1..m{number_of_moments} for type 'ls' ("
+                    + "; ".join(details)
+                    + ")"
+                )
+        if objective_type == "gmm" and weights:
+            raise ValueError(
+                "assignment:moment_objective:moment_weights is only supported for type 'ls'"
+            )
+        covariance = value.get("covariance", {})
+        if covariance is None or covariance == "":
+            covariance = {}
+        if objective_type == "gmm":
+            if not isinstance(covariance, dict):
+                raise ValueError(
+                    "assignment:moment_objective:covariance must be a mapping"
+                )
+            if not covariance:
+                raise ValueError(
+                    "assignment:moment_objective:covariance is required for type 'gmm'"
+                )
+            covariance_unknown = set(covariance) - {
+                "method",
+                "n_samples",
+                "random_seed",
+                "perturbation",
+            }
+            if covariance_unknown:
+                raise ValueError(
+                    "assignment:moment_objective:covariance contains unknown key(s): "
+                    + ", ".join(sorted(covariance_unknown))
+                )
+            covariance_method = str(covariance.get("method", "")).strip().lower()
+            if covariance_method != "monte_carlo":
+                raise ValueError(
+                    "assignment:moment_objective:covariance:method must be "
+                    "'monte_carlo' for type 'gmm'"
+                )
+            n_samples = covariance.get("n_samples")
+            if not isinstance(n_samples, int) or n_samples <= 0:
+                raise ValueError(
+                    "assignment:moment_objective:covariance:n_samples must be "
+                    "a positive integer"
+                )
+            random_seed = covariance.get("random_seed")
+            if random_seed is not None and not isinstance(random_seed, int):
+                raise ValueError(
+                    "assignment:moment_objective:covariance:random_seed must be "
+                    "an integer when provided"
+                )
+            perturbation = covariance.get("perturbation")
+            if not isinstance(perturbation, dict):
+                raise ValueError(
+                    "assignment:moment_objective:covariance:perturbation must be "
+                    "a mapping"
+                )
+            perturbation_unknown = set(perturbation) - {
+                "shift_sigma_abs",
+                "width_sigma_rel",
+            }
+            if perturbation_unknown:
+                raise ValueError(
+                    "assignment:moment_objective:covariance:perturbation contains "
+                    "unknown key(s): "
+                    + ", ".join(sorted(perturbation_unknown))
+                )
+            if "shift_sigma_abs" not in perturbation:
+                raise ValueError(
+                    "assignment:moment_objective:covariance:perturbation:"
+                    "shift_sigma_abs is required"
+                )
+            if "width_sigma_rel" not in perturbation:
+                raise ValueError(
+                    "assignment:moment_objective:covariance:perturbation:"
+                    "width_sigma_rel is required"
+                )
+            shift_sigma_abs = float(perturbation["shift_sigma_abs"])
+            width_sigma_rel = float(perturbation["width_sigma_rel"])
+            if shift_sigma_abs <= 0.0:
+                raise ValueError(
+                    "assignment:moment_objective:covariance:perturbation:"
+                    "shift_sigma_abs must be positive"
+                )
+            if width_sigma_rel <= 0.0:
+                raise ValueError(
+                    "assignment:moment_objective:covariance:perturbation:"
+                    "width_sigma_rel must be positive"
+                )
+        parsed_weights = {
+            moment_name: float(weight)
+            for moment_name, weight in weights.items()
+        }
         self._assignment_moment_objective = {
             "type": objective_type,
-            "weights": {
-                moment_name: float(weight)
-                for moment_name, weight in weights.items()
-            },
+            "number_of_moments": int(number_of_moments),
         }
+        if objective_type == "ls":
+            self._assignment_moment_objective["moment_weights"] = parsed_weights
+        else:
+            self._assignment_moment_objective["covariance"] = {
+                "method": "monte_carlo",
+                "n_samples": int(covariance["n_samples"]),
+                "random_seed": (
+                    None
+                    if covariance.get("random_seed") is None
+                    else int(covariance["random_seed"])
+                ),
+                "perturbation": {
+                    "shift_sigma_abs": float(covariance["perturbation"]["shift_sigma_abs"]),
+                    "width_sigma_rel": float(covariance["perturbation"]["width_sigma_rel"]),
+                },
+            }
         return
 
     @property

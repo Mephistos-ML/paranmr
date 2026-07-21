@@ -10,14 +10,18 @@ from dataclasses import dataclass
 import numpy as np
 from numpy.typing import NDArray
 
-from paranmr.core.fitting.susceptibility.moments.descriptors import (
-    normalize_gaussian_mixture_moment_vectors,
+from paranmr.core.fitting.susceptibility.objectives.moments.differences import (
+    build_moment_difference_vector,
+)
+from paranmr.core.fitting.susceptibility.objectives.moments.ls.weighting import (
+    build_ls_weight_vector,
+    build_ls_weights_by_name,
 )
 
 
 @dataclass(frozen=True)
 class WeightedLSMomentObjective:
-    """Weighted relative-residual objective for Gaussian-mixture moments."""
+    """Weighted least-squares objective for normalized moment differences."""
 
     moment_names: tuple[str, ...]
     weights_by_name: dict[str, float]
@@ -30,23 +34,10 @@ class WeightedLSMomentObjective:
         weights: dict[str, float] | None,
     ) -> "WeightedLSMomentObjective":
         """Build a weighted least-squares moment objective from user weights."""
-        if weights is None:
-            weights = {}
-
-        unknown = set(weights) - set(moment_names)
-        if unknown:
-            raise ValueError(
-                "Moment weights contain unknown moment(s): "
-                + ", ".join(sorted(unknown))
-            )
-
-        weights_by_name = {}
-        for moment_name in moment_names:
-            weight = float(weights.get(moment_name, 1.0))
-            if weight < 0.0:
-                raise ValueError("Moment weights must be non-negative")
-            weights_by_name[moment_name] = weight
-
+        weights_by_name = build_ls_weights_by_name(
+            moment_names=moment_names,
+            weights=weights,
+        )
         return cls(moment_names=moment_names, weights_by_name=weights_by_name)
 
     @property
@@ -65,7 +56,20 @@ class WeightedLSMomentObjective:
     @property
     def diagnostics(self) -> dict[str, dict[str, float]]:
         """Return serializable objective diagnostics."""
-        return {"weights": dict(self.weights_by_name)}
+        return {"moment_weights": dict(self.weights_by_name)}
+
+    def conditions(
+        self,
+        *,
+        observed_moments: dict[str, float],
+        calculated_moments: dict[str, float],
+    ) -> NDArray[np.float64]:
+        """Return the shared normalized moment-condition vector ``m_calc - m_exp``."""
+        return build_moment_difference_vector(
+            observed_moments=observed_moments,
+            calculated_moments=calculated_moments,
+            moment_names=self.moment_names,
+        )
 
     def residuals(
         self,
@@ -73,26 +77,16 @@ class WeightedLSMomentObjective:
         observed_moments: dict[str, float],
         calculated_moments: dict[str, float],
     ) -> NDArray[np.float64]:
-        """Return weighted residuals for the configured moment order.
-
-        The residual for moment ``n`` is
-        ``weight_n * (calculated_n / observed_n - 1)``.
-        """
-        normalized_observed, normalized_calculated = (
-            normalize_gaussian_mixture_moment_vectors(
-                observed=observed_moments,
-                calculated=calculated_moments,
-            )
+        """Return weighted residuals for normalized moment differences."""
+        condition_vector = self.conditions(
+            observed_moments=observed_moments,
+            calculated_moments=calculated_moments,
         )
-        values = [
-            self.weights_by_name[moment_name]
-            * (
-                normalized_calculated[moment_name]
-                - normalized_observed[moment_name]
-            )
-            for moment_name in self.moment_names
-        ]
-        return np.asarray(values, dtype=float)
+        weights = build_ls_weight_vector(
+            moment_names=self.moment_names,
+            weights_by_name=self.weights_by_name,
+        )
+        return weights * condition_vector
 
     def score(
         self,

@@ -129,11 +129,11 @@ def test_fit_susc_moments_weighted_ls_smoke(tmp_path: Path):
     assert np.isfinite(diagnostics[numeric_cols].to_numpy(dtype=float)).all()
 
     file_text = expected_output.read_text(encoding="utf-8-sig")
-    weighted_score_line = next(
-        line for line in file_text.splitlines() if line.startswith("# weighted_score = ")
+    score_line = next(
+        line for line in file_text.splitlines() if line.startswith("# score = ")
     )
-    weighted_score = float(weighted_score_line.split("=", maxsplit=1)[1].strip())
-    assert np.isfinite(weighted_score)
+    score = float(score_line.split("=", maxsplit=1)[1].strip())
+    assert np.isfinite(score)
 
     linewidth_model_output = (
         cwd
@@ -152,6 +152,25 @@ def test_fit_susc_moments_weighted_ls_smoke(tmp_path: Path):
     assert linewidth_model["linewidth_method"].iloc[0] == "r6"
     assert np.isfinite(float(linewidth_model["p1"].iloc[0]))
     assert np.isfinite(float(linewidth_model["p2"].iloc[0]))
+
+    moment_jacobian_output = (
+        cwd
+        / "DyL1_1H_Fitting_Moments_iso_ax_rho"
+        / "moment_jacobian_302.15_K.csv"
+    )
+    assert moment_jacobian_output.exists(), (
+        f"Expected output file missing: {moment_jacobian_output}"
+    )
+
+    moment_jacobian = pd.read_csv(
+        moment_jacobian_output, comment="#", encoding="utf-8-sig"
+    )
+    assert list(moment_jacobian.columns) == ["quantity", "ax"]
+    assert moment_jacobian.shape == (6, 2)
+    jacobian_values = moment_jacobian.drop(columns=["quantity"]).to_numpy(
+        dtype=float
+    )
+    assert np.isfinite(jacobian_values).all()
 
     peak_output = (
         cwd / "DyL1_1H_Fitting_Moments_iso_ax_rho" / "peak_data_302.15_K.csv"

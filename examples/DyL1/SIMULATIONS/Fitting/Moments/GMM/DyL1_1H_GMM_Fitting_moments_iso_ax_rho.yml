@@ -1,0 +1,56 @@
+project:
+  name: DyL1_1H_Fitting_Moments_iso_ax_rho
+    
+hyperfine:
+  method: pdip
+  file: ../../../../DATA/HFC/DyL1.xyz
+  paramagnetic_centre: [0.006857, -0.008695, 0.057882]
+  spin: 2.5
+  orbit: 5
+  total_momentum_J: 7.5
+
+nuclei:
+  include: H
+      
+diamagnetic:
+  method: dft
+  file: ../../../../DATA/DIA/YL1_DIA_NMR.out
+
+diamagnetic_ref:
+  method: dft
+  file: ../../../../DATA/DIA/tms_ref.out
+
+experiment:
+  files: ../../../../DATA/PARA/DyL1_Exp_Decomposition.csv
+
+
+assignment:
+  method: moments
+  moment_objective:
+    type: gmm
+    number_of_moments: 6
+    covariance:
+      method: monte_carlo
+      n_samples: 500
+      random_seed: 12345
+      perturbation:
+        shift_sigma_abs: 0.02
+        width_sigma_rel: 0.05
+
+linewidth:
+  method: r6
+  variables:
+    p1: [fix, 2897.493389]
+    p2: [fix, 0.547118]
+    # p1: [fit, 2500.0, [1000.0, 5000.0]]
+    # p2: [fit, 0.01, [0.0, 1.0]]
+
+susc_fit:
+  type: isoaxrho_euler
+  variables:
+    iso: [fix, 0.00]
+    ax: [fit, -0.001]
+    rho_over_ax: [fix, 0.0]
+    alpha: [fix, 0.0]
+    beta: [fix, 0.0]
+    gamma: [fix, 0.0]

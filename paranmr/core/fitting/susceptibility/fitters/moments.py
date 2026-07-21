@@ -8,6 +8,7 @@ from __future__ import annotations
 import copy
 import logging
 from dataclasses import dataclass
+from typing import Protocol
 
 import numpy as np
 from numpy.typing import NDArray
@@ -16,22 +17,58 @@ from scipy.optimize._optimize import OptimizeResult
 
 from paranmr.core.domain.mol import Nucleus
 from paranmr.core.fitting.susceptibility.moments.descriptors import (
-    normalize_gaussian_mixture_moment_vectors,
+    build_normalized_moment_vectors,
 )
 from paranmr.core.fitting.susceptibility.moments.forward import (
     calculated_moments_from_parameters,
+)
+from paranmr.core.fitting.susceptibility.objectives.moments.differences import (
+    build_moment_difference_vector,
 )
 from paranmr.core.fitting.susceptibility.linewidths import (
     SusceptibilityLinewidthInputs,
     predict_r6_widths_by_atom_label,
 )
 from paranmr.core.fitting.susceptibility.models.base import SusceptibilityModel
-from paranmr.core.fitting.susceptibility.objectives.moments.api import (
-    MomentObjective,
-)
 from paranmr.core.fitting.susceptibility.stats import svd_stdev
 
 logger = logging.getLogger(__name__)
+
+
+class MomentObjective(Protocol):
+    """Structural contract required from moment objective implementations."""
+
+    @property
+    def objective_type(self) -> str:
+        ...
+
+    @property
+    def active_mask(self) -> NDArray[np.bool_]:
+        ...
+
+    def conditions(
+        self,
+        *,
+        observed_moments: dict[str, float],
+        calculated_moments: dict[str, float],
+    ) -> NDArray[np.float64]:
+        ...
+
+    def residuals(
+        self,
+        *,
+        observed_moments: dict[str, float],
+        calculated_moments: dict[str, float],
+    ) -> NDArray[np.float64]:
+        ...
+
+    def score(
+        self,
+        *,
+        observed_moments: dict[str, float],
+        calculated_moments: dict[str, float],
+    ) -> float:
+        ...
 
 
 @dataclass(frozen=True)
@@ -45,7 +82,7 @@ class MomentFitResult:
     linewidth_method: str
     linewidth_vars_by_name: dict[str, float]
     calculated_linewidths_by_label: dict[str, float]
-    weighted_score: float
+    score: float
 
 
 @dataclass(frozen=True)
@@ -55,6 +92,7 @@ class MomentFitInputs:
     model: SusceptibilityModel
     nuclei: tuple[Nucleus, ...]
     temperature: float
+    moment_labels: tuple[str, ...]
     observed_moments: dict[str, float]
     moment_objective: MomentObjective
     linewidth_inputs: SusceptibilityLinewidthInputs
@@ -73,9 +111,8 @@ def fit_moment_model(
 ) -> MomentFitResult | None:
     """Optimize a susceptibility model against moment constraints."""
 
-    # Solve over susceptibility and linewidth variables.
     curr_fit = least_squares(
-        fun=_moment_residual_from_float_list,
+        fun=_moment_objective_residuals_from_fit_vector,
         args=(inputs,),
         x0=inputs.fit_guess,
         bounds=inputs.fit_bounds,
@@ -134,14 +171,6 @@ def fit_moment_model(
         model.final_var_values[key] = val
     model._post_fit()
 
-    # Compute fit quality metrics directly from the final residual vector.
-    residual_values = np.asarray(curr_fit.fun, dtype=float)
-    model.mae = float(np.sum(np.abs(residual_values)) / len(residual_values))
-    ss_res = float(np.sum(residual_values**2))
-    model.rmse = float(np.sqrt(ss_res / len(residual_values)))
-    model.r2 = np.nan
-    model.adj_r2 = np.nan
-
     # Reconstruct final linewidth values from the fitted optimizer vector.
     final_linewidth_vars = {**inputs.linewidth_fix_vars}
     final_linewidth_vars.update(
@@ -165,31 +194,39 @@ def fit_moment_model(
         nuclei=inputs.nuclei,
         linewidths_by_label=final_linewidths_by_atom_label,
         include_diamagnetic=inputs.use_diamagnetic,
+        moment_labels=inputs.moment_labels,
         average_labels=inputs.average_labels,
     )
 
     # Package the final comparison between experimental and calculated moments.
-    normalized_observed_moments, normalized_calculated_moments = (
-        normalize_gaussian_mixture_moment_vectors(
-            observed=inputs.observed_moments,
-            calculated=calculated_moments,
-        )
+    normalized_moments = build_normalized_moment_vectors(
+        observed=inputs.observed_moments,
+        calculated=calculated_moments,
+        moment_names=inputs.moment_labels,
     )
-    weighted_score = _weighted_moment_score(
-        observed_moments=inputs.observed_moments,
-        calculated_moments=calculated_moments,
-        moment_objective=inputs.moment_objective,
+    condition_vector = build_moment_difference_vector(
+        observed_moments=normalized_moments.observed,
+        calculated_moments=normalized_moments.calculated,
+        moment_names=inputs.moment_labels,
+    )
+    model.mae = float(np.mean(np.abs(condition_vector)))
+    model.rmse = float(np.sqrt(np.mean(condition_vector**2)))
+    model.r2 = np.nan
+    model.adj_r2 = np.nan
+    score = inputs.moment_objective.score(
+        observed_moments=normalized_moments.observed,
+        calculated_moments=normalized_moments.calculated,
     )
     return MomentFitResult(
         temperature=float(inputs.temperature),
         objective_type=inputs.moment_objective.objective_type,
         observed_moments={
             f"{k}_norm": float(v)
-            for k, v in normalized_observed_moments.items()
+            for k, v in normalized_moments.observed.items()
         },
         calculated_moments={
             f"{k}_norm": float(v)
-            for k, v in normalized_calculated_moments.items()
+            for k, v in normalized_moments.calculated.items()
         },
         linewidth_method="r6",
         linewidth_vars_by_name={
@@ -198,14 +235,13 @@ def fit_moment_model(
         calculated_linewidths_by_label={
             k: float(v) for k, v in final_linewidths_by_atom_label.items()
         },
-        weighted_score=weighted_score,
+        score=score,
     )
-
-
-def _moment_residual_from_float_list(
+def _moment_objective_residuals_from_fit_vector(
     new_vals: list[float],
     inputs: MomentFitInputs,
 ) -> list[float]:
+    """Return moment-objective residuals for a flat optimizer fit vector."""
     optimizer_values = np.asarray(new_vals, dtype=float)
     n_susc_params = len(inputs.fit_var_names)
     susc_vals = optimizer_values[:n_susc_params]
@@ -231,36 +267,17 @@ def _moment_residual_from_float_list(
         nuclei=inputs.nuclei,
         linewidths_by_label=calculated_widths_by_atom_label,
         include_diamagnetic=inputs.use_diamagnetic,
+        moment_labels=inputs.moment_labels,
         average_labels=inputs.average_labels,
     )
+    normalized_moments = build_normalized_moment_vectors(
+        observed=inputs.observed_moments,
+        calculated=calculated_moments,
+        moment_names=inputs.moment_labels,
+    )
     return list(
-        _weighted_moment_residuals(
-            observed_moments=inputs.observed_moments,
-            calculated_moments=calculated_moments,
-            moment_objective=inputs.moment_objective,
+        inputs.moment_objective.residuals(
+            observed_moments=normalized_moments.observed,
+            calculated_moments=normalized_moments.calculated,
         )
-    )
-
-
-def _weighted_moment_residuals(
-    *,
-    observed_moments: dict[str, float],
-    calculated_moments: dict[str, float],
-    moment_objective: MomentObjective,
-) -> NDArray[np.float64]:
-    return moment_objective.residuals(
-        observed_moments=observed_moments,
-        calculated_moments=calculated_moments,
-    )
-
-
-def _weighted_moment_score(
-    *,
-    observed_moments: dict[str, float],
-    calculated_moments: dict[str, float],
-    moment_objective: MomentObjective,
-) -> float:
-    return moment_objective.score(
-        observed_moments=observed_moments,
-        calculated_moments=calculated_moments,
     )

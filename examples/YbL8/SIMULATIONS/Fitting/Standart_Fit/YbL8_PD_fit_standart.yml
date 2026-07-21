@@ -1,0 +1,56 @@
+project:
+  name: YbL8_1H_PD_fit_Standart
+  
+hyperfine:
+  method: pdip
+  file: ../../../DATA/HFC/YbL8.xyz
+  paramagnetic_centre: [0.0, 0.0, 0.0]
+  spin: 0.5
+  orbit: 3
+  total_momentum_J: 3.5
+
+nuclei:
+  include: H
+  
+diamagnetic:
+  method: dft
+  file: ../../../DATA/DIA/LuL8_DIA_NMR.out
+
+diamagnetic_ref:
+  method: dft
+  file: ../../../DATA/DIA/tms_ref.out
+
+signal_labels:
+  file: ../../../DATA/LABELS/YbL8_labels.csv
+
+experiment:
+  files: ../../../DATA/PARA/exp.csv
+
+assignment:
+  method: fixed
+
+linewidth:
+  method: experimental
+  estimate: p1_p2
+
+susc_fit:
+  type: split
+  variables:
+    iso: [fix, 0]
+    dxx: [fit, 0.1]
+    dxy: [fit, 0.01]
+    dxz: [fit, 0.01]
+    dyy: [fit, 0.1]
+    dyz: [fit, 0.01]
+  average_shifts: 'all'
+
+# susc_fit:
+#   type: isoaxrho_euler
+#   variables:
+#     iso: [fix, 0.00]
+#     ax: [fit, 0.01]
+#     rho_over_ax: [fix, 0.0]
+#     alpha: [fix, 188.299094]
+#     beta: [fix, 21.860629]
+#     gamma: [fix, 209.965089]
+#   average_shifts: 'all'

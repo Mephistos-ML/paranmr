@@ -395,8 +395,21 @@ Used in susceptibility fitting workflows that require assignment handling.
 
         # Moment objective [Required for moments only]
         moment_objective:
+          type: gmm
+          number_of_moments: 6
+          covariance:
+            method: monte_carlo
+            n_samples: 200
+            perturbation:
+              shift_sigma_abs: 0.02
+              width_sigma_rel: 0.05
+            random_seed: 12345
+
+        # Weighted least-squares alternative [Optional]
+        moment_objective:
           type: ls
-          weights:           # Required for type: ls
+          number_of_moments: 6
+          moment_weights:
             m1: 1.0
             m2: 5.0
             m3: 0.5
@@ -450,15 +463,29 @@ preferred over ``permute`` for large or heavily degenerate assignment problems.
 Moment-based fitting is selected with ``assignment:method: moments``. The
 ``susc_fit:type`` field still selects the susceptibility model parameterization.
 
-The moment objective controls how the normalized moment residual vector is
-transformed before least-squares optimization. The supported objective is
-``ls``, which uses user-provided per-moment weights. Here ``m1`` and
-``m2`` correspond to the spectral mean and second central moment, while ``m3``
-to ``m6`` correspond to the third to sixth central moments. The current
-normalization is component-wise, i.e. each calculated descriptor is divided by
-the corresponding observed descriptor value. This ratio-based normalization
-fails explicitly if any observed descriptor is zero or numerically too close to
-zero.
+The moment objective controls how the moment discrepancy vector is transformed
+before optimization. The required ``number_of_moments`` field defines the
+descriptor vector ``m1`` to ``mN`` used throughout the fit. Two objective types
+are supported.
+
+``gmm``
+    Uses the generalized-method-of-moments workflow. The public configuration
+    requires an explicit covariance specification under
+    ``assignment:moment_objective:covariance``. The current implementation
+    estimates the moment covariance matrix by Monte Carlo perturbation of the
+    experimental peak centers and widths, then constructs the GMM weighting
+    matrix from its inverse.
+
+``ls``
+    Uses user-provided per-moment weights applied to the normalized moment
+    residual vector. The weights must be provided explicitly as
+    ``moment_weights`` and must define exactly ``m1`` to ``mN`` for the chosen
+    ``number_of_moments``. In the current implementation, ``m1`` is the
+    spectral mean and ``m2`` to ``mN`` are central moments of order two
+    through ``N``. The current normalization is component-wise, i.e. each
+    calculated descriptor is divided by the corresponding observed descriptor
+    value. This ratio-based normalization fails explicitly if any observed
+    descriptor is zero or numerically too close to zero.
 
 .. _Hungarian algorithm: https://en.wikipedia.org/wiki/Hungarian_algorithm
 
