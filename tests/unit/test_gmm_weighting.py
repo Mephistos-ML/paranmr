@@ -4,49 +4,35 @@
 import numpy as np
 import pytest
 
-from paranmr.core.fitting.susceptibility.jacobian.types import (
-    MomentJacobianResult,
+from paranmr.core.fitting.susceptibility.objectives.moments.gmm.covariance import (
+    MonteCarloMomentCovarianceConfig,
+    estimate_moment_covariance_from_monte_carlo,
 )
-from paranmr.core.fitting.susceptibility.moments.descriptors import MOMENT_NAMES
 from paranmr.core.fitting.susceptibility.objectives.moments.gmm.weighting import (
     build_gmm_weighting_matrix,
-    estimate_gmm_covariance_from_jacobian,
 )
 
 
 @pytest.mark.unit
-def test_estimate_gmm_covariance_from_jacobian_returns_regularized_symmetric_matrix():
-    jacobian = MomentJacobianResult(
-        temperature=302.15,
-        moment_names=MOMENT_NAMES,
-        parameter_names=(
-            "p1",
-            "p2",
-            "iso",
-            "ax",
-            "rho_over_ax",
-            "alpha",
-            "beta",
-            "gamma",
-        ),
-        values=np.asarray(
-            [
-                [1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-                [0.0, 2.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-                [0.0, 0.0, 3.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-                [0.0, 0.0, 0.0, 4.0, 0.0, 0.0, 0.0, 0.0],
-                [0.0, 0.0, 0.0, 0.0, 5.0, 0.0, 0.0, 0.0],
-                [0.0, 0.0, 0.0, 0.0, 0.0, 6.0, 0.0, 0.0],
-            ],
-            dtype=float,
+def test_estimate_moment_covariance_from_monte_carlo_returns_symmetric_matrix():
+    estimate = estimate_moment_covariance_from_monte_carlo(
+        observed_peaks={
+            "center": np.asarray([-10.0, 5.0, 20.0], dtype=float),
+            "sigma": np.asarray([1.0, 2.0, 1.5], dtype=float),
+            "area_norm": np.asarray([0.2, 0.3, 0.5], dtype=float),
+        },
+        moment_names=("m1", "m2", "m3", "m4", "m5", "m6"),
+        config=MonteCarloMomentCovarianceConfig(
+            n_samples=200,
+            shift_sigma_abs=0.02,
+            width_sigma_rel=0.05,
+            random_seed=12345,
         ),
     )
 
-    covariance = estimate_gmm_covariance_from_jacobian(jacobian)
-
-    assert covariance.shape == (6, 6)
-    assert np.allclose(covariance, covariance.T)
-    assert np.all(np.diag(covariance) > 0.0)
+    assert estimate.covariance.shape == (6, 6)
+    assert np.allclose(estimate.covariance, estimate.covariance.T)
+    assert np.all(np.diag(estimate.covariance) >= 0.0)
 
 
 @pytest.mark.unit

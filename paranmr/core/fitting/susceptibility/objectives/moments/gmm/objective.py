@@ -30,16 +30,11 @@ class GMMMomentObjective:
         moment_names: tuple[str, ...],
         objective_config: dict | None = None,
     ) -> "GMMMomentObjective":
-        """Build the public GMM objective.
-
-        The public YAML contract exposes only ``type: gmm``. Internally the
-        workflow starts from the identity weighting matrix and will later be
-        extended to the second-step covariance-weighted stage.
-        """
-        del objective_config
-        return cls.with_weighting_matrix(
-            moment_names=moment_names,
-            weighting_matrix=np.eye(len(moment_names), dtype=float),
+        """Reject direct construction without an explicit weighting matrix."""
+        del moment_names, objective_config
+        raise NotImplementedError(
+            "GMM objective construction requires an explicit covariance-derived "
+            "weighting matrix."
         )
 
     @classmethod

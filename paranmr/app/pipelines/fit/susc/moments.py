@@ -32,9 +32,15 @@ from paranmr.core.fitting.susceptibility.models.base import SusceptibilityModel
 from paranmr.core.fitting.susceptibility.objectives.moments.api import (
     prepare_moment_objective,
 )
+from paranmr.core.fitting.susceptibility.objectives.moments.gmm import (
+    MonteCarloMomentCovarianceConfig,
+    build_gmm_weighting_matrix,
+    estimate_moment_covariance_from_monte_carlo,
+)
 from paranmr.io.csv.fit import (
     save_moment_fit_diagnostics,
     save_fit_linewidth_model,
+    save_moment_covariance,
     save_moment_jacobian,
 )
 
@@ -81,10 +87,40 @@ def fit_moment_assignment(
         area_norm=observed_peaks["area_norm"],
     )
 
+    moment_covariance = None
+    gmm_weighting_matrix = None
+    if (
+        assignment_moment_objective is not None
+        and assignment_moment_objective.get("type") == "gmm"
+    ):
+        covariance_config = assignment_moment_objective["covariance"]
+        moment_covariance = estimate_moment_covariance_from_monte_carlo(
+            observed_peaks=observed_peaks,
+            moment_names=tuple(experimental_moments.keys()),
+            config=MonteCarloMomentCovarianceConfig(
+                n_samples=int(covariance_config["n_samples"]),
+                shift_sigma_abs=float(
+                    covariance_config["perturbation"]["shift_sigma_abs"]
+                ),
+                width_sigma_rel=float(
+                    covariance_config["perturbation"]["width_sigma_rel"]
+                ),
+                random_seed=(
+                    None
+                    if covariance_config.get("random_seed") is None
+                    else int(covariance_config["random_seed"])
+                ),
+            ),
+        )
+        gmm_weighting_matrix = build_gmm_weighting_matrix(
+            moment_covariance.covariance
+        )
+
     # Build the configured moment objective before assembling optimizer inputs.
     moment_objective = prepare_moment_objective(
         observed_moments=experimental_moments,
         objective_config=assignment_moment_objective,
+        gmm_weighting_matrix=gmm_weighting_matrix,
     )
 
     # Split linewidth variables into fit, fixed, and bounded subsets.
@@ -152,6 +188,15 @@ def fit_moment_assignment(
                 f"linewidth_model_{experiment.temperature:.2f}_K.csv",
             ),
         )
+        if moment_covariance is not None:
+            save_moment_covariance(
+                estimate=moment_covariance,
+                file_name=os.path.join(
+                    project_name,
+                    f"moment_covariance_{experiment.temperature:.2f}_K.csv",
+                ),
+                temperature=float(experiment.temperature),
+            )
         moment_jacobian = build_moment_jacobian(
             temperature=float(experiment.temperature),
             parameters=model.final_var_values,

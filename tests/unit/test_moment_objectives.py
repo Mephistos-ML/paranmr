@@ -114,7 +114,7 @@ def test_weighted_ls_moment_objective_exposes_raw_condition_vector():
     )
 
 @pytest.mark.unit
-def test_prepare_moment_objective_builds_identity_gmm_objective():
+def test_prepare_moment_objective_builds_gmm_objective_from_weighting_matrix():
     observed = {
         "m1": 1.0,
         "m2": 2.0,
@@ -127,17 +127,37 @@ def test_prepare_moment_objective_builds_identity_gmm_objective():
     objective = prepare_moment_objective(
         observed_moments=observed,
         objective_config={"type": "gmm"},
+        gmm_weighting_matrix=np.eye(6, dtype=float),
     )
 
-    assert isinstance(objective, GMMMomentObjective)
     assert objective.objective_type == "gmm"
     assert np.array_equal(objective.active_mask, np.ones(6, dtype=bool))
 
 
 @pytest.mark.unit
+def test_prepare_moment_objective_rejects_gmm_without_weighting_matrix():
+    observed = {
+        "m1": 1.0,
+        "m2": 2.0,
+        "m3": 3.0,
+        "m4": 4.0,
+        "m5": 5.0,
+        "m6": 6.0,
+    }
+
+    with pytest.raises(ValueError, match="requires an explicit covariance-derived"):
+        prepare_moment_objective(
+            observed_moments=observed,
+            objective_config={"type": "gmm"},
+        )
+
+
+@pytest.mark.unit
 def test_gmm_moment_objective_returns_raw_condition_residuals_for_identity_weighting():
-    objective = GMMMomentObjective.from_config(
-        moment_names=("m1", "m2", "m3", "m4", "m5", "m6"),
+    objective = prepare_moment_objective(
+        observed_moments={"m1": 1.0, "m2": 1.0, "m3": 1.0, "m4": 1.0, "m5": 1.0, "m6": 1.0},
+        objective_config={"type": "gmm"},
+        gmm_weighting_matrix=np.eye(6, dtype=float),
     )
     observed = {
         "m1": 2.0,

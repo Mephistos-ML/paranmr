@@ -63,6 +63,7 @@ def prepare_moment_objective(
     *,
     observed_moments: dict[str, float],
     objective_config: dict | None = None,
+    gmm_weighting_matrix: NDArray[np.float64] | None = None,
 ) -> MomentObjective:
     """Build the configured moment objective.
 
@@ -92,9 +93,14 @@ def prepare_moment_objective(
         )
 
     if objective_type == "gmm":
-        return GMMMomentObjective.from_config(
+        if gmm_weighting_matrix is None:
+            raise ValueError(
+                "GMM moment objective requires an explicit covariance-derived "
+                "weighting matrix"
+            )
+        return GMMMomentObjective.with_weighting_matrix(
             moment_names=moment_names,
-            objective_config=objective_config,
+            weighting_matrix=gmm_weighting_matrix,
         )
 
     raise ValueError(

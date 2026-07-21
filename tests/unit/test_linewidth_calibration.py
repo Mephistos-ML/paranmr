@@ -181,9 +181,68 @@ def test_fit_susc_config_accepts_gmm_moment_objective_placeholder(tmp_path):
         encoding="utf-8",
     )
 
+    with pytest.raises(ValueError, match="covariance is required for type 'gmm'"):
+        FitSuscConfig.from_file(config_file)
+
+
+@pytest.mark.unit
+def test_fit_susc_config_accepts_gmm_with_explicit_covariance_specification(tmp_path):
+    config_file = tmp_path / "fit.yml"
+    config_file.write_text(
+        "\n".join(
+            [
+                "project:",
+                "  name: test",
+                "hyperfine:",
+                "  method: pdip",
+                "  file: hf.xyz",
+                "  paramagnetic_centre: [0.0, 0.0, 0.0]",
+                "experiment:",
+                "  files: exp.csv",
+                "nuclei:",
+                "  include: H",
+                "diamagnetic:",
+                "  method: dft",
+                "  file: dia.out",
+                "diamagnetic_ref:",
+                "  method: dft",
+                "  file: ref.out",
+                "susc_fit:",
+                "  type: isoaxrho",
+                "  variables:",
+                "    iso: [fit, 0.0]",
+                "assignment:",
+                "  method: moments",
+                "  moment_objective:",
+                "    type: gmm",
+                "    covariance:",
+                "      method: monte_carlo",
+                "      n_samples: 500",
+                "      random_seed: 12345",
+                "      perturbation:",
+                "        shift_sigma_abs: 0.02",
+                "        width_sigma_rel: 0.05",
+                "linewidth:",
+                "  method: experimental",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
     config = FitSuscConfig.from_file(config_file)
 
-    assert config.assignment_moment_objective["type"] == "gmm"
+    assert config.assignment_moment_objective == {
+        "type": "gmm",
+        "covariance": {
+            "method": "monte_carlo",
+            "n_samples": 500,
+            "random_seed": 12345,
+            "perturbation": {
+                "shift_sigma_abs": 0.02,
+                "width_sigma_rel": 0.05,
+            },
+        },
+    }
 
 @pytest.mark.unit
 def test_fit_susc_config_rejects_gmm_moment_weights(tmp_path):

@@ -765,7 +765,7 @@ class FitSuscConfig(Config):
                 + ", ".join(sorted(allowed))
             )
 
-        unknown = set(value) - {"type", "weights"}
+        unknown = set(value) - {"type", "weights", "covariance"}
         if unknown:
             raise ValueError(
                 "assignment:moment_objective contains unknown key(s): "
@@ -786,6 +786,85 @@ class FitSuscConfig(Config):
             raise ValueError(
                 "assignment:moment_objective:weights is only supported for type 'ls'"
             )
+        covariance = value.get("covariance", {})
+        if covariance is None or covariance == "":
+            covariance = {}
+        if objective_type == "gmm":
+            if not isinstance(covariance, dict):
+                raise ValueError(
+                    "assignment:moment_objective:covariance must be a mapping"
+                )
+            if not covariance:
+                raise ValueError(
+                    "assignment:moment_objective:covariance is required for type 'gmm'"
+                )
+            covariance_unknown = set(covariance) - {
+                "method",
+                "n_samples",
+                "random_seed",
+                "perturbation",
+            }
+            if covariance_unknown:
+                raise ValueError(
+                    "assignment:moment_objective:covariance contains unknown key(s): "
+                    + ", ".join(sorted(covariance_unknown))
+                )
+            covariance_method = str(covariance.get("method", "")).strip().lower()
+            if covariance_method != "monte_carlo":
+                raise ValueError(
+                    "assignment:moment_objective:covariance:method must be "
+                    "'monte_carlo' for type 'gmm'"
+                )
+            n_samples = covariance.get("n_samples")
+            if not isinstance(n_samples, int) or n_samples <= 0:
+                raise ValueError(
+                    "assignment:moment_objective:covariance:n_samples must be "
+                    "a positive integer"
+                )
+            random_seed = covariance.get("random_seed")
+            if random_seed is not None and not isinstance(random_seed, int):
+                raise ValueError(
+                    "assignment:moment_objective:covariance:random_seed must be "
+                    "an integer when provided"
+                )
+            perturbation = covariance.get("perturbation")
+            if not isinstance(perturbation, dict):
+                raise ValueError(
+                    "assignment:moment_objective:covariance:perturbation must be "
+                    "a mapping"
+                )
+            perturbation_unknown = set(perturbation) - {
+                "shift_sigma_abs",
+                "width_sigma_rel",
+            }
+            if perturbation_unknown:
+                raise ValueError(
+                    "assignment:moment_objective:covariance:perturbation contains "
+                    "unknown key(s): "
+                    + ", ".join(sorted(perturbation_unknown))
+                )
+            if "shift_sigma_abs" not in perturbation:
+                raise ValueError(
+                    "assignment:moment_objective:covariance:perturbation:"
+                    "shift_sigma_abs is required"
+                )
+            if "width_sigma_rel" not in perturbation:
+                raise ValueError(
+                    "assignment:moment_objective:covariance:perturbation:"
+                    "width_sigma_rel is required"
+                )
+            shift_sigma_abs = float(perturbation["shift_sigma_abs"])
+            width_sigma_rel = float(perturbation["width_sigma_rel"])
+            if shift_sigma_abs <= 0.0:
+                raise ValueError(
+                    "assignment:moment_objective:covariance:perturbation:"
+                    "shift_sigma_abs must be positive"
+                )
+            if width_sigma_rel <= 0.0:
+                raise ValueError(
+                    "assignment:moment_objective:covariance:perturbation:"
+                    "width_sigma_rel must be positive"
+                )
         parsed_weights = {
             moment_name: float(weight)
             for moment_name, weight in weights.items()
@@ -793,6 +872,20 @@ class FitSuscConfig(Config):
         self._assignment_moment_objective = {"type": objective_type}
         if objective_type == "ls":
             self._assignment_moment_objective["weights"] = parsed_weights
+        else:
+            self._assignment_moment_objective["covariance"] = {
+                "method": "monte_carlo",
+                "n_samples": int(covariance["n_samples"]),
+                "random_seed": (
+                    None
+                    if covariance.get("random_seed") is None
+                    else int(covariance["random_seed"])
+                ),
+                "perturbation": {
+                    "shift_sigma_abs": float(covariance["perturbation"]["shift_sigma_abs"]),
+                    "width_sigma_rel": float(covariance["perturbation"]["width_sigma_rel"]),
+                },
+            }
         return
 
     @property

@@ -15,6 +15,9 @@ import pandas as pd
 from paranmr.core.fitting.linewidth import R6LinewidthParameterEstimate
 from paranmr.core.fitting.susceptibility.jacobian.types import MomentJacobianResult
 from paranmr.core.fitting.susceptibility.fitters.moments import MomentFitResult
+from paranmr.core.fitting.susceptibility.objectives.moments.gmm.covariance import (
+    MomentCovarianceEstimate,
+)
 from paranmr.io.csv.csv_util import read_csv_safe, write_csv_safe
 
 logger = logging.getLogger(__name__)
@@ -167,6 +170,43 @@ def save_moment_jacobian(
 
     if verbose:
         logger.info("Moment Jacobian written to %s", file_name)
+
+    return
+
+
+def save_moment_covariance(
+    estimate: MomentCovarianceEstimate,
+    file_name: str,
+    *,
+    temperature: float,
+    verbose: bool = True,
+) -> None:
+    """Write the estimated moment covariance matrix to CSV."""
+
+    rows = []
+    for row_name, row_values in zip(estimate.moment_names, estimate.covariance):
+        rows.append(
+            {
+                "quantity": row_name,
+                **{
+                    moment_name: float(value)
+                    for moment_name, value in zip(estimate.moment_names, row_values)
+                },
+            }
+        )
+
+    comment = [
+        f"T = {temperature:.2f} K",
+        f"method = {estimate.method}",
+        f"n_samples = {estimate.n_samples}",
+        f"random_seed = {estimate.random_seed}",
+        f"shift_sigma_abs = {estimate.shift_sigma_abs:.6g}",
+        f"width_sigma_rel = {estimate.width_sigma_rel:.6g}",
+    ]
+    write_csv_safe(pd.DataFrame(rows), file_name, comment)
+
+    if verbose:
+        logger.info("Moment covariance written to %s", file_name)
 
     return
 
