@@ -2,6 +2,90 @@
 
 <!-- version list -->
 
+## v1.15.0 (2026-07-21)
+
+### Bug Fixes
+
+- **gmm**: Finalize covariance-backed moment fitter wiring
+  ([`d85e732`](https://github.com/Mephistos-ML/paranmr/commit/d85e73247a1eb60d0aca1bd8d22b0b33bd60aeb0))
+
+### Chores
+
+- **examples**: Add covariance-backed gmm example inputs
+  ([`6adf5d6`](https://github.com/Mephistos-ML/paranmr/commit/6adf5d652b03cb627851af073cdc94690f29933a))
+
+- **examples**: Align GMM inputs with moment objective schema
+  ([`519cbca`](https://github.com/Mephistos-ML/paranmr/commit/519cbca31e00324eb90372aed19733aa3c011be9))
+
+- **examples**: Refresh DyL1 fitting outputs after moment updates
+  ([`a6fa3f9`](https://github.com/Mephistos-ML/paranmr/commit/a6fa3f91b53d914d51b3a43d514d3a0197ba6c43))
+
+- **examples**: Refresh DyL1 simulation outputs after moment pipeline updates
+  ([`0ac41a6`](https://github.com/Mephistos-ML/paranmr/commit/0ac41a6d3243de31c74f04db7161e9fea0504b75))
+
+- **examples**: Update DyL1 and YbL8 moment-fitting configs
+  ([`f738346`](https://github.com/Mephistos-ML/paranmr/commit/f7383467f8f45c427f888f6b6ab1e6bb9a9d17d9))
+
+### Documentation
+
+- **moments**: Document LS and GMM objective configuration
+  ([`551505d`](https://github.com/Mephistos-ML/paranmr/commit/551505dccd3e07249e5f6595c8ce0eecb050834a))
+
+### Features
+
+- **gmm**: Add two-step moment objective prototype
+  ([`f140c82`](https://github.com/Mephistos-ML/paranmr/commit/f140c82ca41e742512fb5fdcfb3a42fc2d4afd46))
+
+- **gmm**: Estimate moment covariance by Monte Carlo peak perturbation
+  ([`ed4a6e7`](https://github.com/Mephistos-ML/paranmr/commit/ed4a6e7e16e7aaf38fbc18aff9862b32ade8ad44))
+
+- **gmm**: Normalize active moment jacobian construction
+  ([`0902e60`](https://github.com/Mephistos-ML/paranmr/commit/0902e601c8aec55e65faaace3eff41be27e85f79))
+
+- **moments**: Add analytical Jacobian core
+  ([`c1d447f`](https://github.com/Mephistos-ML/paranmr/commit/c1d447fad8c728770c19258d96e35f3fc3df3319))
+
+- **moments**: Export Jacobian from fit pipeline
+  ([`9d5ba77`](https://github.com/Mephistos-ML/paranmr/commit/9d5ba77611389631232009b8fac3cb8011456779))
+
+### Refactoring
+
+- **config**: Require explicit moment labels and strict LS weights
+  ([`b4a2294`](https://github.com/Mephistos-ML/paranmr/commit/b4a22945b757a46ff57fd8d4ba54165da418321a))
+
+- **gmm**: Unify normalized moment conditions across objectives
+  ([`125e5ed`](https://github.com/Mephistos-ML/paranmr/commit/125e5edfbf29304ef2ab57b0f379148634d38c8f))
+
+- **jacobian**: Make normalized moment Jacobian the public contract
+  ([`eb275e2`](https://github.com/Mephistos-ML/paranmr/commit/eb275e23a1c29e65bf525009e27cd2aff3a2ebdd))
+
+- **jacobian**: Normalize moment Jacobian at the builder boundary
+  ([`b63e32a`](https://github.com/Mephistos-ML/paranmr/commit/b63e32acee5e09c37afdc4bd31dbeee10f25a819))
+
+- **jacobian**: Use active fit parameters as the only Jacobian contract
+  ([`75e75eb`](https://github.com/Mephistos-ML/paranmr/commit/75e75eb1507473a719e06b58b9a5d00ba69b8379))
+
+- **moments**: Align objective scoring and clean pipeline docs
+  ([`a37e102`](https://github.com/Mephistos-ML/paranmr/commit/a37e102e7a0786ea005f5f109ec8a432763058c0))
+
+- **moments**: Simplify objective routing and residual flow
+  ([`91d3726`](https://github.com/Mephistos-ML/paranmr/commit/91d3726e549c9049040874b907db70ca99f8b162))
+
+- **objectives**: Organize shift and moment objective modules
+  ([`7e143ab`](https://github.com/Mephistos-ML/paranmr/commit/7e143ab9469e37483f5557fc2d9f4ca4b7b68079))
+
+- **objectives**: Remove legacy moment objective modules
+  ([`6fb9bfb`](https://github.com/Mephistos-ML/paranmr/commit/6fb9bfbfc9c2bfdbb975b126af97fe50be409bbe))
+
+### Testing
+
+- **moments**: Cover equal-weight averaging contract
+  ([`948cf50`](https://github.com/Mephistos-ML/paranmr/commit/948cf50d7a4abd637e6eb28ee19b45c8af5b7bb7))
+
+- **moments**: Cover strict contracts and jacobian normalization
+  ([`3254a0d`](https://github.com/Mephistos-ML/paranmr/commit/3254a0d51e268a62dede06c734da15eb05e3cf67))
+
+
 ## v1.14.0 (2026-07-15)
 
 ### Features
