@@ -213,7 +213,10 @@ def fit_moment_model(
     model.rmse = float(np.sqrt(np.mean(condition_vector**2)))
     model.r2 = np.nan
     model.adj_r2 = np.nan
-    score = float(np.sqrt(np.sum(np.asarray(condition_vector, dtype=float) ** 2)))
+    score = inputs.moment_objective.score(
+        observed_moments=normalized_moments.observed,
+        calculated_moments=normalized_moments.calculated,
+    )
     return MomentFitResult(
         temperature=float(inputs.temperature),
         objective_type=inputs.moment_objective.objective_type,

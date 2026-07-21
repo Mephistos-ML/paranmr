@@ -89,7 +89,7 @@ class GMMMomentObjective:
         observed_moments: dict[str, float],
         calculated_moments: dict[str, float],
     ) -> NDArray[np.float64]:
-        """Return the least-squares residual vector associated with the current GMM weighting."""
+        """Return the transformed residual vector implied by the current GMM weighting."""
         return self.residual_transform @ self.conditions(
             observed_moments=observed_moments,
             calculated_moments=calculated_moments,

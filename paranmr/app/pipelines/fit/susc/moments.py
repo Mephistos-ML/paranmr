@@ -186,7 +186,7 @@ def fit_moment_assignment(
         average_labels=tuple(tuple(group) for group in average_labels),
     )
 
-    # Run the core least-squares fit.
+    # Run the core moment fit with the configured LS or GMM residual model.
     moment_fit_result = fit_moment_model(fit_inputs)
 
     # Persist fit diagnostics next to the project outputs.

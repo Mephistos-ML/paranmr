@@ -21,7 +21,7 @@ from paranmr.core.fitting.susceptibility.objectives.moments.ls.weighting import 
 
 @dataclass(frozen=True)
 class WeightedLSMomentObjective:
-    """Weighted relative-residual objective for Gaussian-mixture moments."""
+    """Weighted least-squares objective for normalized moment differences."""
 
     moment_names: tuple[str, ...]
     weights_by_name: dict[str, float]
@@ -77,7 +77,7 @@ class WeightedLSMomentObjective:
         observed_moments: dict[str, float],
         calculated_moments: dict[str, float],
     ) -> NDArray[np.float64]:
-        """Return weighted residuals for normalized moment descriptors."""
+        """Return weighted residuals for normalized moment differences."""
         condition_vector = self.conditions(
             observed_moments=observed_moments,
             calculated_moments=calculated_moments,
