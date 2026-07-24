@@ -17,7 +17,12 @@ from paranmr.core.domain.mol import Molecule
 from paranmr.core.fitting.susceptibility.fitters.moments import (
     MomentFitInputs,
     MomentFitResult,
+    evaluate_moment_fit_vector,
     fit_moment_model,
+)
+from paranmr.core.fitting.susceptibility.objective_map import (
+    ObjectiveMapConfig,
+    build_objective_map,
 )
 from paranmr.core.fitting.susceptibility.jacobian.assembly import (
     build_moment_jacobian,
@@ -43,8 +48,11 @@ from paranmr.io.csv.fit import (
     save_fit_linewidth_model,
     save_moment_covariance,
     save_moment_jacobian,
+    save_objective_map,
 )
+from paranmr.viz.plots.covariance import plot_moment_covariance_heatmap
 from paranmr.viz.plots.jacobian import plot_moment_jacobian_heatmap
+from paranmr.viz.plots.objective_map import plot_objective_map
 from paranmr.viz.style.theme import PlotSpec
 
 logger = logging.getLogger(__name__)
@@ -59,6 +67,7 @@ def fit_moment_assignment(
     show_plots: bool,
     project_name: str,
     assignment_moment_objective: dict | None,
+    susc_fit_objective_map: dict | None,
     linewidth_variables: dict | None,
     average_labels: list[list[str]] | None = None,
 ) -> MomentFitResult | None:
@@ -224,6 +233,17 @@ def fit_moment_assignment(
                 ),
                 temperature=float(experiment.temperature),
             )
+            with spec.context():
+                plot_moment_covariance_heatmap(
+                    covariance=moment_covariance,
+                    spec=spec,
+                    save=True,
+                    show=show_plots,
+                    save_name=os.path.join(
+                        project_name,
+                        f"moment_covariance_heatmap_{experiment.temperature:.2f}_K",
+                    ),
+                )
         moment_jacobian = build_moment_jacobian(
             temperature=float(experiment.temperature),
             parameters=model.final_var_values,
@@ -252,6 +272,53 @@ def fit_moment_assignment(
                     f"moment_jacobian_heatmap_{experiment.temperature:.2f}_K",
                 ),
             )
+        objective_map_config = susc_fit_objective_map or {}
+        if objective_map_config:
+            fitted_vector = [
+                float(model.final_var_values[name]) for name in fit_var_names
+            ] + [
+                float(moment_fit_result.linewidth_vars_by_name[name])
+                for name in linewidth_fit_names
+            ]
+            def moment_score(point: np.ndarray) -> float:
+                evaluation = evaluate_moment_fit_vector(point, fit_inputs)
+                return fit_inputs.moment_objective.score(
+                    observed_moments=evaluation.normalized_observed_moments,
+                    calculated_moments=evaluation.normalized_calculated_moments,
+                )
+
+            objective_map = build_objective_map(
+                temperature=float(experiment.temperature),
+                objective_type=fit_inputs.moment_objective.objective_type,
+                parameter_names=fit_var_names + linewidth_fit_names,
+                fit_vector=fitted_vector,
+                fit_bounds=fit_inputs.fit_bounds,
+                config=ObjectiveMapConfig(
+                    parameters=tuple(objective_map_config["parameters"]),
+                    window_rel=float(objective_map_config["window_rel"]),
+                    n_grid=int(objective_map_config["n_grid"]),
+                    gradient=bool(objective_map_config["gradient"]),
+                ),
+                score_evaluator=moment_score,
+            )
+            file_stub = (
+                "objective_map_"
+                f"{objective_map.parameter_names[0]}_"
+                f"{objective_map.parameter_names[1]}_"
+                f"{experiment.temperature:.2f}_K"
+            )
+            save_objective_map(
+                objective_map=objective_map,
+                file_name=os.path.join(project_name, f"{file_stub}.csv"),
+            )
+            with spec.context():
+                plot_objective_map(
+                    objective_map,
+                    spec=spec,
+                    save=True,
+                    show=show_plots,
+                    save_name=os.path.join(project_name, file_stub),
+                )
     return moment_fit_result
 
 

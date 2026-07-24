@@ -58,6 +58,20 @@ def test_fit_susc_with_pdip_hfc_isoaxrho_and_permutation_assignment(tmp_path: Pa
     peak_output = cwd / "DyL1_1H_Fitting" / "peak_data_302.15_K.csv"
     assert peak_output.exists(), f"Expected output file missing: {peak_output}"
 
+    objective_map_output = (
+        cwd / "DyL1_1H_Fitting" / "objective_map_ax_rho_over_ax_302.15_K.pdf"
+    )
+    assert objective_map_output.exists(), (
+        f"Expected output file missing: {objective_map_output}"
+    )
+
+    objective_map_csv = (
+        cwd / "DyL1_1H_Fitting" / "objective_map_ax_rho_over_ax_302.15_K.csv"
+    )
+    assert objective_map_csv.exists(), (
+        f"Expected output file missing: {objective_map_csv}"
+    )
+
     peak_data = pd.read_csv(peak_output, comment="#", encoding="utf-8-sig")
     assert "linewidth_exp (ppm)" in peak_data.columns
     linewidths = peak_data["linewidth_exp (ppm)"].to_numpy(dtype=float)
@@ -165,8 +179,8 @@ def test_fit_susc_moments_weighted_ls_smoke(tmp_path: Path):
     moment_jacobian = pd.read_csv(
         moment_jacobian_output, comment="#", encoding="utf-8-sig"
     )
-    assert list(moment_jacobian.columns) == ["quantity", "ax"]
-    assert moment_jacobian.shape == (6, 2)
+    assert list(moment_jacobian.columns) == ["quantity", "ax", "rho_over_ax"]
+    assert moment_jacobian.shape == (6, 3)
     jacobian_values = moment_jacobian.drop(columns=["quantity"]).to_numpy(
         dtype=float
     )
@@ -179,6 +193,31 @@ def test_fit_susc_moments_weighted_ls_smoke(tmp_path: Path):
     )
     assert moment_jacobian_heatmap_output.exists(), (
         f"Expected output file missing: {moment_jacobian_heatmap_output}"
+    )
+
+    moment_covariance_heatmap_output = (
+        cwd
+        / "DyL1_1H_Fitting_Moments_iso_ax_rho"
+        / "moment_covariance_heatmap_302.15_K.pdf"
+    )
+    assert not moment_covariance_heatmap_output.exists()
+
+    objective_map_output = (
+        cwd
+        / "DyL1_1H_Fitting_Moments_iso_ax_rho"
+        / "objective_map_ax_rho_over_ax_302.15_K.pdf"
+    )
+    assert objective_map_output.exists(), (
+        f"Expected output file missing: {objective_map_output}"
+    )
+
+    objective_map_csv = (
+        cwd
+        / "DyL1_1H_Fitting_Moments_iso_ax_rho"
+        / "objective_map_ax_rho_over_ax_302.15_K.csv"
+    )
+    assert objective_map_csv.exists(), (
+        f"Expected output file missing: {objective_map_csv}"
     )
 
     peak_output = (

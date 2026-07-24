@@ -52,3 +52,5 @@ susc_fit:
     beta: [fit, 0.0]
     gamma: [fit, 0.0]
   average_shifts: 'methyls'
+  objective_map:
+    parameters: [ax, rho_over_ax]

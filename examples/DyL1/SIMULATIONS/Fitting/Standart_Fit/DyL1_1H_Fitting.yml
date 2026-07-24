@@ -38,5 +38,7 @@ susc_fit:
   variables:
     iso: [fix, 0.0]
     ax: [fit, -0.001]
-    rho_over_ax: [fix, 0.0]
+    rho_over_ax: [fit, 0.0]
   average_shifts: 'all'
+  objective_map:
+    parameters: [ax, rho_over_ax]
