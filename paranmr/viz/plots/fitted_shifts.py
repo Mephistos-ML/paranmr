@@ -24,6 +24,7 @@ from paranmr.viz.layout.export import render_figure
 from paranmr.viz.layout.label import resolve_label_layout
 from paranmr.viz.layout.table import render_compact_table
 from paranmr.viz.style.theme import PlotSpec
+from paranmr.viz.utils.labels import parameter_label_mathtext
 from paranmr.viz.utils.uncertainty import format_compact_uncertainty
 
 logger = logging.getLogger(__name__)
@@ -176,7 +177,7 @@ def plot_fitted_shifts(
     model_lines: list[str] = []
     for name in susc_model.VARNAMES:
         val = float(susc_model.final_var_values[name]) * conv
-        label = susc_model.VARNAMES_MM[name]
+        label = parameter_label_mathtext(name)
 
         err = susc_model.fit_stdev.get(name)
         if name in susc_model.fit_vars and err is not None and err > 0:
