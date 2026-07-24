@@ -2,6 +2,49 @@
 
 <!-- version list -->
 
+## v1.16.0 (2026-07-24)
+
+### Bug Fixes
+
+- **objectives**: Wire analytic moment Jacobian into LS and GMM fits
+  ([`1d42c70`](https://github.com/Mephistos-ML/paranmr/commit/1d42c7022c6f42fd4e1c1e487f0aedc180c71589))
+
+### Chores
+
+- **repo**: Keep simulation inputs and ignore generated outputs
+  ([`89ce752`](https://github.com/Mephistos-ML/paranmr/commit/89ce752533d5eac919e36a8bc53e2bce4539cd73))
+
+- **repo**: Stop tracking generated simulation artefacts
+  ([`e560bc9`](https://github.com/Mephistos-ML/paranmr/commit/e560bc9aa8f9ae53d28818096f0e8c8e4b4cfe81))
+
+### Features
+
+- **viz**: Add generalized susceptibility objective-map diagnostics
+  ([`9313d54`](https://github.com/Mephistos-ML/paranmr/commit/9313d54543107346daa1110e2396234bd3fda2c2))
+
+- **viz**: Add moment covariance heatmap export for GMM diagnostics
+  ([`6525938`](https://github.com/Mephistos-ML/paranmr/commit/652593817a96170b708a16c76df360c8f850289b))
+
+- **viz**: Export moment Jacobian heat map from moment-fit pipeline
+  ([`3acb064`](https://github.com/Mephistos-ML/paranmr/commit/3acb064cf93a7e4e8a0130a62364e1a956957927))
+
+### Refactoring
+
+- **moments**: Expose fit-vector evaluation helper for shared diagnostics
+  ([`23421f8`](https://github.com/Mephistos-ML/paranmr/commit/23421f8c9274dc96d434e9c700fec7974add186c))
+
+- **viz**: Centralize mathtext labels for fitted parameters and moments
+  ([`24996fa`](https://github.com/Mephistos-ML/paranmr/commit/24996faa14497c40904cc24587efd56808613842))
+
+- **viz**: Remove objective-map CSV export
+  ([`7630969`](https://github.com/Mephistos-ML/paranmr/commit/7630969c767b2db30184e9ea4ded33b0ec4bf734))
+
+### Testing
+
+- **viz**: Cover covariance heatmap PDF export
+  ([`c5fcee8`](https://github.com/Mephistos-ML/paranmr/commit/c5fcee838bee80f748ee691129d86617bd803db6))
+
+
 ## v1.15.0 (2026-07-21)
 
 ### Bug Fixes
