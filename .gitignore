@@ -28,14 +28,13 @@ dist/
 
 # ============================================================================
 # Example pipeline outputs
-# These directories contain generated data from example workflows.
-# Do not version them.
-#
-# Pattern notes:
-#   - `examples/**/X/` matches X at any depth under examples/
-#   - Trailing slash ensures only directories are ignored.
+# Treat everything under SIMULATIONS as generated workflow state, except the
+# canonical YAML input files used to rerun the examples.
 # ============================================================================
-examples/**/SIMULATIONS/
+examples/**/SIMULATIONS/*
+examples/**/SIMULATIONS/**/*
+!examples/**/SIMULATIONS/**/
+!examples/**/SIMULATIONS/**/*.yml
 
 # ============================================================================
 # Generated test artefacts
