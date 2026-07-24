@@ -10,6 +10,8 @@ from paranmr.core.fitting.susceptibility.jacobian.types import (
     MomentJacobianResult,
 )
 from paranmr.io.csv.fit import save_moment_jacobian
+from paranmr.viz.plots.jacobian import plot_moment_jacobian_heatmap
+from paranmr.viz.style.theme import build_spec
 
 MOMENT_LABELS = tuple(f"m{order}" for order in range(1, 7))
 
@@ -72,3 +74,32 @@ def test_save_moment_jacobian_writes_expected_csv_layout(tmp_path: Path):
     assert df.iloc[0]["alpha"] == pytest.approx(2.0)
     assert df.iloc[5]["ax"] == pytest.approx(50.0)
     assert df.iloc[5]["alpha"] == pytest.approx(52.0)
+
+
+@pytest.mark.unit
+def test_plot_moment_jacobian_heatmap_writes_pdf(tmp_path: Path):
+    parameter_names = ("ax", "rho_over_ax", "alpha")
+    values = [
+        [10.0 * row + col for col in range(len(parameter_names))]
+        for row in range(len(MOMENT_LABELS))
+    ]
+    result = MomentJacobianResult(
+        temperature=302.15,
+        moment_names=MOMENT_LABELS,
+        parameter_names=parameter_names,
+        values=values,
+    )
+
+    output = tmp_path / "moment_jacobian_heatmap_302.15_K"
+    spec = build_spec("paper")
+    with spec.context():
+        plot_moment_jacobian_heatmap(
+            result,
+            spec=spec,
+            save=True,
+            show=False,
+            save_name=str(output),
+            verbose=False,
+        )
+
+    assert Path(f"{output}.pdf").exists()

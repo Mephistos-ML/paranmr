@@ -44,6 +44,8 @@ from paranmr.io.csv.fit import (
     save_moment_covariance,
     save_moment_jacobian,
 )
+from paranmr.viz.plots.jacobian import plot_moment_jacobian_heatmap
+from paranmr.viz.style.theme import PlotSpec
 
 logger = logging.getLogger(__name__)
 
@@ -53,6 +55,8 @@ def fit_moment_assignment(
     model: SusceptibilityModel,
     molecule: Molecule,
     experiment: Experiment,
+    spec: PlotSpec,
+    show_plots: bool,
     project_name: str,
     assignment_moment_objective: dict | None,
     linewidth_variables: dict | None,
@@ -237,6 +241,17 @@ def fit_moment_assignment(
                 f"moment_jacobian_{experiment.temperature:.2f}_K.csv",
             ),
         )
+        with spec.context():
+            plot_moment_jacobian_heatmap(
+                jacobian=moment_jacobian,
+                spec=spec,
+                save=True,
+                show=show_plots,
+                save_name=os.path.join(
+                    project_name,
+                    f"moment_jacobian_heatmap_{experiment.temperature:.2f}_K",
+                ),
+            )
     return moment_fit_result
 
 

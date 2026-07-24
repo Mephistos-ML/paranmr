@@ -172,6 +172,15 @@ def test_fit_susc_moments_weighted_ls_smoke(tmp_path: Path):
     )
     assert np.isfinite(jacobian_values).all()
 
+    moment_jacobian_heatmap_output = (
+        cwd
+        / "DyL1_1H_Fitting_Moments_iso_ax_rho"
+        / "moment_jacobian_heatmap_302.15_K.pdf"
+    )
+    assert moment_jacobian_heatmap_output.exists(), (
+        f"Expected output file missing: {moment_jacobian_heatmap_output}"
+    )
+
     peak_output = (
         cwd / "DyL1_1H_Fitting_Moments_iso_ax_rho" / "peak_data_302.15_K.csv"
     )
