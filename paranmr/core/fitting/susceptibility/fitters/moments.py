@@ -259,7 +259,7 @@ def fit_moment_model(
         },
         score=score,
     )
-def _evaluate_moment_fit_vector(
+def evaluate_moment_fit_vector(
     new_vals: list[float] | NDArray[np.float64],
     inputs: MomentFitInputs,
 ) -> MomentFitEvaluation:
@@ -312,7 +312,7 @@ def _moment_objective_residuals_from_fit_vector(
     inputs: MomentFitInputs,
 ) -> list[float]:
     """Return moment-objective residuals for a flat optimizer fit vector."""
-    evaluation = _evaluate_moment_fit_vector(new_vals, inputs)
+    evaluation = evaluate_moment_fit_vector(new_vals, inputs)
     return list(
         inputs.moment_objective.residuals(
             observed_moments=evaluation.normalized_observed_moments,
@@ -326,7 +326,7 @@ def _moment_objective_jacobian_from_fit_vector(
     inputs: MomentFitInputs,
 ) -> NDArray[np.float64]:
     """Return the analytical residual Jacobian for a flat optimizer fit vector."""
-    evaluation = _evaluate_moment_fit_vector(new_vals, inputs)
+    evaluation = evaluate_moment_fit_vector(new_vals, inputs)
     moment_jacobian = build_moment_jacobian(
         temperature=float(inputs.temperature),
         parameters=evaluation.all_vars,
