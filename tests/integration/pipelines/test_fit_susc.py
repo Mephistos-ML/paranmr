@@ -65,13 +65,6 @@ def test_fit_susc_with_pdip_hfc_isoaxrho_and_permutation_assignment(tmp_path: Pa
         f"Expected output file missing: {objective_map_output}"
     )
 
-    objective_map_csv = (
-        cwd / "DyL1_1H_Fitting" / "objective_map_ax_rho_over_ax_302.15_K.csv"
-    )
-    assert objective_map_csv.exists(), (
-        f"Expected output file missing: {objective_map_csv}"
-    )
-
     peak_data = pd.read_csv(peak_output, comment="#", encoding="utf-8-sig")
     assert "linewidth_exp (ppm)" in peak_data.columns
     linewidths = peak_data["linewidth_exp (ppm)"].to_numpy(dtype=float)
@@ -209,15 +202,6 @@ def test_fit_susc_moments_weighted_ls_smoke(tmp_path: Path):
     )
     assert objective_map_output.exists(), (
         f"Expected output file missing: {objective_map_output}"
-    )
-
-    objective_map_csv = (
-        cwd
-        / "DyL1_1H_Fitting_Moments_iso_ax_rho"
-        / "objective_map_ax_rho_over_ax_302.15_K.csv"
-    )
-    assert objective_map_csv.exists(), (
-        f"Expected output file missing: {objective_map_csv}"
     )
 
     peak_output = (

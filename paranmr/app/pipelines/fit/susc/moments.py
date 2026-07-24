@@ -48,7 +48,6 @@ from paranmr.io.csv.fit import (
     save_fit_linewidth_model,
     save_moment_covariance,
     save_moment_jacobian,
-    save_objective_map,
 )
 from paranmr.viz.plots.covariance import plot_moment_covariance_heatmap
 from paranmr.viz.plots.jacobian import plot_moment_jacobian_heatmap
@@ -306,10 +305,6 @@ def fit_moment_assignment(
                 f"{objective_map.parameter_names[0]}_"
                 f"{objective_map.parameter_names[1]}_"
                 f"{experiment.temperature:.2f}_K"
-            )
-            save_objective_map(
-                objective_map=objective_map,
-                file_name=os.path.join(project_name, f"{file_stub}.csv"),
             )
             with spec.context():
                 plot_objective_map(

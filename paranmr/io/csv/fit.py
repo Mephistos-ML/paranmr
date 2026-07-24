@@ -12,7 +12,6 @@ import logging
 import numpy as np
 import pandas as pd
 
-from paranmr.core.fitting.susceptibility.objective_map import ObjectiveMapResult
 from paranmr.core.fitting.linewidth import R6LinewidthParameterEstimate
 from paranmr.core.fitting.susceptibility.jacobian.types import MomentJacobianResult
 from paranmr.core.fitting.susceptibility.fitters.moments import MomentFitResult
@@ -208,54 +207,6 @@ def save_moment_covariance(
 
     if verbose:
         logger.info("Moment covariance written to %s", file_name)
-
-    return
-
-
-def save_objective_map(
-    objective_map: ObjectiveMapResult,
-    file_name: str,
-    verbose: bool = True,
-) -> None:
-    """Write a two-parameter objective map to CSV."""
-
-    x_values = np.asarray(objective_map.x_values, dtype=float)
-    y_values = np.asarray(objective_map.y_values, dtype=float)
-    score_grid = np.asarray(objective_map.score_grid, dtype=float)
-    gradient_x = (
-        None
-        if objective_map.gradient_x is None
-        else np.asarray(objective_map.gradient_x, dtype=float)
-    )
-    gradient_y = (
-        None
-        if objective_map.gradient_y is None
-        else np.asarray(objective_map.gradient_y, dtype=float)
-    )
-
-    rows = []
-    for row_index, y_value in enumerate(y_values):
-        for col_index, x_value in enumerate(x_values):
-            row = {
-                objective_map.parameter_names[0]: float(x_value),
-                objective_map.parameter_names[1]: float(y_value),
-                "score": float(score_grid[row_index, col_index]),
-            }
-            if gradient_x is not None and gradient_y is not None:
-                row["gradient_x"] = float(gradient_x[row_index, col_index])
-                row["gradient_y"] = float(gradient_y[row_index, col_index])
-            rows.append(row)
-
-    comment = [
-        f"T = {objective_map.temperature:.2f} K",
-        f"objective = {objective_map.objective_type}",
-        f"x_parameter = {objective_map.parameter_names[0]}",
-        f"y_parameter = {objective_map.parameter_names[1]}",
-    ]
-    write_csv_safe(pd.DataFrame(rows), file_name, comment)
-
-    if verbose:
-        logger.info("Objective map written to %s", file_name)
 
     return
 

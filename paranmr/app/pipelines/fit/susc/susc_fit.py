@@ -55,7 +55,6 @@ from paranmr.core.pcs.isosurf import compute_pcs_isosurface
 
 # IO layer
 from paranmr.io.csv.mol import save_molecule_to_csv
-from paranmr.io.csv.fit import save_objective_map
 from paranmr.io.csv.spec import read_spectrum
 from paranmr.io.csv.peaks import save_peak_data_to_csv
 from paranmr.io.csv.susc import save_susc
@@ -386,10 +385,6 @@ def run_fit_susc(config, options: FitSuscRunOptions | None = None) -> int:
                 f"{objective_map.parameter_names[0]}_"
                 f"{objective_map.parameter_names[1]}_"
                 f"{experiment.temperature:.2f}_K"
-            )
-            save_objective_map(
-                objective_map=objective_map,
-                file_name=os.path.join(config.project_name, f"{file_stub}.csv"),
             )
             with spec.context():
                 plot_objective_map(
