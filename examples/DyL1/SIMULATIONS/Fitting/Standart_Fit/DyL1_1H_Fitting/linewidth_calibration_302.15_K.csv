@@ -1,5 +1,0 @@
-﻿# This file was generated with ParaNMR v1.12.3 at 14:47:13 04-07-2026 
-# T = 302.15 K
-# Experimental linewidths were converted to ppm before calibration.
-linewidth_method,calibration_mode,p1,p2,rmse (ppm)
-r6,p1_p2,2897.493389,0.547118,0.355261

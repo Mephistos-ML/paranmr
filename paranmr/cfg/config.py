@@ -176,6 +176,7 @@ class FitSuscConfig(Config):
             "variables",
             "input_units",
             "average_shifts",
+            "objective_map",
         ],
         "project": ["name"],
         "signal_labels": ["file"],
@@ -234,6 +235,7 @@ class FitSuscConfig(Config):
         self._susc_fit_variables = ""
         self._susc_fit_input_units = "A3"
         self._susc_fit_average_shifts = []
+        self._susc_fit_objective_map = {}
         self._signal_labels_file = ""
         self._spin_S = None
         self._spin_multiplicity = None
@@ -745,6 +747,21 @@ class FitSuscConfig(Config):
         )
 
     @property
+    def susc_fit_objective_map(self) -> dict:
+        return self._susc_fit_objective_map
+
+    @susc_fit_objective_map.setter
+    def susc_fit_objective_map(self, value: dict | None):
+        if value is None or value == "":
+            self._susc_fit_objective_map = {}
+            return
+        self._susc_fit_objective_map = self._parse_objective_map(
+            value=value,
+            context="susc_fit:objective_map",
+        )
+        return
+
+    @property
     def assignment_moment_objective(self) -> dict:
         return self._assignment_moment_objective
 
@@ -946,6 +963,45 @@ class FitSuscConfig(Config):
                 },
             }
         return
+
+    def _parse_objective_map(self, *, value: dict, context: str) -> dict:
+        if not isinstance(value, dict):
+            raise ValueError(f"{context} must be a mapping")
+        unknown = set(value) - {"parameters", "window_rel", "n_grid", "gradient"}
+        if unknown:
+            raise ValueError(
+                f"{context} contains unknown key(s): " + ", ".join(sorted(unknown))
+            )
+        parameters = value.get("parameters")
+        if (
+            not isinstance(parameters, list)
+            or len(parameters) != 2
+            or any(not isinstance(name, str) or not name for name in parameters)
+        ):
+            raise ValueError(
+                f"{context}:parameters must be a two-item list of parameter names"
+            )
+        if parameters[0] == parameters[1]:
+            raise ValueError(
+                f"{context}:parameters must refer to two distinct parameters"
+            )
+        window_rel = value.get("window_rel", 0.25)
+        if not isinstance(window_rel, (int, float)) or float(window_rel) <= 0.0:
+            raise ValueError(f"{context}:window_rel must be a positive number")
+        n_grid = value.get("n_grid", 60)
+        if not isinstance(n_grid, int) or n_grid < 2:
+            raise ValueError(
+                f"{context}:n_grid must be an integer greater than 1"
+            )
+        gradient = value.get("gradient", True)
+        if not isinstance(gradient, bool):
+            raise ValueError(f"{context}:gradient must be a boolean")
+        return {
+            "parameters": [str(name) for name in parameters],
+            "window_rel": float(window_rel),
+            "n_grid": int(n_grid),
+            "gradient": bool(gradient),
+        }
 
     @property
     def linewidth_method(self) -> str:

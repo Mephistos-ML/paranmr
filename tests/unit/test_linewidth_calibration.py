@@ -304,6 +304,106 @@ def test_fit_susc_config_accepts_gmm_with_explicit_covariance_specification(tmp_
         },
     }
 
+
+@pytest.mark.unit
+def test_fit_susc_config_accepts_susc_fit_objective_map_defaults(tmp_path):
+    config_file = tmp_path / "fit.yml"
+    config_file.write_text(
+        "\n".join(
+            [
+                "project:",
+                "  name: test",
+                "hyperfine:",
+                "  method: pdip",
+                "  file: hf.xyz",
+                "  paramagnetic_centre: [0.0, 0.0, 0.0]",
+                "experiment:",
+                "  files: exp.csv",
+                "nuclei:",
+                "  include: H",
+                "diamagnetic:",
+                "  method: dft",
+                "  file: dia.out",
+                "diamagnetic_ref:",
+                "  method: dft",
+                "  file: ref.out",
+                "susc_fit:",
+                "  type: isoaxrho",
+                "  variables:",
+                "    iso: [fit, 0.0]",
+                "  objective_map:",
+                "    parameters: [ax, rho_over_ax]",
+                "assignment:",
+                "  method: moments",
+                "  moment_objective:",
+                "    type: ls",
+                "    number_of_moments: 2",
+                "    moment_weights:",
+                "      m1: 1.0",
+                "      m2: 1.0",
+                "linewidth:",
+                "  method: experimental",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    config = FitSuscConfig.from_file(config_file)
+
+    assert config.susc_fit_objective_map == {
+        "parameters": ["ax", "rho_over_ax"],
+        "window_rel": 0.25,
+        "n_grid": 60,
+        "gradient": True,
+    }
+
+
+@pytest.mark.unit
+def test_fit_susc_config_rejects_invalid_susc_fit_objective_map_parameter_list(tmp_path):
+    config_file = tmp_path / "fit.yml"
+    config_file.write_text(
+        "\n".join(
+            [
+                "project:",
+                "  name: test",
+                "hyperfine:",
+                "  method: pdip",
+                "  file: hf.xyz",
+                "  paramagnetic_centre: [0.0, 0.0, 0.0]",
+                "experiment:",
+                "  files: exp.csv",
+                "nuclei:",
+                "  include: H",
+                "diamagnetic:",
+                "  method: dft",
+                "  file: dia.out",
+                "diamagnetic_ref:",
+                "  method: dft",
+                "  file: ref.out",
+                "susc_fit:",
+                "  type: isoaxrho",
+                "  variables:",
+                "    iso: [fit, 0.0]",
+                "  objective_map:",
+                "    parameters: [ax]",
+                "assignment:",
+                "  method: moments",
+                "  moment_objective:",
+                "    type: ls",
+                "    number_of_moments: 2",
+                "    moment_weights:",
+                "      m1: 1.0",
+                "      m2: 1.0",
+                "linewidth:",
+                "  method: experimental",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="two-item list"):
+        FitSuscConfig.from_file(config_file)
+
 @pytest.mark.unit
 def test_fit_susc_config_rejects_gmm_moment_weights(tmp_path):
     config_file = tmp_path / "fit.yml"

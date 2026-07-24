@@ -50,7 +50,9 @@ susc_fit:
   variables:
     iso: [fix, 0.00]
     ax: [fit, -0.001]
-    rho_over_ax: [fix, 0.0]
+    rho_over_ax: [fit, 0.0]
     alpha: [fix, 0.0]
     beta: [fix, 0.0]
     gamma: [fix, 0.0]
+  objective_map:
+    parameters: [ax, rho_over_ax]

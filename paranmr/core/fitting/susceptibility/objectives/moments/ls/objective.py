@@ -88,6 +88,18 @@ class WeightedLSMomentObjective:
         )
         return weights * condition_vector
 
+    def residual_jacobian(
+        self,
+        *,
+        moment_jacobian: NDArray[np.float64],
+    ) -> NDArray[np.float64]:
+        """Return the residual Jacobian implied by the current LS weighting."""
+        weights = build_ls_weight_vector(
+            moment_names=self.moment_names,
+            weights_by_name=self.weights_by_name,
+        )
+        return weights[:, None] * np.asarray(moment_jacobian, dtype=float)
+
     def score(
         self,
         *,

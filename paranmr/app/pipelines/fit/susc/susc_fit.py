@@ -38,12 +38,19 @@ from paranmr.app.policies.susc import resolve_susc_fit_variables
 # Core / domain
 from paranmr.core.domain.mol import Molecule
 from paranmr.core.domain.tensor import Hyperfine
+from paranmr.core.fitting.susceptibility.objective_map import (
+    ObjectiveMapConfig,
+    build_objective_map,
+)
 from paranmr.core.fitting.susceptibility.models.base import SusceptibilityModel
 from paranmr.core.fitting.susceptibility.models.isoaxrho import IsoAxRhoFitter
 from paranmr.core.fitting.susceptibility.models.isoaxrho_euler import (
     IsoAxRhoEulerFitter,
 )
 from paranmr.core.fitting.susceptibility.models.split import SplitFitter
+from paranmr.core.fitting.susceptibility.objectives.shifts.residuals import (
+    shift_residual_from_float_list,
+)
 from paranmr.core.pcs.isosurf import compute_pcs_isosurface
 
 # IO layer
@@ -54,6 +61,7 @@ from paranmr.io.csv.susc import save_susc
 from paranmr.io.cube.pcs_iso_write import write_pcs_cube
 from paranmr.io.xyz import xyz_write
 from paranmr.viz.plots.fitted_shifts import plot_fitted_shifts
+from paranmr.viz.plots.objective_map import plot_objective_map
 
 # Visualisation
 from paranmr.viz.plots.shifts import plot_shift_contrib, plot_shift_spread
@@ -61,6 +69,35 @@ from paranmr.viz.plots.spect import plot_pred_spectrum, plot_raw_deconv_pred
 from paranmr.viz.style.theme import apply_profile
 
 logger = logging.getLogger(__name__)
+
+
+def _shift_fit_score_evaluator(
+    *,
+    model: SusceptibilityModel,
+    fit_var_names: tuple[str, ...],
+    molecule: Molecule,
+    experiment,
+    average_labels: list[list[str]],
+):
+    al_to_para_shift = {
+        nuc.label: experiment[nuc.signal_label].shift - nuc.shift.dia
+        for nuc in molecule.nuclei
+    }
+
+    def evaluator(point: np.ndarray) -> float:
+        residuals = shift_residual_from_float_list(
+            list(np.asarray(point, dtype=float)),
+            model,
+            {name: model.fit_vars[name] for name in fit_var_names},
+            model.fix_vars,
+            molecule.nuclei,
+            al_to_para_shift,
+            average_labels,
+        )
+        residual_arr = np.asarray(residuals, dtype=float)
+        return float(np.sqrt(np.sum(residual_arr**2)))
+
+    return evaluator
 
 
 def run_fit_susc(config, options: FitSuscRunOptions | None = None) -> int:
@@ -253,8 +290,11 @@ def run_fit_susc(config, options: FitSuscRunOptions | None = None) -> int:
                 model=susc_model,
                 molecule=molecule,
                 experiment=experiment,
+                spec=spec,
+                show_plots=options.runtime.show_plots,
                 project_name=config.project_name,
                 assignment_moment_objective=config.assignment_moment_objective,
+                susc_fit_objective_map=config.susc_fit_objective_map,
                 linewidth_variables=config.linewidth_variables,
                 average_labels=average_labels,
             )
@@ -303,6 +343,57 @@ def run_fit_susc(config, options: FitSuscRunOptions | None = None) -> int:
         # Skip if fit fails
         if not susc_model.fit_status:
             continue
+
+        objective_map_config = config.susc_fit_objective_map or {}
+        if objective_map_config and config.assignment_method != "moments":
+            fit_var_names = tuple(susc_model.fit_vars.keys())
+            fit_vector = [
+                float(susc_model.final_var_values[name]) for name in fit_var_names
+            ]
+            fit_bounds = np.asarray(
+                [
+                    [
+                        float(susc_model.BOUNDS[name][0]),
+                        float(susc_model.BOUNDS[name][1]),
+                    ]
+                    for name in fit_var_names
+                ],
+                dtype=float,
+            ).T
+            objective_map = build_objective_map(
+                temperature=float(experiment.temperature),
+                objective_type="shifts",
+                parameter_names=fit_var_names,
+                fit_vector=fit_vector,
+                fit_bounds=fit_bounds,
+                config=ObjectiveMapConfig(
+                    parameters=tuple(objective_map_config["parameters"]),
+                    window_rel=float(objective_map_config["window_rel"]),
+                    n_grid=int(objective_map_config["n_grid"]),
+                    gradient=bool(objective_map_config["gradient"]),
+                ),
+                score_evaluator=_shift_fit_score_evaluator(
+                    model=susc_model,
+                    fit_var_names=fit_var_names,
+                    molecule=molecule,
+                    experiment=experiment,
+                    average_labels=average_labels,
+                ),
+            )
+            file_stub = (
+                "objective_map_"
+                f"{objective_map.parameter_names[0]}_"
+                f"{objective_map.parameter_names[1]}_"
+                f"{experiment.temperature:.2f}_K"
+            )
+            with spec.context():
+                plot_objective_map(
+                    objective_map,
+                    spec=spec,
+                    save=True,
+                    show=options.runtime.show_plots,
+                    save_name=os.path.join(config.project_name, file_stub),
+                )
 
         # Update susceptibility tensor of Molecule using model
         molecule.susc = susc_model.tosusceptibility()

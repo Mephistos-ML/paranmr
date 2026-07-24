@@ -1,4 +1,0 @@
-﻿# This file was generated with ParaNMR v1.12.3 at 12:50:00 06-07-2026 
-# 
-Temperature (K),chi_iso (Å^3),chi_ax (Å^3),chi_ax-s-dev (Å^3),chi_rho (Å^3),chi_rho-s-dev (Å^3),chi_xx (Å^3),chi_xy (Å^3),chi_xz (Å^3),chi_yy (Å^3),chi_yz (Å^3),chi_zz (Å^3),dchi_xx (Å^3),dchi_xy (Å^3),dchi_xz (Å^3),dchi_yy (Å^3),dchi_yz (Å^3),dchi_zz (Å^3),chi_x (Å^3),chi_y (Å^3),chi_z (Å^3),alpha (degrees),beta (degrees),gamma (degrees),r2 (),r2_adjusted (),MAE (ppm),RMSE (ppm),chi_dxx-s-dev (Å^3),chi_dxy-s-dev (Å^3),chi_dxz-s-dev (Å^3),chi_dyy-s-dev (Å^3),chi_dyz-s-dev (Å^3)
-302.150000,0.000000,0.113253,0.002865,0.013900,0.001255,-0.019836,0.014794,-0.036993,-0.040929,-0.000869,0.060766,-0.019836,0.014794,-0.036993,-0.040929,-0.000869,0.060766,-0.051651,-0.023851,0.075502,188.299094,21.860629,209.965089,0.987902,0.986351,3.353133,4.301340,0.001494,0.001260,0.001303,0.001501,0.001259
