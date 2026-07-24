@@ -19,6 +19,9 @@ from paranmr.core.domain.mol import Nucleus
 from paranmr.core.fitting.susceptibility.moments.descriptors import (
     build_normalized_moment_vectors,
 )
+from paranmr.core.fitting.susceptibility.jacobian.assembly import (
+    build_moment_jacobian,
+)
 from paranmr.core.fitting.susceptibility.moments.forward import (
     calculated_moments_from_parameters,
 )
@@ -70,6 +73,13 @@ class MomentObjective(Protocol):
     ) -> float:
         ...
 
+    def residual_jacobian(
+        self,
+        *,
+        moment_jacobian: NDArray[np.float64],
+    ) -> NDArray[np.float64]:
+        ...
+
 
 @dataclass(frozen=True)
 class MomentFitResult:
@@ -83,6 +93,18 @@ class MomentFitResult:
     linewidth_vars_by_name: dict[str, float]
     calculated_linewidths_by_label: dict[str, float]
     score: float
+
+
+@dataclass(frozen=True)
+class MomentFitEvaluation:
+    """Intermediate state for one evaluation of the moment-fit objective."""
+
+    all_vars: dict[str, float]
+    linewidth_vars: dict[str, float]
+    calculated_widths_by_atom_label: dict[str, float]
+    calculated_moments: dict[str, float]
+    normalized_observed_moments: dict[str, float]
+    normalized_calculated_moments: dict[str, float]
 
 
 @dataclass(frozen=True)
@@ -113,10 +135,10 @@ def fit_moment_model(
 
     curr_fit = least_squares(
         fun=_moment_objective_residuals_from_fit_vector,
+        jac=_moment_objective_jacobian_from_fit_vector,
         args=(inputs,),
         x0=inputs.fit_guess,
         bounds=inputs.fit_bounds,
-        jac="3-point",
     )
 
     # Persist the fitted temperature on the mutable model object.
@@ -237,11 +259,11 @@ def fit_moment_model(
         },
         score=score,
     )
-def _moment_objective_residuals_from_fit_vector(
-    new_vals: list[float],
+def _evaluate_moment_fit_vector(
+    new_vals: list[float] | NDArray[np.float64],
     inputs: MomentFitInputs,
-) -> list[float]:
-    """Return moment-objective residuals for a flat optimizer fit vector."""
+) -> MomentFitEvaluation:
+    """Return all moment-fit state implied by one optimizer vector."""
     optimizer_values = np.asarray(new_vals, dtype=float)
     n_susc_params = len(inputs.fit_var_names)
     susc_vals = optimizer_values[:n_susc_params]
@@ -275,9 +297,46 @@ def _moment_objective_residuals_from_fit_vector(
         calculated=calculated_moments,
         moment_names=inputs.moment_labels,
     )
+    return MomentFitEvaluation(
+        all_vars=all_vars,
+        linewidth_vars=linewidth_vars,
+        calculated_widths_by_atom_label=calculated_widths_by_atom_label,
+        calculated_moments=calculated_moments,
+        normalized_observed_moments=normalized_moments.observed,
+        normalized_calculated_moments=normalized_moments.calculated,
+    )
+
+
+def _moment_objective_residuals_from_fit_vector(
+    new_vals: list[float],
+    inputs: MomentFitInputs,
+) -> list[float]:
+    """Return moment-objective residuals for a flat optimizer fit vector."""
+    evaluation = _evaluate_moment_fit_vector(new_vals, inputs)
     return list(
         inputs.moment_objective.residuals(
-            observed_moments=normalized_moments.observed,
-            calculated_moments=normalized_moments.calculated,
+            observed_moments=evaluation.normalized_observed_moments,
+            calculated_moments=evaluation.normalized_calculated_moments,
         )
+    )
+
+
+def _moment_objective_jacobian_from_fit_vector(
+    new_vals: list[float],
+    inputs: MomentFitInputs,
+) -> NDArray[np.float64]:
+    """Return the analytical residual Jacobian for a flat optimizer fit vector."""
+    evaluation = _evaluate_moment_fit_vector(new_vals, inputs)
+    moment_jacobian = build_moment_jacobian(
+        temperature=float(inputs.temperature),
+        parameters=evaluation.all_vars,
+        nuclei=list(inputs.nuclei),
+        linewidth_inputs=inputs.linewidth_inputs,
+        linewidth_vars_by_name=evaluation.linewidth_vars,
+        observed_moments=inputs.observed_moments,
+        parameter_names=inputs.fit_var_names + inputs.linewidth_fit_names,
+        average_labels=inputs.average_labels,
+    )
+    return inputs.moment_objective.residual_jacobian(
+        moment_jacobian=moment_jacobian.values,
     )

@@ -39,8 +39,6 @@ assignment:
 linewidth:
   method: r6
   variables:
-    # p1: [fix, 705.05]
-    # p2: [fix, 0.248]
     p1: [fit, 1250.0, [500.0, 2000.0]]
     p2: [fit, 0.5, [0.0, 1.0]]
     
@@ -49,12 +47,8 @@ susc_fit:
   variables:
     iso: [fix, 0.00]
     ax: [fit, 0.001]
-    # rho_over_ax: [fix, 0.123]
     rho_over_ax: [fit, 0.0]
     alpha: [fit, 0.0]
     beta: [fit, 0.0]
     gamma: [fit, 0.0]
-    # alpha: [fix, 188.299094]
-    # beta: [fix, 21.860629]
-    # gamma: [fix, 209.965089]
   average_shifts: 'methyls'

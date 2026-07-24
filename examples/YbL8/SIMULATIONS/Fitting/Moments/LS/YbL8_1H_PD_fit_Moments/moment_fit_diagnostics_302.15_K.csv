@@ -1,7 +1,7 @@
-﻿# This file was generated with ParaNMR v1.14.0 at 14:28:01 20-07-2026 
+﻿# This file was generated with ParaNMR v1.15.0 at 19:05:28 23-07-2026 
 # T = 302.15 K
 # objective = ls
-# score = 0.971691
+# score = 0.913179
 quantity,m1_norm,m2_norm,m3_norm,m4_norm,m5_norm,m6_norm
 observed,1.000000,1.000000,1.000000,1.000000,1.000000,1.000000
-calculated,0.330585,1.305794,0.706299,1.107140,0.535414,0.701708
+calculated,0.288204,1.380747,0.872007,1.246717,0.712228,0.850969

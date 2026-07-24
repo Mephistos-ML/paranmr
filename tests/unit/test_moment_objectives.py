@@ -82,6 +82,20 @@ def test_weighted_ls_moment_objective_matches_relative_residual_formula():
     ) == pytest.approx(float(np.sqrt(np.sum(expected**2))))
 
 
+@pytest.mark.unit
+def test_weighted_ls_moment_objective_transforms_residual_jacobian_rowwise():
+    objective = WeightedLSMomentObjective.from_config(
+        moment_names=("m1", "m2"),
+        weights={"m1": 2.0, "m2": 3.0},
+    )
+
+    residual_jacobian = objective.residual_jacobian(
+        moment_jacobian=np.asarray([[1.0, 4.0], [2.0, 5.0]], dtype=float)
+    )
+
+    assert residual_jacobian == pytest.approx(
+        np.asarray([[2.0, 8.0], [6.0, 15.0]], dtype=float)
+    )
 
 
 @pytest.mark.unit
@@ -214,3 +228,19 @@ def test_build_moment_difference_vector_returns_calculated_minus_observed_in_ord
     )
 
     assert vector == pytest.approx(np.asarray([1.0, -2.0, 4.0, 0.0, -16.0, 64.0]))
+
+
+@pytest.mark.unit
+def test_gmm_moment_objective_transforms_residual_jacobian_by_cholesky_factor():
+    objective = GMMMomentObjective.with_weighting_matrix(
+        moment_names=("m1", "m2"),
+        weighting_matrix=np.asarray([[4.0, 0.0], [0.0, 9.0]], dtype=float),
+    )
+
+    residual_jacobian = objective.residual_jacobian(
+        moment_jacobian=np.asarray([[1.0, 2.0], [3.0, 4.0]], dtype=float)
+    )
+
+    assert residual_jacobian == pytest.approx(
+        np.asarray([[2.0, 4.0], [9.0, 12.0]], dtype=float)
+    )

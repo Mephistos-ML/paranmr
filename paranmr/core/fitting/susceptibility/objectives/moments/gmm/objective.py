@@ -95,6 +95,14 @@ class GMMMomentObjective:
             calculated_moments=calculated_moments,
         )
 
+    def residual_jacobian(
+        self,
+        *,
+        moment_jacobian: NDArray[np.float64],
+    ) -> NDArray[np.float64]:
+        """Return the residual Jacobian implied by the current GMM weighting."""
+        return self.residual_transform @ np.asarray(moment_jacobian, dtype=float)
+
     def score(
         self,
         *,

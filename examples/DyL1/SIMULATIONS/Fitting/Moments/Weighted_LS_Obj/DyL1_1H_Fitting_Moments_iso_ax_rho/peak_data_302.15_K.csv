@@ -1,4 +1,4 @@
-﻿# This file was generated with ParaNMR v1.14.0 at 13:13:12 21-07-2026 
+﻿# This file was generated with ParaNMR v1.15.0 at 22:26:56 22-07-2026 
 # T = 302.15 K
 signal_label,δ_total_avg (ppm),δ_dia_avg (ppm),δ_pc_avg (ppm),δ_fc_avg (ppm),linewidth_r6_fit (ppm)
 H1,-34.501992,2.828000,-37.329992,0.000000,0.963031
