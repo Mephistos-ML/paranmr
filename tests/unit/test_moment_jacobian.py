@@ -9,7 +9,11 @@ import pytest
 from paranmr.core.fitting.susceptibility.jacobian.types import (
     MomentJacobianResult,
 )
+from paranmr.core.fitting.susceptibility.objectives.moments.gmm.covariance import (
+    MomentCovarianceEstimate,
+)
 from paranmr.io.csv.fit import save_moment_jacobian
+from paranmr.viz.plots.covariance import plot_moment_covariance_heatmap
 from paranmr.viz.plots.jacobian import plot_moment_jacobian_heatmap
 from paranmr.viz.style.theme import build_spec
 
@@ -95,6 +99,36 @@ def test_plot_moment_jacobian_heatmap_writes_pdf(tmp_path: Path):
     with spec.context():
         plot_moment_jacobian_heatmap(
             result,
+            spec=spec,
+            save=True,
+            show=False,
+            save_name=str(output),
+            verbose=False,
+        )
+
+    assert Path(f"{output}.pdf").exists()
+
+
+@pytest.mark.unit
+def test_plot_moment_covariance_heatmap_writes_pdf(tmp_path: Path):
+    estimate = MomentCovarianceEstimate(
+        method="monte_carlo",
+        moment_names=MOMENT_LABELS,
+        covariance=[
+            [1.0 if i == j else 0.1 * (i - j) for j in range(len(MOMENT_LABELS))]
+            for i in range(len(MOMENT_LABELS))
+        ],
+        n_samples=500,
+        random_seed=12345,
+        shift_sigma_abs=0.02,
+        width_sigma_rel=0.05,
+    )
+
+    output = tmp_path / "moment_covariance_heatmap_302.15_K"
+    spec = build_spec("paper")
+    with spec.context():
+        plot_moment_covariance_heatmap(
+            estimate,
             spec=spec,
             save=True,
             show=False,
