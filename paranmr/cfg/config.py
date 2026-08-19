@@ -142,7 +142,7 @@ class FitSuscConfig(Config):
     REQ_KEYWORDS = {
         "hyperfine": ["method", "file"],
         "experiment": ["files"],
-        "nuclei": ["include"],
+        "nuclei": ["include", "include_groups"],
         "susc_fit": ["type", "variables"],
         "project": ["name"],
     }
@@ -961,7 +961,7 @@ class FitSuscConfig(Config):
                     "shift_sigma_abs": float(covariance["perturbation"]["shift_sigma_abs"]),
                     "width_sigma_rel": float(covariance["perturbation"]["width_sigma_rel"]),
                 },
-            }
+                }
         return
 
     def _parse_objective_map(self, *, value: dict, context: str) -> dict:
@@ -1743,7 +1743,7 @@ class PredictConfig(FitSuscConfig):
             "paramagnetic_centre",
         ],
         "experiment": ["files", "spectrum_files", "exp_reference"],
-        "nuclei": ["include"],
+        "nuclei": ["include", "include_groups"],
         "project": ["name"],
         "signal_labels": ["file"],
         "diamagnetic": [

@@ -198,6 +198,15 @@ def run_predict(config, options: PredictRunOptions | None = None) -> int:
             ref_avg_by_label_nn=ref_avg_by_label_nn,
         )
 
+    requested_nuclei = (
+        config.nuclei_include
+        if isinstance(config.nuclei_include, list)
+        else [config.nuclei_include]
+    )
+    requested_isotopes = {
+        remove_numbers(str(label)) for label in requested_nuclei if str(label).strip()
+    }
+
     # Load experimental data from file into list of experiment objects
     if len(config.experiment_files):
         experiments = load_experiments(config.experiment_files)
@@ -212,7 +221,7 @@ def run_predict(config, options: PredictRunOptions | None = None) -> int:
                     exp.temperature,
                     susc.temperature,
                 )
-            if re.sub("[0-9]", "", exp.isotope) not in config.nuclei_include:
+            if re.sub("[0-9]", "", exp.isotope) not in requested_isotopes:
                 logger.warning(
                     "Experimental isotope (%s) not requested in input file (%s)",
                     exp.isotope,
