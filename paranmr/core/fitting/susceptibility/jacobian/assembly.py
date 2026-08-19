@@ -178,7 +178,6 @@ def _normalize_raw_moment_jacobian(
             "that are zero or too close to zero: "
             + ", ".join(zero_like)
         )
-
     normalized_values = np.asarray(jacobian.values, dtype=float) / scales[:, None]
     return MomentJacobianResult(
         temperature=float(jacobian.temperature),
