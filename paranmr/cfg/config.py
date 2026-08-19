@@ -142,7 +142,7 @@ class FitSuscConfig(Config):
     REQ_KEYWORDS = {
         "hyperfine": ["method", "file"],
         "experiment": ["files"],
-        "nuclei": ["include", "include_groups"],
+        "nuclei": ["include"],
         "susc_fit": ["type", "variables"],
         "project": ["name"],
     }
