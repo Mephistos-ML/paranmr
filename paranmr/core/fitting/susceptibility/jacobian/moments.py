@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (C) 2026 Suturina Group
 
-"""Analytical derivatives of Gaussian-mixture moments."""
+"""Analytical derivatives of Gaussian-mixture raw moments."""
 
 from __future__ import annotations
 
@@ -11,7 +11,6 @@ import numpy as np
 from numpy.typing import ArrayLike, NDArray
 
 from paranmr.core.fitting.susceptibility.moments.descriptors import (
-    compute_first_moment,
     moment_order,
 )
 
@@ -34,24 +33,18 @@ def differentiate_moments_by_centers(
         sigmas=sigmas,
         area_norm=area_norm,
     )
-    mean = compute_first_moment(centers_arr, weights_arr)
-    delta = centers_arr - mean
     highest_order = max(moment_order(label) for label in moment_labels)
-    shifted_moments = _compute_shifted_component_moments(
-        delta=delta,
+    component_raw_moments = _compute_component_raw_moments(
+        centers=centers_arr,
         sigmas=sigmas_arr,
         max_order=highest_order - 1,
     )
 
     jacobian = np.zeros((len(moment_labels), len(centers_arr)), dtype=float)
-    jacobian[0, :] = weights_arr
-    for row_index, label in enumerate(moment_labels[1:], start=1):
+    for row_index, label in enumerate(moment_labels):
         order = moment_order(label)
-        component_previous = shifted_moments[order - 1]
-        component_average = float(np.sum(weights_arr * component_previous))
-        jacobian[row_index, :] = (
-            order * weights_arr * (component_previous - component_average)
-        )
+        component_previous = component_raw_moments[order - 1]
+        jacobian[row_index, :] = order * weights_arr * component_previous
     return jacobian
 
 
@@ -73,19 +66,19 @@ def differentiate_moments_by_sigmas(
         sigmas=sigmas,
         area_norm=area_norm,
     )
-    mean = compute_first_moment(centers_arr, weights_arr)
-    delta = centers_arr - mean
     highest_order = max(moment_order(label) for label in moment_labels)
-    shifted_moments = _compute_shifted_component_moments(
-        delta=delta,
+    component_raw_moments = _compute_component_raw_moments(
+        centers=centers_arr,
         sigmas=sigmas_arr,
         max_order=highest_order - 2,
     )
 
     jacobian = np.zeros((len(moment_labels), len(centers_arr)), dtype=float)
-    for row_index, label in enumerate(moment_labels[1:], start=1):
+    for row_index, label in enumerate(moment_labels):
         order = moment_order(label)
-        component_two_lower = shifted_moments[order - 2]
+        if order == 1:
+            continue
+        component_two_lower = component_raw_moments[order - 2]
         jacobian[row_index, :] = (
             order
             * (order - 1)
@@ -96,50 +89,50 @@ def differentiate_moments_by_sigmas(
     return jacobian
 
 
-def _compute_shifted_component_moments(
+def _compute_component_raw_moments(
     *,
-    delta: np.ndarray,
+    centers: np.ndarray,
     sigmas: np.ndarray,
     max_order: int,
 ) -> dict[int, np.ndarray]:
-    """Return component moments about the global mixture mean."""
+    """Return component raw moments about the origin."""
 
-    moments: dict[int, np.ndarray] = {0: np.ones_like(delta, dtype=float)}
+    moments: dict[int, np.ndarray] = {0: np.ones_like(centers, dtype=float)}
     if max_order >= 1:
-        moments[1] = delta.astype(float, copy=True)
+        moments[1] = centers.astype(float, copy=True)
     for order in range(2, max_order + 1):
-        moments[order] = _differentiate_single_shifted_moment(
-            delta=delta,
+        moments[order] = _compute_single_component_raw_moment(
+            centers=centers,
             sigmas=sigmas,
             order=order,
         )
     return moments
 
 
-def _differentiate_single_shifted_moment(
+def _compute_single_component_raw_moment(
     *,
-    delta: np.ndarray,
+    centers: np.ndarray,
     sigmas: np.ndarray,
     order: int,
 ) -> np.ndarray:
-    """Return one component-wise moment about the global mixture mean."""
+    """Return one component-wise raw moment about the origin."""
 
-    total = np.zeros_like(delta, dtype=float)
+    total = np.zeros_like(centers, dtype=float)
     for inner_order in range(order + 1):
         total += (
             comb(order, inner_order)
-            * delta ** (order - inner_order)
-            * _normal_central_moment(sigmas=sigmas, order=inner_order)
+            * centers ** (order - inner_order)
+            * _normal_raw_moment(sigmas=sigmas, order=inner_order)
         )
     return total
 
 
-def _normal_central_moment(
+def _normal_raw_moment(
     *,
     sigmas: np.ndarray,
     order: int,
 ) -> np.ndarray:
-    """Return the central moment of a Gaussian component of given order."""
+    """Return the raw moment of a centered Gaussian component of given order."""
 
     if order == 0:
         return np.ones_like(sigmas, dtype=float)

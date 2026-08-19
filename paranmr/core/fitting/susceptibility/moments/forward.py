@@ -119,7 +119,7 @@ def calculated_moments_from_parameters(
     moment_labels: tuple[str, ...],
     average_labels: tuple[tuple[str, ...], ...] = (),
 ) -> dict[str, float]:
-    """Compute Gaussian-mixture moments for a calculated parameter set."""
+    """Compute Gaussian-mixture raw moments for a calculated parameter set."""
 
     packages = calculated_signal_packages_from_parameters(
         model=model,
