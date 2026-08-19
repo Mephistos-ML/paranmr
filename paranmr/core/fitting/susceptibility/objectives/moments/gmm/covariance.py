@@ -11,6 +11,7 @@ import numpy as np
 from numpy.typing import NDArray
 
 from paranmr.core.fitting.susceptibility.moments.descriptors import (
+    build_normalized_moment_vectors,
     compute_gaussian_mixture_moments,
 )
 
@@ -41,10 +42,11 @@ class MomentCovarianceEstimate:
 def estimate_moment_covariance_from_monte_carlo(
     *,
     observed_peaks: dict[str, NDArray[np.float64]],
+    raw_experimental_moments: dict[str, float],
     moment_names: tuple[str, ...],
     config: MonteCarloMomentCovarianceConfig,
 ) -> MomentCovarianceEstimate:
-    """Estimate the covariance of experimental moments by Monte Carlo sampling."""
+    """Estimate covariance in normalized moment space via Monte Carlo sampling."""
 
     rng = np.random.default_rng(config.random_seed)
     centers = np.asarray(observed_peaks["center"], dtype=float)
@@ -70,7 +72,15 @@ def estimate_moment_covariance_from_monte_carlo(
             area_norm=area_norm,
             moment_labels=moment_names,
         )
-        samples[i, :] = np.asarray([moments[name] for name in moment_names], dtype=float)
+        normalized_moments = build_normalized_moment_vectors(
+            observed=raw_experimental_moments,
+            calculated=moments,
+            moment_names=moment_names,
+        )
+        samples[i, :] = np.asarray(
+            [normalized_moments.calculated[name] for name in moment_names],
+            dtype=float,
+        )
 
     covariance = np.cov(samples, rowvar=False, ddof=1)
     covariance = np.asarray(covariance, dtype=float)

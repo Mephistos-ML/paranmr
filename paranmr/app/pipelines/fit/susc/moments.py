@@ -47,6 +47,7 @@ from paranmr.io.csv.fit import (
     save_moment_fit_diagnostics,
     save_fit_linewidth_model,
     save_moment_covariance,
+    save_moment_weighting_matrix,
     save_moment_jacobian,
 )
 from paranmr.viz.plots.covariance import plot_moment_covariance_heatmap
@@ -114,6 +115,7 @@ def fit_moment_assignment(
         covariance_config = assignment_moment_objective["covariance"]
         moment_covariance = estimate_moment_covariance_from_monte_carlo(
             observed_peaks=observed_peaks,
+            raw_experimental_moments=experimental_moments,
             moment_names=moment_labels,
             config=MonteCarloMomentCovarianceConfig(
                 n_samples=int(covariance_config["n_samples"]),
@@ -232,6 +234,16 @@ def fit_moment_assignment(
                 ),
                 temperature=float(experiment.temperature),
             )
+            if gmm_weighting_matrix is not None:
+                save_moment_weighting_matrix(
+                    weighting_matrix=gmm_weighting_matrix,
+                    moment_names=moment_labels,
+                    file_name=os.path.join(
+                        project_name,
+                        f"moment_weighting_matrix_{experiment.temperature:.2f}_K.csv",
+                    ),
+                    temperature=float(experiment.temperature),
+                )
             with spec.context():
                 plot_moment_covariance_heatmap(
                     covariance=moment_covariance,

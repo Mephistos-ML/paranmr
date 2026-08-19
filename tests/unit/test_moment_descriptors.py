@@ -68,6 +68,8 @@ def test_compute_gaussian_mixture_moments_general_formula_matches_manual_3_to_6(
         moment_labels=MOMENT_LABELS,
     )
 
+    expected_m1 = sum(weight * center for weight, center in zip(weights, centers))
+    assert moments["m1"] == pytest.approx(expected_m1)
     assert moments["m3"] == pytest.approx(m3)
     assert moments["m4"] == pytest.approx(m4)
     assert moments["m5"] == pytest.approx(m5)
@@ -185,7 +187,10 @@ def test_build_normalized_moment_vectors_fails_loudly_on_zero_observed():
         "m6": 64.0,
     }
 
-    with pytest.raises(ValueError, match="zero or too close to zero: m3"):
+    with pytest.raises(
+        ValueError,
+        match="zero or too close to zero: m3",
+    ):
         build_normalized_moment_vectors(
             observed=observed,
             calculated=calculated,

@@ -53,7 +53,9 @@ class GMMMomentObjective:
             )
         if not np.allclose(weighting_matrix, weighting_matrix.T):
             raise ValueError('GMM weighting matrix must be symmetric')
-        residual_transform = np.linalg.cholesky(weighting_matrix)
+        # np.linalg.cholesky returns L such that W = L @ L.T.
+        # Residuals must use L.T so ||L.T @ r||^2 = r.T @ W @ r.
+        residual_transform = np.linalg.cholesky(weighting_matrix).T
         return cls(
             moment_names=moment_names,
             weighting_matrix=weighting_matrix,

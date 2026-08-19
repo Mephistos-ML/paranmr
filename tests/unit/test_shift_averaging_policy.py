@@ -139,10 +139,8 @@ def test_calculated_moments_treat_collapsed_packages_with_equal_weight():
         areas=[1.0, 1.0],
     )
     expected_m1 = float(
-        expected_peaks["area_norm"][0] * expected_peaks["center"][0]
-        + expected_peaks["area_norm"][1] * expected_peaks["center"][1]
+        sum(expected_peaks["area_norm"] * expected_peaks["center"])
     )
-
     assert moments["m1"] == pytest.approx(expected_m1)
 
 

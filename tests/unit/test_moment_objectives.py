@@ -203,6 +203,29 @@ def test_gmm_moment_objective_applies_general_weighting_matrix():
 
 
 @pytest.mark.unit
+def test_gmm_moment_objective_score_matches_weighting_quadratic_form():
+    weighting_matrix = np.asarray([[5.0, 2.0], [2.0, 3.0]], dtype=float)
+    objective = GMMMomentObjective.with_weighting_matrix(
+        moment_names=("m1", "m2"),
+        weighting_matrix=weighting_matrix,
+    )
+    observed = {"m1": 1.0, "m2": 2.0}
+    calculated = {"m1": 3.0, "m2": 5.0}
+
+    conditions = objective.conditions(
+        observed_moments=observed,
+        calculated_moments=calculated,
+    )
+    score = objective.score(
+        observed_moments=observed,
+        calculated_moments=calculated,
+    )
+
+    expected = float(np.sqrt(conditions @ weighting_matrix @ conditions))
+    assert score == pytest.approx(expected)
+
+
+@pytest.mark.unit
 def test_build_moment_difference_vector_returns_calculated_minus_observed_in_order():
     observed = {
         "m1": 2.0,
@@ -244,3 +267,20 @@ def test_gmm_moment_objective_transforms_residual_jacobian_by_cholesky_factor():
     assert residual_jacobian == pytest.approx(
         np.asarray([[2.0, 4.0], [9.0, 12.0]], dtype=float)
     )
+
+
+@pytest.mark.unit
+def test_gmm_moment_objective_uses_transposed_cholesky_factor():
+    weighting_matrix = np.asarray([[5.0, 2.0], [2.0, 3.0]], dtype=float)
+    objective = GMMMomentObjective.with_weighting_matrix(
+        moment_names=("m1", "m2"),
+        weighting_matrix=weighting_matrix,
+    )
+    raw_jacobian = np.asarray([[1.0, 2.0], [3.0, 4.0]], dtype=float)
+
+    residual_jacobian = objective.residual_jacobian(
+        moment_jacobian=raw_jacobian,
+    )
+    expected = np.linalg.cholesky(weighting_matrix).T @ raw_jacobian
+
+    assert residual_jacobian == pytest.approx(expected)
