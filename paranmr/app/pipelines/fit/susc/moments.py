@@ -115,7 +115,6 @@ def fit_moment_assignment(
         covariance_config = assignment_moment_objective["covariance"]
         moment_covariance = estimate_moment_covariance_from_monte_carlo(
             observed_peaks=observed_peaks,
-            raw_experimental_moments=experimental_moments,
             moment_names=moment_labels,
             config=MonteCarloMomentCovarianceConfig(
                 n_samples=int(covariance_config["n_samples"]),
