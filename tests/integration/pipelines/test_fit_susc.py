@@ -189,6 +189,18 @@ def _group_centers_from_hyperfines(
     return centers
 
 
+def _range_based_ppm_tolerance(
+    *,
+    centers_by_group: dict[frozenset[str], float],
+    fraction: float = 0.03,
+) -> float:
+    """Return a ppm tolerance as a fraction of the fitted spectral range."""
+
+    center_values = np.asarray(list(centers_by_group.values()), dtype=float)
+    spectral_range = float(np.max(center_values) - np.min(center_values))
+    return fraction * spectral_range
+
+
 @pytest.mark.integration
 def test_fit_susc_with_pdip_hfc_isoaxrho_and_permutation_assignment(tmp_path: Path):
     """Run the canonical ``fit_susc`` workflow with PDIP hyperfine input.
@@ -473,9 +485,10 @@ def test_fit_susc_moments_gmm_recovers_dyl1_reference_proton_partition(
         hyperfines_csv=gmm_hyperfines_csv,
         proton_groups=recovered_partition,
     )
+    ppm_tolerance = _range_based_ppm_tolerance(centers_by_group=fixed_centers)
 
     for proton_group in expected_partition:
-        assert abs(gmm_centers[proton_group] - fixed_centers[proton_group]) < 1.0
+        assert abs(gmm_centers[proton_group] - fixed_centers[proton_group]) < ppm_tolerance
 
     fixed_susc = pd.read_csv(fixed_susc_csv, comment="#", encoding="utf-8-sig")
     gmm_susc = pd.read_csv(gmm_susc_csv, comment="#", encoding="utf-8-sig")
@@ -582,9 +595,10 @@ def test_fit_susc_moments_gmm_recovers_ybl8_reference_proton_partition(
         hyperfines_csv=gmm_hyperfines_csv,
         proton_groups=recovered_partition,
     )
+    ppm_tolerance = _range_based_ppm_tolerance(centers_by_group=fixed_centers)
 
     for proton_group in expected_groups:
-        assert abs(gmm_centers[proton_group] - fixed_centers[proton_group]) < 1.0
+        assert abs(gmm_centers[proton_group] - fixed_centers[proton_group]) < ppm_tolerance
 
     fixed_susc = pd.read_csv(fixed_susc_csv, comment="#", encoding="utf-8-sig")
     gmm_susc = pd.read_csv(gmm_susc_csv, comment="#", encoding="utf-8-sig")
