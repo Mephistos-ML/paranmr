@@ -52,10 +52,20 @@ def fit_model_to_shifts(
 
     guess = [val for val in model.fit_vars.values()]
     bounds = np.array([model.BOUNDS[name] for name in model.fit_vars.keys()]).T
-    al_to_para_shift = {
-        nuc.label: experiment[nuc.signal_label].shift - nuc.shift.dia
-        for nuc in molecule.nuclei
-    }
+    try:
+        al_to_para_shift = {
+            nuc.label: experiment[nuc.signal_label].shift - nuc.shift.dia
+            for nuc in molecule.nuclei
+        }
+    except KeyError as err:
+        missing_label = err.args[0]
+        raise ValueError(
+            "Assignment-based susceptibility fitting could not match a molecular "
+            f"signal label to the experiment: {missing_label!r}. "
+            "Check that 'signal_labels:file' is provided for fixed/permute/"
+            "hungarian assignment methods and that the resulting signal labels "
+            "match the experimental CSV 'signal_label' entries."
+        ) from err
 
     curr_fit = least_squares(
         fun=shift_residual_from_float_list,
