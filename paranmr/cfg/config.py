@@ -739,12 +739,7 @@ class FitSuscConfig(Config):
                 "susc_fit:average_shifts: 'methyls' is only supported for "
                 "assignment:method 'moments'."
             )
-        if self._assignment_method != "moments":
-            return
-        raise ValueError(
-            "assignment:method 'moments' only supports "
-            "susc_fit:average_shifts: 'methyls'."
-        )
+        return
 
     @property
     def susc_fit_objective_map(self) -> dict:
