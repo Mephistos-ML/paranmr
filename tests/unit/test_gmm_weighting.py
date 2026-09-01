@@ -10,6 +10,9 @@ from paranmr.core.fitting.susceptibility.objectives.moments.gmm.covariance impor
 from paranmr.core.fitting.susceptibility.objectives.moments.gmm.weighting import (
     build_gmm_weighting_matrix,
 )
+from paranmr.core.fitting.susceptibility.moments.descriptors import (
+    compute_gaussian_mixture_moments,
+)
 from paranmr.io.csv.fit import save_moment_weighting_matrix
 
 
@@ -21,8 +24,15 @@ def test_estimate_moment_covariance_from_monte_carlo_returns_symmetric_matrix():
         "area_norm": np.asarray([0.2, 0.3, 0.5], dtype=float),
     }
     moment_names = ("m1", "m2", "m3", "m4", "m5", "m6")
+    raw_experimental_moments = compute_gaussian_mixture_moments(
+        centers=observed_peaks["center"],
+        sigmas=observed_peaks["sigma"],
+        area_norm=observed_peaks["area_norm"],
+        moment_labels=moment_names,
+    )
     estimate = estimate_moment_covariance_from_monte_carlo(
         observed_peaks=observed_peaks,
+        raw_experimental_moments=raw_experimental_moments,
         moment_names=moment_names,
         config=MonteCarloMomentCovarianceConfig(
             n_samples=200,
