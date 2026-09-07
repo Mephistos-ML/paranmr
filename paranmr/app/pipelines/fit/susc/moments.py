@@ -149,9 +149,9 @@ def fit_moment_assignment(
                 "GMM moment objective requires an explicit covariance-derived "
                 "weighting matrix"
             )
-        moment_objective = GMMMomentObjective.with_weighting_matrix(
+        moment_objective = GMMMomentObjective.with_covariance(
             moment_names=moment_labels,
-            weighting_matrix=gmm_weighting_matrix,
+            covariance=moment_covariance.covariance,
         )
     else:
         raise ValueError(
