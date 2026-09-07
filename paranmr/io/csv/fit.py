@@ -203,10 +203,59 @@ def save_moment_covariance(
         f"shift_sigma_abs = {estimate.shift_sigma_abs:.6g}",
         f"width_sigma_rel = {estimate.width_sigma_rel:.6g}",
     ]
-    write_csv_safe(pd.DataFrame(rows), file_name, comment)
+    write_csv_safe(
+        pd.DataFrame(rows),
+        file_name,
+        comment,
+        float_format="%.6e",
+    )
 
     if verbose:
         logger.info("Moment covariance written to %s", file_name)
+
+    return
+
+
+def save_moment_weighting_matrix(
+    *,
+    weighting_matrix: np.ndarray,
+    moment_names: tuple[str, ...],
+    file_name: str,
+    temperature: float,
+    verbose: bool = True,
+) -> None:
+    """Write the GMM weighting matrix to CSV."""
+
+    matrix = np.asarray(weighting_matrix, dtype=float)
+    expected_shape = (len(moment_names), len(moment_names))
+    if matrix.shape != expected_shape:
+        raise ValueError(
+            "Weighting matrix shape does not match moment names: "
+            f"expected {expected_shape}, got {matrix.shape}"
+        )
+
+    rows = []
+    for row_name, row_values in zip(moment_names, matrix):
+        rows.append(
+            {
+                "quantity": row_name,
+                **{
+                    moment_name: float(value)
+                    for moment_name, value in zip(moment_names, row_values)
+                },
+            }
+        )
+
+    comment = [f"T = {temperature:.2f} K", "matrix = gmm_weighting"]
+    write_csv_safe(
+        pd.DataFrame(rows),
+        file_name,
+        comment,
+        float_format="%.6e",
+    )
+
+    if verbose:
+        logger.info("Moment weighting matrix written to %s", file_name)
 
     return
 

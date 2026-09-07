@@ -42,6 +42,9 @@ def plot_objective_map(
     x_values = np.asarray(objective_map.x_values, dtype=float)
     y_values = np.asarray(objective_map.y_values, dtype=float)
     score_grid = np.asarray(objective_map.score_grid, dtype=float)
+    score_scale_exponent = _score_scale_exponent(score_grid)
+    score_scale = 10.0**score_scale_exponent
+    display_score_grid = score_grid / score_scale
     gradient_x = (
         None
         if objective_map.gradient_x is None
@@ -57,14 +60,14 @@ def plot_objective_map(
     contour_fill = ax.contourf(
         x_grid,
         y_grid,
-        score_grid,
+        display_score_grid,
         levels=30,
         cmap="viridis",
     )
     ax.contour(
         x_grid,
         y_grid,
-        score_grid,
+        display_score_grid,
         levels=12,
         colors="white",
         linewidths=0.6,
@@ -101,10 +104,10 @@ def plot_objective_map(
 
     ax.set_xlabel(parameter_label_mathtext(objective_map.parameter_names[0]))
     ax.set_ylabel(parameter_label_mathtext(objective_map.parameter_names[1]))
-    ax.set_title("Objective Map")
+    ax.set_title("Objective Map at Convergence")
 
     colorbar = fig.colorbar(contour_fill, ax=ax, pad=0.02)
-    colorbar.set_label("Score")
+    colorbar.set_label(_score_label(score_scale_exponent))
 
     render_figure(
         fig,
@@ -116,3 +119,16 @@ def plot_objective_map(
         logger.info("Objective map written to %s", save_name)
 
     return fig, ax
+
+
+def _score_scale_exponent(score_grid: np.ndarray) -> int:
+    max_abs = float(np.max(np.abs(score_grid)))
+    if max_abs == 0.0:
+        return 0
+    return int(np.floor(np.log10(max_abs)))
+
+
+def _score_label(exponent: int) -> str:
+    if exponent == 0:
+        return "Score"
+    return rf"Score $\times 10^{{{exponent}}}$"

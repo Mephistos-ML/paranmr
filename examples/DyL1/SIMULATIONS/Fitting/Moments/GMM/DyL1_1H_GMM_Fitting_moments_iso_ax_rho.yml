@@ -54,3 +54,5 @@ susc_fit:
     alpha: [fix, 0.0]
     beta: [fix, 0.0]
     gamma: [fix, 0.0]
+  objective_map:
+    parameters: [ax, p1]

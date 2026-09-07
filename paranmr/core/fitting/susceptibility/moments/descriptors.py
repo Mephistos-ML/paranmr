@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (C) 2026 Suturina Group
 
-"""Gaussian mixture moment descriptors and residuals."""
+"""Gaussian-mixture raw moment descriptors and normalized residual helpers."""
 
 from __future__ import annotations
 
@@ -53,44 +53,32 @@ def compute_first_moment(
     return float(np.sum(weights_arr * centers_arr))
 
 
-def _compute_single_central_moment(
+def _normal_raw_moment(
     *,
-    weights: np.ndarray,
-    delta: np.ndarray,
     sigmas: np.ndarray,
     order: int,
-) -> float:
-    """Return a central moment of the Gaussian mixture about the global mean."""
-    total = np.zeros_like(weights, dtype=float)
-    for inner_order in range(order + 1):
-        if inner_order == 0:
-            component_moment = np.ones_like(sigmas, dtype=float)
-        elif inner_order % 2 == 1:
-            component_moment = np.zeros_like(sigmas, dtype=float)
-        else:
-            double_factorial = 1
-            for value in range(inner_order - 1, 0, -2):
-                double_factorial *= value
-            component_moment = double_factorial * sigmas**inner_order
-        if np.all(component_moment == 0.0):
-            continue
-        total += (
-            comb(order, inner_order)
-            * delta ** (order - inner_order)
-            * component_moment
-        )
-    return float(np.sum(weights * total))
+) -> np.ndarray:
+    """Return the raw moment of a centered Gaussian component of given order."""
+
+    if order == 0:
+        return np.ones_like(sigmas, dtype=float)
+    if order % 2 == 1:
+        return np.zeros_like(sigmas, dtype=float)
+
+    double_factorial = 1
+    for value in range(order - 1, 0, -2):
+        double_factorial *= value
+    return double_factorial * sigmas**order
 
 
-def compute_central_moments(
+def compute_single_gaussian_mixture_raw_moment(
     *,
     centers: ArrayLike,
     sigmas: ArrayLike,
     area_norm: ArrayLike,
-    mean: float,
-    moment_labels: tuple[str, ...],
-) -> dict[str, float]:
-    """Return Gaussian-mixture central moments for the requested labels."""
+    order: int,
+) -> float:
+    """Return the raw moment of the requested order for a Gaussian mixture."""
 
     centers_arr = np.asarray(centers, dtype=float)
     sigmas_arr = np.asarray(sigmas, dtype=float)
@@ -99,17 +87,20 @@ def compute_central_moments(
     if centers_arr.shape != sigmas_arr.shape or centers_arr.shape != weights_arr.shape:
         raise ValueError("Gaussian mixture arrays must have matching shapes")
 
-    delta = centers_arr - float(mean)
-    central_labels = moment_labels[1:]
-    return {
-        label: _compute_single_central_moment(
-            weights=weights_arr,
-            delta=delta,
+    total = np.zeros_like(weights_arr, dtype=float)
+    for inner_order in range(order + 1):
+        component_moment = _normal_raw_moment(
             sigmas=sigmas_arr,
-            order=moment_order(label),
+            order=inner_order,
         )
-        for label in central_labels
-    }
+        if np.all(component_moment == 0.0):
+            continue
+        total += (
+            comb(order, inner_order)
+            * centers_arr ** (order - inner_order)
+            * component_moment
+        )
+    return float(np.sum(weights_arr * total))
 
 
 def compute_gaussian_mixture_moments(
@@ -119,7 +110,7 @@ def compute_gaussian_mixture_moments(
     area_norm: ArrayLike,
     moment_labels: tuple[str, ...],
 ) -> dict[str, float]:
-    """Compute raw moment descriptors for a normalized Gaussian mixture.
+    """Compute raw moments for a normalized Gaussian mixture.
 
     Args:
         centers: Gaussian component centers.
@@ -128,14 +119,12 @@ def compute_gaussian_mixture_moments(
         moment_labels: Ordered moment labels requested by the caller.
 
     Returns:
-        Mapping in the requested label order. The first label receives the
-        spectral mean, and every subsequent label receives the corresponding
-        central moment of that order.
+        Mapping in the requested label order. Each label ``mN`` receives the
+        raw moment of order ``N``.
 
     Raises:
         ValueError: If arrays do not have matching shapes, sigmas are not positive,
-            weights are negative, weights do not sum to one, or the mixture has
-            zero variance.
+            weights are negative or weights do not sum to one.
     """
 
     centers_arr = np.asarray(centers, dtype=float)
@@ -153,16 +142,15 @@ def compute_gaussian_mixture_moments(
     if not moment_labels:
         raise ValueError("At least one moment label is required")
 
-    mean = compute_first_moment(centers_arr, weights_arr)
-    central_moments = compute_central_moments(
-        centers=centers_arr,
-        sigmas=sigmas_arr,
-        area_norm=weights_arr,
-        mean=mean,
-        moment_labels=moment_labels,
-    )
-
-    return {moment_labels[0]: mean, **central_moments}
+    return {
+        label: compute_single_gaussian_mixture_raw_moment(
+            centers=centers_arr,
+            sigmas=sigmas_arr,
+            area_norm=weights_arr,
+            order=moment_order(label),
+        )
+        for label in moment_labels
+    }
 
 
 def build_normalized_moment_vectors(

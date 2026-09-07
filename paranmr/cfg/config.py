@@ -739,12 +739,7 @@ class FitSuscConfig(Config):
                 "susc_fit:average_shifts: 'methyls' is only supported for "
                 "assignment:method 'moments'."
             )
-        if self._assignment_method != "moments":
-            return
-        raise ValueError(
-            "assignment:method 'moments' only supports "
-            "susc_fit:average_shifts: 'methyls'."
-        )
+        return
 
     @property
     def susc_fit_objective_map(self) -> dict:
@@ -961,7 +956,7 @@ class FitSuscConfig(Config):
                     "shift_sigma_abs": float(covariance["perturbation"]["shift_sigma_abs"]),
                     "width_sigma_rel": float(covariance["perturbation"]["width_sigma_rel"]),
                 },
-            }
+                }
         return
 
     def _parse_objective_map(self, *, value: dict, context: str) -> dict:
@@ -1743,7 +1738,7 @@ class PredictConfig(FitSuscConfig):
             "paramagnetic_centre",
         ],
         "experiment": ["files", "spectrum_files", "exp_reference"],
-        "nuclei": ["include"],
+        "nuclei": ["include", "include_groups"],
         "project": ["name"],
         "signal_labels": ["file"],
         "diamagnetic": [

@@ -462,8 +462,7 @@ def run_fit_susc(config, options: FitSuscRunOptions | None = None) -> int:
         )
         if experiment_for_signal_plots is None:
             logger.info(
-                "Skipping experimental signal overlay for %s K because the "
-                "current signal labels do not match the experimental labels.",
+                "Skipping experimental overlay at %s K: signal labels do not match.",
                 f"{experiment.temperature:.2f}",
             )
         else:

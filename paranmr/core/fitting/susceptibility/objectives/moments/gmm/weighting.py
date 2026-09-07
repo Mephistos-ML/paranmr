@@ -29,5 +29,26 @@ def build_gmm_weighting_matrix(
     ridge = ridge_factor * average_scale
     covariance = covariance + ridge * np.eye(n_moments, dtype=float)
 
-    weighting = np.linalg.inv(covariance)
+    factor = np.linalg.cholesky(covariance)
+    identity = np.eye(n_moments, dtype=float)
+    weighting = np.linalg.solve(factor.T, np.linalg.solve(factor, identity))
     return 0.5 * (weighting + weighting.T)
+
+
+def build_gmm_whitening_factor(
+    covariance: NDArray[np.float64],
+    *,
+    ridge_factor: float = 1.0e-8,
+) -> NDArray[np.float64]:
+    """Return ``L`` for the regularized covariance ``S = L L.T``."""
+    covariance = np.asarray(covariance, dtype=float)
+    if covariance.ndim != 2 or covariance.shape[0] != covariance.shape[1]:
+        raise ValueError("GMM covariance matrix must be square")
+    if not np.allclose(covariance, covariance.T):
+        raise ValueError("GMM covariance matrix must be symmetric")
+    n_moments = covariance.shape[0]
+    average_scale = float(np.trace(covariance) / n_moments) if n_moments else 1.0
+    if not np.isfinite(average_scale) or average_scale <= 0.0:
+        average_scale = 1.0
+    ridge = ridge_factor * average_scale
+    return np.linalg.cholesky(covariance + ridge * np.eye(n_moments))
