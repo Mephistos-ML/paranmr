@@ -2,6 +2,68 @@
 
 <!-- version list -->
 
+## v1.16.1 (2026-09-07)
+
+### Bug Fixes
+
+- **config**: Make nuclei include_groups optional for fit_susc
+  ([`7e863c2`](https://github.com/Mephistos-ML/paranmr/commit/7e863c22cc4c8fcadb90450269fe3ef31a76f137))
+
+- **config**: Relax moment averaging validation
+  ([`0a9e00b`](https://github.com/Mephistos-ML/paranmr/commit/0a9e00b9f5a511a2552bed4b6500482eb3ad852f))
+
+- **config**: Support grouped nuclei handling in predict and fit configs
+  ([`5fa28ce`](https://github.com/Mephistos-ML/paranmr/commit/5fa28ce9e4e243aea293dbc776df91fe0e3f2555))
+
+- **fit**: Raise clearer error for missing signal label assignments
+  ([`c05be30`](https://github.com/Mephistos-ML/paranmr/commit/c05be30cc9dd02544d47a520dd7b44d57d43b17c))
+
+- **gmm**: Align covariance weighting with normalized moment space
+  ([`2492149`](https://github.com/Mephistos-ML/paranmr/commit/24921492c45c48164fc2a2e7424f06b0a18be5fd))
+
+- **gmm**: Align covariance with relative residuals
+  ([`2f12a86`](https://github.com/Mephistos-ML/paranmr/commit/2f12a863fbdc2fa45b568348c9f4a797c2c0c935))
+
+- **gmm**: Restore raw moment covariance weighting
+  ([`fe2619b`](https://github.com/Mephistos-ML/paranmr/commit/fe2619bfe4b5a0004f3b4184571f9910a3b6e82d))
+
+### Code Style
+
+- **jacobian**: Remove stray whitespace in normalization path
+  ([`d1adbad`](https://github.com/Mephistos-ML/paranmr/commit/d1adbadc8e79480ea949986ce5c4ff723e494cf2))
+
+### Refactoring
+
+- **gmm**: Whiten moments via covariance Cholesky solves
+  ([`d6f8f75`](https://github.com/Mephistos-ML/paranmr/commit/d6f8f75d864ebb805d59fb220c8497932828d172))
+
+- **moments**: Switch gaussian mixture descriptors to raw moments
+  ([`27f00df`](https://github.com/Mephistos-ML/paranmr/commit/27f00dff8dbe5e524a500a0927d847f410259674))
+
+- **viz**: Improve objective map score display
+  ([`cef8bcd`](https://github.com/Mephistos-ML/paranmr/commit/cef8bcd877294668e9a51462644aa78077eea46e))
+
+### Testing
+
+- **config**: Remove obsolete moments averaging tests
+  ([`d6a97f4`](https://github.com/Mephistos-ML/paranmr/commit/d6a97f4b4543aea81635b4b3c8f12970d54f4658))
+
+- **gmm**: Add strict proton partition regressions
+  ([`2197b76`](https://github.com/Mephistos-ML/paranmr/commit/2197b765b08908f9d96975050a490bfbcf48e9e9))
+
+- **gmm**: Align covariance unit test with current API
+  ([`f89b845`](https://github.com/Mephistos-ML/paranmr/commit/f89b845b9a18a5040969d33874c134eceb86f895))
+
+- **gmm**: Use 3 percent spectral-range tolerance for ppm regression
+  ([`476c297`](https://github.com/Mephistos-ML/paranmr/commit/476c2976f0cd6d5fb74a92da9430b4115ae85b06))
+
+- **gmm**: Validate fresh assignment-free fit outputs
+  ([`358a190`](https://github.com/Mephistos-ML/paranmr/commit/358a190b735ea4d980de8e37ecd77ae1471644d4))
+
+- **ybl8**: Fix GMM nuisance parameters
+  ([`40da7cd`](https://github.com/Mephistos-ML/paranmr/commit/40da7cde0be23ca05825bccae98ee4a509e5d4b0))
+
+
 ## v1.16.0 (2026-07-24)
 
 ### Bug Fixes
