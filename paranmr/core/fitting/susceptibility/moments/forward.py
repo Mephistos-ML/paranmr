@@ -131,11 +131,14 @@ def calculated_moments_from_parameters(
     sorted_packages = sort_packages_by_center(packages)
     centers = package_centers(sorted_packages)
     calculated_widths_ppm = package_linewidths(sorted_packages, linewidths_by_label)
+    areas = np.asarray(
+        [len(package.atom_labels) for package in sorted_packages], dtype=float
+    )
 
     calculated_peaks = gaussian_peak_representation(
         centers=centers,
         fwhm=calculated_widths_ppm,
-        areas=np.ones(len(sorted_packages), dtype=float),
+        areas=areas,
     )
     return compute_gaussian_mixture_moments(
         centers=calculated_peaks["center"],

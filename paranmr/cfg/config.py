@@ -1670,16 +1670,6 @@ class FitSuscConfig(Config):
                     "assignment:moment_objective is required when "
                     "assignment:method is 'moments'"
                 )
-            if (
-                config.diamagnetic_file
-                and config.diamagnetic_method == "csv"
-            ):
-                raise ValueError(
-                    "diamagnetic:method 'csv' is not supported when "
-                    "assignment:method is 'moments'; use DFT diamagnetic "
-                    "input or disable diamagnetic shifts."
-                )
-
         if (
             config.assignment_method != "moments"
             and config.assignment_moment_objective

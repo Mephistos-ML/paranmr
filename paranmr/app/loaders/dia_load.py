@@ -36,14 +36,26 @@ def load_diamagnetic_shifts(
         if "shift" not in dia.columns:
             raise KeyError("Missing required column 'shift' in diamagnetic shift file")
 
-        if "signal_label" in dia.columns:
+        has_atom_labels = "atom_label" in dia.columns
+        has_signal_labels = "signal_label" in dia.columns
+        if has_atom_labels and has_signal_labels:
+            raise ValueError(
+                "Diamagnetic shift CSV must contain exactly one of "
+                "'atom_label' or 'signal_label'"
+            )
+        if has_atom_labels:
+            key_kind = "atom_label"
+            dia_by_key = {
+                str(k): float(v) for k, v in zip(dia["atom_label"], dia["shift"])
+            }
+        elif has_signal_labels:
             key_kind = "signal_label"
             dia_by_key = {
                 str(k): float(v) for k, v in zip(dia["signal_label"], dia["shift"])
             }
         else:
             raise KeyError(
-                "signal_label not present in diamagnetic shift file"
+                "Diamagnetic shift CSV requires 'atom_label' or 'signal_label'"
             )
 
     elif file_type == "dft":

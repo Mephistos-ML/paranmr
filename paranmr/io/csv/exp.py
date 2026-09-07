@@ -123,7 +123,9 @@ def load_experiments_from_csv(
         table,
         ["area", "areas", "area ()", "area()", "integral", "integrals"],
     )
-    signal_label_col = _pick_col(table, ["signal_label", "signal_labels"])
+    signal_label_col = _pick_col(
+        table, ["signal_label", "signal_labels", "signal_label ()"]
+    )
 
     l_to_g_col = next((c for c in ["L/G", "L/G ()"] if c in table.columns), None)
     r1_col = next(
@@ -186,6 +188,7 @@ def write_experiment_to_csv(
     delimiter: str = ",",
     comment: str = "",
     verbose: bool = True,
+    float_format: str = "%.6f",
 ) -> None:
     """
     Write an Experiment object to a CSV file.
@@ -196,10 +199,11 @@ def write_experiment_to_csv(
         delimiter: CSV delimiter.
         comment: Optional comment to prepend to the file.
         verbose: Whether to print status messages.
+        float_format: Numeric CSV precision used for shift and linewidth values.
     """
     df = _build_experiment_signals_df(experiment)
 
-    write_csv_safe(df, file_name, comment)
+    write_csv_safe(df, file_name, comment, float_format=float_format)
 
     if verbose:
         logger.info("Experiment written to %s", file_name)

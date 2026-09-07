@@ -152,8 +152,10 @@ def fit_moment_model(
         for name, value in zip(inputs.fit_var_names, curr_fit.x[:n_susc_params])
     }
 
-    # Return a failed fit with NaN diagnostics when the optimizer exhausts iterations.
-    if curr_fit.status == 0:
+    # A flat numerical Jacobian can exhaust evaluations after reaching an exact
+    # moment match. Preserve that valid result; otherwise status=0 is a failure.
+    exact_moment_match = np.allclose(curr_fit.fun, 0.0, rtol=0.0, atol=1e-8)
+    if curr_fit.status == 0 and not exact_moment_match:
         if verbose:
             logger.warning(
                 "Moment fit at %s K failed - Too many iterations",
@@ -167,6 +169,12 @@ def fit_moment_model(
         model.r2 = np.nan
         model.adj_r2 = np.nan
         return None
+    if curr_fit.status == 0:
+        logger.info(
+            "Moment fit at %s K reached an exact residual match after the "
+            "optimizer evaluation limit.",
+            model.temperature,
+        )
 
     # Estimate parameter uncertainty only when there are enough active residuals.
     active_mask = inputs.moment_objective.active_mask

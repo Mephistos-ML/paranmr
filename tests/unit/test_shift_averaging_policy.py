@@ -99,7 +99,7 @@ def test_moment_forward_collapses_methyl_group_into_one_signal():
 
 
 @pytest.mark.unit
-def test_calculated_moments_treat_collapsed_packages_with_equal_weight():
+def test_calculated_moments_preserve_collapsed_package_proton_counts():
     molecule = Molecule.from_labels_coords(
         labels=["C1", "H1", "H2", "H3", "C2", "H4"],
         coords=[
@@ -136,7 +136,7 @@ def test_calculated_moments_treat_collapsed_packages_with_equal_weight():
     expected_peaks = gaussian_peak_representation(
         centers=[(1.0 + 2.0 + 4.0) / 3.0, 10.0],
         fwhm=[1.0, 1.0],
-        areas=[1.0, 1.0],
+        areas=[3.0, 1.0],
     )
     expected_m1 = float(
         sum(expected_peaks["area_norm"] * expected_peaks["center"])
