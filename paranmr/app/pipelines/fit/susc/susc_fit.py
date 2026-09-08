@@ -168,9 +168,10 @@ def run_fit_susc(config, options: FitSuscRunOptions | None = None) -> int:
             experiment.exp_reference = config.experiment_exp_reference
             experiment.spectrum = spectrum_array
 
-    # Add signal labels for assignment-based workflows before any assignment
-    # or shift-fit logic consumes `molecule.nuclei`.
-    if config.assignment_method != "moments" and len(config.signal_labels_file):
+    # Apply signal labels before diamagnetic shifts for every fitting workflow.
+    # In particular, moments fitting stays assignment-free, but signal-level
+    # diamagnetic CSV inputs still need this atom-to-signal mapping.
+    if len(config.signal_labels_file):
         try:
             al_to_sl, al_to_sml = load_signal_labels_from_csv(config.signal_labels_file)
             if has_missing_selected_signal_labels(base_molecule, al_to_sl):
