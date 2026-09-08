@@ -2,6 +2,19 @@
 
 <!-- version list -->
 
+## v1.17.0 (2026-09-08)
+
+### Bug Fixes
+
+- Apply signal labels before moments diamagnetic loading
+  ([`c34b850`](https://github.com/Mephistos-ML/paranmr/commit/c34b850bab0641dcd65d5a994a91aaab5335975f))
+
+### Features
+
+- Support atom-resolved diamagnetic CSV shifts
+  ([`72bea8a`](https://github.com/Mephistos-ML/paranmr/commit/72bea8a2400bb69e8d744932679dea6c7873c588))
+
+
 ## v1.16.1 (2026-09-07)
 
 ### Bug Fixes
