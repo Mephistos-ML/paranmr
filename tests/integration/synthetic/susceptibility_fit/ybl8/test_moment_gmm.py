@@ -20,7 +20,7 @@ import yaml
 from tests.helpers.cli import run_paranmr
 
 
-_YBL8_DATA = Path("tests/data/YbL8/DATA")
+_YBL8_DATA = Path(__file__).resolve().parents[5] / "tests" / "data" / "YbL8" / "DATA"
 
 
 def _cli_env(tmp_path: Path) -> dict[str, str]:

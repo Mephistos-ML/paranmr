@@ -11,6 +11,7 @@ from pathlib import Path
 import pytest
 
 from tests.helpers.cli import run_paranmr
+from tests.helpers.fixtures import repository_path
 
 
 @pytest.mark.integration
@@ -22,12 +23,9 @@ def test_get_sh_with_isoaxrho_fit_csv_runs_successfully(tmp_path: Path):
     execution together with creation of the expected output CSV.
     """
     cwd = tmp_path / "spinham"
-    shutil.copytree(Path("tests/data/pipelines/spinham"), cwd)
+    shutil.copytree(repository_path("tests", "data", "pipelines", "spinham"), cwd)
     cmd = ["paranmr", "get_sh", "--spin", "2.0", "isoaxrho_fit.csv"]
     result = run_paranmr(cmd[1:], cwd=cwd)
-
-    if result.returncode != 0 and "missing" in result.stderr.lower():
-        pytest.xfail(f"Test failed due to missing dependency:\n{result.stderr}")
 
     assert result.returncode == 0, (
         f"Command failed with return code {result.returncode}\nstdout:\n"

@@ -13,5 +13,5 @@ generated fit outputs, plots, or runnable YAML configurations.
 Test-only configurations live under
 `tests/integration/experimental/configs/<complex>/SIMULATIONS/`. Integration
 tests materialize both trees into `tmp_path` through
-`tests.helpers.fixtures.materialize_example_fixture`, so test runs never write
-to fixtures or `examples/`.
+`tests.helpers.fixtures.materialize_canonical_fixture`, so test runs never write
+to canonical fixtures.

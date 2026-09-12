@@ -12,7 +12,7 @@ from pathlib import Path
 
 import pytest
 
-from tests.helpers.fixtures import materialize_example_fixture
+from tests.helpers.fixtures import materialize_canonical_fixture
 from tests.helpers.cli import run_paranmr
 
 
@@ -28,13 +28,10 @@ def test_predict_with_qc_hfc_and_qc_susceptibility(tmp_path: Path):
     hyperfine input with QC-derived susceptibility input, including the
     relaxation-enabled prediction workflow.
     """
-    root = materialize_example_fixture(tmp_path=tmp_path, system="P3FeCl")
+    root = materialize_canonical_fixture(tmp_path=tmp_path, system="P3FeCl")
     cwd = root / "SIMULATIONS" / "Prediction"
     cmd = ["paranmr", "--hide", "predict", "P3FeCl_Prediction.yml"]
     result = run_paranmr(cmd[1:], cwd=cwd, env=_cli_env(tmp_path))
-
-    if result.returncode != 0 and "missing" in result.stderr.lower():
-        pytest.xfail(f"Test failed due to missing dependency:\n{result.stderr}")
 
     assert result.returncode == 0, (
         f"Command failed with return code {result.returncode}\nstdout:\n"
@@ -53,13 +50,10 @@ def test_predict_with_pdip_hfc_and_csv_susceptibility(tmp_path: Path):
     hyperfine input from XYZ coordinates with CSV-based susceptibility input,
     including the relaxation-enabled prediction workflow.
     """
-    root = materialize_example_fixture(tmp_path=tmp_path, system="DyL1")
+    root = materialize_canonical_fixture(tmp_path=tmp_path, system="DyL1")
     cwd = root / "SIMULATIONS" / "Prediction"
     cmd = ["paranmr", "--hide", "predict", "DyL1_1H_Prediction.yml"]
     result = run_paranmr(cmd[1:], cwd=cwd, env=_cli_env(tmp_path))
-
-    if result.returncode != 0 and "missing" in result.stderr.lower():
-        pytest.xfail(f"Test failed due to missing dependency:\n{result.stderr}")
 
     assert result.returncode == 0, (
         f"Command failed with return code {result.returncode}\nstdout:\n"

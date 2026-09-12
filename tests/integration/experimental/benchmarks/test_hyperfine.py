@@ -10,8 +10,9 @@ import pytest
 
 from paranmr.io.csv.csv_util import read_csv_safe
 from tests.helpers.cli import run_paranmr
+from tests.helpers.fixtures import repository_path
 
-DATA_DIR = Path("tests/data/sources/hfc/qc/orca/version_6")
+DATA_DIR = repository_path("tests", "data", "sources", "hfc", "qc", "orca", "version_6")
 HFC_FILE = DATA_DIR / "P3FeCl_HFC.out"
 SIGNAL_LABELS_FILE = DATA_DIR / "P3FeCl_Signal_Labels_13C.csv"
 
