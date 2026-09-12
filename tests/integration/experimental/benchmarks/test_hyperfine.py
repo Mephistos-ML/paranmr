@@ -4,12 +4,12 @@
 """Integration tests for hyperfine benchmark workflows."""
 
 import os
-import subprocess
 from pathlib import Path
 
 import pytest
 
 from paranmr.io.csv.csv_util import read_csv_safe
+from tests.helpers.cli import run_paranmr
 
 DATA_DIR = Path("tests/data/sources/hfc/qc/orca/version_6")
 HFC_FILE = DATA_DIR / "P3FeCl_HFC.out"
@@ -61,11 +61,8 @@ def test_benchmark_a_fc_with_orca6_hfc(tmp_path: Path):
     project_dir = tmp_path / "A_FC_Benchmark"
     input_file = _write_benchmark_input(tmp_path, project_dir=project_dir)
 
-    result = subprocess.run(
-        ["paranmr", "--hide", "benchmark", "a_fc", str(input_file)],
-        capture_output=True,
-        text=True,
-        env=_cli_env(tmp_path),
+    result = run_paranmr(
+        ["--hide", "benchmark", "a_fc", str(input_file)], env=_cli_env(tmp_path)
     )
 
     assert result.returncode == 0, (
@@ -99,11 +96,8 @@ def test_benchmark_a_sd_with_orca6_hfc(tmp_path: Path):
     project_dir = tmp_path / "A_SD_Benchmark"
     input_file = _write_benchmark_input(tmp_path, project_dir=project_dir)
 
-    result = subprocess.run(
-        ["paranmr", "--hide", "benchmark", "a_sd", str(input_file)],
-        capture_output=True,
-        text=True,
-        env=_cli_env(tmp_path),
+    result = run_paranmr(
+        ["--hide", "benchmark", "a_sd", str(input_file)], env=_cli_env(tmp_path)
     )
 
     assert result.returncode == 0, (

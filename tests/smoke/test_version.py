@@ -1,7 +1,7 @@
-import subprocess
+from tests.helpers.cli import run_paranmr
 
 
 def test_paranmr_version():
-    result = subprocess.run(["paranmr", "--version"], capture_output=True, text=True)
+    result = run_paranmr(["--version"])
     assert result.returncode == 0
     assert result.stdout.strip() != ""

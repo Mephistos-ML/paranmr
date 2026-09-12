@@ -1,6 +1,6 @@
-import subprocess
+from tests.helpers.cli import run_paranmr
 
 
 def test_paranmr_help():
-    result = subprocess.run(["paranmr", "--help"], capture_output=True)
+    result = run_paranmr(["--help"])
     assert result.returncode == 0

@@ -8,12 +8,12 @@ stable happy-path integration case for the CLI pipeline.
 """
 
 import os
-import subprocess
 from pathlib import Path
 
 import pytest
 
 from tests.helpers.fixtures import materialize_example_fixture
+from tests.helpers.cli import run_paranmr
 
 
 def _cli_env(tmp_path: Path) -> dict[str, str]:
@@ -31,9 +31,7 @@ def test_fit_corr_time(tmp_path: Path):
     root = materialize_example_fixture(tmp_path=tmp_path, system="FeH")
     cwd = root / "SIMULATIONS" / "Fit_Correlation_Time"
     cmd = ["paranmr", "--hide", "fit_corr_time", "FeH_fit_corr_time.yml"]
-    result = subprocess.run(
-        cmd, capture_output=True, text=True, cwd=cwd, env=_cli_env(tmp_path)
-    )
+    result = run_paranmr(cmd[1:], cwd=cwd, env=_cli_env(tmp_path))
 
     if result.returncode != 0 and "missing" in result.stderr.lower():
         pytest.xfail(f"Test failed due to missing dependency:\n{result.stderr}")

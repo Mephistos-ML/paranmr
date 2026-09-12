@@ -5,21 +5,25 @@
 
 from __future__ import annotations
 
-import subprocess
+import shutil
 from pathlib import Path
 
 import pytest
 
+from tests.helpers.cli import run_paranmr
+
 
 @pytest.mark.integration
-def test_calc_pcs_iso_with_csv_susceptibility_creates_cube_file():
+def test_calc_pcs_iso_with_csv_susceptibility_creates_cube_file(tmp_path: Path):
     """Run the PCS isosurface workflow with CSV-based susceptibility input.
 
     This test exercises the CLI-driven ``calc_pcs_iso`` path on the internal
     DyL1 fixture using susceptibility data loaded from a CSV file and verifies
     that at least one cube file is produced.
     """
-    cwd = Path("tests/data/pipelines/pcs_isosurface/csv_susceptibility_dyl1")
+    source = Path("tests/data/pipelines/pcs_isosurface/csv_susceptibility_dyl1")
+    cwd = tmp_path / "csv_susceptibility_dyl1"
+    shutil.copytree(source, cwd)
     cmd = [
         "paranmr",
         "calc_pcs_iso",
@@ -28,7 +32,7 @@ def test_calc_pcs_iso_with_csv_susceptibility_creates_cube_file():
         "structure.xyz",
         "Dy1",
     ]
-    result = subprocess.run(cmd, capture_output=True, text=True, cwd=cwd)
+    result = run_paranmr(cmd[1:], cwd=cwd)
 
     if result.returncode != 0 and "missing" in result.stderr.lower():
         pytest.xfail(f"Test failed due to missing dependency:\n{result.stderr}")
@@ -43,14 +47,16 @@ def test_calc_pcs_iso_with_csv_susceptibility_creates_cube_file():
 
 
 @pytest.mark.integration
-def test_calc_pcs_iso_with_nevpt2_susceptibility_creates_cube_file():
+def test_calc_pcs_iso_with_nevpt2_susceptibility_creates_cube_file(tmp_path: Path):
     """Run the PCS isosurface workflow with NEVPT2 susceptibility input.
 
     This test exercises the CLI-driven ``calc_pcs_iso`` path on the internal
     P3FeCl fixture using susceptibility data loaded from a NEVPT2 output file
     and verifies that at least one cube file is produced.
     """
-    cwd = Path("tests/data/pipelines/pcs_isosurface/nevpt2_susceptibility_p3fecl")
+    source = Path("tests/data/pipelines/pcs_isosurface/nevpt2_susceptibility_p3fecl")
+    cwd = tmp_path / "nevpt2_susceptibility_p3fecl"
+    shutil.copytree(source, cwd)
     cmd = [
         "paranmr",
         "calc_pcs_iso",
@@ -59,7 +65,7 @@ def test_calc_pcs_iso_with_nevpt2_susceptibility_creates_cube_file():
         "structure.xyz",
         "Fe1",
     ]
-    result = subprocess.run(cmd, capture_output=True, text=True, cwd=cwd)
+    result = run_paranmr(cmd[1:], cwd=cwd)
 
     if result.returncode != 0 and "missing" in result.stderr.lower():
         pytest.xfail(f"Test failed due to missing dependency:\n{result.stderr}")

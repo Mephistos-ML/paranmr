@@ -6,12 +6,12 @@
 from __future__ import annotations
 
 import os
-import subprocess
 from pathlib import Path
 
 import pytest
 
 from tests.helpers.fixtures import materialize_example_fixture
+from tests.helpers.cli import run_paranmr
 
 
 @pytest.mark.integration
@@ -25,12 +25,8 @@ def test_variable_temperature_split_fit(tmp_path: Path) -> None:
         "MPLCONFIGDIR": str(tmp_path / "matplotlib"),
         "XDG_CACHE_HOME": str(tmp_path / "xdg-cache"),
     }
-    result = subprocess.run(
-        ["paranmr", "--hide", "fit_susc", "P3FeCl_VT_Fitting.yml"],
-        capture_output=True,
-        text=True,
-        cwd=cwd,
-        env=environment,
+    result = run_paranmr(
+        ["--hide", "fit_susc", "P3FeCl_VT_Fitting.yml"], cwd=cwd, env=environment
     )
 
     assert result.returncode == 0, result.stdout + result.stderr

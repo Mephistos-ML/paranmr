@@ -5,23 +5,26 @@
 
 from __future__ import annotations
 
-import subprocess
+import shutil
 from pathlib import Path
 
 import pytest
 
+from tests.helpers.cli import run_paranmr
+
 
 @pytest.mark.integration
-def test_get_sh_with_isoaxrho_fit_csv_runs_successfully():
+def test_get_sh_with_isoaxrho_fit_csv_runs_successfully(tmp_path: Path):
     """Run the ``get_sh`` CLI workflow on an ``isoaxrho`` fit result.
 
     This test exercises the CLI-driven spin-Hamiltonian extraction path using
     an internal susceptibility-fit CSV fixture and verifies successful command
     execution together with creation of the expected output CSV.
     """
-    cwd = Path("tests/data/pipelines/spinham")
+    cwd = tmp_path / "spinham"
+    shutil.copytree(Path("tests/data/pipelines/spinham"), cwd)
     cmd = ["paranmr", "get_sh", "--spin", "2.0", "isoaxrho_fit.csv"]
-    result = subprocess.run(cmd, capture_output=True, text=True, cwd=cwd)
+    result = run_paranmr(cmd[1:], cwd=cwd)
 
     if result.returncode != 0 and "missing" in result.stderr.lower():
         pytest.xfail(f"Test failed due to missing dependency:\n{result.stderr}")

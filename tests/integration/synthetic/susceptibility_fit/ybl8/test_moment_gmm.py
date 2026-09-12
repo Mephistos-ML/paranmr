@@ -9,18 +9,15 @@ Install the optional generator dependency with ``pip install '.[synthetic]'``.
 from __future__ import annotations
 
 import os
-import subprocess
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 import pandas as pd
 import pytest
 import yaml
 
-pytest.importorskip("paranmr_synth", reason="install with: pip install '.[synthetic]'")
-
-from paranmr_synth.app.pipelines.dataset_export import generate_dataset
-from paranmr_synth.cfg.dataset import DatasetGenerationConfig
+from tests.helpers.cli import run_paranmr
 
 
 _YBL8_DATA = Path("tests/data/YbL8/DATA")
@@ -35,9 +32,9 @@ def _cli_env(tmp_path: Path) -> dict[str, str]:
     }
 
 
-def _generation_config(seed: int) -> DatasetGenerationConfig:
+def _generation_config(seed: int, config_type: type[Any]) -> Any:
     """Build the seeded YbL8 generator contract from canonical raw inputs."""
-    return DatasetGenerationConfig.from_mapping(
+    return config_type.from_mapping(
         {
             "project": {"name": "synthetic_ybl8_gmm", "n_cases": 1, "seed": seed},
             "hyperfine": {
@@ -71,8 +68,18 @@ def test_gmm_recovers_seeded_synthetic_ybl8_shifts(
     tmp_path: Path, seed: int
 ) -> None:
     """Fit all χ/R6 variables to a seeded, unlabeled YbL8 synthetic spectrum."""
+    try:
+        from paranmr_synth.app.pipelines.dataset_export import generate_dataset
+        from paranmr_synth.cfg.dataset import DatasetGenerationConfig
+    except ModuleNotFoundError:
+        pytest.fail(
+            "Synthetic GMM anchor requires ParaNMR-Synth; install with "
+            "`pip install '.[synthetic]'`."
+        )
+
     root = generate_dataset(
-        config=_generation_config(seed), output_dir=tmp_path / "synthetic_data"
+        config=_generation_config(seed, DatasetGenerationConfig),
+        output_dir=tmp_path / "synthetic_data",
     )
     case_dir = next((root / "cases").iterdir())
     fitting_dir = case_dir / "SIMULATIONS" / "FITTING"
@@ -95,12 +102,10 @@ def test_gmm_recovers_seeded_synthetic_ybl8_shifts(
     )
     expected_centers = np.sort(generated_peaks["shift (ppm)"].to_numpy(dtype=float))
 
-    result = subprocess.run(
-        ["paranmr", "--hide", "fit_susc", "gmm_config.yml"],
+    result = run_paranmr(
+        ["--hide", "fit_susc", "gmm_config.yml"],
         cwd=fitting_dir,
         env=_cli_env(tmp_path),
-        capture_output=True,
-        text=True,
     )
     assert result.returncode == 0, result.stdout + result.stderr
 
