@@ -8,7 +8,7 @@ import pytest
 from tests.helpers.fixtures import materialize_example_fixture
 
 
-@pytest.mark.unit
+@pytest.mark.integration
 @pytest.mark.parametrize("system", ["P3FeCl", "DyL1", "FeH", "YbL8"])
 def test_materialize_example_fixture_creates_writable_case(
     tmp_path: Path, system: str
