@@ -7,23 +7,33 @@ This module exercises the public, user-facing ``fit_corr_time`` example as a
 stable happy-path integration case for the CLI pipeline.
 """
 
+import os
 import subprocess
 from pathlib import Path
 
 import pytest
 
+from tests.helpers.fixtures import materialize_example_fixture
+
+
+def _cli_env(tmp_path: Path) -> dict[str, str]:
+    return {**os.environ, "MPLBACKEND": "Agg", "MPLCONFIGDIR": str(tmp_path / "mpl")}
+
 
 @pytest.mark.integration
-def test_fit_corr_time():
+def test_fit_corr_time(tmp_path: Path):
     """Run the canonical ``fit_corr_time`` CLI workflow.
 
     This integration test executes the public example configuration from the
     examples tree and asserts that the pipeline completes successfully and
     produces the expected diagnostics CSV artifact.
     """
-    cwd = Path("examples/FeH/SIMULATIONS/Fit_Correlation_Time")
+    root = materialize_example_fixture(tmp_path=tmp_path, system="FeH")
+    cwd = root / "SIMULATIONS" / "Fit_Correlation_Time"
     cmd = ["paranmr", "--hide", "fit_corr_time", "FeH_fit_corr_time.yml"]
-    result = subprocess.run(cmd, capture_output=True, text=True, cwd=cwd)
+    result = subprocess.run(
+        cmd, capture_output=True, text=True, cwd=cwd, env=_cli_env(tmp_path)
+    )
 
     if result.returncode != 0 and "missing" in result.stderr.lower():
         pytest.xfail(f"Test failed due to missing dependency:\n{result.stderr}")

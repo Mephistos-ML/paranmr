@@ -19,6 +19,7 @@ import pytest
 from paranmr.app.policies.averaging import detect_methyl_group_records
 from paranmr.core.domain.mol import Molecule
 from paranmr.tools.coords import xyz_fmt as xyzf
+from tests.helpers.fixtures import materialize_example_fixture
 
 
 def _cli_env(tmp_path: Path) -> dict[str, str]:
@@ -215,7 +216,8 @@ def test_fit_susc_with_pdip_hfc_isoaxrho_and_permutation_assignment(tmp_path: Pa
     coordinates together with the ``isoaxrho`` susceptibility fit model and
     permutation-based assignment.
     """
-    cwd = Path("examples/DyL1/SIMULATIONS/Fitting/Standart_Fit")
+    root = materialize_example_fixture(tmp_path=tmp_path, system="DyL1")
+    cwd = root / "SIMULATIONS" / "Fitting" / "Standart_Fit"
     cmd = ["paranmr", "--hide", "fit_susc", "DyL1_1H_Fitting.yml"]
     result = subprocess.run(
         cmd, capture_output=True, text=True, cwd=cwd, env=_cli_env(tmp_path)
@@ -258,7 +260,8 @@ def test_fit_susc_with_qc_hfc_split_model_and_hungarian_assignment(tmp_path: Pat
     shared susceptibility model across multiple experiments recorded at
     different temperatures.
     """
-    cwd = Path("examples/P3FeCl/SIMULATIONS/Fitting")
+    root = materialize_example_fixture(tmp_path=tmp_path, system="P3FeCl")
+    cwd = root / "SIMULATIONS" / "Fitting"
     cmd = ["paranmr", "--hide", "fit_susc", "P3FeCl_VT_Fitting.yml"]
     result = subprocess.run(
         cmd, capture_output=True, text=True, cwd=cwd, env=_cli_env(tmp_path)
@@ -285,7 +288,8 @@ def test_fit_susc_moments_weighted_ls_smoke(tmp_path: Path):
     example dataset. It asserts that the workflow completes, writes diagnostics,
     and produces finite moment outputs with a finite weighted score.
     """
-    cwd = Path("examples/DyL1/SIMULATIONS/Fitting/Moments/Weighted_LS_Obj")
+    root = materialize_example_fixture(tmp_path=tmp_path, system="DyL1")
+    cwd = root / "SIMULATIONS" / "Fitting" / "Moments" / "Weighted_LS_Obj"
     cmd = ["paranmr", "--hide", "fit_susc", "DyL1_1H_Fitting_moments_iso_ax_rho.yml"]
     result = subprocess.run(
         cmd, capture_output=True, text=True, cwd=cwd, env=_cli_env(tmp_path)
@@ -408,8 +412,7 @@ def test_fit_susc_moments_gmm_recovers_dyl1_reference_proton_partition(
 ):
     """Check that DyL1 GMM moment fitting recovers fixed proton groups and positions."""
 
-    dyl1_root = tmp_path / "DyL1"
-    shutil.copytree(Path("examples/DyL1"), dyl1_root)
+    dyl1_root = materialize_example_fixture(tmp_path=tmp_path, system="DyL1")
 
     fixed_cwd = dyl1_root / "SIMULATIONS" / "Fitting" / "Standart_Fit"
     _remove_generated_project(fixed_cwd, "DyL1_1H_Fitting")
@@ -514,8 +517,7 @@ def test_fit_susc_moments_gmm_recovers_ybl8_reference_proton_partition(
 ):
     """Check that YbL8 GMM moment fitting recovers methyl-aware proton groups."""
 
-    ybl8_root = tmp_path / "YbL8"
-    shutil.copytree(Path("examples/YbL8"), ybl8_root)
+    ybl8_root = materialize_example_fixture(tmp_path=tmp_path, system="YbL8")
 
     fixed_cwd = ybl8_root / "SIMULATIONS" / "Fitting" / "Standart_Fit"
     _remove_generated_project(fixed_cwd, "YbL8_1H_PD_fit_Standart")

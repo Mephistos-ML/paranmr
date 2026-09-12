@@ -49,7 +49,8 @@ setuptools.setup(
         "dev": [
             "pytest>=8.0",
             "ruff>=0.1.0",
-        ]
+        ],
+        "synthetic": ["ParaNMR-Synth>=0.3.0"],
     },
     entry_points={
         "console_scripts": [
