@@ -1,0 +1,1 @@
+"""Susceptibility-fit integration scenarios."""
