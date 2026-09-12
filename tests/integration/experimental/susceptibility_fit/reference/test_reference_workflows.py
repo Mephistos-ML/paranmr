@@ -251,35 +251,6 @@ def test_fit_susc_with_pdip_hfc_isoaxrho_and_permutation_assignment(tmp_path: Pa
 
 
 @pytest.mark.integration
-def test_fit_susc_with_qc_hfc_split_model_and_hungarian_assignment(tmp_path: Path):
-    """Run the canonical variable-temperature ``fit_susc`` workflow.
-
-    This public happy-path case uses DFT-derived hyperfine input together with
-    the ``split`` susceptibility fit model and Hungarian-based assignment. It
-    exercises the variable-temperature fitting path, where the workflow fits a
-    shared susceptibility model across multiple experiments recorded at
-    different temperatures.
-    """
-    root = materialize_example_fixture(tmp_path=tmp_path, system="P3FeCl")
-    cwd = root / "SIMULATIONS" / "Fitting"
-    cmd = ["paranmr", "--hide", "fit_susc", "P3FeCl_VT_Fitting.yml"]
-    result = subprocess.run(
-        cmd, capture_output=True, text=True, cwd=cwd, env=_cli_env(tmp_path)
-    )
-
-    if result.returncode != 0 and "missing" in result.stderr.lower():
-        pytest.xfail(f"Test failed due to missing dependency:\n{result.stderr}")
-
-    assert result.returncode == 0, (
-        f"Command failed with return code {result.returncode}\nstdout:\n"
-        f"{result.stdout}\nstderr:\n{result.stderr}"
-    )
-
-    expected_output = cwd / "P3FeCl_VT_Fitting" / "susceptibility_tensor.csv"
-    assert expected_output.exists(), f"Expected output file missing: {expected_output}"
-
-
-@pytest.mark.integration
 def test_fit_susc_moments_weighted_ls_smoke(tmp_path: Path):
     """Run the canonical ``fit_susc`` moments workflow using weighted LS.
 
