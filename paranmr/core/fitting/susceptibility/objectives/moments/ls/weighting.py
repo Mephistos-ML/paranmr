@@ -21,8 +21,7 @@ def build_ls_weights_by_name(
     unknown = set(weights) - set(moment_names)
     if unknown:
         raise ValueError(
-            "Moment weights contain unknown moment(s): "
-            + ", ".join(sorted(unknown))
+            "Moment weights contain unknown moment(s): " + ", ".join(sorted(unknown))
         )
 
     weights_by_name: dict[str, float] = {}

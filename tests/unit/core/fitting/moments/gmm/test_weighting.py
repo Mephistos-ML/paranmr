@@ -3,15 +3,16 @@
 
 import numpy as np
 import pytest
+
+from paranmr.core.fitting.susceptibility.moments.descriptors import (
+    compute_gaussian_mixture_moments,
+)
 from paranmr.core.fitting.susceptibility.objectives.moments.gmm.covariance import (
     MonteCarloMomentCovarianceConfig,
     estimate_moment_covariance_from_monte_carlo,
 )
 from paranmr.core.fitting.susceptibility.objectives.moments.gmm.weighting import (
     build_gmm_weighting_matrix,
-)
-from paranmr.core.fitting.susceptibility.moments.descriptors import (
-    compute_gaussian_mixture_moments,
 )
 from paranmr.io.csv.fit import save_moment_weighting_matrix
 

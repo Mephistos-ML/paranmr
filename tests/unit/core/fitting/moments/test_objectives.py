@@ -130,6 +130,7 @@ def test_weighted_ls_moment_objective_exposes_raw_condition_vector():
         np.asarray([1.0, -2.0, 4.0, 0.0, -16.0, 64.0], dtype=float)
     )
 
+
 @pytest.mark.unit
 def test_prepare_moment_objective_builds_gmm_objective_from_weighting_matrix():
     objective = GMMMomentObjective.with_covariance(

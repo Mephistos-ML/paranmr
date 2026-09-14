@@ -74,8 +74,10 @@ def plot_objective_map(
         alpha=0.75,
     )
 
-    if gradient_x is not None and gradient_y is not None and not np.allclose(
-        gradient_x, 0.0
+    if (
+        gradient_x is not None
+        and gradient_y is not None
+        and not np.allclose(gradient_x, 0.0)
     ):
         step = max(1, len(x_values) // 15)
         ax.quiver(

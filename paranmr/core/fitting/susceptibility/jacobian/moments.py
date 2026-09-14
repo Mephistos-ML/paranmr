@@ -80,11 +80,7 @@ def differentiate_moments_by_sigmas(
             continue
         component_two_lower = component_raw_moments[order - 2]
         jacobian[row_index, :] = (
-            order
-            * (order - 1)
-            * weights_arr
-            * sigmas_arr
-            * component_two_lower
+            order * (order - 1) * weights_arr * sigmas_arr * component_two_lower
         )
     return jacobian
 

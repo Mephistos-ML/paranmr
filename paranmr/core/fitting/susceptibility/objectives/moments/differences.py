@@ -32,13 +32,16 @@ def build_moment_difference_vector(
     missing_observed = [name for name in moment_names if name not in observed_moments]
     if missing_observed:
         raise ValueError(
-            'Observed moments are missing required keys: ' + ', '.join(missing_observed)
+            "Observed moments are missing required keys: " + ", ".join(missing_observed)
         )
 
-    missing_calculated = [name for name in moment_names if name not in calculated_moments]
+    missing_calculated = [
+        name for name in moment_names if name not in calculated_moments
+    ]
     if missing_calculated:
         raise ValueError(
-            'Calculated moments are missing required keys: ' + ', '.join(missing_calculated)
+            "Calculated moments are missing required keys: "
+            + ", ".join(missing_calculated)
         )
 
     return np.asarray(

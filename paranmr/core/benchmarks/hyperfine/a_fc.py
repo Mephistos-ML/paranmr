@@ -51,9 +51,7 @@ def summarize_a_fc_max_report_rows(
             max_value = float(row["max"])
             min_value = float(summary[functional][nucleus_label][signal_label]["min"])
             range_value = (
-                (max_value - min_value) / max_value
-                if max_value != 0.0
-                else np.nan
+                (max_value - min_value) / max_value if max_value != 0.0 else np.nan
             )
 
             rows.append(

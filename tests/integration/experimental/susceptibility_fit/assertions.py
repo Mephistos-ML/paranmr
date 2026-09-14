@@ -14,7 +14,9 @@ from paranmr.tools.coords import xyz_fmt as xyzf
 
 def read_generated_hyperfines_table(path: Path) -> pd.DataFrame:
     lines = path.read_text(encoding="utf-8-sig").splitlines()
-    header_index = next(i for i, line in enumerate(lines) if line.startswith("atom_label"))
+    header_index = next(
+        i for i, line in enumerate(lines) if line.startswith("atom_label")
+    )
     return pd.read_csv(path, skiprows=header_index, encoding="utf-8-sig")
 
 
@@ -37,7 +39,8 @@ def reference_signal_groups_with_methyls(
     labels, coords = xyzf.load_xyz(str(xyz_file), check=False)
     molecule = Molecule.from_labels_coords(labels, coords, elements="H")
     methyl_groups = [
-        frozenset(group.proton_labels) for group in detect_methyl_group_records(molecule)
+        frozenset(group.proton_labels)
+        for group in detect_methyl_group_records(molecule)
     ]
     refined = []
     for group in groups:
@@ -60,7 +63,11 @@ def partition_protons_by_sorted_shift(
 ) -> set[frozenset[str]]:
     table = read_generated_hyperfines_table(hyperfines_csv)
     protons = table[table["atom_label ()"].astype(str).str.startswith("H")]
-    atom_labels = protons.sort_values("δ_total (ppm)", kind="mergesort")["atom_label ()"].astype(str).tolist()
+    atom_labels = (
+        protons.sort_values("δ_total (ppm)", kind="mergesort")["atom_label ()"]
+        .astype(str)
+        .tolist()
+    )
     assert sum(group_sizes) == len(atom_labels)
     return {
         frozenset(atom_labels[start : start + size])
@@ -75,7 +82,9 @@ def group_centers_from_hyperfines(
     protons = protons[protons["atom_label ()"].astype(str).str.startswith("H")]
     centers = {}
     for group in proton_groups:
-        values = protons.loc[protons["atom_label ()"].isin(group), "δ_total (ppm)"].to_numpy(float)
+        values = protons.loc[
+            protons["atom_label ()"].isin(group), "δ_total (ppm)"
+        ].to_numpy(float)
         assert len(values) == len(group)
         centers[group] = float(np.mean(values))
     return centers

@@ -1,8 +1,84 @@
 # Project build, packaging, and tooling configuration.
 
 [build-system]
-requires = ["setuptools>=61", "wheel"]
+requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
+
+[project]
+name = "paranmr"
+dynamic = ["version"]
+description = "Prediction, fitting, and analysis of paramagnetic NMR spectra."
+readme = { file = "README.md", content-type = "text/markdown" }
+requires-python = ">=3.10"
+
+authors = [
+    { name = "Suturina Group (original)" },
+]
+maintainers = [
+    { name = "Ernest Borysenko", email = "eb2819@bath.ac.uk" },
+]
+
+license = "GPL-3.0-or-later"
+license-files = ["LICENSE"]
+
+keywords = [
+    "paramagnetic NMR",
+    "NMR spectroscopy",
+    "susceptibility",
+    "hyperfine coupling",
+    "quantum chemistry",
+]
+
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Operating System :: OS Independent",
+    "Topic :: Scientific/Engineering :: Chemistry",
+    "Topic :: Scientific/Engineering :: Physics",
+]
+
+dependencies = [
+    "numpy",
+    "scipy",
+    "sympy",
+    "matplotlib",
+    "pandas",
+    "pathos",
+    "PyYAML",
+    "pyyaml-include",
+    "adjustText",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pre-commit>=4.0",
+    "pytest>=8.0",
+    "ruff>=0.16.1",
+]
+synthetic = [
+    "ParaNMR-Synth>=0.3.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/Mephistos-ML/paranmr"
+Documentation = "https://mephistos-ml.github.io/paranmr/"
+Repository = "https://github.com/Mephistos-ML/paranmr"
+Issues = "https://github.com/Mephistos-ML/paranmr/issues"
+"Original Source" = "https://gitlab.com/suturina-group/simpnmr"
+
+[project.scripts]
+paranmr = "paranmr.cli.main:interface"
+plot_A_funcs = "paranmr.tools.hfc_plot_batch:main"
+plot_chi_funcs = "paranmr.tools.susc_plot_batch:main"
+xyz_to_chemlabel = "paranmr.tools.coords.chemcraft:main"
+
+[tool.setuptools.dynamic]
+version = { attr = "paranmr.__version__.__version__" }
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["paranmr*"]
+namespaces = false
 
 [tool.semantic_release]
 version_variables = ["paranmr/__version__.py:__version__"]

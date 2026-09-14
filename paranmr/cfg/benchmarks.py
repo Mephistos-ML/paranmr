@@ -246,9 +246,7 @@ class AfcBenchmarkConfig:
         try:
             tolerance = float(value)
         except (TypeError, ValueError) as exc:
-            raise ValueError(
-                "benchmark:max_label_tolerance must be numeric"
-            ) from exc
+            raise ValueError("benchmark:max_label_tolerance must be numeric") from exc
 
         if tolerance < 0:
             raise ValueError("benchmark:max_label_tolerance must be non-negative")

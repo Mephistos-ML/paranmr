@@ -6,7 +6,9 @@
 import numpy as np
 from scipy.optimize import curve_fit
 
-from paranmr.core.fitting.variable_temperatures.components import compute_curie_prefactor
+from paranmr.core.fitting.variable_temperatures.components import (
+    compute_curie_prefactor,
+)
 
 
 def fit_chit_linear_model(
@@ -317,4 +319,3 @@ def compute_chit_high_t_limit(
     }
 
     return chiT_reduced, errT_reduced, fit_results
-

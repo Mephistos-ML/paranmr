@@ -102,9 +102,7 @@ def fit_model_to_shifts(
         return
 
     stdev, _ = svd_stdev(curr_fit)
-    model.fit_stdev = {
-        label: val for label, val in zip(model.fit_vars.keys(), stdev)
-    }
+    model.fit_stdev = {label: val for label, val in zip(model.fit_vars.keys(), stdev)}
     model.fit_status = True
     model.final_var_values = copy.deepcopy(curr_fit_dict)
     for key, val in model.fix_vars.items():
@@ -167,9 +165,7 @@ def fit_linear_model_to_shifts(
 
     curr_fit.jac = model.design_matrix(molecule.nuclei, model.fix_vars)
     stdev, _ = svd_stdev(curr_fit)
-    model.fit_stdev = {
-        label: val for label, val in zip(model.fit_vars.keys(), stdev)
-    }
+    model.fit_stdev = {label: val for label, val in zip(model.fit_vars.keys(), stdev)}
     model.fit_status = True
     model.final_var_values = copy.deepcopy(curr_fit_dict)
     for key, val in model.fix_vars.items():

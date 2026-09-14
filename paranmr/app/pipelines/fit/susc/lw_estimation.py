@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (C) 2026 Suturina Group
 
-"""Linewidth-parameter estimation helpers for fixed-assignment susceptibility workflows."""
+"""Linewidth estimation helpers for fixed-assignment susceptibility workflows."""
 
 from __future__ import annotations
 
@@ -41,9 +41,7 @@ def run_fixed_assignment_linewidth_estimation(
     """
 
     if molecule.paramagnetic_centre is None:
-        raise ValueError(
-            "linewidth:estimate requires hyperfine:paramagnetic_centre"
-        )
+        raise ValueError("linewidth:estimate requires hyperfine:paramagnetic_centre")
 
     mean_inv_r6 = mean_inv_r6_by_label(
         nuclei=molecule.nuclei,

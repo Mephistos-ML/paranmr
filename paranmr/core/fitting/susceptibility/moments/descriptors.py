@@ -194,17 +194,12 @@ def build_normalized_moment_vectors(
     if zero_like:
         raise ValueError(
             "Cannot normalize moment vectors by observed descriptor values "
-            "that are zero or too close to zero: "
-            + ", ".join(zero_like)
+            "that are zero or too close to zero: " + ", ".join(zero_like)
         )
 
-    normalized_observed = {
-        name: 1.0
-        for name in moment_names
-    }
+    normalized_observed = {name: 1.0 for name in moment_names}
     normalized_calculated = {
-        name: float(calculated[name]) / float(observed[name])
-        for name in moment_names
+        name: float(calculated[name]) / float(observed[name]) for name in moment_names
     }
 
     return NormalizedMomentVectors(

@@ -58,7 +58,9 @@ def run_plot_hfc_iso_ax(
                 base_molecule.average_hyperfine(av)
 
             if config.signal_labels_file:
-                al_to_sl, al_to_sml = load_signal_labels_from_csv(config.signal_labels_file)
+                al_to_sl, al_to_sml = load_signal_labels_from_csv(
+                    config.signal_labels_file
+                )
                 base_molecule.apply_signal_labels(al_to_sl, al_to_sml)
 
             iso_div_ax = {

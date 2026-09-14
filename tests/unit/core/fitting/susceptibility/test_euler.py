@@ -30,9 +30,7 @@ def test_susceptibility_euler_angles_round_trip_isoaxrho_euler_tensor():
     recovered = {
         "iso": float(susceptibility.iso),
         "ax": float(susceptibility.axiality),
-        "rho_over_ax": float(
-            susceptibility.rhombicity / susceptibility.axiality
-        ),
+        "rho_over_ax": float(susceptibility.rhombicity / susceptibility.axiality),
         "alpha": float(susceptibility.alpha),
         "beta": float(susceptibility.beta),
         "gamma": float(susceptibility.gamma),
@@ -62,9 +60,7 @@ def test_susceptibility_euler_angles_round_trip_for_sign_reflected_axiality():
     recovered = {
         "iso": float(susceptibility.iso),
         "ax": float(susceptibility.axiality),
-        "rho_over_ax": float(
-            susceptibility.rhombicity / susceptibility.axiality
-        ),
+        "rho_over_ax": float(susceptibility.rhombicity / susceptibility.axiality),
         "alpha": float(susceptibility.alpha),
         "beta": float(susceptibility.beta),
         "gamma": float(susceptibility.gamma),

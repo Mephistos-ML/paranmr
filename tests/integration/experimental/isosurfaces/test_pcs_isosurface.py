@@ -22,7 +22,9 @@ def test_calc_pcs_iso_with_csv_susceptibility_creates_cube_file(tmp_path: Path):
     DyL1 fixture using susceptibility data loaded from a CSV file and verifies
     that at least one cube file is produced.
     """
-    source = repository_path("tests", "data", "pipelines", "pcs_isosurface", "csv_susceptibility_dyl1")
+    source = repository_path(
+        "tests", "data", "pipelines", "pcs_isosurface", "csv_susceptibility_dyl1"
+    )
     cwd = tmp_path / "csv_susceptibility_dyl1"
     shutil.copytree(source, cwd)
     cmd = [
@@ -52,7 +54,13 @@ def test_calc_pcs_iso_with_nevpt2_susceptibility_creates_cube_file(tmp_path: Pat
     P3FeCl fixture using susceptibility data loaded from a NEVPT2 output file
     and verifies that at least one cube file is produced.
     """
-    source = repository_path("tests", "data", "pipelines", "pcs_isosurface", "nevpt2_susceptibility_p3fecl")
+    source = repository_path(
+        "tests",
+        "data",
+        "pipelines",
+        "pcs_isosurface",
+        "nevpt2_susceptibility_p3fecl",
+    )
     cwd = tmp_path / "nevpt2_susceptibility_p3fecl"
     shutil.copytree(source, cwd)
     cmd = [

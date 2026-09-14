@@ -139,7 +139,9 @@ def _build_raw_moment_jacobian(
             + ", ".join(missing_parameters)
         )
 
-    values = np.column_stack([derivatives_by_parameter[name] for name in parameter_names])
+    values = np.column_stack(
+        [derivatives_by_parameter[name] for name in parameter_names]
+    )
 
     return MomentJacobianResult(
         temperature=float(temperature),
@@ -175,8 +177,7 @@ def _normalize_raw_moment_jacobian(
     if zero_like:
         raise ValueError(
             "Cannot normalize moment Jacobian by observed moment values "
-            "that are zero or too close to zero: "
-            + ", ".join(zero_like)
+            "that are zero or too close to zero: " + ", ".join(zero_like)
         )
     normalized_values = np.asarray(jacobian.values, dtype=float) / scales[:, None]
     return MomentJacobianResult(

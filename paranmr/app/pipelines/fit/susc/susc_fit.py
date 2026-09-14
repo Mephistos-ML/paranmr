@@ -19,7 +19,6 @@ from paranmr.app.loaders.mol_load import load_base_molecule
 from paranmr.app.loaders.paramag_centre_load import load_paramagnetic_centre
 from paranmr.app.loaders.sh_load import load_g_tensor_dft
 from paranmr.app.params.options import FitSuscRunOptions
-from paranmr.app.pipelines.fit.vt_fit import fit_vt
 from paranmr.app.pipelines.fit.susc.fixed import fit_assigned_shifts
 from paranmr.app.pipelines.fit.susc.hungarian import fit_hungarian_assignment
 from paranmr.app.pipelines.fit.susc.lw_estimation import (
@@ -27,6 +26,7 @@ from paranmr.app.pipelines.fit.susc.lw_estimation import (
 )
 from paranmr.app.pipelines.fit.susc.moments import fit_moment_assignment
 from paranmr.app.pipelines.fit.susc.permute import fit_permuted_assignments
+from paranmr.app.pipelines.fit.vt_fit import fit_vt
 from paranmr.app.policies.averaging import (
     apply_methyl_signal_labels,
     resolve_average_shift_groups,
@@ -38,16 +38,16 @@ from paranmr.app.policies.susc import resolve_susc_fit_variables
 # Core / domain
 from paranmr.core.domain.mol import Molecule
 from paranmr.core.domain.tensor import Hyperfine
-from paranmr.core.fitting.susceptibility.objective_map import (
-    ObjectiveMapConfig,
-    build_objective_map,
-)
 from paranmr.core.fitting.susceptibility.models.base import SusceptibilityModel
 from paranmr.core.fitting.susceptibility.models.isoaxrho import IsoAxRhoFitter
 from paranmr.core.fitting.susceptibility.models.isoaxrho_euler import (
     IsoAxRhoEulerFitter,
 )
 from paranmr.core.fitting.susceptibility.models.split import SplitFitter
+from paranmr.core.fitting.susceptibility.objective_map import (
+    ObjectiveMapConfig,
+    build_objective_map,
+)
 from paranmr.core.fitting.susceptibility.objectives.shifts.residuals import (
     shift_residual_from_float_list,
 )
@@ -55,8 +55,8 @@ from paranmr.core.pcs.isosurf import compute_pcs_isosurface
 
 # IO layer
 from paranmr.io.csv.mol import save_molecule_to_csv
-from paranmr.io.csv.spec import read_spectrum
 from paranmr.io.csv.peaks import save_peak_data_to_csv
+from paranmr.io.csv.spec import read_spectrum
 from paranmr.io.csv.susc import save_susc
 from paranmr.io.cube.pcs_iso_write import write_pcs_cube
 from paranmr.io.xyz import xyz_write
@@ -322,10 +322,10 @@ def run_fit_susc(config, options: FitSuscRunOptions | None = None) -> int:
                 delimiter=delimiter,
             )
 
-        if (
-            config.linewidth_estimate == "p1_p2"
-            and config.assignment_method in {"", "fixed"}
-        ):
+        if config.linewidth_estimate == "p1_p2" and config.assignment_method in {
+            "",
+            "fixed",
+        }:
             run_fixed_assignment_linewidth_estimation(
                 molecule=molecule,
                 experiment=experiment,
@@ -438,7 +438,7 @@ def run_fit_susc(config, options: FitSuscRunOptions | None = None) -> int:
                     f"pred_spectrum_{molecule.susc.temperature:.2f}_K",
                 ),
             )
-                        
+
             plot_raw_deconv_pred(
                 molecule=molecule,
                 isotope=molecule.nuclei[0].isotope,
@@ -457,9 +457,7 @@ def run_fit_susc(config, options: FitSuscRunOptions | None = None) -> int:
         experiment_labels = set(experiment.keys())
         molecule_labels = {nuc.signal_label for nuc in molecule.nuclei}
         experiment_for_signal_plots = (
-            experiment
-            if molecule_labels.issubset(experiment_labels)
-            else None
+            experiment if molecule_labels.issubset(experiment_labels) else None
         )
         if experiment_for_signal_plots is None:
             logger.info(

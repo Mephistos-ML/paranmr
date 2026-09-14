@@ -233,9 +233,11 @@ def _build_molecule_df(molecule):
         ("z (Å)", lambda ctx: ctx["coord"][2]),
         (
             "A_fc_iso (ppm Å^-3)",
-            lambda ctx: 1.0 / 3.0 * np.trace(ctx["hfc"].fc)
-            if ctx["hfc"] is not None
-            else np.nan,
+            lambda ctx: (
+                1.0 / 3.0 * np.trace(ctx["hfc"].fc)
+                if ctx["hfc"] is not None
+                else np.nan
+            ),
         ),
         (
             "A_sd_xx (ppm Å^-3)",
@@ -265,39 +267,39 @@ def _build_molecule_df(molecule):
             [
                 (
                     "A_orb_xx (ppm Å^-3)",
-                    lambda ctx: ctx["hfc"].orb[0, 0]
-                    if ctx["hfc"] is not None
-                    else np.nan,
+                    lambda ctx: (
+                        ctx["hfc"].orb[0, 0] if ctx["hfc"] is not None else np.nan
+                    ),
                 ),
                 (
                     "A_orb_xy (ppm Å^-3)",
-                    lambda ctx: ctx["hfc"].orb[0, 1]
-                    if ctx["hfc"] is not None
-                    else np.nan,
+                    lambda ctx: (
+                        ctx["hfc"].orb[0, 1] if ctx["hfc"] is not None else np.nan
+                    ),
                 ),
                 (
                     "A_orb_xz (ppm Å^-3)",
-                    lambda ctx: ctx["hfc"].orb[0, 2]
-                    if ctx["hfc"] is not None
-                    else np.nan,
+                    lambda ctx: (
+                        ctx["hfc"].orb[0, 2] if ctx["hfc"] is not None else np.nan
+                    ),
                 ),
                 (
                     "A_orb_yy (ppm Å^-3)",
-                    lambda ctx: ctx["hfc"].orb[1, 1]
-                    if ctx["hfc"] is not None
-                    else np.nan,
+                    lambda ctx: (
+                        ctx["hfc"].orb[1, 1] if ctx["hfc"] is not None else np.nan
+                    ),
                 ),
                 (
                     "A_orb_yz (ppm Å^-3)",
-                    lambda ctx: ctx["hfc"].orb[1, 2]
-                    if ctx["hfc"] is not None
-                    else np.nan,
+                    lambda ctx: (
+                        ctx["hfc"].orb[1, 2] if ctx["hfc"] is not None else np.nan
+                    ),
                 ),
                 (
                     "A_orb_zz (ppm Å^-3)",
-                    lambda ctx: ctx["hfc"].orb[2, 2]
-                    if ctx["hfc"] is not None
-                    else np.nan,
+                    lambda ctx: (
+                        ctx["hfc"].orb[2, 2] if ctx["hfc"] is not None else np.nan
+                    ),
                 ),
             ]
             if has_orb
@@ -323,15 +325,19 @@ def _build_molecule_df(molecule):
             [
                 (
                     "δ_fc_spin_only (ppm)",
-                    lambda ctx: ctx["nuc"].shift.fc_spin_only
-                    if ctx["nuc"] is not None
-                    else np.nan,
+                    lambda ctx: (
+                        ctx["nuc"].shift.fc_spin_only
+                        if ctx["nuc"] is not None
+                        else np.nan
+                    ),
                 ),
                 (
                     "Δδ_fc_g_corr (ppm)",
-                    lambda ctx: ctx["nuc"].shift.fc_delta_g_corr
-                    if ctx["nuc"] is not None
-                    else np.nan,
+                    lambda ctx: (
+                        ctx["nuc"].shift.fc_delta_g_corr
+                        if ctx["nuc"] is not None
+                        else np.nan
+                    ),
                 ),
             ]
             if has_fc_gcorr
@@ -342,21 +348,27 @@ def _build_molecule_df(molecule):
     orb_specs = [
         (
             "δ_orb (ppm)",
-            lambda ctx: getattr(ctx["nuc"].shift, "orb", np.nan)
-            if ctx["nuc"] is not None
-            else np.nan,
+            lambda ctx: (
+                getattr(ctx["nuc"].shift, "orb", np.nan)
+                if ctx["nuc"] is not None
+                else np.nan
+            ),
         ),
         (
             "δ_orb_iso (ppm)",
-            lambda ctx: getattr(ctx["nuc"].shift, "orb_iso", np.nan)
-            if ctx["nuc"] is not None
-            else np.nan,
+            lambda ctx: (
+                getattr(ctx["nuc"].shift, "orb_iso", np.nan)
+                if ctx["nuc"] is not None
+                else np.nan
+            ),
         ),
         (
             "δ_orb_aniso (ppm)",
-            lambda ctx: getattr(ctx["nuc"].shift, "orb_aniso", np.nan)
-            if ctx["nuc"] is not None
-            else np.nan,
+            lambda ctx: (
+                getattr(ctx["nuc"].shift, "orb_aniso", np.nan)
+                if ctx["nuc"] is not None
+                else np.nan
+            ),
         ),
     ]
 

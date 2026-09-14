@@ -12,8 +12,8 @@ from pathlib import Path
 
 import pytest
 
-from tests.helpers.fixtures import materialize_canonical_fixture
 from tests.helpers.cli import run_paranmr
+from tests.helpers.fixtures import materialize_canonical_fixture
 
 
 def _cli_env(tmp_path: Path) -> dict[str, str]:

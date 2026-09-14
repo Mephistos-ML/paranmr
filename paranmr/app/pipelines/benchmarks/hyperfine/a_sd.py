@@ -65,6 +65,3 @@ def run_benchmark_a_sd(config, options: BenchmarkAsdRunOptions | None = None) ->
     )
 
     return 0
-
-
-

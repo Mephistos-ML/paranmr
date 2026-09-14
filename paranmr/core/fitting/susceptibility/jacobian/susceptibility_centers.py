@@ -17,12 +17,12 @@ from paranmr.core.fitting.susceptibility.jacobian.susceptibility_tensor import (
     differentiate_tensor_by_susc_iso,
     differentiate_tensor_by_susc_rho_over_ax,
 )
+from paranmr.core.fitting.susceptibility.models.isoaxrho_euler import (
+    IsoAxRhoEulerFitter,
+)
 from paranmr.core.fitting.susceptibility.moments.forward import (
     calculated_signal_packages_from_parameters,
     sort_packages_by_center,
-)
-from paranmr.core.fitting.susceptibility.models.isoaxrho_euler import (
-    IsoAxRhoEulerFitter,
 )
 
 
@@ -169,7 +169,10 @@ def differentiate_centers_by_tensor_derivative(
         [
             float(
                 np.mean(
-                    [derivative_by_atom_label[atom_label] for atom_label in package.atom_labels]
+                    [
+                        derivative_by_atom_label[atom_label]
+                        for atom_label in package.atom_labels
+                    ]
                 )
             )
             for package in packages

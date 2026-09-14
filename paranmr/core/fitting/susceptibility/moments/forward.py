@@ -101,10 +101,7 @@ def package_linewidths(
             + ", ".join(missing)
         )
     return np.asarray(
-        [
-            _package_linewidth(package, linewidths_by_label)
-            for package in packages
-        ],
+        [_package_linewidth(package, linewidths_by_label) for package in packages],
         dtype=float,
     )
 
@@ -151,9 +148,7 @@ def _package_linewidth(
 ) -> float:
     if package.label in linewidths_by_label:
         return linewidths_by_label[package.label]
-    return float(
-        np.mean([linewidths_by_label[label] for label in package.atom_labels])
-    )
+    return float(np.mean([linewidths_by_label[label] for label in package.atom_labels]))
 
 
 def average_signal_packages(
@@ -172,9 +167,7 @@ def average_signal_packages(
         for atom_label in package.atom_labels
     }
     averaged_atom_labels = {
-        atom_label
-        for group in average_labels
-        for atom_label in group
+        atom_label for group in average_labels for atom_label in group
     }
     averaged_packages: list[CalculatedSignalPackage] = []
     for group in average_labels:

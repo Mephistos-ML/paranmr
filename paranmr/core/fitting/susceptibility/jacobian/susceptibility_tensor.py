@@ -125,7 +125,12 @@ def tensor_paf_from_parameters(parameters: dict[str, float]) -> NDArray[np.float
 
 def rotation_and_derivatives(
     parameters: dict[str, float],
-) -> tuple[NDArray[np.float64], NDArray[np.float64], NDArray[np.float64], NDArray[np.float64]]:
+) -> tuple[
+    NDArray[np.float64],
+    NDArray[np.float64],
+    NDArray[np.float64],
+    NDArray[np.float64],
+]:
     """Return the ZYZ rotation and its derivatives by Euler angles."""
 
     alpha = np.deg2rad(float(parameters.get("alpha", 0.0)))
