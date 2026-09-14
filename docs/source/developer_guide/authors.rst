@@ -14,7 +14,9 @@ Citation
 
 To acknowledge ``ParaNMR`` in your work, please include the ``paranmr`` version number and cite the associated publication.
 
-The primary reference for ``ParaNMR`` is currently **in preparation** and will be added here once available.
+The primary reference for ``ParaNMR`` is the associated `ChemRxiv preprint
+<https://doi.org/10.26434/chemrxiv.15001463.v1>`_. The repository also includes
+machine-readable citation metadata in ``CITATION.cff``.
 
 The version number can be obtained using the following terminal command:
 
