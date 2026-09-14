@@ -4,12 +4,16 @@
 import numpy as np
 import pytest
 
+from paranmr.core.fitting.susceptibility.jacobian.moments import (
+    differentiate_moments_by_centers,
+    differentiate_moments_by_sigmas,
+)
 from paranmr.core.fitting.susceptibility.moments.descriptors import (
     compute_gaussian_mixture_moments,
 )
 from paranmr.core.fitting.susceptibility.objectives.moments.gmm.covariance import (
-    MonteCarloMomentCovarianceConfig,
-    estimate_moment_covariance_from_monte_carlo,
+    JacobianMomentCovarianceConfig,
+    estimate_moment_covariance_from_jacobian,
 )
 from paranmr.core.fitting.susceptibility.objectives.moments.gmm.weighting import (
     build_gmm_weighting_matrix,
@@ -18,9 +22,10 @@ from paranmr.io.csv.fit import save_moment_weighting_matrix
 
 
 @pytest.mark.unit
-def test_estimate_moment_covariance_from_monte_carlo_returns_symmetric_matrix():
+def test_estimate_moment_covariance_from_jacobian_returns_symmetric_matrix():
     observed_peaks = {
         "center": np.asarray([-10.0, 5.0, 20.0], dtype=float),
+        "fwhm": np.asarray([2.354820045, 4.709640090, 3.532230068], dtype=float),
         "sigma": np.asarray([1.0, 2.0, 1.5], dtype=float),
         "area_norm": np.asarray([0.2, 0.3, 0.5], dtype=float),
     }
@@ -31,22 +36,44 @@ def test_estimate_moment_covariance_from_monte_carlo_returns_symmetric_matrix():
         area_norm=observed_peaks["area_norm"],
         moment_labels=moment_names,
     )
-    estimate = estimate_moment_covariance_from_monte_carlo(
+    estimate = estimate_moment_covariance_from_jacobian(
         observed_peaks=observed_peaks,
         raw_experimental_moments=raw_experimental_moments,
         moment_names=moment_names,
-        config=MonteCarloMomentCovarianceConfig(
-            n_samples=200,
+        config=JacobianMomentCovarianceConfig(
             shift_sigma_abs=0.02,
             width_sigma_rel=0.05,
-            random_seed=12345,
         ),
     )
 
+    assert estimate.method == "jacobian"
     assert estimate.covariance.shape == (6, 6)
     assert np.allclose(estimate.covariance, estimate.covariance.T)
     assert np.all(np.diag(estimate.covariance) >= 0.0)
     assert np.any(np.diag(estimate.covariance) > 0.0)
+    assert estimate.input_covariance.shape == (6, 6)
+
+    center_jacobian = differentiate_moments_by_centers(
+        centers=observed_peaks["center"],
+        sigmas=observed_peaks["sigma"],
+        area_norm=observed_peaks["area_norm"],
+        moment_labels=moment_names,
+    )
+    width_jacobian = differentiate_moments_by_sigmas(
+        centers=observed_peaks["center"],
+        sigmas=observed_peaks["sigma"],
+        area_norm=observed_peaks["area_norm"],
+        moment_labels=moment_names,
+    ) / (2.0 * np.sqrt(2.0 * np.log(2.0)))
+    scales = np.asarray(
+        [raw_experimental_moments[name] for name in moment_names], dtype=float
+    )
+    expected_jacobian = np.hstack((center_jacobian, width_jacobian))
+    expected_jacobian = expected_jacobian / scales[:, None]
+
+    assert estimate.covariance == pytest.approx(
+        expected_jacobian @ estimate.input_covariance @ expected_jacobian.T
+    )
 
 
 @pytest.mark.unit

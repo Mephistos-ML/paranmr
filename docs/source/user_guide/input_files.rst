@@ -398,12 +398,10 @@ Used in susceptibility fitting workflows that require assignment handling.
           type: gmm
           number_of_moments: 6
           covariance:
-            method: monte_carlo
-            n_samples: 200
-            perturbation:
+            method: jacobian
+            measurement_uncertainty:
               shift_sigma_abs: 0.02
               width_sigma_rel: 0.05
-            random_seed: 12345
 
         # Weighted least-squares alternative [Optional]
         moment_objective:
@@ -472,9 +470,9 @@ are supported.
     Uses the generalized-method-of-moments workflow. The public configuration
     requires an explicit covariance specification under
     ``assignment:moment_objective:covariance``. The current implementation
-    estimates the moment covariance matrix by Monte Carlo perturbation of the
-    experimental peak centers and widths, then constructs the GMM weighting
-    matrix from its inverse.
+    propagates configured experimental peak-center and linewidth uncertainty
+    through the analytical measurement Jacobian, then constructs the GMM
+    weighting matrix from the inverse covariance.
 
 ``ls``
     Uses user-provided per-moment weights applied to the normalized moment

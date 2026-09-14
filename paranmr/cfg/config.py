@@ -868,9 +868,7 @@ class FitSuscConfig(Config):
                 )
             covariance_unknown = set(covariance) - {
                 "method",
-                "n_samples",
-                "random_seed",
-                "perturbation",
+                "measurement_uncertainty",
             }
             if covariance_unknown:
                 raise ValueError(
@@ -878,58 +876,46 @@ class FitSuscConfig(Config):
                     + ", ".join(sorted(covariance_unknown))
                 )
             covariance_method = str(covariance.get("method", "")).strip().lower()
-            if covariance_method != "monte_carlo":
+            if covariance_method != "jacobian":
                 raise ValueError(
                     "assignment:moment_objective:covariance:method must be "
-                    "'monte_carlo' for type 'gmm'"
+                    "'jacobian' for type 'gmm'"
                 )
-            n_samples = covariance.get("n_samples")
-            if not isinstance(n_samples, int) or n_samples <= 0:
+            measurement_uncertainty = covariance.get("measurement_uncertainty")
+            if not isinstance(measurement_uncertainty, dict):
                 raise ValueError(
-                    "assignment:moment_objective:covariance:n_samples must be "
-                    "a positive integer"
+                    "assignment:moment_objective:covariance:measurement_uncertainty "
+                    "must be a mapping"
                 )
-            random_seed = covariance.get("random_seed")
-            if random_seed is not None and not isinstance(random_seed, int):
-                raise ValueError(
-                    "assignment:moment_objective:covariance:random_seed must be "
-                    "an integer when provided"
-                )
-            perturbation = covariance.get("perturbation")
-            if not isinstance(perturbation, dict):
-                raise ValueError(
-                    "assignment:moment_objective:covariance:perturbation must be "
-                    "a mapping"
-                )
-            perturbation_unknown = set(perturbation) - {
+            uncertainty_unknown = set(measurement_uncertainty) - {
                 "shift_sigma_abs",
                 "width_sigma_rel",
             }
-            if perturbation_unknown:
+            if uncertainty_unknown:
                 raise ValueError(
-                    "assignment:moment_objective:covariance:perturbation contains "
-                    "unknown key(s): " + ", ".join(sorted(perturbation_unknown))
+                    "assignment:moment_objective:covariance:measurement_uncertainty "
+                    "contains unknown key(s): " + ", ".join(sorted(uncertainty_unknown))
                 )
-            if "shift_sigma_abs" not in perturbation:
+            if "shift_sigma_abs" not in measurement_uncertainty:
                 raise ValueError(
-                    "assignment:moment_objective:covariance:perturbation:"
+                    "assignment:moment_objective:covariance:measurement_uncertainty:"
                     "shift_sigma_abs is required"
                 )
-            if "width_sigma_rel" not in perturbation:
+            if "width_sigma_rel" not in measurement_uncertainty:
                 raise ValueError(
-                    "assignment:moment_objective:covariance:perturbation:"
+                    "assignment:moment_objective:covariance:measurement_uncertainty:"
                     "width_sigma_rel is required"
                 )
-            shift_sigma_abs = float(perturbation["shift_sigma_abs"])
-            width_sigma_rel = float(perturbation["width_sigma_rel"])
+            shift_sigma_abs = float(measurement_uncertainty["shift_sigma_abs"])
+            width_sigma_rel = float(measurement_uncertainty["width_sigma_rel"])
             if shift_sigma_abs <= 0.0:
                 raise ValueError(
-                    "assignment:moment_objective:covariance:perturbation:"
+                    "assignment:moment_objective:covariance:measurement_uncertainty:"
                     "shift_sigma_abs must be positive"
                 )
             if width_sigma_rel <= 0.0:
                 raise ValueError(
-                    "assignment:moment_objective:covariance:perturbation:"
+                    "assignment:moment_objective:covariance:measurement_uncertainty:"
                     "width_sigma_rel must be positive"
                 )
         parsed_weights = {
@@ -943,20 +929,10 @@ class FitSuscConfig(Config):
             self._assignment_moment_objective["moment_weights"] = parsed_weights
         else:
             self._assignment_moment_objective["covariance"] = {
-                "method": "monte_carlo",
-                "n_samples": int(covariance["n_samples"]),
-                "random_seed": (
-                    None
-                    if covariance.get("random_seed") is None
-                    else int(covariance["random_seed"])
-                ),
-                "perturbation": {
-                    "shift_sigma_abs": float(
-                        covariance["perturbation"]["shift_sigma_abs"]
-                    ),
-                    "width_sigma_rel": float(
-                        covariance["perturbation"]["width_sigma_rel"]
-                    ),
+                "method": "jacobian",
+                "measurement_uncertainty": {
+                    "shift_sigma_abs": shift_sigma_abs,
+                    "width_sigma_rel": width_sigma_rel,
                 },
             }
         return

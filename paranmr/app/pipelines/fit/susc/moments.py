@@ -36,9 +36,9 @@ from paranmr.core.fitting.susceptibility.objective_map import (
 )
 from paranmr.core.fitting.susceptibility.objectives.moments.gmm import (
     GMMMomentObjective,
-    MonteCarloMomentCovarianceConfig,
+    JacobianMomentCovarianceConfig,
     build_gmm_weighting_matrix,
-    estimate_moment_covariance_from_monte_carlo,
+    estimate_moment_covariance_from_jacobian,
 )
 from paranmr.core.fitting.susceptibility.objectives.moments.ls.objective import (
     WeightedLSMomentObjective,
@@ -113,22 +113,16 @@ def fit_moment_assignment(
         and assignment_moment_objective.get("type") == "gmm"
     ):
         covariance_config = assignment_moment_objective["covariance"]
-        moment_covariance = estimate_moment_covariance_from_monte_carlo(
+        moment_covariance = estimate_moment_covariance_from_jacobian(
             observed_peaks=observed_peaks,
             raw_experimental_moments=experimental_moments,
             moment_names=moment_labels,
-            config=MonteCarloMomentCovarianceConfig(
-                n_samples=int(covariance_config["n_samples"]),
+            config=JacobianMomentCovarianceConfig(
                 shift_sigma_abs=float(
-                    covariance_config["perturbation"]["shift_sigma_abs"]
+                    covariance_config["measurement_uncertainty"]["shift_sigma_abs"]
                 ),
                 width_sigma_rel=float(
-                    covariance_config["perturbation"]["width_sigma_rel"]
-                ),
-                random_seed=(
-                    None
-                    if covariance_config.get("random_seed") is None
-                    else int(covariance_config["random_seed"])
+                    covariance_config["measurement_uncertainty"]["width_sigma_rel"]
                 ),
             ),
         )

@@ -29,10 +29,8 @@ assignment:
     type: gmm
     number_of_moments: 6
     covariance:
-      method: monte_carlo
-      n_samples: 500
-      random_seed: 12345
-      perturbation:
+      method: jacobian
+      measurement_uncertainty:
         shift_sigma_abs: 0.02
         width_sigma_rel: 0.05
 

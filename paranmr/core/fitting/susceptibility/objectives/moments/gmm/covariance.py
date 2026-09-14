@@ -1,96 +1,101 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (C) 2026 Suturina Group
 
-"""Monte Carlo covariance estimation for moment-based GMM fitting."""
+"""Jacobian-based covariance propagation for moment-based GMM fitting."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass
+from math import sqrt
 
 import numpy as np
 from numpy.typing import NDArray
 
-from paranmr.core.fitting.susceptibility.moments.descriptors import (
-    build_normalized_moment_vectors,
-    compute_gaussian_mixture_moments,
+from paranmr.core.fitting.susceptibility.jacobian.moments import (
+    differentiate_moments_by_centers,
+    differentiate_moments_by_sigmas,
 )
 
 
 @dataclass(frozen=True)
-class MonteCarloMomentCovarianceConfig:
-    """Configuration for Monte Carlo moment-covariance estimation."""
+class JacobianMomentCovarianceConfig:
+    """Measurement uncertainty used for Jacobian covariance propagation."""
 
-    n_samples: int
     shift_sigma_abs: float
     width_sigma_rel: float
-    random_seed: int | None = None
 
 
 @dataclass(frozen=True)
 class MomentCovarianceEstimate:
-    """Structured Monte Carlo estimate of the moment covariance matrix."""
+    """Structured Jacobian-propagated estimate of moment covariance."""
 
     method: str
     moment_names: tuple[str, ...]
     covariance: NDArray[np.float64]
-    n_samples: int
-    random_seed: int | None
     shift_sigma_abs: float
     width_sigma_rel: float
+    input_names: tuple[str, ...]
+    input_covariance: NDArray[np.float64]
 
 
-def estimate_moment_covariance_from_monte_carlo(
+def estimate_moment_covariance_from_jacobian(
     *,
     observed_peaks: dict[str, NDArray[np.float64]],
     raw_experimental_moments: dict[str, float],
     moment_names: tuple[str, ...],
-    config: MonteCarloMomentCovarianceConfig,
+    config: JacobianMomentCovarianceConfig,
 ) -> MomentCovarianceEstimate:
-    """Estimate covariance in the relative moment space used by the objective."""
+    """Propagate peak measurement uncertainty into relative moment space.
 
-    rng = np.random.default_rng(config.random_seed)
+    The input covariance assumes independent center and width measurements.
+    Width uncertainty is relative to each measured Gaussian FWHM width.
+    """
+
     centers = np.asarray(observed_peaks["center"], dtype=float)
+    fwhm = np.asarray(observed_peaks["fwhm"], dtype=float)
     sigmas = np.asarray(observed_peaks["sigma"], dtype=float)
     area_norm = np.asarray(observed_peaks["area_norm"], dtype=float)
 
-    samples = np.empty((config.n_samples, len(moment_names)), dtype=float)
-    for i in range(config.n_samples):
-        perturbed_centers = centers + rng.normal(
-            loc=0.0,
-            scale=config.shift_sigma_abs,
-            size=centers.shape,
+    center_jacobian = differentiate_moments_by_centers(
+        centers=centers,
+        sigmas=sigmas,
+        area_norm=area_norm,
+        moment_labels=moment_names,
+    )
+    sigma_jacobian = differentiate_moments_by_sigmas(
+        centers=centers,
+        sigmas=sigmas,
+        area_norm=area_norm,
+        moment_labels=moment_names,
+    )
+    scales = np.asarray(
+        [float(raw_experimental_moments[name]) for name in moment_names],
+        dtype=float,
+    )
+    if np.any(np.isclose(scales, 0.0)):
+        raise ValueError("Cannot propagate covariance through zero-valued moments")
+    fwhm_to_sigma = 2.0 * sqrt(2.0 * np.log(2.0))
+    width_jacobian = sigma_jacobian / fwhm_to_sigma
+    condition_jacobian = np.hstack((center_jacobian, width_jacobian))
+    condition_jacobian = condition_jacobian / scales[:, np.newaxis]
+    standard_deviations = np.concatenate(
+        (
+            np.full(centers.shape, config.shift_sigma_abs, dtype=float),
+            config.width_sigma_rel * fwhm,
         )
-        sigma_factors = 1.0 + rng.normal(
-            loc=0.0,
-            scale=config.width_sigma_rel,
-            size=sigmas.shape,
-        )
-        perturbed_sigmas = sigmas * np.maximum(sigma_factors, 1.0e-12)
-        moments = compute_gaussian_mixture_moments(
-            centers=perturbed_centers,
-            sigmas=perturbed_sigmas,
-            area_norm=area_norm,
-            moment_labels=moment_names,
-        )
-        normalized_moments = build_normalized_moment_vectors(
-            observed=raw_experimental_moments,
-            calculated=moments,
-            moment_names=moment_names,
-        )
-        samples[i, :] = np.asarray(
-            [normalized_moments.calculated[name] for name in moment_names],
-            dtype=float,
-        )
-
-    covariance = np.cov(samples, rowvar=False, ddof=1)
-    covariance = np.asarray(covariance, dtype=float)
+    )
+    input_covariance = np.diag(standard_deviations**2)
+    covariance = condition_jacobian @ input_covariance @ condition_jacobian.T
     covariance = 0.5 * (covariance + covariance.T)
     return MomentCovarianceEstimate(
-        method="monte_carlo",
+        method="jacobian",
         moment_names=moment_names,
         covariance=covariance,
-        n_samples=config.n_samples,
-        random_seed=config.random_seed,
         shift_sigma_abs=config.shift_sigma_abs,
         width_sigma_rel=config.width_sigma_rel,
+        input_names=tuple(
+            [f"center[{index}]" for index in range(centers.size)]
+            + [f"width[{index}]" for index in range(fwhm.size)]
+        ),
+        input_covariance=input_covariance,
     )

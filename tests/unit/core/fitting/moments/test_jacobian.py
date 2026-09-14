@@ -112,16 +112,16 @@ def test_plot_moment_jacobian_heatmap_writes_pdf(tmp_path: Path):
 @pytest.mark.unit
 def test_plot_moment_covariance_heatmap_writes_pdf(tmp_path: Path):
     estimate = MomentCovarianceEstimate(
-        method="monte_carlo",
+        method="jacobian",
         moment_names=MOMENT_LABELS,
         covariance=[
             [1.0 if i == j else 0.1 * (i - j) for j in range(len(MOMENT_LABELS))]
             for i in range(len(MOMENT_LABELS))
         ],
-        n_samples=500,
-        random_seed=12345,
         shift_sigma_abs=0.02,
         width_sigma_rel=0.05,
+        input_names=("center[0]", "width[0]"),
+        input_covariance=[[1.0, 0.0], [0.0, 1.0]],
     )
 
     output = tmp_path / "moment_covariance_heatmap_302.15_K"

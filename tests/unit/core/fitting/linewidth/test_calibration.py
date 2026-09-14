@@ -272,10 +272,8 @@ def test_fit_susc_config_accepts_gmm_with_explicit_covariance_specification(tmp_
                 "    type: gmm",
                 "    number_of_moments: 6",
                 "    covariance:",
-                "      method: monte_carlo",
-                "      n_samples: 500",
-                "      random_seed: 12345",
-                "      perturbation:",
+                "      method: jacobian",
+                "      measurement_uncertainty:",
                 "        shift_sigma_abs: 0.02",
                 "        width_sigma_rel: 0.05",
                 "linewidth:",
@@ -291,15 +289,57 @@ def test_fit_susc_config_accepts_gmm_with_explicit_covariance_specification(tmp_
         "type": "gmm",
         "number_of_moments": 6,
         "covariance": {
-            "method": "monte_carlo",
-            "n_samples": 500,
-            "random_seed": 12345,
-            "perturbation": {
+            "method": "jacobian",
+            "measurement_uncertainty": {
                 "shift_sigma_abs": 0.02,
                 "width_sigma_rel": 0.05,
             },
         },
     }
+
+
+@pytest.mark.unit
+def test_fit_susc_config_rejects_monte_carlo_gmm_covariance(tmp_path):
+    config_file = tmp_path / "fit.yml"
+    config_file.write_text(
+        "\n".join(
+            [
+                "project:",
+                "  name: test",
+                "hyperfine:",
+                "  method: pdip",
+                "  file: hf.xyz",
+                "  paramagnetic_centre: [0.0, 0.0, 0.0]",
+                "experiment:",
+                "  files: exp.csv",
+                "nuclei:",
+                "  include: H",
+                "diamagnetic:",
+                "  method: csv",
+                "  file: dia.csv",
+                "susc_fit:",
+                "  type: isoaxrho",
+                "  variables:",
+                "    iso: [fit, 0.0]",
+                "assignment:",
+                "  method: moments",
+                "  moment_objective:",
+                "    type: gmm",
+                "    number_of_moments: 6",
+                "    covariance:",
+                "      method: monte_carlo",
+                "      measurement_uncertainty:",
+                "        shift_sigma_abs: 0.02",
+                "        width_sigma_rel: 0.05",
+                "linewidth:",
+                "  method: experimental",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="must be 'jacobian'"):
+        FitSuscConfig.from_file(config_file)
 
 
 @pytest.mark.unit

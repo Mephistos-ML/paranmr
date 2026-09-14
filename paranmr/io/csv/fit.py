@@ -198,8 +198,6 @@ def save_moment_covariance(
     comment = [
         f"T = {temperature:.2f} K",
         f"method = {estimate.method}",
-        f"n_samples = {estimate.n_samples}",
-        f"random_seed = {estimate.random_seed}",
         f"shift_sigma_abs = {estimate.shift_sigma_abs:.6g}",
         f"width_sigma_rel = {estimate.width_sigma_rel:.6g}",
     ]
