@@ -53,10 +53,10 @@ class GMMMomentObjective:
         n_moments = len(moment_names)
         if weighting_matrix.shape != (n_moments, n_moments):
             raise ValueError(
-                'GMM weighting matrix shape does not match the configured moment count'
+                "GMM weighting matrix shape does not match the configured moment count"
             )
         if not np.allclose(weighting_matrix, weighting_matrix.T):
-            raise ValueError('GMM weighting matrix must be symmetric')
+            raise ValueError("GMM weighting matrix must be symmetric")
         return cls(
             moment_names=moment_names,
             weighting_matrix=weighting_matrix,
@@ -66,7 +66,7 @@ class GMMMomentObjective:
     @property
     def objective_type(self) -> str:
         """Return the public objective type name."""
-        return 'gmm'
+        return "gmm"
 
     @property
     def active_mask(self) -> NDArray[np.bool_]:
@@ -93,10 +93,14 @@ class GMMMomentObjective:
         calculated_moments: dict[str, float],
     ) -> NDArray[np.float64]:
         """Return residuals transformed by the current GMM weighting."""
-        return solve_triangular(self.covariance_factor, self.conditions(
-            observed_moments=observed_moments,
-            calculated_moments=calculated_moments,
-        ), lower=True)
+        return solve_triangular(
+            self.covariance_factor,
+            self.conditions(
+                observed_moments=observed_moments,
+                calculated_moments=calculated_moments,
+            ),
+            lower=True,
+        )
 
     def residual_jacobian(
         self,

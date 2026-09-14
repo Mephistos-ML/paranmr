@@ -41,9 +41,7 @@ def run_fixed_assignment_linewidth_estimation(
     """
 
     if molecule.paramagnetic_centre is None:
-        raise ValueError(
-            "linewidth:estimate requires hyperfine:paramagnetic_centre"
-        )
+        raise ValueError("linewidth:estimate requires hyperfine:paramagnetic_centre")
 
     mean_inv_r6 = mean_inv_r6_by_label(
         nuclei=molecule.nuclei,

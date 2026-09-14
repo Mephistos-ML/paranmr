@@ -539,12 +539,8 @@ class Susceptibility:
         if np.linalg.det(_vecs) < 0:
             _vecs[:, 0] = -_vecs[:, 0]
 
-        self.alpha = np.float64(
-            np.rad2deg(np.arctan2(_vecs[1, 2], _vecs[0, 2])) % 360
-        )
-        self.beta = np.float64(
-            np.rad2deg(np.arccos(np.clip(_vecs[2, 2], -1.0, 1.0)))
-        )
+        self.alpha = np.float64(np.rad2deg(np.arctan2(_vecs[1, 2], _vecs[0, 2])) % 360)
+        self.beta = np.float64(np.rad2deg(np.arccos(np.clip(_vecs[2, 2], -1.0, 1.0))))
         if np.isclose(_ev_sorted[0], _ev_sorted[1], rtol=1e-8):
             self.gamma = np.float64(0.0)
         else:

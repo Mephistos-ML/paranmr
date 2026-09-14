@@ -5,7 +5,6 @@ from __future__ import annotations
 import shutil
 from pathlib import Path
 
-
 _DATA_ROOT = Path("tests/data")
 _CONFIG_ROOT = Path("tests/integration/experimental/configs")
 _REPOSITORY_ROOT = Path(__file__).resolve().parents[2]

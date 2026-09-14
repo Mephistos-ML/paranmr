@@ -40,11 +40,7 @@ class MomentJacobianResult:
                 f"labels: expected {expected_shape}, got {values.shape}"
             )
         if len(set(self.moment_names)) != len(self.moment_names):
-            raise ValueError(
-                "Moment Jacobian row labels must be unique"
-            )
+            raise ValueError("Moment Jacobian row labels must be unique")
         if len(set(self.parameter_names)) != len(self.parameter_names):
-            raise ValueError(
-                "Moment Jacobian column labels must be unique"
-            )
+            raise ValueError("Moment Jacobian column labels must be unique")
         object.__setattr__(self, "values", values)

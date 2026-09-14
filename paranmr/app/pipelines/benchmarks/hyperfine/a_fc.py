@@ -72,5 +72,3 @@ def run_benchmark_a_fc(config, options: BenchmarkAfcRunOptions | None = None) ->
     )
 
     return 0
-
-

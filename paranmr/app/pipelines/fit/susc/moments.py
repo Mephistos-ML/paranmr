@@ -132,9 +132,7 @@ def fit_moment_assignment(
                 ),
             ),
         )
-        gmm_weighting_matrix = build_gmm_weighting_matrix(
-            moment_covariance.covariance
-        )
+        gmm_weighting_matrix = build_gmm_weighting_matrix(moment_covariance.covariance)
 
     # Build the configured moment objective before assembling optimizer inputs.
     objective_type = str(assignment_moment_objective["type"]).lower()
@@ -291,6 +289,7 @@ def fit_moment_assignment(
                 float(moment_fit_result.linewidth_vars_by_name[name])
                 for name in linewidth_fit_names
             ]
+
             def moment_score(point: np.ndarray) -> float:
                 evaluation = evaluate_moment_fit_vector(point, fit_inputs)
                 return fit_inputs.moment_objective.score(

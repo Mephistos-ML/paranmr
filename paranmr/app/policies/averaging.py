@@ -61,8 +61,7 @@ def resolve_average_shift_groups(
                 "signal-label averaging."
             )
         return [
-            list(group.proton_labels)
-            for group in detect_methyl_group_records(molecule)
+            list(group.proton_labels) for group in detect_methyl_group_records(molecule)
         ]
     if any(value.strip().lower() == "all" for value in signal_labels):
         if len(signal_labels) != 1:
@@ -76,6 +75,8 @@ def resolve_average_shift_groups(
         molecule=molecule,
         signal_labels=signal_labels,
     )
+
+
 def apply_methyl_signal_labels(molecule: Molecule) -> None:
     """Assign synthetic signal labels for detected methyl groups."""
 
@@ -102,8 +103,7 @@ def detect_methyl_group_records(molecule: Molecule) -> list[MethylGroup]:
         raise ValueError("Molecule labels and coordinates must have matching lengths")
 
     atom_kind_by_label = {
-        label: xyzf.remove_label_indices(label)
-        for label in full_labels
+        label: xyzf.remove_label_indices(label) for label in full_labels
     }
     coord_by_label = {
         label: np.asarray(coord, dtype=float)
@@ -142,9 +142,7 @@ def detect_methyl_group_records(molecule: Molecule) -> list[MethylGroup]:
         methyl_groups.append(
             MethylGroup(
                 carbon_label=carbon_label,
-                proton_labels=tuple(
-                    sorted(hydrogen_neighbors, key=_natural_label_key)
-                ),
+                proton_labels=tuple(sorted(hydrogen_neighbors, key=_natural_label_key)),
             )
         )
 

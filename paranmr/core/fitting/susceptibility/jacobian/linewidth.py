@@ -51,9 +51,7 @@ def differentiate_sigmas_by_linewidth_parameters(
             package=package,
             mean_inv_r6_by_atom_label=mean_inv_r6_by_atom_label,
         )
-        jacobian[row_index, 0] = (
-            package_mean_inv_r6 / _GAUSSIAN_FWHM_TO_SIGMA_FACTOR
-        )
+        jacobian[row_index, 0] = package_mean_inv_r6 / _GAUSSIAN_FWHM_TO_SIGMA_FACTOR
         jacobian[row_index, 1] = 1.0 / _GAUSSIAN_FWHM_TO_SIGMA_FACTOR
     return jacobian
 
@@ -73,8 +71,7 @@ def differentiate_moments_by_linewidth_parameters(
 
     if "p1" not in linewidth_vars_by_name or "p2" not in linewidth_vars_by_name:
         raise ValueError(
-            "Linewidth Jacobian evaluation requires linewidth variables 'p1' "
-            "and 'p2'."
+            "Linewidth Jacobian evaluation requires linewidth variables 'p1' and 'p2'."
         )
 
     centers = package_centers(packages)
@@ -118,8 +115,7 @@ def _package_mean_inv_r6(
     if missing:
         raise ValueError(
             "Missing atom-level mean 1/r^6 values for linewidth Jacobian "
-            "evaluation: "
-            + ", ".join(missing)
+            "evaluation: " + ", ".join(missing)
         )
     return float(
         np.mean(

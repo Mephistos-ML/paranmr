@@ -42,43 +42,37 @@ class MomentObjective(Protocol):
     """Structural contract required from moment objective implementations."""
 
     @property
-    def objective_type(self) -> str:
-        ...
+    def objective_type(self) -> str: ...
 
     @property
-    def active_mask(self) -> NDArray[np.bool_]:
-        ...
+    def active_mask(self) -> NDArray[np.bool_]: ...
 
     def conditions(
         self,
         *,
         observed_moments: dict[str, float],
         calculated_moments: dict[str, float],
-    ) -> NDArray[np.float64]:
-        ...
+    ) -> NDArray[np.float64]: ...
 
     def residuals(
         self,
         *,
         observed_moments: dict[str, float],
         calculated_moments: dict[str, float],
-    ) -> NDArray[np.float64]:
-        ...
+    ) -> NDArray[np.float64]: ...
 
     def score(
         self,
         *,
         observed_moments: dict[str, float],
         calculated_moments: dict[str, float],
-    ) -> float:
-        ...
+    ) -> float: ...
 
     def residual_jacobian(
         self,
         *,
         moment_jacobian: NDArray[np.float64],
-    ) -> NDArray[np.float64]:
-        ...
+    ) -> NDArray[np.float64]: ...
 
 
 @dataclass(frozen=True)
@@ -243,22 +237,20 @@ def fit_moment_model(
         temperature=float(inputs.temperature),
         objective_type=inputs.moment_objective.objective_type,
         observed_moments={
-            f"{k}_norm": float(v)
-            for k, v in normalized_moments.observed.items()
+            f"{k}_norm": float(v) for k, v in normalized_moments.observed.items()
         },
         calculated_moments={
-            f"{k}_norm": float(v)
-            for k, v in normalized_moments.calculated.items()
+            f"{k}_norm": float(v) for k, v in normalized_moments.calculated.items()
         },
         linewidth_method="r6",
-        linewidth_vars_by_name={
-            k: float(v) for k, v in final_linewidth_vars.items()
-        },
+        linewidth_vars_by_name={k: float(v) for k, v in final_linewidth_vars.items()},
         calculated_linewidths_by_label={
             k: float(v) for k, v in final_linewidths_by_atom_label.items()
         },
         score=score,
     )
+
+
 def evaluate_moment_fit_vector(
     new_vals: list[float] | NDArray[np.float64],
     inputs: MomentFitInputs,
@@ -268,9 +260,7 @@ def evaluate_moment_fit_vector(
     n_susc_params = len(inputs.fit_var_names)
     susc_vals = optimizer_values[:n_susc_params]
     linewidth_vals = optimizer_values[n_susc_params:]
-    new_fit_vars = {
-        name: value for name, value in zip(inputs.fit_var_names, susc_vals)
-    }
+    new_fit_vars = {name: value for name, value in zip(inputs.fit_var_names, susc_vals)}
     all_vars = {**inputs.model.fix_vars, **new_fit_vars}
     linewidth_vars = {
         **inputs.linewidth_fix_vars,

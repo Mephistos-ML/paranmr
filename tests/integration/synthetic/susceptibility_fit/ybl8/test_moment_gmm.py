@@ -15,7 +15,6 @@ import yaml
 
 from tests.helpers.cli import run_paranmr
 
-
 _YBL8_ROOT = Path(__file__).resolve().parents[5] / "tests" / "data" / "YbL8"
 _YBL8_DATA = _YBL8_ROOT / "DATA"
 _GMM_FIXTURE = _YBL8_ROOT / "SYNTHETIC" / "GMM"
@@ -41,9 +40,7 @@ def _materialize_gmm_config(tmp_path: Path) -> Path:
     config["diamagnetic_ref"]["file"] = str(_YBL8_DATA / "DIA" / "tms_ref.out")
     config["experiment"]["files"] = str(_GMM_FIXTURE / "generated_shifts.csv")
     config_path = tmp_path / "gmm_config.yml"
-    config_path.write_text(
-        yaml.safe_dump(config, sort_keys=False), encoding="utf-8"
-    )
+    config_path.write_text(yaml.safe_dump(config, sort_keys=False), encoding="utf-8")
     return config_path
 
 

@@ -820,8 +820,7 @@ class FitSuscConfig(Config):
         if invalid_weight_names:
             raise ValueError(
                 "assignment:moment_objective:moment_weights contains unknown "
-                "moment(s): "
-                + ", ".join(sorted(invalid_weight_names))
+                "moment(s): " + ", ".join(sorted(invalid_weight_names))
             )
         if objective_type == "ls":
             expected_weight_names = {
@@ -838,13 +837,11 @@ class FitSuscConfig(Config):
                 details = []
                 if missing_weight_names:
                     details.append(
-                        "missing moment weight(s): "
-                        + ", ".join(missing_weight_names)
+                        "missing moment weight(s): " + ", ".join(missing_weight_names)
                     )
                 if extra_weight_names:
                     details.append(
-                        "unknown moment weight(s): "
-                        + ", ".join(extra_weight_names)
+                        "unknown moment weight(s): " + ", ".join(extra_weight_names)
                     )
                 raise ValueError(
                     "assignment:moment_objective:moment_weights must define exactly "
@@ -911,8 +908,7 @@ class FitSuscConfig(Config):
             if perturbation_unknown:
                 raise ValueError(
                     "assignment:moment_objective:covariance:perturbation contains "
-                    "unknown key(s): "
-                    + ", ".join(sorted(perturbation_unknown))
+                    "unknown key(s): " + ", ".join(sorted(perturbation_unknown))
                 )
             if "shift_sigma_abs" not in perturbation:
                 raise ValueError(
@@ -937,8 +933,7 @@ class FitSuscConfig(Config):
                     "width_sigma_rel must be positive"
                 )
         parsed_weights = {
-            moment_name: float(weight)
-            for moment_name, weight in weights.items()
+            moment_name: float(weight) for moment_name, weight in weights.items()
         }
         self._assignment_moment_objective = {
             "type": objective_type,
@@ -963,7 +958,7 @@ class FitSuscConfig(Config):
                         covariance["perturbation"]["width_sigma_rel"]
                     ),
                 },
-                }
+            }
         return
 
     def _parse_objective_map(self, *, value: dict, context: str) -> dict:
@@ -992,9 +987,7 @@ class FitSuscConfig(Config):
             raise ValueError(f"{context}:window_rel must be a positive number")
         n_grid = value.get("n_grid", 60)
         if not isinstance(n_grid, int) or n_grid < 2:
-            raise ValueError(
-                f"{context}:n_grid must be an integer greater than 1"
-            )
+            raise ValueError(f"{context}:n_grid must be an integer greater than 1")
         gradient = value.get("gradient", True)
         if not isinstance(gradient, bool):
             raise ValueError(f"{context}:gradient must be a boolean")
@@ -1086,8 +1079,7 @@ class FitSuscConfig(Config):
             if mode == "fix":
                 if len(entry) != 2:
                     raise ValueError(
-                        f"linewidth:variables:{name} fixed entries must be "
-                        "[fix, value]"
+                        f"linewidth:variables:{name} fixed entries must be [fix, value]"
                     )
                 variables[name] = ["fix", numeric_value]
                 continue
@@ -1677,10 +1669,7 @@ class FitSuscConfig(Config):
                     "assignment:moment_objective is required when "
                     "assignment:method is 'moments'"
                 )
-        if (
-            config.assignment_method != "moments"
-            and config.assignment_moment_objective
-        ):
+        if config.assignment_method != "moments" and config.assignment_moment_objective:
             raise ValueError(
                 "assignment:moment_objective is only supported when "
                 "assignment:method is 'moments'"
@@ -1706,8 +1695,7 @@ class FitSuscConfig(Config):
                 )
             if config.linewidth_estimate != "p1_p2":
                 raise ValueError(
-                    "Unsupported linewidth:estimate mode "
-                    f"{config.linewidth_estimate!r}"
+                    f"Unsupported linewidth:estimate mode {config.linewidth_estimate!r}"
                 )
 
         return config

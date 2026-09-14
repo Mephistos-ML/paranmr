@@ -20,10 +20,7 @@ from paranmr.core.fitting.susceptibility.moments.gaussian import (
 
 class _DummyModel:
     def model(self, parameters, nuclei):
-        return {
-            nucleus.label: parameters[nucleus.label]
-            for nucleus in nuclei
-        }
+        return {nucleus.label: parameters[nucleus.label] for nucleus in nuclei}
 
 
 @pytest.mark.unit
@@ -138,9 +135,7 @@ def test_calculated_moments_treat_collapsed_packages_with_equal_weight():
         fwhm=[1.0, 1.0],
         areas=[1.0, 1.0],
     )
-    expected_m1 = float(
-        sum(expected_peaks["area_norm"] * expected_peaks["center"])
-    )
+    expected_m1 = float(sum(expected_peaks["area_norm"] * expected_peaks["center"]))
     assert moments["m1"] == pytest.approx(expected_m1)
 
 

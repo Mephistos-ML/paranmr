@@ -9,8 +9,8 @@ def test_spin_only_susceptibility_matches_curie_reference_formula():
     spin, orbit, temperature = 2.5, 5.0, 302.15
     g_eff = calc_g_eff(spin, orbit, None)
     s_eff = choose_S_eff(spin, None)
-    expected_si = MU0 * MUB**2 * g_eff**2 * s_eff * (s_eff + 1.0) / (
-        3.0 * KB * temperature
+    expected_si = (
+        MU0 * MUB**2 * g_eff**2 * s_eff * (s_eff + 1.0) / (3.0 * KB * temperature)
     )
 
     assert get_spin_only_susc(spin, orbit, None, temperature) == pytest.approx(
@@ -27,9 +27,9 @@ def test_curie_susceptibility_scales_inversely_with_temperature():
 
 def test_lande_factor_matches_explicit_reference_formula():
     spin, orbit, total_momentum = 0.5, 3.0, 3.5
-    expected = 1.5 + (
-        spin * (spin + 1.0) - orbit * (orbit + 1.0)
-    ) / (2.0 * total_momentum * (total_momentum + 1.0))
+    expected = 1.5 + (spin * (spin + 1.0) - orbit * (orbit + 1.0)) / (
+        2.0 * total_momentum * (total_momentum + 1.0)
+    )
 
     assert calc_g_eff(spin, orbit, total_momentum) == pytest.approx(expected)
 

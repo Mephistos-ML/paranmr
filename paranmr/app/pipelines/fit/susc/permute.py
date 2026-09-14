@@ -88,9 +88,7 @@ def fit_permuted_assignments(
         ),
         delimiter=delimiter,
         comment=(
-            f"Optimal Assignment\n"
-            f"r2 = {opt_r2:f}\n"
-            f"T = {experiment.temperature:.2f} K"
+            f"Optimal Assignment\nr2 = {opt_r2:f}\nT = {experiment.temperature:.2f} K"
         ),
     )
 

@@ -322,10 +322,10 @@ def run_fit_susc(config, options: FitSuscRunOptions | None = None) -> int:
                 delimiter=delimiter,
             )
 
-        if (
-            config.linewidth_estimate == "p1_p2"
-            and config.assignment_method in {"", "fixed"}
-        ):
+        if config.linewidth_estimate == "p1_p2" and config.assignment_method in {
+            "",
+            "fixed",
+        }:
             run_fixed_assignment_linewidth_estimation(
                 molecule=molecule,
                 experiment=experiment,
@@ -438,7 +438,7 @@ def run_fit_susc(config, options: FitSuscRunOptions | None = None) -> int:
                     f"pred_spectrum_{molecule.susc.temperature:.2f}_K",
                 ),
             )
-                        
+
             plot_raw_deconv_pred(
                 molecule=molecule,
                 isotope=molecule.nuclei[0].isotope,
@@ -457,9 +457,7 @@ def run_fit_susc(config, options: FitSuscRunOptions | None = None) -> int:
         experiment_labels = set(experiment.keys())
         molecule_labels = {nuc.signal_label for nuc in molecule.nuclei}
         experiment_for_signal_plots = (
-            experiment
-            if molecule_labels.issubset(experiment_labels)
-            else None
+            experiment if molecule_labels.issubset(experiment_labels) else None
         )
         if experiment_for_signal_plots is None:
             logger.info(
