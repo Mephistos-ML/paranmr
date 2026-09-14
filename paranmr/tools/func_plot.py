@@ -19,7 +19,9 @@ from paranmr.app.loaders.labels_load import load_signal_labels_from_csv
 from paranmr.app.loaders.mol_load import load_molecule_from_qca
 
 
-def load_hyperfine_data(sources: dict[str, str], signal_labels: str) -> dict[str, object]:
+def load_hyperfine_data(
+    sources: dict[str, str], signal_labels: str
+) -> dict[str, object]:
     """
     Load hyperfine data from multiple sources and return Molecule objects.
 

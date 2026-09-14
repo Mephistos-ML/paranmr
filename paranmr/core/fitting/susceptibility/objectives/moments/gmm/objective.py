@@ -8,8 +8,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 import numpy as np
-from scipy.linalg import solve_triangular
 from numpy.typing import NDArray
+from scipy.linalg import solve_triangular
 
 from paranmr.core.fitting.susceptibility.objectives.moments.differences import (
     build_moment_difference_vector,
@@ -92,7 +92,7 @@ class GMMMomentObjective:
         observed_moments: dict[str, float],
         calculated_moments: dict[str, float],
     ) -> NDArray[np.float64]:
-        """Return the transformed residual vector implied by the current GMM weighting."""
+        """Return residuals transformed by the current GMM weighting."""
         return solve_triangular(self.covariance_factor, self.conditions(
             observed_moments=observed_moments,
             calculated_moments=calculated_moments,

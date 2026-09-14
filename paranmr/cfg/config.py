@@ -794,7 +794,8 @@ class FitSuscConfig(Config):
         number_of_moments = value["number_of_moments"]
         if not isinstance(number_of_moments, int) or number_of_moments <= 0:
             raise ValueError(
-                "assignment:moment_objective:number_of_moments must be a positive integer"
+                "assignment:moment_objective:number_of_moments must be a "
+                "positive integer"
             )
 
         weights = value.get("moment_weights", {})
@@ -818,7 +819,8 @@ class FitSuscConfig(Config):
                 invalid_weight_names.append(moment_name)
         if invalid_weight_names:
             raise ValueError(
-                "assignment:moment_objective:moment_weights contains unknown moment(s): "
+                "assignment:moment_objective:moment_weights contains unknown "
+                "moment(s): "
                 + ", ".join(sorted(invalid_weight_names))
             )
         if objective_type == "ls":
@@ -852,7 +854,8 @@ class FitSuscConfig(Config):
                 )
         if objective_type == "gmm" and weights:
             raise ValueError(
-                "assignment:moment_objective:moment_weights is only supported for type 'ls'"
+                "assignment:moment_objective:moment_weights is only supported "
+                "for type 'ls'"
             )
         covariance = value.get("covariance", {})
         if covariance is None or covariance == "":
@@ -953,8 +956,12 @@ class FitSuscConfig(Config):
                     else int(covariance["random_seed"])
                 ),
                 "perturbation": {
-                    "shift_sigma_abs": float(covariance["perturbation"]["shift_sigma_abs"]),
-                    "width_sigma_rel": float(covariance["perturbation"]["width_sigma_rel"]),
+                    "shift_sigma_abs": float(
+                        covariance["perturbation"]["shift_sigma_abs"]
+                    ),
+                    "width_sigma_rel": float(
+                        covariance["perturbation"]["width_sigma_rel"]
+                    ),
                 },
                 }
         return

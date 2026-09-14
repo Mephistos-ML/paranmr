@@ -13,8 +13,8 @@ import numpy as np
 import pandas as pd
 
 from paranmr.core.fitting.linewidth import R6LinewidthParameterEstimate
-from paranmr.core.fitting.susceptibility.jacobian.types import MomentJacobianResult
 from paranmr.core.fitting.susceptibility.fitters.moments import MomentFitResult
+from paranmr.core.fitting.susceptibility.jacobian.types import MomentJacobianResult
 from paranmr.core.fitting.susceptibility.objectives.moments.gmm.covariance import (
     MomentCovarianceEstimate,
 )

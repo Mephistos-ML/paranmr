@@ -356,7 +356,9 @@ def test_fit_susc_config_accepts_susc_fit_objective_map_defaults(tmp_path):
 
 
 @pytest.mark.unit
-def test_fit_susc_config_rejects_invalid_susc_fit_objective_map_parameter_list(tmp_path):
+def test_fit_susc_config_rejects_invalid_susc_fit_objective_map_parameter_list(
+    tmp_path,
+):
     config_file = tmp_path / "fit.yml"
     config_file.write_text(
         "\n".join(

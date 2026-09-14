@@ -10,6 +10,7 @@ from dataclasses import dataclass
 import numpy as np
 from numpy.typing import NDArray
 
+
 @dataclass(frozen=True)
 class ObjectiveMapConfig:
     """Configuration for a two-parameter objective map."""

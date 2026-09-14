@@ -29,9 +29,15 @@ def _manual_gaussian_mixture_raw_moments_1_to_6():
             elif order == 3:
                 total += weight * (center**3 + 3.0 * center * sigma**2)
             elif order == 4:
-                total += weight * (center**4 + 6.0 * center**2 * sigma**2 + 3.0 * sigma**4)
+                total += weight * (
+                    center**4 + 6.0 * center**2 * sigma**2 + 3.0 * sigma**4
+                )
             elif order == 5:
-                total += weight * (center**5 + 10.0 * center**3 * sigma**2 + 15.0 * center * sigma**4)
+                total += weight * (
+                    center**5
+                    + 10.0 * center**3 * sigma**2
+                    + 15.0 * center * sigma**4
+                )
             elif order == 6:
                 total += weight * (
                     center**6

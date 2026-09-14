@@ -250,14 +250,15 @@ def save_peak_data_to_csv(
 
     signal_labels = sorted(signal_labels)
 
-    # Base columns: signal_label only, then shift columns, then linewidth, then R1/R2 etc.
+    # Base columns: signal label, shifts, linewidth, then R1/R2 and other data.
     out: dict[str, list] = {
         "signal_label": signal_labels,
     }
 
     if avg_delta_total_avg_by_signal_label is not None:
         out["δ_total_avg (ppm)"] = [
-            avg_delta_total_avg_by_signal_label.get(lbl, np.nan) for lbl in signal_labels
+            avg_delta_total_avg_by_signal_label.get(lbl, np.nan)
+            for lbl in signal_labels
         ]
     if avg_delta_dia_by_signal_label is not None:
         out["δ_dia_avg (ppm)"] = [
@@ -273,11 +274,13 @@ def save_peak_data_to_csv(
         ]
     if avg_delta_fc_spin_only_by_signal_label is not None:
         out["δ_fc_spin_only_avg (ppm)"] = [
-            avg_delta_fc_spin_only_by_signal_label.get(lbl, np.nan) for lbl in signal_labels
+            avg_delta_fc_spin_only_by_signal_label.get(lbl, np.nan)
+            for lbl in signal_labels
         ]
     if avg_delta_fc_g_corr_by_signal_label is not None:
         out["Δδ_fc_g_corr_avg (ppm)"] = [
-            avg_delta_fc_g_corr_by_signal_label.get(lbl, np.nan) for lbl in signal_labels
+            avg_delta_fc_g_corr_by_signal_label.get(lbl, np.nan)
+            for lbl in signal_labels
         ]
     if has_orb and avg_delta_orb_by_signal_label is not None:
         out["δ_orb_avg (ppm)"] = [
@@ -289,7 +292,8 @@ def save_peak_data_to_csv(
         ]
     if has_orb and avg_delta_orb_aniso_by_signal_label is not None:
         out["δ_orb_aniso_avg (ppm)"] = [
-            avg_delta_orb_aniso_by_signal_label.get(lbl, np.nan) for lbl in signal_labels
+            avg_delta_orb_aniso_by_signal_label.get(lbl, np.nan)
+            for lbl in signal_labels
         ]
 
     out[linewidth_column_name] = [

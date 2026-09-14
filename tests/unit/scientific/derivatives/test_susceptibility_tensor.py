@@ -19,9 +19,9 @@ def test_axial_tensor_derivative_matches_independent_central_difference():
     step = 1e-6
     plus = {**parameters, "ax": parameters["ax"] + step}
     minus = {**parameters, "ax": parameters["ax"] - step}
-    numerical = (tensor_paf_from_parameters(plus) - tensor_paf_from_parameters(minus)) / (
-        2.0 * step
-    )
+    numerical = (
+        tensor_paf_from_parameters(plus) - tensor_paf_from_parameters(minus)
+    ) / (2.0 * step)
 
     assert differentiate_tensor_by_susc_ax(parameters) == pytest.approx(numerical)
 

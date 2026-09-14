@@ -1,8 +1,7 @@
-import numpy as np
 import pytest
 
 from paranmr.core.build.eff_factors import calc_g_eff, choose_S_eff
-from paranmr.core.const.physics import KB, MUB, MU0
+from paranmr.core.const.physics import KB, MU0, MUB
 from paranmr.core.phys.susc import get_spin_only_susc
 
 

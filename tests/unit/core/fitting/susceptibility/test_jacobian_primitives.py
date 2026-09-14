@@ -22,6 +22,12 @@ from paranmr.core.fitting.susceptibility.jacobian.susceptibility_moments import 
     differentiate_moments_by_susc_iso,
     differentiate_moments_by_susc_rho_over_ax,
 )
+from paranmr.core.fitting.susceptibility.moments.gaussian import (
+    gaussian_peak_representation,
+)
+from paranmr.core.fitting.susceptibility.models.isoaxrho_euler import (
+    IsoAxRhoEulerFitter,
+)
 from paranmr.core.fitting.susceptibility.moments.descriptors import (
     compute_gaussian_mixture_moments,
 )
@@ -30,12 +36,6 @@ from paranmr.core.fitting.susceptibility.moments.forward import (
     package_centers,
     package_linewidths,
     sort_packages_by_center,
-)
-from paranmr.core.fitting.susceptibility.moments.gaussian import (
-    gaussian_peak_representation,
-)
-from paranmr.core.fitting.susceptibility.models.isoaxrho_euler import (
-    IsoAxRhoEulerFitter,
 )
 
 MOMENT_LABELS = tuple(f"m{order}" for order in range(1, 7))

@@ -20,20 +20,20 @@ from paranmr.core.fitting.susceptibility.fitters.moments import (
     evaluate_moment_fit_vector,
     fit_moment_model,
 )
-from paranmr.core.fitting.susceptibility.objective_map import (
-    ObjectiveMapConfig,
-    build_objective_map,
-)
 from paranmr.core.fitting.susceptibility.jacobian.assembly import (
     build_moment_jacobian,
 )
+from paranmr.core.fitting.susceptibility.models.base import SusceptibilityModel
 from paranmr.core.fitting.susceptibility.moments.descriptors import (
     compute_gaussian_mixture_moments,
 )
 from paranmr.core.fitting.susceptibility.moments.gaussian import (
     gaussian_peak_representation,
 )
-from paranmr.core.fitting.susceptibility.models.base import SusceptibilityModel
+from paranmr.core.fitting.susceptibility.objective_map import (
+    ObjectiveMapConfig,
+    build_objective_map,
+)
 from paranmr.core.fitting.susceptibility.objectives.moments.gmm import (
     GMMMomentObjective,
     MonteCarloMomentCovarianceConfig,
@@ -44,11 +44,11 @@ from paranmr.core.fitting.susceptibility.objectives.moments.ls.objective import 
     WeightedLSMomentObjective,
 )
 from paranmr.io.csv.fit import (
-    save_moment_fit_diagnostics,
     save_fit_linewidth_model,
     save_moment_covariance,
-    save_moment_weighting_matrix,
+    save_moment_fit_diagnostics,
     save_moment_jacobian,
+    save_moment_weighting_matrix,
 )
 from paranmr.viz.plots.covariance import plot_moment_covariance_heatmap
 from paranmr.viz.plots.jacobian import plot_moment_jacobian_heatmap

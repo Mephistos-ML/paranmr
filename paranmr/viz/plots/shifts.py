@@ -554,7 +554,9 @@ def plot_shift_tdep(
     )
 
     # Group signals of each experiment by assignment label
-    labels = {signal.signal_label for experiment in experiments for signal in experiment}
+    labels = {
+        signal.signal_label for experiment in experiments for signal in experiment
+    }
 
     colour_cycle_len = len(colour_cycle)
     colours = {

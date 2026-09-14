@@ -139,7 +139,9 @@ def _build_raw_moment_jacobian(
             + ", ".join(missing_parameters)
         )
 
-    values = np.column_stack([derivatives_by_parameter[name] for name in parameter_names])
+    values = np.column_stack(
+        [derivatives_by_parameter[name] for name in parameter_names]
+    )
 
     return MomentJacobianResult(
         temperature=float(temperature),

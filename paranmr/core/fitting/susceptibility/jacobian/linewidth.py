@@ -8,12 +8,12 @@ from __future__ import annotations
 import numpy as np
 from numpy.typing import NDArray
 
+from paranmr.core.fitting.susceptibility.jacobian.moments import (
+    differentiate_moments_by_sigmas,
+)
 from paranmr.core.fitting.susceptibility.linewidths import (
     SusceptibilityLinewidthInputs,
     predict_r6_widths_by_atom_label,
-)
-from paranmr.core.fitting.susceptibility.jacobian.moments import (
-    differentiate_moments_by_sigmas,
 )
 from paranmr.core.fitting.susceptibility.moments.forward import (
     CalculatedSignalPackage,
@@ -123,6 +123,9 @@ def _package_mean_inv_r6(
         )
     return float(
         np.mean(
-            [mean_inv_r6_by_atom_label[atom_label] for atom_label in package.atom_labels]
+            [
+                mean_inv_r6_by_atom_label[atom_label]
+                for atom_label in package.atom_labels
+            ]
         )
     )

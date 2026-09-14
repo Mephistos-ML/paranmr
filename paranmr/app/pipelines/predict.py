@@ -353,7 +353,8 @@ def run_predict(config, options: PredictRunOptions | None = None) -> int:
                     show=options.runtime.show_plots,
                     save_name=os.path.join(
                         config.project_name,
-                        f"pred_orbital_distance_dependence_{molecule.susc.temperature:.2f}_K",
+                        "pred_orbital_distance_dependence_"
+                        f"{molecule.susc.temperature:.2f}_K",
                     ),
                     verbose=True,
                     window_title=(

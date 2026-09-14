@@ -16,11 +16,16 @@ from scipy.optimize import least_squares
 from scipy.optimize._optimize import OptimizeResult
 
 from paranmr.core.domain.mol import Nucleus
-from paranmr.core.fitting.susceptibility.moments.descriptors import (
-    build_normalized_moment_vectors,
-)
 from paranmr.core.fitting.susceptibility.jacobian.assembly import (
     build_moment_jacobian,
+)
+from paranmr.core.fitting.susceptibility.linewidths import (
+    SusceptibilityLinewidthInputs,
+    predict_r6_widths_by_atom_label,
+)
+from paranmr.core.fitting.susceptibility.models.base import SusceptibilityModel
+from paranmr.core.fitting.susceptibility.moments.descriptors import (
+    build_normalized_moment_vectors,
 )
 from paranmr.core.fitting.susceptibility.moments.forward import (
     calculated_moments_from_parameters,
@@ -28,11 +33,6 @@ from paranmr.core.fitting.susceptibility.moments.forward import (
 from paranmr.core.fitting.susceptibility.objectives.moments.differences import (
     build_moment_difference_vector,
 )
-from paranmr.core.fitting.susceptibility.linewidths import (
-    SusceptibilityLinewidthInputs,
-    predict_r6_widths_by_atom_label,
-)
-from paranmr.core.fitting.susceptibility.models.base import SusceptibilityModel
 from paranmr.core.fitting.susceptibility.stats import svd_stdev
 
 logger = logging.getLogger(__name__)
