@@ -25,7 +25,7 @@ Source Code
 4. Use **Google-style docstrings** and type hints for all public functions, methods, classes, and modules.
    Internal helper functions may omit docstrings if their intent is obvious.
 5. Update the documentation to reflect your changes (for example, CLI usage pages or relevant user/developer guide sections).
-6. If your changes add or modify dependencies, update the project configuration (``setup.py`` or ``pyproject.toml``) with explicit version constraints.
+6. If your changes add or modify dependencies, update ``pyproject.toml`` with explicit version constraints.
 
 .. _local-development-setup:
 
