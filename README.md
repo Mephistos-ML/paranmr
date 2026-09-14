@@ -67,6 +67,15 @@ Developer Guide:
 
 👉 https://mephistos-ml.github.io/paranmr/developer_guide/
 
+Install the development dependencies and enable the local pre-commit checks:
+
+```bash
+python -m pip install -e ".[dev]"
+pre-commit install
+```
+
+Run all checks manually with `pre-commit run --all-files`.
+
 ## Citation
 
 If you use ParaNMR in academic work, please cite the software and the specific
