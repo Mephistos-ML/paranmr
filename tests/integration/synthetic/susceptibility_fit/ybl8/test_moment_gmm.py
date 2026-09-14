@@ -62,6 +62,48 @@ def _generation_config(seed: int, config_type: type[Any]) -> Any:
     )
 
 
+def _find_generated_gmm_config(case_dir: Path) -> Path:
+    """Locate the runnable GMM YAML emitted by ParaNMR-Synth.
+
+    The generator owns the output directory layout and may change directory or
+    file naming without changing the generated YAML contract.  Select the
+    configuration by its contents rather than coupling the test to a path.
+    """
+    candidates = sorted(
+        path
+        for pattern in ("*.yml", "*.yaml")
+        for path in case_dir.rglob(pattern)
+    )
+    matches: list[Path] = []
+    for path in candidates:
+        try:
+            document = yaml.safe_load(path.read_text(encoding="utf-8"))
+        except (OSError, yaml.YAMLError):
+            continue
+        if not isinstance(document, dict):
+            continue
+        assignment = document.get("assignment")
+        objective = (
+            assignment.get("moment_objective")
+            if isinstance(assignment, dict)
+            else None
+        )
+        if (
+            isinstance(assignment, dict)
+            and assignment.get("method") == "moments"
+            and isinstance(objective, dict)
+            and objective.get("type") == "gmm"
+        ):
+            matches.append(path)
+
+    if len(matches) != 1:
+        raise AssertionError(
+            "ParaNMR-Synth must emit exactly one GMM fitting YAML; found: "
+            + ", ".join(str(path.relative_to(case_dir)) for path in matches)
+        )
+    return matches[0]
+
+
 @pytest.mark.integration
 @pytest.mark.parametrize("seed", [20260912])
 def test_gmm_recovers_seeded_synthetic_ybl8_shifts(
@@ -82,10 +124,8 @@ def test_gmm_recovers_seeded_synthetic_ybl8_shifts(
         output_dir=tmp_path / "synthetic_data",
     )
     case_dir = next((root / "cases").iterdir())
-    fitting_dir = case_dir / "SIMULATIONS" / "FITTING"
-    gmm_config = yaml.safe_load(
-        (fitting_dir / "gmm_config.yml").read_text(encoding="utf-8")
-    )
+    gmm_config_path = _find_generated_gmm_config(case_dir)
+    gmm_config = yaml.safe_load(gmm_config_path.read_text(encoding="utf-8"))
     assert gmm_config["assignment"]["method"] == "moments"
     assert gmm_config["assignment"]["moment_objective"]["type"] == "gmm"
     assert all(
@@ -103,13 +143,13 @@ def test_gmm_recovers_seeded_synthetic_ybl8_shifts(
     expected_centers = np.sort(generated_peaks["shift (ppm)"].to_numpy(dtype=float))
 
     result = run_paranmr(
-        ["--hide", "fit_susc", "gmm_config.yml"],
-        cwd=fitting_dir,
+        ["--hide", "fit_susc", gmm_config_path.name],
+        cwd=gmm_config_path.parent,
         env=_cli_env(tmp_path),
     )
     assert result.returncode == 0, result.stdout + result.stderr
 
-    output = fitting_dir / "paranmr_gmm_fitted_output"
+    output = gmm_config_path.parent / "paranmr_gmm_fitted_output"
     peak_data = pd.read_csv(
         output / "peak_data_302.15_K.csv", comment="#", encoding="utf-8-sig"
     )
