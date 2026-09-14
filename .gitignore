@@ -8,6 +8,7 @@ __pycache__/
 *.pyd
 *egg*
 *.egg-info/
+*.swp
 
 dist/
 

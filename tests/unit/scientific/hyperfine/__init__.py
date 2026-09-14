@@ -1,0 +1,1 @@
+"""Hyperfine tensor decomposition contracts."""

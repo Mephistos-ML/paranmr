@@ -22,6 +22,19 @@ pip install paranmr
 paranmr --help
 ```
 
+### Synthetic GMM acceptance suite
+
+Install the optional synthetic-data generator and run the seeded, fully
+relaxed GMM acceptance tests:
+
+```bash
+pip install 'paranmr[synthetic]'
+pytest tests/integration/synthetic
+```
+
+These tests generate spectra through ParaNMR-Synth, fit the generated peak
+lists without assignments, and compare the recovered and generated shifts.
+
 ## Quick example
 
 ```bash

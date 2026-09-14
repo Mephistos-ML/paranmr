@@ -1,6 +1,6 @@
-import subprocess
-
 import pytest
+
+from tests.helpers.cli import run_paranmr
 
 
 @pytest.mark.parametrize(
@@ -13,5 +13,5 @@ import pytest
     ],
 )
 def test_paranmr_subcommand_help(subcommand):
-    result = subprocess.run(["paranmr", subcommand, "--help"], capture_output=True)
+    result = run_paranmr([subcommand, "--help"])
     assert result.returncode == 0
