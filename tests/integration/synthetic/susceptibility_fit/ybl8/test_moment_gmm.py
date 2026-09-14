@@ -1,16 +1,12 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (C) 2026 Suturina Group
 
-"""End-to-end GMM validation against seeded ParaNMR-Synth YbL8 cases.
-
-Install the optional generator dependency with ``pip install '.[synthetic]'``.
-"""
+"""End-to-end GMM validation against a committed seeded YbL8 fixture."""
 
 from __future__ import annotations
 
 import os
 from pathlib import Path
-from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -20,7 +16,9 @@ import yaml
 from tests.helpers.cli import run_paranmr
 
 
-_YBL8_DATA = Path(__file__).resolve().parents[5] / "tests" / "data" / "YbL8" / "DATA"
+_YBL8_ROOT = Path(__file__).resolve().parents[5] / "tests" / "data" / "YbL8"
+_YBL8_DATA = _YBL8_ROOT / "DATA"
+_GMM_FIXTURE = _YBL8_ROOT / "SYNTHETIC" / "GMM"
 
 
 def _cli_env(tmp_path: Path) -> dict[str, str]:
@@ -32,99 +30,27 @@ def _cli_env(tmp_path: Path) -> dict[str, str]:
     }
 
 
-def _generation_config(seed: int, config_type: type[Any]) -> Any:
-    """Build the seeded YbL8 generator contract from canonical raw inputs."""
-    return config_type.from_mapping(
-        {
-            "project": {"name": "synthetic_ybl8_gmm", "n_cases": 1, "seed": seed},
-            "hyperfine": {
-                "method": "pdip",
-                "file": str(_YBL8_DATA / "HFC" / "YbL8.xyz"),
-                "paramagnetic_centre": [0.0, 0.0, 0.0],
-                "spin": 0.5,
-                "orbit": 3.0,
-                "total_momentum_J": 3.5,
-            },
-            "nuclei": {"include": "H"},
-            "diamagnetic": {
-                "method": "dft",
-                "file": str(_YBL8_DATA / "DIA" / "LuL8_DIA_NMR.out"),
-            },
-            "diamagnetic_ref": {
-                "method": "dft",
-                "file": str(_YBL8_DATA / "DIA" / "tms_ref.out"),
-            },
-            "experiment": {"temperature_k": 302.15, "magnetic_field_t": 4.7},
-            "moments": {"number_of_moments": 10},
-            "linewidth": {"method": "r6"},
-            "susceptibility": {"model": "isoaxrho_euler"},
-        }
+def _materialize_gmm_config(tmp_path: Path) -> Path:
+    """Create a runnable copy of the committed GMM fixture."""
+    config = yaml.safe_load(
+        (_GMM_FIXTURE / "gmm_config.yml").read_text(encoding="utf-8")
     )
-
-
-def _find_generated_gmm_config(case_dir: Path) -> Path:
-    """Locate the runnable GMM YAML emitted by ParaNMR-Synth.
-
-    The generator owns the output directory layout and may change directory or
-    file naming without changing the generated YAML contract.  Select the
-    configuration by its contents rather than coupling the test to a path.
-    """
-    candidates = sorted(
-        path
-        for pattern in ("*.yml", "*.yaml")
-        for path in case_dir.rglob(pattern)
+    config["project"]["name"] = str(tmp_path / "paranmr_gmm_fitted_output")
+    config["hyperfine"]["file"] = str(_YBL8_DATA / "HFC" / "YbL8.xyz")
+    config["diamagnetic"]["file"] = str(_YBL8_DATA / "DIA" / "LuL8_DIA_NMR.out")
+    config["diamagnetic_ref"]["file"] = str(_YBL8_DATA / "DIA" / "tms_ref.out")
+    config["experiment"]["files"] = str(_GMM_FIXTURE / "generated_shifts.csv")
+    config_path = tmp_path / "gmm_config.yml"
+    config_path.write_text(
+        yaml.safe_dump(config, sort_keys=False), encoding="utf-8"
     )
-    matches: list[Path] = []
-    for path in candidates:
-        try:
-            document = yaml.safe_load(path.read_text(encoding="utf-8"))
-        except (OSError, yaml.YAMLError):
-            continue
-        if not isinstance(document, dict):
-            continue
-        assignment = document.get("assignment")
-        objective = (
-            assignment.get("moment_objective")
-            if isinstance(assignment, dict)
-            else None
-        )
-        if (
-            isinstance(assignment, dict)
-            and assignment.get("method") == "moments"
-            and isinstance(objective, dict)
-            and objective.get("type") == "gmm"
-        ):
-            matches.append(path)
-
-    if len(matches) != 1:
-        raise AssertionError(
-            "ParaNMR-Synth must emit exactly one GMM fitting YAML; found: "
-            + ", ".join(str(path.relative_to(case_dir)) for path in matches)
-        )
-    return matches[0]
+    return config_path
 
 
 @pytest.mark.integration
-@pytest.mark.parametrize("seed", [20260912])
-def test_gmm_recovers_seeded_synthetic_ybl8_shifts(
-    tmp_path: Path, seed: int
-) -> None:
-    """Fit all χ/R6 variables to a seeded, unlabeled YbL8 synthetic spectrum."""
-    try:
-        from paranmr_synth.app.pipelines.dataset_export import generate_dataset
-        from paranmr_synth.cfg.dataset import DatasetGenerationConfig
-    except ModuleNotFoundError:
-        pytest.fail(
-            "Synthetic GMM anchor requires ParaNMR-Synth; install with "
-            "`pip install '.[synthetic]'`."
-        )
-
-    root = generate_dataset(
-        config=_generation_config(seed, DatasetGenerationConfig),
-        output_dir=tmp_path / "synthetic_data",
-    )
-    case_dir = next((root / "cases").iterdir())
-    gmm_config_path = _find_generated_gmm_config(case_dir)
+def test_gmm_recovers_seeded_synthetic_ybl8_shifts(tmp_path: Path) -> None:
+    """Fit all χ/R6 variables to the committed seeded YbL8 fixture."""
+    gmm_config_path = _materialize_gmm_config(tmp_path)
     gmm_config = yaml.safe_load(gmm_config_path.read_text(encoding="utf-8"))
     assert gmm_config["assignment"]["method"] == "moments"
     assert gmm_config["assignment"]["moment_objective"]["type"] == "gmm"
@@ -132,11 +58,10 @@ def test_gmm_recovers_seeded_synthetic_ybl8_shifts(
         value[0] == "fit" for value in gmm_config["susc_fit"]["variables"].values()
     )
     assert all(
-        value[0] == "fit"
-        for value in gmm_config["linewidth"]["variables"].values()
+        value[0] == "fit" for value in gmm_config["linewidth"]["variables"].values()
     )
     generated_peaks = pd.read_csv(
-        case_dir / "DATA" / "PARA" / "generated_shifts.csv",
+        _GMM_FIXTURE / "generated_shifts.csv",
         comment="#",
         encoding="utf-8-sig",
     )
@@ -149,7 +74,7 @@ def test_gmm_recovers_seeded_synthetic_ybl8_shifts(
     )
     assert result.returncode == 0, result.stdout + result.stderr
 
-    output = gmm_config_path.parent / "paranmr_gmm_fitted_output"
+    output = tmp_path / "paranmr_gmm_fitted_output"
     peak_data = pd.read_csv(
         output / "peak_data_302.15_K.csv", comment="#", encoding="utf-8-sig"
     )

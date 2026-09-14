@@ -1,0 +1,68 @@
+project:
+  name: paranmr_gmm_fitted_output
+hyperfine:
+  method: pdip
+  file: ../../DATA/HFC/YbL8.xyz
+  paramagnetic_centre:
+  - 0.0
+  - 0.0
+  - 0.0
+  spin: 0.5
+  orbit: 3.0
+  total_momentum_J: 3.5
+nuclei:
+  include: H
+diamagnetic:
+  method: dft
+  file: ../../DATA/DIA/LuL8_DIA_NMR.out
+diamagnetic_ref:
+  method: dft
+  file: ../../DATA/DIA/tms_ref.out
+experiment:
+  files: generated_shifts.csv
+assignment:
+  method: moments
+  moment_objective:
+    type: gmm
+    number_of_moments: 10
+    covariance:
+      method: monte_carlo
+      n_samples: 500
+      random_seed: 20260912
+      perturbation:
+        shift_sigma_abs: 0.02
+        width_sigma_rel: 0.05
+linewidth:
+  method: r6
+  variables:
+    p1:
+    - fit
+    - 1.0
+    - - 0.0
+      - 1000000.0
+    p2:
+    - fit
+    - 0.1
+    - - 0.0
+      - 10.0
+susc_fit:
+  type: isoaxrho_euler
+  variables:
+    iso:
+    - fit
+    - 0.0
+    ax:
+    - fit
+    - 0.01
+    rho_over_ax:
+    - fit
+    - 0.1
+    alpha:
+    - fit
+    - 0.0
+    beta:
+    - fit
+    - 0.0
+    gamma:
+    - fit
+    - 0.0

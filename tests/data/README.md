@@ -6,9 +6,11 @@ Each complex keeps the same input layout used by its public example:
 tests/data/<complex>/DATA/...
 ```
 
-Only immutable raw inputs belong here: geometry, experimental measurements,
-diamagnetic data, hyperfine data, and quantum-chemistry outputs. Do not add
-generated fit outputs, plots, or runnable YAML configurations.
+Only immutable raw inputs belong under ``DATA``: geometry, experimental
+measurements, diamagnetic data, hyperfine data, and quantum-chemistry outputs.
+Generated golden fixtures may live under ``SYNTHETIC`` when they reference the
+shared ``DATA`` tree instead of duplicating its files. Keep their provenance in
+an accompanying manifest.
 
 Test-only configurations live under
 `tests/integration/experimental/configs/<complex>/SIMULATIONS/`. Integration
