@@ -1539,6 +1539,12 @@ class FitSuscConfig(Config):
                 )
 
         elif config.assignment_method == "moments":
+            if config.susc_fit_type != "split":
+                raise ValueError(
+                    "assignment:method 'moments' requires susc_fit:type 'split'; "
+                    "GMM optimizes the six independent Cartesian susceptibility "
+                    "coordinates."
+                )
             if config.nuclei_include_groups:
                 raise ValueError(
                     "nuclei:include_groups is not supported when "

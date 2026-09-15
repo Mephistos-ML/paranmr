@@ -13,6 +13,7 @@ from paranmr.core.fitting.susceptibility.jacobian.susceptibility_tensor import (
     differentiate_tensor_by_alpha,
     differentiate_tensor_by_beta,
     differentiate_tensor_by_gamma,
+    differentiate_tensor_by_split_parameter,
     differentiate_tensor_by_susc_ax,
     differentiate_tensor_by_susc_iso,
     differentiate_tensor_by_susc_rho_over_ax,
@@ -20,6 +21,7 @@ from paranmr.core.fitting.susceptibility.jacobian.susceptibility_tensor import (
 from paranmr.core.fitting.susceptibility.models.isoaxrho_euler import (
     IsoAxRhoEulerFitter,
 )
+from paranmr.core.fitting.susceptibility.models.split import SplitFitter
 from paranmr.core.fitting.susceptibility.moments.forward import (
     calculated_signal_packages_from_parameters,
     sort_packages_by_center,
@@ -143,18 +145,43 @@ class ShiftOnlyIsoAxRhoModel:
         }
 
 
+class ShiftOnlySplitModel:
+    """Shift forward model for the Cartesian split susceptibility coordinates."""
+
+    model = staticmethod(SplitFitter.model)
+
+
+def differentiate_centers_by_split_parameter(
+    *,
+    parameter_name: str,
+    parameters: dict[str, float],
+    nuclei: list[Nucleus],
+    average_labels: tuple[tuple[str, ...], ...] = (),
+) -> NDArray[np.float64]:
+    """Return center derivatives with respect to one split tensor component."""
+
+    return differentiate_centers_by_tensor_derivative(
+        parameters=parameters,
+        nuclei=nuclei,
+        average_labels=average_labels,
+        d_tensor=differentiate_tensor_by_split_parameter(parameter_name),
+        shift_model=ShiftOnlySplitModel(),
+    )
+
+
 def differentiate_centers_by_tensor_derivative(
     *,
     parameters: dict[str, float],
     nuclei: list[Nucleus],
     average_labels: tuple[tuple[str, ...], ...],
     d_tensor: NDArray[np.float64],
+    shift_model=ShiftOnlyIsoAxRhoModel(),
 ) -> NDArray[np.float64]:
     """Return center derivatives for a supplied tensor derivative."""
 
     packages = sort_packages_by_center(
         calculated_signal_packages_from_parameters(
-            model=ShiftOnlyIsoAxRhoModel(),
+            model=shift_model,
             parameters=parameters,
             nuclei=nuclei,
             include_diamagnetic=True,

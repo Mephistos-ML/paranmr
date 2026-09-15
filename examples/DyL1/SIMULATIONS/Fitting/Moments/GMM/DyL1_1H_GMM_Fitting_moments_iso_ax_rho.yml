@@ -43,13 +43,13 @@ linewidth:
     p2: [fit, 0.01, [0.0, 1.0]]
 
 susc_fit:
-  type: isoaxrho_euler
+  type: split
   variables:
     iso: [fix, 0.00]
-    ax: [fit, -0.001]
-    rho_over_ax: [fix, 0.0]
-    alpha: [fix, 0.0]
-    beta: [fix, 0.0]
-    gamma: [fix, 0.0]
+    dxx: [fit, 0.0003333333333333333]
+    dyy: [fit, 0.0003333333333333333]
+    dxy: [fit, 0.0]
+    dxz: [fit, 0.0]
+    dyz: [fit, 0.0]
   objective_map:
-    parameters: [ax, p1]
+    parameters: [dxx, p1]

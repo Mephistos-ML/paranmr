@@ -14,9 +14,11 @@ from paranmr.core.fitting.susceptibility.jacobian.moments import (
 )
 from paranmr.core.fitting.susceptibility.jacobian.susceptibility_centers import (
     ShiftOnlyIsoAxRhoModel,
+    ShiftOnlySplitModel,
     differentiate_centers_by_alpha,
     differentiate_centers_by_beta,
     differentiate_centers_by_gamma,
+    differentiate_centers_by_split_parameter,
     differentiate_centers_by_susc_ax,
     differentiate_centers_by_susc_iso,
     differentiate_centers_by_susc_rho_over_ax,
@@ -29,6 +31,33 @@ from paranmr.core.fitting.susceptibility.moments.forward import (
 from paranmr.core.fitting.susceptibility.moments.gaussian import (
     gaussian_peak_representation,
 )
+
+
+def differentiate_moments_by_split_parameter(
+    *,
+    parameter_name: str,
+    parameters: dict[str, float],
+    nuclei: list[Nucleus],
+    linewidths_by_label: dict[str, float],
+    moment_labels: tuple[str, ...],
+    average_labels: tuple[tuple[str, ...], ...] = (),
+) -> NDArray[np.float64]:
+    """Return analytical moment derivatives for one split tensor coordinate."""
+
+    return differentiate_moments_by_center_derivative(
+        parameters=parameters,
+        nuclei=nuclei,
+        linewidths_by_label=linewidths_by_label,
+        moment_labels=moment_labels,
+        average_labels=average_labels,
+        d_centers=differentiate_centers_by_split_parameter(
+            parameter_name=parameter_name,
+            parameters=parameters,
+            nuclei=nuclei,
+            average_labels=average_labels,
+        ),
+        shift_model=ShiftOnlySplitModel(),
+    )
 
 
 def differentiate_moments_by_susc_ax(
@@ -183,12 +212,13 @@ def differentiate_moments_by_center_derivative(
     moment_labels: tuple[str, ...],
     average_labels: tuple[tuple[str, ...], ...],
     d_centers: NDArray[np.float64],
+    shift_model=ShiftOnlyIsoAxRhoModel(),
 ) -> NDArray[np.float64]:
     """Return moment derivatives for a supplied center-derivative vector."""
 
     packages = sort_packages_by_center(
         calculated_signal_packages_from_parameters(
-            model=ShiftOnlyIsoAxRhoModel(),
+            model=shift_model,
             parameters=parameters,
             nuclei=nuclei,
             include_diamagnetic=True,

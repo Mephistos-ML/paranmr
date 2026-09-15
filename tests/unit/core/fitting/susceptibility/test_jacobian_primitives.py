@@ -18,6 +18,7 @@ from paranmr.core.fitting.susceptibility.jacobian.susceptibility_moments import 
     differentiate_moments_by_alpha,
     differentiate_moments_by_beta,
     differentiate_moments_by_gamma,
+    differentiate_moments_by_split_parameter,
     differentiate_moments_by_susc_ax,
     differentiate_moments_by_susc_iso,
     differentiate_moments_by_susc_rho_over_ax,
@@ -25,6 +26,7 @@ from paranmr.core.fitting.susceptibility.jacobian.susceptibility_moments import 
 from paranmr.core.fitting.susceptibility.models.isoaxrho_euler import (
     IsoAxRhoEulerFitter,
 )
+from paranmr.core.fitting.susceptibility.models.split import SplitFitter
 from paranmr.core.fitting.susceptibility.moments.descriptors import (
     compute_gaussian_mixture_moments,
 )
@@ -774,3 +776,57 @@ class _EulerModel:
     @staticmethod
     def model(parameters, nuclei):
         return IsoAxRhoEulerFitter.model(parameters, nuclei)
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("parameter_name", SplitFitter.VARNAMES)
+def test_split_moment_derivative_matches_finite_difference(parameter_name: str):
+    nuclei = _test_nuclei()
+    parameters = {
+        "iso": 0.04,
+        "dxx": 0.12,
+        "dyy": -0.08,
+        "dxy": 0.03,
+        "dxz": -0.02,
+        "dyz": 0.05,
+    }
+    linewidths_by_label = {"H1": 1.1, "H2": 0.9, "H3": 1.3}
+    step = 1.0e-7
+
+    analytical = differentiate_moments_by_split_parameter(
+        parameter_name=parameter_name,
+        parameters=parameters,
+        nuclei=nuclei,
+        linewidths_by_label=linewidths_by_label,
+        moment_labels=MOMENT_LABELS,
+    )
+
+    def _moments(value: float) -> np.ndarray:
+        varied = {**parameters, parameter_name: value}
+        packages = sort_packages_by_center(
+            calculated_signal_packages_from_parameters(
+                model=SplitFitter,
+                parameters=varied,
+                nuclei=nuclei,
+                include_diamagnetic=True,
+            )
+        )
+        peaks = gaussian_peak_representation(
+            centers=package_centers(packages),
+            fwhm=package_linewidths(packages, linewidths_by_label),
+            areas=np.ones(len(packages)),
+        )
+        moments = compute_gaussian_mixture_moments(
+            centers=peaks["center"],
+            sigmas=peaks["sigma"],
+            area_norm=peaks["area_norm"],
+            moment_labels=MOMENT_LABELS,
+        )
+        return np.asarray([moments[name] for name in MOMENT_LABELS])
+
+    finite_difference = (
+        _moments(parameters[parameter_name] + step)
+        - _moments(parameters[parameter_name] - step)
+    ) / (2.0 * step)
+
+    assert analytical == pytest.approx(finite_difference, rel=1e-6, abs=1e-8)

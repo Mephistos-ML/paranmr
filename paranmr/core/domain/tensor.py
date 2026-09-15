@@ -4,12 +4,87 @@ Provides Hyperfine, Susceptibility, and Shift classes used across the library.
 """
 
 import copy
+from dataclasses import dataclass
 
 import numpy as np
 import numpy.linalg as la
 from numpy.typing import ArrayLike, NDArray
 
 from paranmr.core.const.physics import GE
+
+
+@dataclass(frozen=True)
+class SusceptibilityDecomposition:
+    """Canonical principal-axis representation of a susceptibility tensor."""
+
+    iso: float
+    axiality: float
+    rhombicity: float
+    alpha: float
+    beta: float
+    gamma: float
+
+
+def decompose_susceptibility_tensor(
+    tensor: NDArray,
+) -> SusceptibilityDecomposition:
+    """Return the canonical scalar and ZYZ-Euler representation of ``tensor``.
+
+    The ordering and sign convention intentionally matches the established
+    :class:`Susceptibility` reporting convention.  Isotropic and axial tensors
+    have non-unique principal frames; for the latter gamma is reported as zero.
+    """
+
+    array = np.asarray(tensor, dtype=float)
+    if array.shape != (3, 3):
+        raise ValueError("Susceptibility tensor must have shape (3, 3)")
+    if not np.allclose(array, array.T):
+        raise ValueError("Susceptibility tensor must be symmetric")
+
+    iso = float(np.trace(array) / 3.0)
+    deviatoric = array - iso * np.eye(3)
+    deviatoric_eigenvalues = la.eigvalsh(deviatoric)
+    axiality = float(
+        1.5 * deviatoric_eigenvalues[np.argmax(np.abs(deviatoric_eigenvalues))]
+    )
+    rhombic_order = np.argsort(np.abs(deviatoric_eigenvalues))
+    rhombicity = float(
+        0.5
+        * (
+            deviatoric_eigenvalues[rhombic_order[0]]
+            - deviatoric_eigenvalues[rhombic_order[1]]
+        )
+    )
+
+    eigenvalues, eigenvectors = la.eigh(array)
+    eigenvalue_order = np.argsort(np.abs(eigenvalues))
+    eigenvalues = eigenvalues[eigenvalue_order]
+    eigenvectors = eigenvectors[:, eigenvalue_order]
+    deviations = np.abs(eigenvalues - iso)
+    principal_order = np.argsort(deviations)
+    sorted_deviations = deviations[principal_order]
+    rotation = eigenvectors[:, principal_order].copy()
+
+    for column in range(3):
+        dominant_component = int(np.argmax(np.abs(rotation[:, column])))
+        if rotation[dominant_component, column] < 0.0:
+            rotation[:, column] *= -1.0
+    if np.linalg.det(rotation) < 0.0:
+        rotation[:, 0] *= -1.0
+
+    alpha = float(np.rad2deg(np.arctan2(rotation[1, 2], rotation[0, 2])) % 360.0)
+    beta = float(np.rad2deg(np.arccos(np.clip(rotation[2, 2], -1.0, 1.0))))
+    gamma = 0.0
+    if not np.isclose(sorted_deviations[0], sorted_deviations[1], rtol=1e-8):
+        gamma = float(np.rad2deg(np.arctan2(rotation[2, 1], -rotation[2, 0])) % 360.0)
+    return SusceptibilityDecomposition(
+        iso=iso,
+        axiality=axiality,
+        rhombicity=rhombicity,
+        alpha=alpha,
+        beta=beta,
+        gamma=gamma,
+    )
 
 
 class Hyperfine:
@@ -253,6 +328,7 @@ class Susceptibility:
         self._axiality = None
         self._rhombicity = None
         self._irred = None
+        self._decomposition = None
         self._alpha = None
         self._beta = None
         self._gamma = None
@@ -283,6 +359,7 @@ class Susceptibility:
         self._axiality = None
         self._rhombicity = None
         self._irred = None
+        self._decomposition = None
         self._alpha = None
         self._beta = None
         self._gamma = None
@@ -433,8 +510,7 @@ class Susceptibility:
         return
 
     def calc_axiality(self):
-        devals = la.eigvalsh(self.dtensor)
-        self.axiality = 1.5 * devals[np.argmax(np.abs(devals))]
+        self.axiality = np.float64(self.decomposition.axiality)
         return
 
     @property
@@ -452,10 +528,7 @@ class Susceptibility:
         return
 
     def calc_rhombicity(self):
-        devals = la.eigvalsh(self.dtensor)
-        order = np.argsort(np.abs(devals))
-        devals = devals[order]
-        self.rhombicity = 0.5 * (devals[0] - devals[1])
+        self.rhombicity = np.float64(self.decomposition.rhombicity)
         return
 
     @property
@@ -516,38 +589,19 @@ class Susceptibility:
         return
 
     def calc_euler(self):
-        """Computes and stores ZYZ Euler angles mapping input frame to eigenframe.
-
-        Eigenvectors are sorted by deviation from iso (|λ − iso|), then their
-        signs are canonicalized so the dominant component of each vector is
-        positive. If the resulting basis is a reflection, the first axis is
-        flipped to restore a proper rotation matrix.
-
-        Angles are stored in degrees using the same ZYZ convention as the
-        Euler-oriented susceptibility fitter.
-        """
-        _ev = np.abs(self.eigvals - self.iso)
-        order = np.argsort(_ev)
-        _ev_sorted = _ev[order]
-        _vecs = self.eigvecs[:, order].copy()
-
-        for j in range(3):
-            idx = np.argmax(np.abs(_vecs[:, j]))
-            if _vecs[idx, j] < 0:
-                _vecs[:, j] = -_vecs[:, j]
-
-        if np.linalg.det(_vecs) < 0:
-            _vecs[:, 0] = -_vecs[:, 0]
-
-        self.alpha = np.float64(np.rad2deg(np.arctan2(_vecs[1, 2], _vecs[0, 2])) % 360)
-        self.beta = np.float64(np.rad2deg(np.arccos(np.clip(_vecs[2, 2], -1.0, 1.0))))
-        if np.isclose(_ev_sorted[0], _ev_sorted[1], rtol=1e-8):
-            self.gamma = np.float64(0.0)
-        else:
-            self.gamma = np.float64(
-                np.rad2deg(np.arctan2(_vecs[2, 1], -_vecs[2, 0])) % 360
-            )
+        """Compute ZYZ Euler angles using the canonical tensor decomposition."""
+        decomposition = self.decomposition
+        self.alpha = np.float64(decomposition.alpha)
+        self.beta = np.float64(decomposition.beta)
+        self.gamma = np.float64(decomposition.gamma)
         return
+
+    @property
+    def decomposition(self) -> SusceptibilityDecomposition:
+        """Canonical physical decomposition of this susceptibility tensor."""
+        if self._decomposition is None:
+            self._decomposition = decompose_susceptibility_tensor(self.tensor)
+        return self._decomposition
 
     @property
     def irred(self) -> NDArray:

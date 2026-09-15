@@ -43,23 +43,11 @@ linewidth:
     - - 0.0
       - 10.0
 susc_fit:
-  type: isoaxrho_euler
+  type: split
   variables:
-    iso:
-    - fit
-    - 0.0
-    ax:
-    - fit
-    - 0.01
-    rho_over_ax:
-    - fit
-    - 0.1
-    alpha:
-    - fit
-    - 267.646631
-    beta:
-    - fit
-    - 106.206869
-    gamma:
-    - fit
-    - 69.017563
+    iso: [fit, 0.0]
+    dxx: [fit, -0.002560267873729879]
+    dyy: [fit, 0.005800230093043623]
+    dxy: [fit, 0.0005314367779005822]
+    dxz: [fit, -0.0005233237864394349]
+    dyz: [fit, 0.0029033674498646195]

@@ -12,12 +12,7 @@ from paranmr.core.fitting.susceptibility.jacobian.linewidth import (
     differentiate_moments_by_linewidth_parameters,
 )
 from paranmr.core.fitting.susceptibility.jacobian.susceptibility_moments import (
-    differentiate_moments_by_alpha,
-    differentiate_moments_by_beta,
-    differentiate_moments_by_gamma,
-    differentiate_moments_by_susc_ax,
-    differentiate_moments_by_susc_iso,
-    differentiate_moments_by_susc_rho_over_ax,
+    differentiate_moments_by_split_parameter,
 )
 from paranmr.core.fitting.susceptibility.jacobian.types import MomentJacobianResult
 from paranmr.core.fitting.susceptibility.linewidths import (
@@ -58,49 +53,16 @@ def build_moment_jacobian(
     derivatives_by_parameter = {
         "p1": linewidth_derivatives[:, 0],
         "p2": linewidth_derivatives[:, 1],
-        "iso": differentiate_moments_by_susc_iso(
-            parameters=parameters,
-            nuclei=nuclei,
-            linewidths_by_label=linewidths_by_label,
-            moment_labels=moment_names,
-            average_labels=average_labels,
-        ),
-        "ax": differentiate_moments_by_susc_ax(
-            parameters=parameters,
-            nuclei=nuclei,
-            linewidths_by_label=linewidths_by_label,
-            moment_labels=moment_names,
-            average_labels=average_labels,
-        ),
-        "rho_over_ax": differentiate_moments_by_susc_rho_over_ax(
-            parameters=parameters,
-            nuclei=nuclei,
-            linewidths_by_label=linewidths_by_label,
-            moment_labels=moment_names,
-            average_labels=average_labels,
-        ),
-        "alpha": differentiate_moments_by_alpha(
-            parameters=parameters,
-            nuclei=nuclei,
-            linewidths_by_label=linewidths_by_label,
-            moment_labels=moment_names,
-            average_labels=average_labels,
-        ),
-        "beta": differentiate_moments_by_beta(
-            parameters=parameters,
-            nuclei=nuclei,
-            linewidths_by_label=linewidths_by_label,
-            moment_labels=moment_names,
-            average_labels=average_labels,
-        ),
-        "gamma": differentiate_moments_by_gamma(
-            parameters=parameters,
-            nuclei=nuclei,
-            linewidths_by_label=linewidths_by_label,
-            moment_labels=moment_names,
-            average_labels=average_labels,
-        ),
     }
+    for name in ("iso", "dxx", "dyy", "dxy", "dxz", "dyz"):
+        derivatives_by_parameter[name] = differentiate_moments_by_split_parameter(
+            parameter_name=name,
+            parameters=parameters,
+            nuclei=nuclei,
+            linewidths_by_label=linewidths_by_label,
+            moment_labels=moment_names,
+            average_labels=average_labels,
+        )
     missing_parameters = [
         name for name in parameter_names if name not in derivatives_by_parameter
     ]
@@ -129,7 +91,7 @@ def _sorted_packages(
     average_labels: tuple[tuple[str, ...], ...],
 ):
     from paranmr.core.fitting.susceptibility.jacobian.susceptibility_centers import (
-        ShiftOnlyIsoAxRhoModel,
+        ShiftOnlySplitModel,
     )
     from paranmr.core.fitting.susceptibility.moments.forward import (
         calculated_signal_packages_from_parameters,
@@ -138,7 +100,7 @@ def _sorted_packages(
 
     return sort_packages_by_center(
         calculated_signal_packages_from_parameters(
-            model=ShiftOnlyIsoAxRhoModel(),
+            model=ShiftOnlySplitModel(),
             parameters=parameters,
             nuclei=nuclei,
             include_diamagnetic=True,
