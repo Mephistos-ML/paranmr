@@ -508,7 +508,6 @@ class FitSuscConfig(Config):
         if value not in ["fixed", "permute", "hungarian", "moments"]:
             raise ValueError(f"Unknown assignment:method {value}")
         self._assignment_method = value
-        self._validate_susc_fit_average_shifts_for_assignment_method()
         return None
 
     @property
@@ -692,11 +691,15 @@ class FitSuscConfig(Config):
             return
         if isinstance(values, str):
             normalized = values.strip().lower()
-            if normalized in {"all", "methyls"}:
+            if normalized == "methyls":
+                raise ValueError(
+                    "susc_fit:average_shifts 'methyls' is no longer supported; "
+                    "define methyl groups in signal_labels:file and use 'all'."
+                )
+            if normalized == "all":
                 self._susc_fit_average_shifts = normalized
             else:
                 self._susc_fit_average_shifts = [values]
-            self._validate_susc_fit_average_shifts_for_assignment_method()
             return
         if not isinstance(values, (list, tuple)):
             raise ValueError(
@@ -706,15 +709,20 @@ class FitSuscConfig(Config):
         if not normalized_values:
             self._susc_fit_average_shifts = []
             return
+        if any(value.strip().lower() == "methyls" for value in normalized_values):
+            raise ValueError(
+                "susc_fit:average_shifts 'methyls' is no longer supported; "
+                "define methyl groups in signal_labels:file and use 'all'."
+            )
         special_modes = {
             value.strip().lower()
             for value in normalized_values
-            if value.strip().lower() in {"all", "methyls"}
+            if value.strip().lower() == "all"
         }
         if len(special_modes) > 1:
             raise ValueError(
-                "susc_fit:average_shifts cannot combine special modes "
-                "'all' and 'methyls'."
+                "susc_fit:average_shifts cannot combine 'all' with "
+                "additional signal labels."
             )
         if special_modes:
             if len(normalized_values) != 1:
@@ -725,20 +733,6 @@ class FitSuscConfig(Config):
             self._susc_fit_average_shifts = next(iter(special_modes))
         else:
             self._susc_fit_average_shifts = normalized_values
-        self._validate_susc_fit_average_shifts_for_assignment_method()
-        return
-
-    def _validate_susc_fit_average_shifts_for_assignment_method(self) -> None:
-        values = self._susc_fit_average_shifts
-        if values in (None, "", []):
-            return
-        if values == "methyls":
-            if self._assignment_method in {"", "moments"}:
-                return
-            raise ValueError(
-                "susc_fit:average_shifts: 'methyls' is only supported for "
-                "assignment:method 'moments'."
-            )
         return
 
     @property

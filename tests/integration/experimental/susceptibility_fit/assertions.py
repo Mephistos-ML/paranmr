@@ -7,10 +7,6 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from paranmr.app.policies.averaging import detect_methyl_group_records
-from paranmr.core.domain.mol import Molecule
-from paranmr.tools.coords import xyz_fmt as xyzf
-
 
 def read_generated_hyperfines_table(path: Path) -> pd.DataFrame:
     lines = path.read_text(encoding="utf-8-sig").splitlines()
@@ -30,32 +26,6 @@ def reference_signal_groups(labels_csv: Path) -> list[frozenset[str]]:
 
 def reference_signal_partitions(labels_csv: Path) -> set[frozenset[str]]:
     return set(reference_signal_groups(labels_csv))
-
-
-def reference_signal_groups_with_methyls(
-    labels_csv: Path, xyz_file: Path
-) -> list[frozenset[str]]:
-    groups = reference_signal_groups(labels_csv)
-    labels, coords = xyzf.load_xyz(str(xyz_file), check=False)
-    molecule = Molecule.from_labels_coords(labels, coords, elements="H")
-    methyl_groups = [
-        frozenset(group.proton_labels)
-        for group in detect_methyl_group_records(molecule)
-    ]
-    refined = []
-    for group in groups:
-        methyls = [methyl for methyl in methyl_groups if methyl.issubset(group)]
-        if methyls and frozenset().union(*methyls) == group:
-            refined.extend(methyls)
-        else:
-            refined.append(group)
-    return refined
-
-
-def reference_signal_partitions_with_methyls(
-    labels_csv: Path, xyz_file: Path
-) -> set[frozenset[str]]:
-    return set(reference_signal_groups_with_methyls(labels_csv, xyz_file))
 
 
 def partition_protons_by_sorted_shift(

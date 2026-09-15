@@ -27,10 +27,7 @@ from paranmr.app.pipelines.fit.susc.lw_estimation import (
 from paranmr.app.pipelines.fit.susc.moments import fit_moment_assignment
 from paranmr.app.pipelines.fit.susc.permute import fit_permuted_assignments
 from paranmr.app.pipelines.fit.vt_fit import fit_vt
-from paranmr.app.policies.averaging import (
-    apply_methyl_signal_labels,
-    resolve_average_shift_groups,
-)
+from paranmr.app.policies.averaging import resolve_average_shift_groups
 from paranmr.app.policies.hfc import has_missing_selected_signal_labels
 from paranmr.app.policies.output_linewidth import resolve_output_linewidths
 from paranmr.app.policies.susc import resolve_susc_fit_variables
@@ -203,14 +200,6 @@ def run_fit_susc(config, options: FitSuscRunOptions | None = None) -> int:
     if len(config.hyperfine_average):
         base_molecule.average_hyperfine(config.hyperfine_average)
 
-    # Moments fitting can synthesize shared signal labels for methyl protons
-    # before averaging and output generation consume the molecule state.
-    if (
-        config.assignment_method == "moments"
-        and config.susc_fit_average_shifts == "methyls"
-    ):
-        apply_methyl_signal_labels(base_molecule)
-
     # Check the number of experiments is consistent across the files
     # and issue warning if not
     if len(np.unique([len(exp.signals) for exp in experiments])) > 1:
@@ -244,27 +233,10 @@ def run_fit_susc(config, options: FitSuscRunOptions | None = None) -> int:
         logger.info("Dry run successful — no computations executed")
         return 0
 
-    average_shifts = config.susc_fit_average_shifts
-    if (
-        config.assignment_method == "moments"
-        and config.signal_labels_file
-        and average_shifts in (None, "", [])
-    ):
-        average_shifts = "all"
-        logger.info(
-            "Moments fitting uses signal-label groups as theoretical signal "
-            "packages and intensities."
-        )
-
     average_labels = resolve_average_shift_groups(
         molecule=base_molecule,
-        average_shifts=average_shifts,
+        average_shifts=config.susc_fit_average_shifts,
     )
-    if config.susc_fit_average_shifts == "methyls" and not average_labels:
-        logger.warning(
-            "susc_fit:average_shifts 'methyls' was requested, but no methyl "
-            "groups were detected in the current geometry."
-        )
 
     # Shift terms for plots
     # does not affect fit!

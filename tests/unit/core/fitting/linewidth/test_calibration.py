@@ -464,7 +464,7 @@ def test_fit_susc_config_rejects_gmm_moment_weights(tmp_path):
                 "      m1: 1.0",
                 "susc_fit:",
                 "  type: split",
-                "  average_shifts: methyls",
+                "  average_shifts: all",
                 "  variables:",
                 "    iso: [fit, 0.0]",
                 "    ax: [fit, 0.1]",
@@ -479,7 +479,7 @@ def test_fit_susc_config_rejects_gmm_moment_weights(tmp_path):
 
 
 @pytest.mark.unit
-def test_fit_susc_config_accepts_methyls_shift_averaging_for_moments(tmp_path):
+def test_fit_susc_config_accepts_signal_label_averaging_for_moments(tmp_path):
     config_file = tmp_path / "fit.yml"
     config_file.write_text(
         "\n".join(
@@ -498,7 +498,7 @@ def test_fit_susc_config_accepts_methyls_shift_averaging_for_moments(tmp_path):
                 "  type: split",
                 "  variables:",
                 "    iso: [fit, 0.0]",
-                "  average_shifts: methyls",
+                "  average_shifts: all",
                 "assignment:",
                 "  method: moments",
                 "  moment_objective:",
@@ -517,11 +517,11 @@ def test_fit_susc_config_accepts_methyls_shift_averaging_for_moments(tmp_path):
 
     config = FitSuscConfig.from_file(config_file)
 
-    assert config.susc_fit_average_shifts == "methyls"
+    assert config.susc_fit_average_shifts == "all"
 
 
 @pytest.mark.unit
-def test_fit_susc_config_rejects_methyls_shift_averaging_for_basic_fit(tmp_path):
+def test_fit_susc_config_accepts_signal_label_averaging_for_basic_fit(tmp_path):
     config_file = tmp_path / "fit.yml"
     config_file.write_text(
         "\n".join(
@@ -540,7 +540,7 @@ def test_fit_susc_config_rejects_methyls_shift_averaging_for_basic_fit(tmp_path)
                 "  type: isoaxrho",
                 "  variables:",
                 "    iso: [fit, 0.0]",
-                "  average_shifts: methyls",
+                "  average_shifts: all",
                 "assignment:",
                 "  method: fixed",
                 "linewidth:",
@@ -550,8 +550,9 @@ def test_fit_susc_config_rejects_methyls_shift_averaging_for_basic_fit(tmp_path)
         encoding="utf-8",
     )
 
-    with pytest.raises(ValueError, match="only supported"):
-        FitSuscConfig.from_file(config_file)
+    config = FitSuscConfig.from_file(config_file)
+
+    assert config.susc_fit_average_shifts == "all"
 
 
 @pytest.mark.unit

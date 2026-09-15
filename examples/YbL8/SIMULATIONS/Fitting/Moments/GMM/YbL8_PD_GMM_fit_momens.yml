@@ -48,6 +48,6 @@ susc_fit:
     dxy: [fit, 1.9802897554284196e-05]
     dxz: [fit, -0.0003419611728294868]
     dyz: [fit, -4.988064468483049e-05]
-  average_shifts: 'methyls'
+  average_shifts: all
   objective_map:
     parameters: [dxx, dyy]
