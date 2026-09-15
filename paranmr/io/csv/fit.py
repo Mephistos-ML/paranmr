@@ -52,7 +52,7 @@ def save_moment_fit_diagnostics(
     ]
     comment = [
         f"T = {diagnostics.temperature:.2f} K",
-        f"objective = {diagnostics.objective_type}",
+        "objective = gmm",
         f"score = {diagnostics.score:.6g}",
     ]
     write_csv_safe(pd.DataFrame(rows), file_name, comment)
@@ -86,7 +86,7 @@ def save_fit_linewidth_model(
     }
     comment = [
         f"T = {diagnostics.temperature:.2f} K",
-        f"objective = {diagnostics.objective_type}",
+        "objective = gmm",
     ]
     write_csv_safe(pd.DataFrame(data=out), file_name, comment)
 

@@ -8,7 +8,6 @@ from __future__ import annotations
 import copy
 import logging
 from dataclasses import dataclass
-from typing import Protocol
 
 import numpy as np
 from numpy.typing import NDArray
@@ -24,55 +23,15 @@ from paranmr.core.fitting.susceptibility.linewidths import (
     predict_r6_widths_by_atom_label,
 )
 from paranmr.core.fitting.susceptibility.models.base import SusceptibilityModel
-from paranmr.core.fitting.susceptibility.moments.descriptors import (
-    build_normalized_moment_vectors,
-)
 from paranmr.core.fitting.susceptibility.moments.forward import (
     calculated_moments_from_parameters,
 )
-from paranmr.core.fitting.susceptibility.objectives.moments.differences import (
-    build_moment_difference_vector,
+from paranmr.core.fitting.susceptibility.objectives.moments.gmm.objective import (
+    GMMMomentObjective,
 )
 from paranmr.core.fitting.susceptibility.stats import svd_stdev
 
 logger = logging.getLogger(__name__)
-
-
-class MomentObjective(Protocol):
-    """Structural contract required from moment objective implementations."""
-
-    @property
-    def objective_type(self) -> str: ...
-
-    @property
-    def active_mask(self) -> NDArray[np.bool_]: ...
-
-    def conditions(
-        self,
-        *,
-        observed_moments: dict[str, float],
-        calculated_moments: dict[str, float],
-    ) -> NDArray[np.float64]: ...
-
-    def residuals(
-        self,
-        *,
-        observed_moments: dict[str, float],
-        calculated_moments: dict[str, float],
-    ) -> NDArray[np.float64]: ...
-
-    def score(
-        self,
-        *,
-        observed_moments: dict[str, float],
-        calculated_moments: dict[str, float],
-    ) -> float: ...
-
-    def residual_jacobian(
-        self,
-        *,
-        moment_jacobian: NDArray[np.float64],
-    ) -> NDArray[np.float64]: ...
 
 
 @dataclass(frozen=True)
@@ -80,7 +39,6 @@ class MomentFitResult:
     """Structured result for a completed moment fit."""
 
     temperature: float
-    objective_type: str
     observed_moments: dict[str, float]
     calculated_moments: dict[str, float]
     linewidth_method: str
@@ -97,8 +55,6 @@ class MomentFitEvaluation:
     linewidth_vars: dict[str, float]
     calculated_widths_by_atom_label: dict[str, float]
     calculated_moments: dict[str, float]
-    normalized_observed_moments: dict[str, float]
-    normalized_calculated_moments: dict[str, float]
 
 
 @dataclass(frozen=True)
@@ -110,7 +66,7 @@ class MomentFitInputs:
     temperature: float
     moment_labels: tuple[str, ...]
     observed_moments: dict[str, float]
-    moment_objective: MomentObjective
+    gmm_objective: GMMMomentObjective
     linewidth_inputs: SusceptibilityLinewidthInputs
     linewidth_fit_names: tuple[str, ...]
     linewidth_fix_vars: dict[str, float]
@@ -164,15 +120,14 @@ def fit_moment_model(
         return None
 
     # Estimate parameter uncertainty only when there are enough active residuals.
-    active_mask = inputs.moment_objective.active_mask
-    effective_residual_count = int(np.sum(active_mask))
+    effective_residual_count = len(inputs.moment_labels)
     if effective_residual_count <= curr_fit.x.size:
         model.fit_stdev = {label: np.nan for label in inputs.fit_var_names}
     else:
         # Build the active Jacobian subset for SVD-based uncertainty estimation.
         active_fit = OptimizeResult(
-            fun=np.asarray(curr_fit.fun, dtype=float)[active_mask],
-            jac=np.asarray(curr_fit.jac, dtype=float)[active_mask, :],
+            fun=np.asarray(curr_fit.fun, dtype=float),
+            jac=np.asarray(curr_fit.jac, dtype=float),
             x=curr_fit.x,
         )
         stdev, _ = svd_stdev(active_fit)
@@ -216,34 +171,22 @@ def fit_moment_model(
         average_labels=inputs.average_labels,
     )
 
-    # Package the final comparison between experimental and calculated moments.
-    normalized_moments = build_normalized_moment_vectors(
-        observed=inputs.observed_moments,
-        calculated=calculated_moments,
-        moment_names=inputs.moment_labels,
-    )
-    condition_vector = build_moment_difference_vector(
-        observed_moments=normalized_moments.observed,
-        calculated_moments=normalized_moments.calculated,
-        moment_names=inputs.moment_labels,
+    condition_vector = inputs.gmm_objective.conditions(
+        observed_moments=inputs.observed_moments,
+        calculated_moments=calculated_moments,
     )
     model.mae = float(np.mean(np.abs(condition_vector)))
     model.rmse = float(np.sqrt(np.mean(condition_vector**2)))
     model.r2 = np.nan
     model.adj_r2 = np.nan
-    score = inputs.moment_objective.score(
-        observed_moments=normalized_moments.observed,
-        calculated_moments=normalized_moments.calculated,
+    score = inputs.gmm_objective.score(
+        observed_moments=inputs.observed_moments,
+        calculated_moments=calculated_moments,
     )
     return MomentFitResult(
         temperature=float(inputs.temperature),
-        objective_type=inputs.moment_objective.objective_type,
-        observed_moments={
-            f"{k}_norm": float(v) for k, v in normalized_moments.observed.items()
-        },
-        calculated_moments={
-            f"{k}_norm": float(v) for k, v in normalized_moments.calculated.items()
-        },
+        observed_moments=dict(inputs.observed_moments),
+        calculated_moments=dict(calculated_moments),
         linewidth_method="r6",
         linewidth_vars_by_name={k: float(v) for k, v in final_linewidth_vars.items()},
         calculated_linewidths_by_label={
@@ -285,18 +228,11 @@ def evaluate_moment_fit_vector(
         integral_scale=inputs.integral_scale,
         average_labels=inputs.average_labels,
     )
-    normalized_moments = build_normalized_moment_vectors(
-        observed=inputs.observed_moments,
-        calculated=calculated_moments,
-        moment_names=inputs.moment_labels,
-    )
     return MomentFitEvaluation(
         all_vars=all_vars,
         linewidth_vars=linewidth_vars,
         calculated_widths_by_atom_label=calculated_widths_by_atom_label,
         calculated_moments=calculated_moments,
-        normalized_observed_moments=normalized_moments.observed,
-        normalized_calculated_moments=normalized_moments.calculated,
     )
 
 
@@ -307,9 +243,9 @@ def _moment_objective_residuals_from_fit_vector(
     """Return moment-objective residuals for a flat optimizer fit vector."""
     evaluation = evaluate_moment_fit_vector(new_vals, inputs)
     return list(
-        inputs.moment_objective.residuals(
-            observed_moments=evaluation.normalized_observed_moments,
-            calculated_moments=evaluation.normalized_calculated_moments,
+        inputs.gmm_objective.residuals(
+            observed_moments=inputs.observed_moments,
+            calculated_moments=evaluation.calculated_moments,
         )
     )
 
@@ -326,10 +262,10 @@ def _moment_objective_jacobian_from_fit_vector(
         nuclei=list(inputs.nuclei),
         linewidth_inputs=inputs.linewidth_inputs,
         linewidth_vars_by_name=evaluation.linewidth_vars,
-        observed_moments=inputs.observed_moments,
+        moment_names=inputs.moment_labels,
         parameter_names=inputs.fit_var_names + inputs.linewidth_fit_names,
         average_labels=inputs.average_labels,
     )
-    return inputs.moment_objective.residual_jacobian(
+    return inputs.gmm_objective.residual_jacobian(
         moment_jacobian=moment_jacobian.values,
     )

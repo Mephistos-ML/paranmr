@@ -68,14 +68,7 @@ def test_build_moment_jacobian_returns_active_contract():
             mean_inv_r6_by_atom_label={"H1": 2.0, "H2": 5.0, "H3": 3.0}
         ),
         linewidth_vars_by_name={"p1": 1000.0, "p2": 0.5},
-        observed_moments={
-            "m1": 2.0,
-            "m2": 4.0,
-            "m3": 6.0,
-            "m4": 8.0,
-            "m5": 10.0,
-            "m6": 12.0,
-        },
+        moment_names=MOMENT_LABELS,
         parameter_names=("ax", "alpha", "p1"),
         average_labels=(),
     )

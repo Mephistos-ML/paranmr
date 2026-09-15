@@ -41,11 +41,10 @@ class MomentCovarianceEstimate:
 def estimate_moment_covariance_from_jacobian(
     *,
     observed_peaks: dict[str, NDArray[np.float64]],
-    raw_experimental_moments: dict[str, float],
     moment_names: tuple[str, ...],
     config: JacobianMomentCovarianceConfig,
 ) -> MomentCovarianceEstimate:
-    """Propagate peak measurement uncertainty into relative moment space.
+    """Propagate peak measurement uncertainty into raw moment space.
 
     The input covariance assumes independent center and width measurements.
     Width uncertainty is relative to each measured Gaussian FWHM width.
@@ -68,16 +67,9 @@ def estimate_moment_covariance_from_jacobian(
         area_norm=area_norm,
         moment_labels=moment_names,
     )
-    scales = np.asarray(
-        [float(raw_experimental_moments[name]) for name in moment_names],
-        dtype=float,
-    )
-    if np.any(np.isclose(scales, 0.0)):
-        raise ValueError("Cannot propagate covariance through zero-valued moments")
     fwhm_to_sigma = 2.0 * sqrt(2.0 * np.log(2.0))
     width_jacobian = sigma_jacobian / fwhm_to_sigma
     condition_jacobian = np.hstack((center_jacobian, width_jacobian))
-    condition_jacobian = condition_jacobian / scales[:, np.newaxis]
     standard_deviations = np.concatenate(
         (
             np.full(centers.shape, config.shift_sigma_abs, dtype=float),

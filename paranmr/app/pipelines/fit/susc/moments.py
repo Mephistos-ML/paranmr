@@ -37,14 +37,15 @@ from paranmr.core.fitting.susceptibility.objective_map import (
     ObjectiveMapConfig,
     build_objective_map,
 )
-from paranmr.core.fitting.susceptibility.objectives.moments.gmm import (
-    GMMMomentObjective,
+from paranmr.core.fitting.susceptibility.objectives.moments.gmm.covariance import (
     JacobianMomentCovarianceConfig,
-    build_gmm_weighting_matrix,
     estimate_moment_covariance_from_jacobian,
 )
-from paranmr.core.fitting.susceptibility.objectives.moments.ls.objective import (
-    WeightedLSMomentObjective,
+from paranmr.core.fitting.susceptibility.objectives.moments.gmm.objective import (
+    GMMMomentObjective,
+)
+from paranmr.core.fitting.susceptibility.objectives.moments.gmm.weighting import (
+    build_gmm_weighting_matrix,
 )
 from paranmr.io.csv.fit import (
     save_fit_linewidth_model,
@@ -124,50 +125,24 @@ def fit_moment_assignment(
     )
     integral_scale = experimental_total_integral / theoretical_total_integral
 
-    moment_covariance = None
-    gmm_weighting_matrix = None
-    if (
-        assignment_moment_objective is not None
-        and assignment_moment_objective.get("type") == "gmm"
-    ):
-        covariance_config = assignment_moment_objective["covariance"]
-        moment_covariance = estimate_moment_covariance_from_jacobian(
-            observed_peaks=observed_peaks,
-            raw_experimental_moments=experimental_moments,
-            moment_names=moment_labels,
-            config=JacobianMomentCovarianceConfig(
-                shift_sigma_abs=float(
-                    covariance_config["measurement_uncertainty"]["shift_sigma_abs"]
-                ),
-                width_sigma_rel=float(
-                    covariance_config["measurement_uncertainty"]["width_sigma_rel"]
-                ),
+    covariance_config = assignment_moment_objective["covariance"]
+    moment_covariance = estimate_moment_covariance_from_jacobian(
+        observed_peaks=observed_peaks,
+        moment_names=moment_labels,
+        config=JacobianMomentCovarianceConfig(
+            shift_sigma_abs=float(
+                covariance_config["measurement_uncertainty"]["shift_sigma_abs"]
             ),
-        )
-        gmm_weighting_matrix = build_gmm_weighting_matrix(moment_covariance.covariance)
-
-    # Build the configured moment objective before assembling optimizer inputs.
-    objective_type = str(assignment_moment_objective["type"]).lower()
-    if objective_type == "ls":
-        moment_objective = WeightedLSMomentObjective.from_config(
-            moment_names=moment_labels,
-            weights=assignment_moment_objective.get("moment_weights", {}),
-        )
-    elif objective_type == "gmm":
-        if gmm_weighting_matrix is None:
-            raise ValueError(
-                "GMM moment objective requires an explicit covariance-derived "
-                "weighting matrix"
-            )
-        moment_objective = GMMMomentObjective.with_covariance(
-            moment_names=moment_labels,
-            covariance=moment_covariance.covariance,
-        )
-    else:
-        raise ValueError(
-            "Unknown moment objective type "
-            f"{objective_type!r}. Supported values are 'ls' and 'gmm'."
-        )
+            width_sigma_rel=float(
+                covariance_config["measurement_uncertainty"]["width_sigma_rel"]
+            ),
+        ),
+    )
+    gmm_weighting_matrix = build_gmm_weighting_matrix(moment_covariance.covariance)
+    gmm_objective = GMMMomentObjective.with_covariance(
+        moment_names=moment_labels,
+        covariance=moment_covariance.covariance,
+    )
 
     # Split linewidth variables into fit, fixed, and bounded subsets.
     linewidth_fit_vars, linewidth_fix_vars, linewidth_bounds = (
@@ -199,7 +174,7 @@ def fit_moment_assignment(
         temperature=float(experiment.temperature),
         moment_labels=moment_labels,
         observed_moments=experimental_moments,
-        moment_objective=moment_objective,
+        gmm_objective=gmm_objective,
         linewidth_inputs=linewidth_inputs,
         linewidth_fit_names=linewidth_fit_names,
         linewidth_fix_vars=linewidth_fix_vars,
@@ -211,7 +186,7 @@ def fit_moment_assignment(
         average_labels=tuple(tuple(group) for group in average_labels),
     )
 
-    # Run the core moment fit with the configured LS or GMM residual model.
+    # Run the core moment fit with raw generalized-moment residuals.
     moment_fit_result = fit_moment_model(fit_inputs)
 
     # Persist fit diagnostics next to the project outputs.
@@ -236,43 +211,41 @@ def fit_moment_assignment(
                 f"linewidth_model_{experiment.temperature:.2f}_K.csv",
             ),
         )
-        if moment_covariance is not None:
-            save_moment_covariance(
-                estimate=moment_covariance,
-                file_name=os.path.join(
+        save_moment_covariance(
+            estimate=moment_covariance,
+            file_name=os.path.join(
+                project_name,
+                f"moment_covariance_{experiment.temperature:.2f}_K.csv",
+            ),
+            temperature=float(experiment.temperature),
+        )
+        save_moment_weighting_matrix(
+            weighting_matrix=gmm_weighting_matrix,
+            moment_names=moment_labels,
+            file_name=os.path.join(
+                project_name,
+                f"moment_weighting_matrix_{experiment.temperature:.2f}_K.csv",
+            ),
+            temperature=float(experiment.temperature),
+        )
+        with spec.context():
+            plot_moment_covariance_heatmap(
+                covariance=moment_covariance,
+                spec=spec,
+                save=True,
+                show=show_plots,
+                save_name=os.path.join(
                     project_name,
-                    f"moment_covariance_{experiment.temperature:.2f}_K.csv",
+                    f"moment_covariance_heatmap_{experiment.temperature:.2f}_K",
                 ),
-                temperature=float(experiment.temperature),
             )
-            if gmm_weighting_matrix is not None:
-                save_moment_weighting_matrix(
-                    weighting_matrix=gmm_weighting_matrix,
-                    moment_names=moment_labels,
-                    file_name=os.path.join(
-                        project_name,
-                        f"moment_weighting_matrix_{experiment.temperature:.2f}_K.csv",
-                    ),
-                    temperature=float(experiment.temperature),
-                )
-            with spec.context():
-                plot_moment_covariance_heatmap(
-                    covariance=moment_covariance,
-                    spec=spec,
-                    save=True,
-                    show=show_plots,
-                    save_name=os.path.join(
-                        project_name,
-                        f"moment_covariance_heatmap_{experiment.temperature:.2f}_K",
-                    ),
-                )
         moment_jacobian = build_moment_jacobian(
             temperature=float(experiment.temperature),
             parameters=model.final_var_values,
             nuclei=list(molecule.nuclei),
             linewidth_inputs=linewidth_inputs,
             linewidth_vars_by_name=moment_fit_result.linewidth_vars_by_name,
-            observed_moments=experimental_moments,
+            moment_names=moment_labels,
             parameter_names=fit_var_names + linewidth_fit_names,
             average_labels=tuple(tuple(group) for group in average_labels),
         )
@@ -305,14 +278,14 @@ def fit_moment_assignment(
 
             def moment_score(point: np.ndarray) -> float:
                 evaluation = evaluate_moment_fit_vector(point, fit_inputs)
-                return fit_inputs.moment_objective.score(
-                    observed_moments=evaluation.normalized_observed_moments,
-                    calculated_moments=evaluation.normalized_calculated_moments,
+                return fit_inputs.gmm_objective.score(
+                    observed_moments=fit_inputs.observed_moments,
+                    calculated_moments=evaluation.calculated_moments,
                 )
 
             objective_map = build_objective_map(
                 temperature=float(experiment.temperature),
-                objective_type=fit_inputs.moment_objective.objective_type,
+                objective_type="gmm",
                 parameter_names=fit_var_names + linewidth_fit_names,
                 fit_vector=fitted_vector,
                 fit_bounds=fit_inputs.fit_bounds,

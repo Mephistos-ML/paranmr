@@ -21,22 +21,7 @@ class GMMMomentObjective:
     """Moment objective for the two-step generalized method of moments workflow."""
 
     moment_names: tuple[str, ...]
-    weighting_matrix: NDArray[np.float64]
     covariance_factor: NDArray[np.float64]
-
-    @classmethod
-    def from_config(
-        cls,
-        *,
-        moment_names: tuple[str, ...],
-        objective_config: dict | None = None,
-    ) -> "GMMMomentObjective":
-        """Reject direct construction without an explicit weighting matrix."""
-        del moment_names, objective_config
-        raise NotImplementedError(
-            "GMM objective construction requires an explicit covariance-derived "
-            "weighting matrix."
-        )
 
     @classmethod
     def with_covariance(
@@ -46,32 +31,18 @@ class GMMMomentObjective:
         covariance: NDArray[np.float64],
     ) -> "GMMMomentObjective":
         """Build a GMM objective directly from its covariance matrix."""
-        from .weighting import build_gmm_weighting_matrix, build_gmm_whitening_factor
+        from .weighting import build_gmm_whitening_factor
 
         covariance_factor = build_gmm_whitening_factor(covariance)
-        weighting_matrix = build_gmm_weighting_matrix(covariance)
         n_moments = len(moment_names)
-        if weighting_matrix.shape != (n_moments, n_moments):
+        if covariance_factor.shape != (n_moments, n_moments):
             raise ValueError(
-                "GMM weighting matrix shape does not match the configured moment count"
+                "GMM covariance factor shape does not match the configured moment count"
             )
-        if not np.allclose(weighting_matrix, weighting_matrix.T):
-            raise ValueError("GMM weighting matrix must be symmetric")
         return cls(
             moment_names=moment_names,
-            weighting_matrix=weighting_matrix,
             covariance_factor=covariance_factor,
         )
-
-    @property
-    def objective_type(self) -> str:
-        """Return the public objective type name."""
-        return "gmm"
-
-    @property
-    def active_mask(self) -> NDArray[np.bool_]:
-        """Return active residual components for uncertainty estimation."""
-        return np.ones(len(self.moment_names), dtype=bool)
 
     def conditions(
         self,
@@ -79,7 +50,7 @@ class GMMMomentObjective:
         observed_moments: dict[str, float],
         calculated_moments: dict[str, float],
     ) -> NDArray[np.float64]:
-        """Return the shared normalized moment-condition vector ``m_calc - m_exp``."""
+        """Return the raw moment-condition vector ``m_calc - m_exp``."""
         return build_moment_difference_vector(
             observed_moments=observed_moments,
             calculated_moments=calculated_moments,

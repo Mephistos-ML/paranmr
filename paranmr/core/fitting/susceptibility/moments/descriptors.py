@@ -1,11 +1,10 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (C) 2026 Suturina Group
 
-"""Gaussian-mixture raw moment descriptors and normalized residual helpers."""
+"""Gaussian-mixture raw moment descriptors."""
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 from math import comb
 
 import numpy as np
@@ -30,14 +29,6 @@ def moment_order(label: str) -> int:
     if order < 0:
         raise ValueError(f"Invalid moment label {label!r}")
     return order
-
-
-@dataclass(frozen=True)
-class NormalizedMomentVectors:
-    """Normalized observed/calculated moment vectors in canonical order."""
-
-    observed: dict[str, float]
-    calculated: dict[str, float]
 
 
 def compute_first_moment(
@@ -151,58 +142,3 @@ def compute_gaussian_mixture_moments(
         )
         for label in moment_labels
     }
-
-
-def build_normalized_moment_vectors(
-    *,
-    observed: dict[str, float],
-    calculated: dict[str, float],
-    moment_names: tuple[str, ...],
-) -> NormalizedMomentVectors:
-    """Build normalized observed/calculated moment vectors for objectives.
-
-    Each observed and calculated descriptor pair is converted to a ratio
-    against the observed descriptor value.
-
-    Args:
-        observed: Raw Gaussian-mixture moments from experimental peaks.
-        calculated: Raw Gaussian-mixture moments from calculated peaks.
-
-    Returns:
-        Structured normalized moment vectors.
-
-    Raises:
-        ValueError: If moment keys differ or any observed descriptor is
-            missing, zero, or numerically too close to zero.
-    """
-
-    if calculated.keys() != observed.keys():
-        raise ValueError("Calculated and observed moment keys must match")
-
-    missing = set(moment_names) - set(observed)
-    if missing:
-        raise ValueError(
-            "Cannot normalize moment vectors without keys: "
-            + ", ".join(sorted(missing))
-        )
-
-    zero_like = [
-        name
-        for name in moment_names
-        if np.isclose(float(observed[name]), 0.0, atol=1e-12, rtol=0.0)
-    ]
-    if zero_like:
-        raise ValueError(
-            "Cannot normalize moment vectors by observed descriptor values "
-            "that are zero or too close to zero: " + ", ".join(zero_like)
-        )
-
-    normalized_observed = {name: 1.0 for name in moment_names}
-    normalized_calculated = {
-        name: float(calculated[name]) / float(observed[name]) for name in moment_names
-    }
-
-    return NormalizedMomentVectors(
-        observed=normalized_observed,
-        calculated=normalized_calculated,
-    )
