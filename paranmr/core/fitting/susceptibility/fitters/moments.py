@@ -26,7 +26,7 @@ from paranmr.core.fitting.susceptibility.models.base import SusceptibilityModel
 from paranmr.core.fitting.susceptibility.moments.forward import (
     calculated_moments_from_parameters,
 )
-from paranmr.core.fitting.susceptibility.objectives.moments.gmm.objective import (
+from paranmr.core.fitting.susceptibility.objectives.gmm.objective import (
     GMMMomentObjective,
 )
 from paranmr.core.fitting.susceptibility.stats import svd_stdev

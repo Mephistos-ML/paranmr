@@ -11,10 +11,6 @@ import numpy as np
 from numpy.typing import NDArray
 from scipy.linalg import solve_triangular
 
-from paranmr.core.fitting.susceptibility.objectives.moments.differences import (
-    build_moment_difference_vector,
-)
-
 
 @dataclass(frozen=True)
 class GMMMomentObjective:
@@ -51,10 +47,12 @@ class GMMMomentObjective:
         calculated_moments: dict[str, float],
     ) -> NDArray[np.float64]:
         """Return the raw moment-condition vector ``m_calc - m_exp``."""
-        return build_moment_difference_vector(
-            observed_moments=observed_moments,
-            calculated_moments=calculated_moments,
-            moment_names=self.moment_names,
+        return np.asarray(
+            [
+                float(calculated_moments[name]) - float(observed_moments[name])
+                for name in self.moment_names
+            ],
+            dtype=float,
         )
 
     def residuals(

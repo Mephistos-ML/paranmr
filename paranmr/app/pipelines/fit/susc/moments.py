@@ -37,14 +37,14 @@ from paranmr.core.fitting.susceptibility.objective_map import (
     ObjectiveMapConfig,
     build_objective_map,
 )
-from paranmr.core.fitting.susceptibility.objectives.moments.gmm.covariance import (
+from paranmr.core.fitting.susceptibility.objectives.gmm.covariance import (
     JacobianMomentCovarianceConfig,
     estimate_moment_covariance_from_jacobian,
 )
-from paranmr.core.fitting.susceptibility.objectives.moments.gmm.objective import (
+from paranmr.core.fitting.susceptibility.objectives.gmm.objective import (
     GMMMomentObjective,
 )
-from paranmr.core.fitting.susceptibility.objectives.moments.gmm.weighting import (
+from paranmr.core.fitting.susceptibility.objectives.gmm.weighting import (
     build_gmm_weighting_matrix,
 )
 from paranmr.io.csv.fit import (

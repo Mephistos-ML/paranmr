@@ -10,7 +10,7 @@ import logging
 import matplotlib.pyplot as plt
 import numpy as np
 
-from paranmr.core.fitting.susceptibility.objectives.moments.gmm.covariance import (
+from paranmr.core.fitting.susceptibility.objectives.gmm.covariance import (
     MomentCovarianceEstimate,
 )
 from paranmr.viz.layout.canvas import create_canvas

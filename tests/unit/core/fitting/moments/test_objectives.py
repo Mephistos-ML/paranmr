@@ -4,10 +4,7 @@
 import numpy as np
 import pytest
 
-from paranmr.core.fitting.susceptibility.objectives.moments.differences import (
-    build_moment_difference_vector,
-)
-from paranmr.core.fitting.susceptibility.objectives.moments.gmm.objective import (
+from paranmr.core.fitting.susceptibility.objectives.gmm.objective import (
     GMMMomentObjective,
 )
 
@@ -101,33 +98,6 @@ def test_gmm_moment_objective_score_matches_weighting_quadratic_form():
 
 
 @pytest.mark.unit
-def test_build_moment_difference_vector_returns_calculated_minus_observed_in_order():
-    observed = {
-        "m1": 2.0,
-        "m2": 4.0,
-        "m3": 8.0,
-        "m4": 16.0,
-        "m5": 32.0,
-        "m6": 64.0,
-    }
-    calculated = {
-        "m1": 3.0,
-        "m2": 2.0,
-        "m3": 12.0,
-        "m4": 16.0,
-        "m5": 16.0,
-        "m6": 128.0,
-    }
-
-    vector = build_moment_difference_vector(
-        observed_moments=observed,
-        calculated_moments=calculated,
-        moment_names=("m1", "m2", "m3", "m4", "m5", "m6"),
-    )
-
-    assert vector == pytest.approx(np.asarray([1.0, -2.0, 4.0, 0.0, -16.0, 64.0]))
-
-
 @pytest.mark.unit
 def test_gmm_moment_objective_transforms_residual_jacobian_by_cholesky_factor():
     objective = GMMMomentObjective.with_covariance(

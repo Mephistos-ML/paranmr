@@ -9,7 +9,7 @@ import pytest
 from paranmr.core.fitting.susceptibility.jacobian.types import (
     MomentJacobianResult,
 )
-from paranmr.core.fitting.susceptibility.objectives.moments.gmm.covariance import (
+from paranmr.core.fitting.susceptibility.objectives.gmm.covariance import (
     MomentCovarianceEstimate,
 )
 from paranmr.io.csv.fit import save_moment_jacobian

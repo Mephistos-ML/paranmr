@@ -15,7 +15,7 @@ import pandas as pd
 from paranmr.core.fitting.linewidth import R6LinewidthParameterEstimate
 from paranmr.core.fitting.susceptibility.fitters.moments import MomentFitResult
 from paranmr.core.fitting.susceptibility.jacobian.types import MomentJacobianResult
-from paranmr.core.fitting.susceptibility.objectives.moments.gmm.covariance import (
+from paranmr.core.fitting.susceptibility.objectives.gmm.covariance import (
     MomentCovarianceEstimate,
 )
 from paranmr.io.csv.csv_util import read_csv_safe, write_csv_safe

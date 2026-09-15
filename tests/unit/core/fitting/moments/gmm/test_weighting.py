@@ -8,11 +8,11 @@ from paranmr.core.fitting.susceptibility.jacobian.moments import (
     differentiate_moments_by_centers,
     differentiate_moments_by_sigmas,
 )
-from paranmr.core.fitting.susceptibility.objectives.moments.gmm.covariance import (
+from paranmr.core.fitting.susceptibility.objectives.gmm.covariance import (
     JacobianMomentCovarianceConfig,
     estimate_moment_covariance_from_jacobian,
 )
-from paranmr.core.fitting.susceptibility.objectives.moments.gmm.weighting import (
+from paranmr.core.fitting.susceptibility.objectives.gmm.weighting import (
     build_gmm_weighting_matrix,
 )
 from paranmr.io.csv.fit import save_moment_weighting_matrix
