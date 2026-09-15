@@ -51,8 +51,11 @@ def test_gmm_recovers_seeded_synthetic_ybl8_shifts(tmp_path: Path) -> None:
     gmm_config = yaml.safe_load(gmm_config_path.read_text(encoding="utf-8"))
     assert gmm_config["assignment"]["method"] == "moments"
     assert "type" not in gmm_config["assignment"]["moment_objective"]
+    assert gmm_config["susc_fit"]["variables"]["iso"] == ["fix", 0.0]
     assert all(
-        value[0] == "fit" for value in gmm_config["susc_fit"]["variables"].values()
+        value[0] == "fit"
+        for name, value in gmm_config["susc_fit"]["variables"].items()
+        if name != "iso"
     )
     assert all(
         value[0] == "fit" for value in gmm_config["linewidth"]["variables"].values()

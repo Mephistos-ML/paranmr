@@ -45,7 +45,7 @@ linewidth:
 susc_fit:
   type: split
   variables:
-    iso: [fit, 0.0]
+    iso: [fix, 0.0]
     dxx: [fit, -0.002560267873729879]
     dyy: [fit, 0.005800230093043623]
     dxy: [fit, 0.0005314367779005822]
