@@ -23,6 +23,9 @@ diamagnetic_ref:
 experiment:
   files: ../../../../DATA/PARA/exp.csv
 
+signal_labels:
+  file: ../../../../DATA/LABELS/YbL8_labels.csv
+
 assignment:
   method: moments
   moment_objective:
@@ -49,6 +52,6 @@ susc_fit:
     alpha: [fix, 188.299]
     beta: [fix, 21.861]
     gamma: [fix, 209.965]
-  average_shifts: 'methyls'
+  average_shifts: all
   objective_map:
     parameters: [ax, rho_over_ax]

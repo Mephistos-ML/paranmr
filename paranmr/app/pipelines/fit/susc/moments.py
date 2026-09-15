@@ -27,6 +27,9 @@ from paranmr.core.fitting.susceptibility.models.base import SusceptibilityModel
 from paranmr.core.fitting.susceptibility.moments.descriptors import (
     compute_gaussian_mixture_moments,
 )
+from paranmr.core.fitting.susceptibility.moments.forward import (
+    calculated_signal_packages_from_parameters,
+)
 from paranmr.core.fitting.susceptibility.moments.gaussian import (
     gaussian_peak_representation,
 )
@@ -105,6 +108,21 @@ def fit_moment_assignment(
         area_norm=observed_peaks["area_norm"],
         moment_labels=moment_labels,
     )
+    experimental_total_integral = float(np.sum(observed_peaks["area"]))
+    experimental_moments["m0"] = experimental_total_integral
+    theoretical_packages = calculated_signal_packages_from_parameters(
+        model=model,
+        parameters={**model.fix_vars, **model.fit_vars},
+        nuclei=list(molecule.nuclei),
+        include_diamagnetic=any(
+            getattr(nucleus.shift, "dia", 0.0) != 0.0 for nucleus in molecule.nuclei
+        ),
+        average_labels=tuple(tuple(group) for group in average_labels),
+    )
+    theoretical_total_integral = float(
+        sum(len(package.atom_labels) for package in theoretical_packages)
+    )
+    integral_scale = experimental_total_integral / theoretical_total_integral
 
     moment_covariance = None
     gmm_weighting_matrix = None
@@ -189,6 +207,7 @@ def fit_moment_assignment(
         fit_guess=fit_guess,
         fit_bounds=fit_bounds,
         use_diamagnetic=use_diamagnetic,
+        integral_scale=integral_scale,
         average_labels=tuple(tuple(group) for group in average_labels),
     )
 
@@ -325,7 +344,7 @@ def fit_moment_assignment(
 def build_moment_labels_up_to(number_of_moments: int) -> tuple[str, ...]:
     if number_of_moments <= 0:
         raise ValueError("number_of_moments must be positive")
-    return tuple(f"m{index}" for index in range(1, number_of_moments + 1))
+    return tuple(f"m{index}" for index in range(number_of_moments + 1))
 
 
 def _observed_peak_representation_from_experiment(

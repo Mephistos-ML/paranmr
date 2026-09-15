@@ -114,6 +114,7 @@ def calculated_moments_from_parameters(
     linewidths_by_label: dict[str, float],
     include_diamagnetic: bool,
     moment_labels: tuple[str, ...],
+    integral_scale: float = 1.0,
     average_labels: tuple[tuple[str, ...], ...] = (),
 ) -> dict[str, float]:
     """Compute Gaussian-mixture raw moments for a calculated parameter set."""
@@ -132,14 +133,21 @@ def calculated_moments_from_parameters(
     calculated_peaks = gaussian_peak_representation(
         centers=centers,
         fwhm=calculated_widths_ppm,
-        areas=np.ones(len(sorted_packages), dtype=float),
+        areas=np.asarray(
+            [len(package.atom_labels) for package in sorted_packages], dtype=float
+        ),
     )
-    return compute_gaussian_mixture_moments(
+    moments = compute_gaussian_mixture_moments(
         centers=calculated_peaks["center"],
         sigmas=calculated_peaks["sigma"],
         area_norm=calculated_peaks["area_norm"],
         moment_labels=moment_labels,
     )
+    if "m0" in moments:
+        moments["m0"] = float(integral_scale) * float(
+            sum(len(package.atom_labels) for package in sorted_packages)
+        )
+    return moments
 
 
 def _package_linewidth(

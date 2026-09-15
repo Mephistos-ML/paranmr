@@ -815,7 +815,7 @@ class FitSuscConfig(Config):
             except ValueError:
                 invalid_weight_names.append(moment_name)
                 continue
-            if not 1 <= order <= number_of_moments:
+            if not 0 <= order <= number_of_moments:
                 invalid_weight_names.append(moment_name)
         if invalid_weight_names:
             raise ValueError(
@@ -824,7 +824,7 @@ class FitSuscConfig(Config):
             )
         if objective_type == "ls":
             expected_weight_names = {
-                f"m{order}" for order in range(1, number_of_moments + 1)
+                f"m{order}" for order in range(number_of_moments + 1)
             }
             provided_weight_names = set(weights)
             if provided_weight_names != expected_weight_names:

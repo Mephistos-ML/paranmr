@@ -43,6 +43,8 @@ def differentiate_moments_by_centers(
     jacobian = np.zeros((len(moment_labels), len(centers_arr)), dtype=float)
     for row_index, label in enumerate(moment_labels):
         order = moment_order(label)
+        if order == 0:
+            continue
         component_previous = component_raw_moments[order - 1]
         jacobian[row_index, :] = order * weights_arr * component_previous
     return jacobian
@@ -76,7 +78,7 @@ def differentiate_moments_by_sigmas(
     jacobian = np.zeros((len(moment_labels), len(centers_arr)), dtype=float)
     for row_index, label in enumerate(moment_labels):
         order = moment_order(label)
-        if order == 1:
+        if order <= 1:
             continue
         component_two_lower = component_raw_moments[order - 2]
         jacobian[row_index, :] = (

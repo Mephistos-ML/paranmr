@@ -14,8 +14,8 @@ from numpy.typing import ArrayLike
 
 def moment_n(order: int) -> str:
     """Return the canonical public name for a moment descriptor order."""
-    if order < 1:
-        raise ValueError("Moment order must be positive")
+    if order < 0:
+        raise ValueError("Moment order must be non-negative")
     return f"m{order}"
 
 
@@ -27,7 +27,7 @@ def moment_order(label: str) -> int:
         order = int(label[1:])
     except ValueError as exc:
         raise ValueError(f"Invalid moment label {label!r}") from exc
-    if order < 1:
+    if order < 0:
         raise ValueError(f"Invalid moment label {label!r}")
     return order
 
@@ -120,7 +120,7 @@ def compute_gaussian_mixture_moments(
 
     Returns:
         Mapping in the requested label order. Each label ``mN`` receives the
-        raw moment of order ``N``.
+        raw moment of order ``N``. ``m0`` is the normalized total area.
 
     Raises:
         ValueError: If arrays do not have matching shapes, sigmas are not positive,

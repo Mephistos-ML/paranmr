@@ -118,6 +118,7 @@ class MomentFitInputs:
     fit_guess: list[float]
     fit_bounds: NDArray[np.float64]
     use_diamagnetic: bool
+    integral_scale: float
     average_labels: tuple[tuple[str, ...], ...]
 
 
@@ -211,6 +212,7 @@ def fit_moment_model(
         linewidths_by_label=final_linewidths_by_atom_label,
         include_diamagnetic=inputs.use_diamagnetic,
         moment_labels=inputs.moment_labels,
+        integral_scale=inputs.integral_scale,
         average_labels=inputs.average_labels,
     )
 
@@ -280,6 +282,7 @@ def evaluate_moment_fit_vector(
         linewidths_by_label=calculated_widths_by_atom_label,
         include_diamagnetic=inputs.use_diamagnetic,
         moment_labels=inputs.moment_labels,
+        integral_scale=inputs.integral_scale,
         average_labels=inputs.average_labels,
     )
     normalized_moments = build_normalized_moment_vectors(

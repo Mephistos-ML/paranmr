@@ -68,6 +68,18 @@ def test_compute_gaussian_mixture_moments_returns_raw_moments():
 
 
 @pytest.mark.unit
+def test_compute_gaussian_mixture_moments_includes_normalized_zeroth_moment():
+    moments = compute_gaussian_mixture_moments(
+        centers=[-1.0, 1.0],
+        sigmas=[0.5, 0.5],
+        area_norm=[0.5, 0.5],
+        moment_labels=("m0", "m1"),
+    )
+
+    assert moments == pytest.approx({"m0": 1.0, "m1": 0.0})
+
+
+@pytest.mark.unit
 def test_compute_gaussian_mixture_moments_matches_manual_raw_formula_1_to_6():
     centers, sigmas, weights, expected = _manual_gaussian_mixture_raw_moments_1_to_6()
 
