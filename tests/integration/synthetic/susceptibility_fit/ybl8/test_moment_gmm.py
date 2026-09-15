@@ -50,7 +50,7 @@ def test_gmm_recovers_seeded_synthetic_ybl8_shifts(tmp_path: Path) -> None:
     gmm_config_path = _materialize_gmm_config(tmp_path)
     gmm_config = yaml.safe_load(gmm_config_path.read_text(encoding="utf-8"))
     assert gmm_config["assignment"]["method"] == "moments"
-    assert gmm_config["assignment"]["moment_objective"]["type"] == "gmm"
+    assert "type" not in gmm_config["assignment"]["moment_objective"]
     assert all(
         value[0] == "fit" for value in gmm_config["susc_fit"]["variables"].values()
     )

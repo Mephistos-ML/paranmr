@@ -768,20 +768,7 @@ class FitSuscConfig(Config):
         if not isinstance(value, dict):
             raise ValueError("assignment:moment_objective must be a mapping")
 
-        objective_type = str(value.get("type", "ls")).strip().lower()
-        allowed = {"gmm", "ls"}
-        if objective_type not in allowed:
-            raise ValueError(
-                "assignment:moment_objective:type must be one of "
-                + ", ".join(sorted(allowed))
-            )
-
-        unknown = set(value) - {
-            "type",
-            "number_of_moments",
-            "moment_weights",
-            "covariance",
-        }
+        unknown = set(value) - {"number_of_moments", "covariance"}
         if unknown:
             raise ValueError(
                 "assignment:moment_objective contains unknown key(s): "
@@ -798,143 +785,71 @@ class FitSuscConfig(Config):
                 "positive integer"
             )
 
-        weights = value.get("moment_weights", {})
-        if weights is None or weights == "":
-            weights = {}
-        if not isinstance(weights, dict):
-            raise ValueError(
-                "assignment:moment_objective:moment_weights must be a mapping"
-            )
-        invalid_weight_names = []
-        for moment_name in weights:
-            if not isinstance(moment_name, str) or not moment_name.startswith("m"):
-                invalid_weight_names.append(moment_name)
-                continue
-            try:
-                order = int(moment_name[1:])
-            except ValueError:
-                invalid_weight_names.append(moment_name)
-                continue
-            if not 0 <= order <= number_of_moments:
-                invalid_weight_names.append(moment_name)
-        if invalid_weight_names:
-            raise ValueError(
-                "assignment:moment_objective:moment_weights contains unknown "
-                "moment(s): " + ", ".join(sorted(invalid_weight_names))
-            )
-        if objective_type == "ls":
-            expected_weight_names = {
-                f"m{order}" for order in range(number_of_moments + 1)
-            }
-            provided_weight_names = set(weights)
-            if provided_weight_names != expected_weight_names:
-                missing_weight_names = sorted(
-                    expected_weight_names - provided_weight_names
-                )
-                extra_weight_names = sorted(
-                    provided_weight_names - expected_weight_names
-                )
-                details = []
-                if missing_weight_names:
-                    details.append(
-                        "missing moment weight(s): " + ", ".join(missing_weight_names)
-                    )
-                if extra_weight_names:
-                    details.append(
-                        "unknown moment weight(s): " + ", ".join(extra_weight_names)
-                    )
-                raise ValueError(
-                    "assignment:moment_objective:moment_weights must define exactly "
-                    f"m1..m{number_of_moments} for type 'ls' ("
-                    + "; ".join(details)
-                    + ")"
-                )
-        if objective_type == "gmm" and weights:
-            raise ValueError(
-                "assignment:moment_objective:moment_weights is only supported "
-                "for type 'ls'"
-            )
         covariance = value.get("covariance", {})
         if covariance is None or covariance == "":
             covariance = {}
-        if objective_type == "gmm":
-            if not isinstance(covariance, dict):
-                raise ValueError(
-                    "assignment:moment_objective:covariance must be a mapping"
-                )
-            if not covariance:
-                raise ValueError(
-                    "assignment:moment_objective:covariance is required for type 'gmm'"
-                )
-            covariance_unknown = set(covariance) - {
-                "method",
-                "measurement_uncertainty",
-            }
-            if covariance_unknown:
-                raise ValueError(
-                    "assignment:moment_objective:covariance contains unknown key(s): "
-                    + ", ".join(sorted(covariance_unknown))
-                )
-            covariance_method = str(covariance.get("method", "")).strip().lower()
-            if covariance_method != "jacobian":
-                raise ValueError(
-                    "assignment:moment_objective:covariance:method must be "
-                    "'jacobian' for type 'gmm'"
-                )
-            measurement_uncertainty = covariance.get("measurement_uncertainty")
-            if not isinstance(measurement_uncertainty, dict):
-                raise ValueError(
-                    "assignment:moment_objective:covariance:measurement_uncertainty "
-                    "must be a mapping"
-                )
-            uncertainty_unknown = set(measurement_uncertainty) - {
-                "shift_sigma_abs",
-                "width_sigma_rel",
-            }
-            if uncertainty_unknown:
-                raise ValueError(
-                    "assignment:moment_objective:covariance:measurement_uncertainty "
-                    "contains unknown key(s): " + ", ".join(sorted(uncertainty_unknown))
-                )
-            if "shift_sigma_abs" not in measurement_uncertainty:
-                raise ValueError(
-                    "assignment:moment_objective:covariance:measurement_uncertainty:"
-                    "shift_sigma_abs is required"
-                )
-            if "width_sigma_rel" not in measurement_uncertainty:
-                raise ValueError(
-                    "assignment:moment_objective:covariance:measurement_uncertainty:"
-                    "width_sigma_rel is required"
-                )
-            shift_sigma_abs = float(measurement_uncertainty["shift_sigma_abs"])
-            width_sigma_rel = float(measurement_uncertainty["width_sigma_rel"])
-            if shift_sigma_abs <= 0.0:
-                raise ValueError(
-                    "assignment:moment_objective:covariance:measurement_uncertainty:"
-                    "shift_sigma_abs must be positive"
-                )
-            if width_sigma_rel <= 0.0:
-                raise ValueError(
-                    "assignment:moment_objective:covariance:measurement_uncertainty:"
-                    "width_sigma_rel must be positive"
-                )
-        parsed_weights = {
-            moment_name: float(weight) for moment_name, weight in weights.items()
+        if not isinstance(covariance, dict):
+            raise ValueError("assignment:moment_objective:covariance must be a mapping")
+        if not covariance:
+            raise ValueError("assignment:moment_objective:covariance is required")
+        covariance_unknown = set(covariance) - {"method", "measurement_uncertainty"}
+        if covariance_unknown:
+            raise ValueError(
+                "assignment:moment_objective:covariance contains unknown key(s): "
+                + ", ".join(sorted(covariance_unknown))
+            )
+        covariance_method = str(covariance.get("method", "")).strip().lower()
+        if covariance_method != "jacobian":
+            raise ValueError(
+                "assignment:moment_objective:covariance:method must be 'jacobian'"
+            )
+        measurement_uncertainty = covariance.get("measurement_uncertainty")
+        if not isinstance(measurement_uncertainty, dict):
+            raise ValueError(
+                "assignment:moment_objective:covariance:measurement_uncertainty "
+                "must be a mapping"
+            )
+        uncertainty_unknown = set(measurement_uncertainty) - {
+            "shift_sigma_abs",
+            "width_sigma_rel",
         }
+        if uncertainty_unknown:
+            raise ValueError(
+                "assignment:moment_objective:covariance:measurement_uncertainty "
+                "contains unknown key(s): " + ", ".join(sorted(uncertainty_unknown))
+            )
+        if "shift_sigma_abs" not in measurement_uncertainty:
+            raise ValueError(
+                "assignment:moment_objective:covariance:measurement_uncertainty:"
+                "shift_sigma_abs is required"
+            )
+        if "width_sigma_rel" not in measurement_uncertainty:
+            raise ValueError(
+                "assignment:moment_objective:covariance:measurement_uncertainty:"
+                "width_sigma_rel is required"
+            )
+        shift_sigma_abs = float(measurement_uncertainty["shift_sigma_abs"])
+        width_sigma_rel = float(measurement_uncertainty["width_sigma_rel"])
+        if shift_sigma_abs <= 0.0:
+            raise ValueError(
+                "assignment:moment_objective:covariance:measurement_uncertainty:"
+                "shift_sigma_abs must be positive"
+            )
+        if width_sigma_rel <= 0.0:
+            raise ValueError(
+                "assignment:moment_objective:covariance:measurement_uncertainty:"
+                "width_sigma_rel must be positive"
+            )
         self._assignment_moment_objective = {
-            "type": objective_type,
             "number_of_moments": int(number_of_moments),
-        }
-        if objective_type == "ls":
-            self._assignment_moment_objective["moment_weights"] = parsed_weights
-        else:
-            self._assignment_moment_objective["covariance"] = {
+            "covariance": {
                 "method": "jacobian",
                 "measurement_uncertainty": {
                     "shift_sigma_abs": shift_sigma_abs,
                     "width_sigma_rel": width_sigma_rel,
                 },
-            }
+            },
+        }
         return
 
     def _parse_objective_map(self, *, value: dict, context: str) -> dict:

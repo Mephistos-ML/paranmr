@@ -23,7 +23,6 @@ experiment:
 assignment:
   method: moments
   moment_objective:
-    type: gmm
     number_of_moments: 10
     covariance:
       method: jacobian

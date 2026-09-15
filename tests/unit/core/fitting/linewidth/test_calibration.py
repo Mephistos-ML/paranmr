@@ -88,15 +88,12 @@ def test_fit_susc_config_rejects_linewidth_estimate_for_moments(tmp_path):
                 "assignment:",
                 "  method: moments",
                 "  moment_objective:",
-                "    type: ls",
                 "    number_of_moments: 6",
-                "    moment_weights:",
-                "      m1: 1.0",
-                "      m2: 1.0",
-                "      m3: 1.0",
-                "      m4: 1.0",
-                "      m5: 1.0",
-                "      m6: 1.0",
+                "    covariance:",
+                "      method: jacobian",
+                "      measurement_uncertainty:",
+                "        shift_sigma_abs: 0.02",
+                "        width_sigma_rel: 0.05",
                 "linewidth:",
                 "  method: experimental",
                 "  estimate: p1_p2",
@@ -110,7 +107,7 @@ def test_fit_susc_config_rejects_linewidth_estimate_for_moments(tmp_path):
 
 
 @pytest.mark.unit
-def test_fit_susc_config_rejects_unknown_moment_weight_name(tmp_path):
+def test_fit_susc_config_rejects_legacy_moment_weights(tmp_path):
     config_file = tmp_path / "fit.yml"
     config_file.write_text(
         "\n".join(
@@ -138,7 +135,6 @@ def test_fit_susc_config_rejects_unknown_moment_weight_name(tmp_path):
                 "assignment:",
                 "  method: moments",
                 "  moment_objective:",
-                "    type: ls",
                 "    number_of_moments: 6",
                 "    moment_weights:",
                 "      m7: 1.0",
@@ -149,12 +145,12 @@ def test_fit_susc_config_rejects_unknown_moment_weight_name(tmp_path):
         encoding="utf-8",
     )
 
-    with pytest.raises(ValueError, match="unknown moment"):
+    with pytest.raises(ValueError, match="unknown key"):
         FitSuscConfig.from_file(config_file)
 
 
 @pytest.mark.unit
-def test_fit_susc_config_rejects_missing_moment_weight_for_ls(tmp_path):
+def test_fit_susc_config_rejects_legacy_moment_weights_without_all_orders(tmp_path):
     config_file = tmp_path / "fit.yml"
     config_file.write_text(
         "\n".join(
@@ -182,7 +178,6 @@ def test_fit_susc_config_rejects_missing_moment_weight_for_ls(tmp_path):
                 "assignment:",
                 "  method: moments",
                 "  moment_objective:",
-                "    type: ls",
                 "    number_of_moments: 3",
                 "    moment_weights:",
                 "      m1: 1.0",
@@ -196,13 +191,13 @@ def test_fit_susc_config_rejects_missing_moment_weight_for_ls(tmp_path):
 
     with pytest.raises(
         ValueError,
-        match="must define exactly m1..m3 for type 'ls'",
+        match="unknown key",
     ):
         FitSuscConfig.from_file(config_file)
 
 
 @pytest.mark.unit
-def test_fit_susc_config_accepts_gmm_moment_objective_placeholder(tmp_path):
+def test_fit_susc_config_rejects_moment_objective_without_covariance(tmp_path):
     config_file = tmp_path / "fit.yml"
     config_file.write_text(
         "\n".join(
@@ -230,7 +225,6 @@ def test_fit_susc_config_accepts_gmm_moment_objective_placeholder(tmp_path):
                 "assignment:",
                 "  method: moments",
                 "  moment_objective:",
-                "    type: gmm",
                 "    number_of_moments: 6",
                 "linewidth:",
                 "  method: experimental",
@@ -239,7 +233,7 @@ def test_fit_susc_config_accepts_gmm_moment_objective_placeholder(tmp_path):
         encoding="utf-8",
     )
 
-    with pytest.raises(ValueError, match="covariance is required for type 'gmm'"):
+    with pytest.raises(ValueError, match="covariance is required"):
         FitSuscConfig.from_file(config_file)
 
 
@@ -269,7 +263,6 @@ def test_fit_susc_config_accepts_gmm_with_explicit_covariance_specification(tmp_
                 "assignment:",
                 "  method: moments",
                 "  moment_objective:",
-                "    type: gmm",
                 "    number_of_moments: 6",
                 "    covariance:",
                 "      method: jacobian",
@@ -324,7 +317,6 @@ def test_fit_susc_config_rejects_monte_carlo_gmm_covariance(tmp_path):
                 "assignment:",
                 "  method: moments",
                 "  moment_objective:",
-                "    type: gmm",
                 "    number_of_moments: 6",
                 "    covariance:",
                 "      method: monte_carlo",
@@ -373,11 +365,12 @@ def test_fit_susc_config_accepts_susc_fit_objective_map_defaults(tmp_path):
                 "assignment:",
                 "  method: moments",
                 "  moment_objective:",
-                "    type: ls",
                 "    number_of_moments: 2",
-                "    moment_weights:",
-                "      m1: 1.0",
-                "      m2: 1.0",
+                "    covariance:",
+                "      method: jacobian",
+                "      measurement_uncertainty:",
+                "        shift_sigma_abs: 0.02",
+                "        width_sigma_rel: 0.05",
                 "linewidth:",
                 "  method: experimental",
             ]
@@ -428,11 +421,12 @@ def test_fit_susc_config_rejects_invalid_susc_fit_objective_map_parameter_list(
                 "assignment:",
                 "  method: moments",
                 "  moment_objective:",
-                "    type: ls",
                 "    number_of_moments: 2",
-                "    moment_weights:",
-                "      m1: 1.0",
-                "      m2: 1.0",
+                "    covariance:",
+                "      method: jacobian",
+                "      measurement_uncertainty:",
+                "        shift_sigma_abs: 0.02",
+                "        width_sigma_rel: 0.05",
                 "linewidth:",
                 "  method: experimental",
             ]
@@ -466,7 +460,6 @@ def test_fit_susc_config_rejects_gmm_moment_weights(tmp_path):
                 "assignment:",
                 "  method: moments",
                 "  moment_objective:",
-                "    type: gmm",
                 "    number_of_moments: 6",
                 "    moment_weights:",
                 "      m1: 1.0",
@@ -482,7 +475,7 @@ def test_fit_susc_config_rejects_gmm_moment_weights(tmp_path):
         encoding="utf-8",
     )
 
-    with pytest.raises(ValueError, match="only supported for type 'ls'"):
+    with pytest.raises(ValueError, match="unknown key"):
         FitSuscConfig.from_file(config_file)
 
 
@@ -510,15 +503,12 @@ def test_fit_susc_config_accepts_methyls_shift_averaging_for_moments(tmp_path):
                 "assignment:",
                 "  method: moments",
                 "  moment_objective:",
-                "    type: ls",
                 "    number_of_moments: 6",
-                "    moment_weights:",
-                "      m1: 1.0",
-                "      m2: 1.0",
-                "      m3: 1.0",
-                "      m4: 1.0",
-                "      m5: 1.0",
-                "      m6: 1.0",
+                "    covariance:",
+                "      method: jacobian",
+                "      measurement_uncertainty:",
+                "        shift_sigma_abs: 0.02",
+                "        width_sigma_rel: 0.05",
                 "linewidth:",
                 "  method: experimental",
             ]
@@ -566,7 +556,7 @@ def test_fit_susc_config_rejects_methyls_shift_averaging_for_basic_fit(tmp_path)
 
 
 @pytest.mark.unit
-def test_fit_susc_config_rejects_unknown_moment_objective_type(tmp_path):
+def test_fit_susc_config_rejects_legacy_moment_objective_type(tmp_path):
     config_file = tmp_path / "fit.yml"
     config_file.write_text(
         "\n".join(
@@ -596,5 +586,5 @@ def test_fit_susc_config_rejects_unknown_moment_objective_type(tmp_path):
         encoding="utf-8",
     )
 
-    with pytest.raises(ValueError, match="ls"):
+    with pytest.raises(ValueError, match="unknown key"):
         FitSuscConfig.from_file(config_file)
