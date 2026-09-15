@@ -244,9 +244,21 @@ def run_fit_susc(config, options: FitSuscRunOptions | None = None) -> int:
         logger.info("Dry run successful — no computations executed")
         return 0
 
+    average_shifts = config.susc_fit_average_shifts
+    if (
+        config.assignment_method == "moments"
+        and config.signal_labels_file
+        and average_shifts in (None, "", [])
+    ):
+        average_shifts = "all"
+        logger.info(
+            "Moments fitting uses signal-label groups as theoretical signal "
+            "packages and intensities."
+        )
+
     average_labels = resolve_average_shift_groups(
         molecule=base_molecule,
-        average_shifts=config.susc_fit_average_shifts,
+        average_shifts=average_shifts,
     )
     if config.susc_fit_average_shifts == "methyls" and not average_labels:
         logger.warning(

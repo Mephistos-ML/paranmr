@@ -17,6 +17,7 @@ from paranmr.core.fitting.susceptibility.linewidths import (
 )
 from paranmr.core.fitting.susceptibility.moments.forward import (
     CalculatedSignalPackage,
+    package_areas,
     package_centers,
     package_linewidths,
 )
@@ -83,7 +84,7 @@ def differentiate_moments_by_linewidth_parameters(
     peaks = gaussian_peak_representation(
         centers=centers,
         fwhm=fwhm,
-        areas=np.ones(len(packages), dtype=float),
+        areas=package_areas(packages),
     )
 
     d_moments_by_sigmas = differentiate_moments_by_sigmas(

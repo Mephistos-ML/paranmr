@@ -25,6 +25,7 @@ from paranmr.core.fitting.susceptibility.jacobian.susceptibility_centers import 
 )
 from paranmr.core.fitting.susceptibility.moments.forward import (
     calculated_signal_packages_from_parameters,
+    package_areas,
     package_centers,
     sort_packages_by_center,
 )
@@ -239,7 +240,7 @@ def differentiate_moments_by_center_derivative(
     peaks = gaussian_peak_representation(
         centers=centers,
         fwhm=fwhm,
-        areas=np.ones(len(packages), dtype=float),
+        areas=package_areas(packages),
     )
     d_moments_by_centers = differentiate_moments_by_centers(
         centers=peaks["center"],

@@ -26,6 +26,7 @@ class CalculatedSignalPackage:
     label: str
     atom_labels: tuple[str, ...]
     center: float
+    area: float = 1.0
 
 
 def calculated_signal_packages_from_parameters(
@@ -50,6 +51,7 @@ def calculated_signal_packages_from_parameters(
             label=nucleus_by_label[label].label,
             atom_labels=(label,),
             center=float(total_shift),
+            area=1.0,
         )
         for label, total_shift in label_to_total_shift.items()
     ]
@@ -106,6 +108,15 @@ def package_linewidths(
     )
 
 
+def package_areas(packages: list[CalculatedSignalPackage]) -> NDArray:
+    """Return the theoretical integrated area of each calculated signal package."""
+
+    areas = np.asarray([package.area for package in packages], dtype=float)
+    if np.any(areas <= 0.0):
+        raise ValueError("Calculated signal package areas must be positive")
+    return areas
+
+
 def calculated_moments_from_parameters(
     *,
     model,
@@ -133,9 +144,7 @@ def calculated_moments_from_parameters(
     calculated_peaks = gaussian_peak_representation(
         centers=centers,
         fwhm=calculated_widths_ppm,
-        areas=np.asarray(
-            [len(package.atom_labels) for package in sorted_packages], dtype=float
-        ),
+        areas=package_areas(sorted_packages),
     )
     moments = compute_gaussian_mixture_moments(
         centers=calculated_peaks["center"],
@@ -191,6 +200,7 @@ def average_signal_packages(
                 label=group[0],
                 atom_labels=tuple(group),
                 center=float(np.mean(centers)),
+                area=float(sum(package_by_atom_label[label].area for label in group)),
             )
         )
 

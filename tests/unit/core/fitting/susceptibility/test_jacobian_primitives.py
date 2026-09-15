@@ -32,6 +32,7 @@ from paranmr.core.fitting.susceptibility.moments.descriptors import (
 )
 from paranmr.core.fitting.susceptibility.moments.forward import (
     calculated_signal_packages_from_parameters,
+    package_areas,
     package_centers,
     package_linewidths,
     sort_packages_by_center,
@@ -827,6 +828,60 @@ def test_split_moment_derivative_matches_finite_difference(parameter_name: str):
     finite_difference = (
         _moments(parameters[parameter_name] + step)
         - _moments(parameters[parameter_name] - step)
+    ) / (2.0 * step)
+
+    assert analytical == pytest.approx(finite_difference, rel=1e-6, abs=1e-8)
+
+
+@pytest.mark.unit
+def test_split_moment_derivative_uses_grouped_signal_area():
+    nuclei = _test_nuclei()
+    parameters = {
+        "iso": 0.04,
+        "dxx": 0.12,
+        "dyy": -0.08,
+        "dxy": 0.03,
+        "dxz": -0.02,
+        "dyz": 0.05,
+    }
+    linewidths_by_label = {"H1": 1.1, "H2": 0.9, "H3": 1.3}
+    average_labels = (("H1", "H2"),)
+    step = 1.0e-7
+
+    analytical = differentiate_moments_by_split_parameter(
+        parameter_name="dxx",
+        parameters=parameters,
+        nuclei=nuclei,
+        linewidths_by_label=linewidths_by_label,
+        moment_labels=MOMENT_LABELS,
+        average_labels=average_labels,
+    )
+
+    def _moments(dxx: float) -> np.ndarray:
+        packages = sort_packages_by_center(
+            calculated_signal_packages_from_parameters(
+                model=SplitFitter,
+                parameters={**parameters, "dxx": dxx},
+                nuclei=nuclei,
+                include_diamagnetic=True,
+                average_labels=average_labels,
+            )
+        )
+        peaks = gaussian_peak_representation(
+            centers=package_centers(packages),
+            fwhm=package_linewidths(packages, linewidths_by_label),
+            areas=package_areas(packages),
+        )
+        moments = compute_gaussian_mixture_moments(
+            centers=peaks["center"],
+            sigmas=peaks["sigma"],
+            area_norm=peaks["area_norm"],
+            moment_labels=MOMENT_LABELS,
+        )
+        return np.asarray([moments[name] for name in MOMENT_LABELS])
+
+    finite_difference = (
+        _moments(parameters["dxx"] + step) - _moments(parameters["dxx"] - step)
     ) / (2.0 * step)
 
     assert analytical == pytest.approx(finite_difference, rel=1e-6, abs=1e-8)
