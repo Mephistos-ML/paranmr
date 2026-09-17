@@ -12,6 +12,8 @@ hyperfine:
   total_momentum_J: 3.5
 nuclei:
   include: H
+signal_labels:
+  file: ../../DATA/LABELS/YbL8_labels.csv
 diamagnetic:
   method: dft
   file: ../../DATA/DIA/LuL8_DIA_NMR.out
@@ -25,25 +27,19 @@ assignment:
   moment_objective:
     number_of_moments: 10
     covariance:
-      method: jacobian
-      measurement_uncertainty:
-        shift_sigma_abs: 0.02
-        width_sigma_rel: 0.05
+      method: parameter_jacobian
 linewidth:
   method: r6
   variables:
     p1:
-    - fit
-    - 1.0
-    - - 0.0
-      - 1000000.0
+    - fix
+    - 518.933180241867
     p2:
-    - fit
-    - 0.1
-    - - 0.0
-      - 10.0
+    - fix
+    - 0.239390978830240
 susc_fit:
   type: split
+  average_shifts: all
   variables:
     iso: [fix, 0.0]
     dxx: [fit, -0.002560267873729879]

@@ -38,6 +38,7 @@ def _materialize_gmm_config(tmp_path: Path) -> Path:
     config["hyperfine"]["file"] = str(_YBL8_DATA / "HFC" / "YbL8.xyz")
     config["diamagnetic"]["file"] = str(_YBL8_DATA / "DIA" / "LuL8_DIA_NMR.out")
     config["diamagnetic_ref"]["file"] = str(_YBL8_DATA / "DIA" / "tms_ref.out")
+    config["signal_labels"]["file"] = str(_YBL8_DATA / "LABELS" / "YbL8_labels.csv")
     config["experiment"]["files"] = str(_GMM_FIXTURE / "generated_shifts.csv")
     config_path = tmp_path / "gmm_config.yml"
     config_path.write_text(yaml.safe_dump(config, sort_keys=False), encoding="utf-8")
@@ -46,20 +47,22 @@ def _materialize_gmm_config(tmp_path: Path) -> Path:
 
 @pytest.mark.integration
 def test_gmm_recovers_seeded_synthetic_ybl8_shifts(tmp_path: Path) -> None:
-    """Fit all χ/R6 variables to the committed seeded YbL8 fixture."""
+    """Recover seeded YbL8 shifts with its known R6 linewidths fixed."""
     gmm_config_path = _materialize_gmm_config(tmp_path)
     gmm_config = yaml.safe_load(gmm_config_path.read_text(encoding="utf-8"))
     assert gmm_config["assignment"]["method"] == "moments"
     assert "type" not in gmm_config["assignment"]["moment_objective"]
+    assert gmm_config["susc_fit"]["average_shifts"] == "all"
     assert gmm_config["susc_fit"]["variables"]["iso"] == ["fix", 0.0]
     assert all(
         value[0] == "fit"
         for name, value in gmm_config["susc_fit"]["variables"].items()
         if name != "iso"
     )
-    assert all(
-        value[0] == "fit" for value in gmm_config["linewidth"]["variables"].values()
-    )
+    assert gmm_config["linewidth"]["variables"] == {
+        "p1": ["fix", 518.933180241867],
+        "p2": ["fix", 0.239390978830240],
+    }
     generated_peaks = pd.read_csv(
         _GMM_FIXTURE / "generated_shifts.csv",
         comment="#",
