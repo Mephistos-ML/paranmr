@@ -29,6 +29,67 @@ class CalculatedSignalPackage:
     area: float = 1.0
 
 
+@dataclass(frozen=True)
+class ObservedMomentData:
+    """Observed Gaussian peaks, their raw moments, and spectrum integral."""
+
+    peaks: dict[str, NDArray]
+    moments: dict[str, float]
+    integral: float
+
+
+def observed_moment_data_from_peaks(
+    *,
+    centers: NDArray,
+    fwhm: NDArray,
+    areas: NDArray,
+    moment_labels: tuple[str, ...],
+) -> ObservedMomentData:
+    """Construct the observed Gaussian representation used by moment fitting.
+
+    Peak sorting belongs here because Gaussian moment construction is a core
+    numerical operation; application code only extracts measured descriptors.
+    ``m0`` retains the physical spectrum integral for diagnostics, while the
+    requested positive-order moments remain area-normalized descriptors.
+    """
+
+    centers_arr = np.asarray(centers, dtype=float)
+    fwhm_arr = np.asarray(fwhm, dtype=float)
+    areas_arr = np.asarray(areas, dtype=float)
+    if centers_arr.shape != fwhm_arr.shape or centers_arr.shape != areas_arr.shape:
+        raise ValueError("Observed Gaussian peak arrays must have matching shapes")
+    sort_index = np.argsort(centers_arr)
+    peaks = gaussian_peak_representation(
+        centers=centers_arr[sort_index],
+        fwhm=fwhm_arr[sort_index],
+        areas=areas_arr[sort_index],
+    )
+    moments = compute_gaussian_mixture_moments(
+        centers=peaks["center"],
+        sigmas=peaks["sigma"],
+        area_norm=peaks["area_norm"],
+        moment_labels=moment_labels,
+    )
+    integral = float(np.sum(peaks["area"]))
+    moments["m0"] = integral
+    return ObservedMomentData(peaks=peaks, moments=moments, integral=integral)
+
+
+def integral_scale_from_calculated_packages(
+    *,
+    observed_integral: float,
+    packages: list[CalculatedSignalPackage],
+) -> float:
+    """Return the scale mapping calculated package area onto observed area."""
+
+    if observed_integral <= 0.0:
+        raise ValueError("Observed spectrum integral must be positive")
+    calculated_integral = float(np.sum(package_areas(packages)))
+    if calculated_integral <= 0.0:
+        raise ValueError("Calculated spectrum integral must be positive")
+    return float(observed_integral) / calculated_integral
+
+
 def calculated_signal_packages_from_parameters(
     model,
     parameters: dict[str, float],
@@ -75,14 +136,6 @@ def package_centers(packages: list[CalculatedSignalPackage]) -> NDArray:
     """Return package centers in the existing package order."""
 
     return np.asarray([package.center for package in packages], dtype=float)
-
-
-def package_centers_sorted_by_center(
-    packages: list[CalculatedSignalPackage],
-) -> NDArray:
-    """Return calculated package centers sorted in ppm space."""
-
-    return package_centers(sort_packages_by_center(packages))
 
 
 def package_linewidths(
@@ -154,7 +207,7 @@ def calculated_moments_from_parameters(
     )
     if "m0" in moments:
         moments["m0"] = float(integral_scale) * float(
-            sum(len(package.atom_labels) for package in sorted_packages)
+            np.sum(package_areas(sorted_packages))
         )
     return moments
 
