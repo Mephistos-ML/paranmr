@@ -24,37 +24,23 @@ from paranmr.core.fitting.susceptibility.jacobian.assembly import (
     build_moment_jacobian,
 )
 from paranmr.core.fitting.susceptibility.models.base import SusceptibilityModel
-from paranmr.core.fitting.susceptibility.moments.descriptors import (
-    compute_gaussian_mixture_moments,
-)
 from paranmr.core.fitting.susceptibility.moments.forward import (
     calculated_signal_packages_from_parameters,
-)
-from paranmr.core.fitting.susceptibility.moments.gaussian import (
-    gaussian_peak_representation,
+    integral_scale_from_calculated_packages,
+    observed_moment_data_from_peaks,
 )
 from paranmr.core.fitting.susceptibility.objective_map import (
     ObjectiveMapConfig,
     build_objective_map,
 )
-from paranmr.core.fitting.susceptibility.objectives.gmm.covariance import (
-    JacobianMomentCovarianceConfig,
-    estimate_moment_covariance_from_jacobian,
-)
 from paranmr.core.fitting.susceptibility.objectives.gmm.objective import (
     GMMMomentObjective,
 )
-from paranmr.core.fitting.susceptibility.objectives.gmm.weighting import (
-    build_gmm_weighting_matrix,
-)
 from paranmr.io.csv.fit import (
     save_fit_linewidth_model,
-    save_moment_covariance,
     save_moment_fit_diagnostics,
     save_moment_jacobian,
-    save_moment_weighting_matrix,
 )
-from paranmr.viz.plots.covariance import plot_moment_covariance_heatmap
 from paranmr.viz.plots.jacobian import plot_moment_jacobian_heatmap
 from paranmr.viz.plots.objective_map import plot_objective_map
 from paranmr.viz.style.theme import PlotSpec
@@ -70,7 +56,7 @@ def fit_moment_assignment(
     spec: PlotSpec,
     show_plots: bool,
     project_name: str,
-    assignment_moment_objective: dict | None,
+    max_moment_order: int,
     susc_fit_objective_map: dict | None,
     linewidth_variables: dict | None,
     average_labels: list[list[str]] | None = None,
@@ -94,23 +80,18 @@ def fit_moment_assignment(
         label_kind="atom_label",
     )
 
-    moment_labels = build_moment_labels_up_to(
-        int(assignment_moment_objective["number_of_moments"])
-    )
+    # ``m0`` is integral-only; GMM conditions are ``m1`` through ``mN``.
+    moment_labels = tuple(f"m{order}" for order in range(1, max_moment_order + 1))
 
-    # Build experimental moments directly from the measured peaks.
-    observed_peaks = _observed_peak_representation_from_experiment(
-        experiment=experiment,
-        widths_ppm=observed_widths_ppm,
-    )
-    experimental_moments = compute_gaussian_mixture_moments(
-        centers=observed_peaks["center"],
-        sigmas=observed_peaks["sigma"],
-        area_norm=observed_peaks["area_norm"],
+    observed_moment_data = observed_moment_data_from_peaks(
+        centers=np.asarray(
+            [signal.shift for signal in experiment.signals], dtype=float
+        ),
+        fwhm=observed_widths_ppm,
+        areas=np.asarray([signal.area for signal in experiment.signals], dtype=float),
         moment_labels=moment_labels,
     )
-    experimental_total_integral = float(np.sum(observed_peaks["area"]))
-    experimental_moments["m0"] = experimental_total_integral
+    experimental_moments = observed_moment_data.moments
     theoretical_packages = calculated_signal_packages_from_parameters(
         model=model,
         parameters={**model.fix_vars, **model.fit_vars},
@@ -120,28 +101,14 @@ def fit_moment_assignment(
         ),
         average_labels=tuple(tuple(group) for group in average_labels),
     )
-    theoretical_total_integral = float(
-        sum(len(package.atom_labels) for package in theoretical_packages)
+    integral_scale = integral_scale_from_calculated_packages(
+        observed_integral=observed_moment_data.integral,
+        packages=theoretical_packages,
     )
-    integral_scale = experimental_total_integral / theoretical_total_integral
 
-    covariance_config = assignment_moment_objective["covariance"]
-    moment_covariance = estimate_moment_covariance_from_jacobian(
-        observed_peaks=observed_peaks,
+    gmm_objective = GMMMomentObjective(
         moment_names=moment_labels,
-        config=JacobianMomentCovarianceConfig(
-            shift_sigma_abs=float(
-                covariance_config["measurement_uncertainty"]["shift_sigma_abs"]
-            ),
-            width_sigma_rel=float(
-                covariance_config["measurement_uncertainty"]["width_sigma_rel"]
-            ),
-        ),
-    )
-    gmm_weighting_matrix = build_gmm_weighting_matrix(moment_covariance.covariance)
-    gmm_objective = GMMMomentObjective.with_covariance(
-        moment_names=moment_labels,
-        covariance=moment_covariance.covariance,
+        observed_moments=experimental_moments,
     )
 
     # Split linewidth variables into fit, fixed, and bounded subsets.
@@ -211,34 +178,6 @@ def fit_moment_assignment(
                 f"linewidth_model_{experiment.temperature:.2f}_K.csv",
             ),
         )
-        save_moment_covariance(
-            estimate=moment_covariance,
-            file_name=os.path.join(
-                project_name,
-                f"moment_covariance_{experiment.temperature:.2f}_K.csv",
-            ),
-            temperature=float(experiment.temperature),
-        )
-        save_moment_weighting_matrix(
-            weighting_matrix=gmm_weighting_matrix,
-            moment_names=moment_labels,
-            file_name=os.path.join(
-                project_name,
-                f"moment_weighting_matrix_{experiment.temperature:.2f}_K.csv",
-            ),
-            temperature=float(experiment.temperature),
-        )
-        with spec.context():
-            plot_moment_covariance_heatmap(
-                covariance=moment_covariance,
-                spec=spec,
-                save=True,
-                show=show_plots,
-                save_name=os.path.join(
-                    project_name,
-                    f"moment_covariance_heatmap_{experiment.temperature:.2f}_K",
-                ),
-            )
         moment_jacobian = build_moment_jacobian(
             temperature=float(experiment.temperature),
             parameters=model.final_var_values,
@@ -279,7 +218,6 @@ def fit_moment_assignment(
             def moment_score(point: np.ndarray) -> float:
                 evaluation = evaluate_moment_fit_vector(point, fit_inputs)
                 return fit_inputs.gmm_objective.score(
-                    observed_moments=fit_inputs.observed_moments,
                     calculated_moments=evaluation.calculated_moments,
                 )
 
@@ -312,34 +250,6 @@ def fit_moment_assignment(
                     save_name=os.path.join(project_name, file_stub),
                 )
     return moment_fit_result
-
-
-def build_moment_labels_up_to(number_of_moments: int) -> tuple[str, ...]:
-    if number_of_moments <= 0:
-        raise ValueError("number_of_moments must be positive")
-    return tuple(f"m{index}" for index in range(number_of_moments + 1))
-
-
-def _observed_peak_representation_from_experiment(
-    *,
-    experiment: Experiment,
-    widths_ppm: np.ndarray,
-) -> dict[str, np.ndarray]:
-    centers_ppm = np.asarray(
-        [signal.shift for signal in experiment.signals],
-        dtype=float,
-    )
-    areas = np.asarray(
-        [signal.area for signal in experiment.signals],
-        dtype=float,
-    )
-    sort_idx = np.argsort(centers_ppm)
-    observed_peaks = gaussian_peak_representation(
-        centers=centers_ppm[sort_idx],
-        fwhm=widths_ppm[sort_idx],
-        areas=areas[sort_idx],
-    )
-    return observed_peaks
 
 
 def _split_linewidth_variables(

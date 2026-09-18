@@ -19,6 +19,11 @@ from paranmr.core.fitting.susceptibility.linewidths import (
     SusceptibilityLinewidthInputs,
     predict_r6_widths_by_atom_label,
 )
+from paranmr.core.fitting.susceptibility.models.split import SplitFitter
+from paranmr.core.fitting.susceptibility.moments.forward import (
+    calculated_signal_packages_from_parameters,
+    sort_packages_by_center,
+)
 
 
 def build_moment_jacobian(
@@ -38,10 +43,14 @@ def build_moment_jacobian(
         linewidth_inputs=linewidth_inputs,
         linewidth_vars_by_name=linewidth_vars_by_name,
     )
-    packages = _sorted_packages(
-        parameters=parameters,
-        nuclei=nuclei,
-        average_labels=average_labels,
+    packages = sort_packages_by_center(
+        calculated_signal_packages_from_parameters(
+            model=SplitFitter,
+            parameters=parameters,
+            nuclei=nuclei,
+            include_diamagnetic=True,
+            average_labels=average_labels,
+        )
     )
     linewidth_derivatives = differentiate_moments_by_linewidth_parameters(
         packages=packages,
@@ -81,29 +90,4 @@ def build_moment_jacobian(
         moment_names=moment_names,
         parameter_names=parameter_names,
         values=values,
-    )
-
-
-def _sorted_packages(
-    *,
-    parameters: dict[str, float],
-    nuclei: list[Nucleus],
-    average_labels: tuple[tuple[str, ...], ...],
-):
-    from paranmr.core.fitting.susceptibility.jacobian.susceptibility_centers import (
-        ShiftOnlySplitModel,
-    )
-    from paranmr.core.fitting.susceptibility.moments.forward import (
-        calculated_signal_packages_from_parameters,
-        sort_packages_by_center,
-    )
-
-    return sort_packages_by_center(
-        calculated_signal_packages_from_parameters(
-            model=ShiftOnlySplitModel(),
-            parameters=parameters,
-            nuclei=nuclei,
-            include_diamagnetic=True,
-            average_labels=average_labels,
-        )
     )

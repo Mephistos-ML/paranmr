@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import copy
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 import numpy as np
 from numpy.typing import NDArray
@@ -53,7 +53,6 @@ class MomentFitEvaluation:
 
     all_vars: dict[str, float]
     linewidth_vars: dict[str, float]
-    calculated_widths_by_atom_label: dict[str, float]
     calculated_moments: dict[str, float]
 
 
@@ -84,13 +83,7 @@ def fit_moment_model(
 ) -> MomentFitResult | None:
     """Optimize a susceptibility model against moment constraints."""
 
-    curr_fit = least_squares(
-        fun=_moment_objective_residuals_from_fit_vector,
-        jac=_moment_objective_jacobian_from_fit_vector,
-        args=(inputs,),
-        x0=inputs.fit_guess,
-        bounds=inputs.fit_bounds,
-    )
+    curr_fit = _fit_moment_stages(inputs)
 
     # Persist the fitted temperature on the mutable model object.
     model = inputs.model
@@ -170,9 +163,11 @@ def fit_moment_model(
         integral_scale=inputs.integral_scale,
         average_labels=inputs.average_labels,
     )
+    # The integral is retained for diagnostics, but is not a GMM condition:
+    # susceptibility parameters cannot change it.
+    calculated_moments["m0"] = float(inputs.integral_scale) * float(len(inputs.nuclei))
 
     condition_vector = inputs.gmm_objective.conditions(
-        observed_moments=inputs.observed_moments,
         calculated_moments=calculated_moments,
     )
     model.mae = float(np.mean(np.abs(condition_vector)))
@@ -180,7 +175,6 @@ def fit_moment_model(
     model.r2 = np.nan
     model.adj_r2 = np.nan
     score = inputs.gmm_objective.score(
-        observed_moments=inputs.observed_moments,
         calculated_moments=calculated_moments,
     )
     return MomentFitResult(
@@ -231,7 +225,6 @@ def evaluate_moment_fit_vector(
     return MomentFitEvaluation(
         all_vars=all_vars,
         linewidth_vars=linewidth_vars,
-        calculated_widths_by_atom_label=calculated_widths_by_atom_label,
         calculated_moments=calculated_moments,
     )
 
@@ -244,10 +237,44 @@ def _moment_objective_residuals_from_fit_vector(
     evaluation = evaluate_moment_fit_vector(new_vals, inputs)
     return list(
         inputs.gmm_objective.residuals(
-            observed_moments=inputs.observed_moments,
             calculated_moments=evaluation.calculated_moments,
         )
     )
+
+
+def _fit_moment_stages(inputs: MomentFitInputs) -> OptimizeResult:
+    """Solve configured moment stages, passing each solution to the next stage."""
+
+    stages = tuple(range(1, len(inputs.moment_labels) + 1))
+    current_guess = list(inputs.fit_guess)
+    curr_fit: OptimizeResult | None = None
+    for stage_size in stages:
+        stage_labels = inputs.moment_labels[:stage_size]
+        stage_inputs = replace(
+            inputs,
+            moment_labels=stage_labels,
+            gmm_objective=inputs.gmm_objective.subset(stage_labels),
+            fit_guess=current_guess,
+        )
+        method = (
+            "lm"
+            if len(stage_labels) >= len(current_guess)
+            and np.all(np.isinf(stage_inputs.fit_bounds))
+            else "trf"
+        )
+        curr_fit = least_squares(
+            fun=_moment_objective_residuals_from_fit_vector,
+            jac=_moment_objective_jacobian_from_fit_vector,
+            args=(stage_inputs,),
+            x0=current_guess,
+            bounds=stage_inputs.fit_bounds,
+            x_scale="jac",
+            method=method,
+        )
+        current_guess = list(curr_fit.x)
+    if curr_fit is None:
+        raise ValueError("Moment fitting requires at least one optimization stage")
+    return curr_fit
 
 
 def _moment_objective_jacobian_from_fit_vector(

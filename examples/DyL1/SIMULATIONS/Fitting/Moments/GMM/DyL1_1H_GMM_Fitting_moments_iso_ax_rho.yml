@@ -26,13 +26,7 @@ experiment:
 
 assignment:
   method: moments
-  moment_objective:
-    number_of_moments: 6
-    covariance:
-      method: jacobian
-      measurement_uncertainty:
-        shift_sigma_abs: 0.02
-        width_sigma_rel: 0.05
+  max_moment_order: 6
 
 linewidth:
   method: r6

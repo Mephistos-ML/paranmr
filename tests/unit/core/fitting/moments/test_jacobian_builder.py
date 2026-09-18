@@ -57,11 +57,11 @@ def test_build_moment_jacobian_returns_active_contract():
         temperature=302.15,
         parameters={
             "iso": 0.0,
-            "ax": 0.12,
-            "rho_over_ax": 0.08,
-            "alpha": 25.0,
-            "beta": 40.0,
-            "gamma": 75.0,
+            "dxx": 0.12,
+            "dyy": -0.08,
+            "dxy": 0.01,
+            "dxz": 0.03,
+            "dyz": -0.02,
         },
         nuclei=_test_nuclei(),
         linewidth_inputs=SusceptibilityLinewidthInputs(
@@ -69,11 +69,11 @@ def test_build_moment_jacobian_returns_active_contract():
         ),
         linewidth_vars_by_name={"p1": 1000.0, "p2": 0.5},
         moment_names=MOMENT_LABELS,
-        parameter_names=("ax", "alpha", "p1"),
+        parameter_names=("dxx", "dxy", "p1"),
         average_labels=(),
     )
 
     assert result.temperature == pytest.approx(302.15)
     assert result.moment_names == MOMENT_LABELS
-    assert result.parameter_names == ("ax", "alpha", "p1")
+    assert result.parameter_names == ("dxx", "dxy", "p1")
     assert result.values.shape == (6, 3)

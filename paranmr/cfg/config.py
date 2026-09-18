@@ -163,7 +163,7 @@ class FitSuscConfig(Config):
             "method",
             "groups",
             "search",
-            "moment_objective",
+            "max_moment_order",
         ],
         "linewidth": [
             "method",
@@ -225,7 +225,7 @@ class FitSuscConfig(Config):
         self._assignment_n_attempts = None
         self._assignment_max_iter = None
         self._assignment_r2_threshold = None
-        self._assignment_moment_objective = {}
+        self._assignment_max_moment_order = None
         self._linewidth_method = "experimental"
         self._linewidth_variables = None
         self._linewidth_estimate = ""
@@ -691,11 +691,6 @@ class FitSuscConfig(Config):
             return
         if isinstance(values, str):
             normalized = values.strip().lower()
-            if normalized == "methyls":
-                raise ValueError(
-                    "susc_fit:average_shifts 'methyls' is no longer supported; "
-                    "define methyl groups in signal_labels:file and use 'all'."
-                )
             if normalized == "all":
                 self._susc_fit_average_shifts = normalized
             else:
@@ -709,11 +704,6 @@ class FitSuscConfig(Config):
         if not normalized_values:
             self._susc_fit_average_shifts = []
             return
-        if any(value.strip().lower() == "methyls" for value in normalized_values):
-            raise ValueError(
-                "susc_fit:average_shifts 'methyls' is no longer supported; "
-                "define methyl groups in signal_labels:file and use 'all'."
-            )
         special_modes = {
             value.strip().lower()
             for value in normalized_values
@@ -751,99 +741,17 @@ class FitSuscConfig(Config):
         return
 
     @property
-    def assignment_moment_objective(self) -> dict:
-        return self._assignment_moment_objective
+    def assignment_max_moment_order(self) -> int | None:
+        return self._assignment_max_moment_order
 
-    @assignment_moment_objective.setter
-    def assignment_moment_objective(self, value: dict | None):
+    @assignment_max_moment_order.setter
+    def assignment_max_moment_order(self, value: int | None):
         if value is None or value == "":
-            self._assignment_moment_objective = {}
+            self._assignment_max_moment_order = None
             return
-        if not isinstance(value, dict):
-            raise ValueError("assignment:moment_objective must be a mapping")
-
-        unknown = set(value) - {"number_of_moments", "covariance"}
-        if unknown:
-            raise ValueError(
-                "assignment:moment_objective contains unknown key(s): "
-                + ", ".join(sorted(unknown))
-            )
-        if "number_of_moments" not in value:
-            raise ValueError(
-                "assignment:moment_objective:number_of_moments is required"
-            )
-        number_of_moments = value["number_of_moments"]
-        if not isinstance(number_of_moments, int) or number_of_moments <= 0:
-            raise ValueError(
-                "assignment:moment_objective:number_of_moments must be a "
-                "positive integer"
-            )
-
-        covariance = value.get("covariance", {})
-        if covariance is None or covariance == "":
-            covariance = {}
-        if not isinstance(covariance, dict):
-            raise ValueError("assignment:moment_objective:covariance must be a mapping")
-        if not covariance:
-            raise ValueError("assignment:moment_objective:covariance is required")
-        covariance_unknown = set(covariance) - {"method", "measurement_uncertainty"}
-        if covariance_unknown:
-            raise ValueError(
-                "assignment:moment_objective:covariance contains unknown key(s): "
-                + ", ".join(sorted(covariance_unknown))
-            )
-        covariance_method = str(covariance.get("method", "")).strip().lower()
-        if covariance_method != "jacobian":
-            raise ValueError(
-                "assignment:moment_objective:covariance:method must be 'jacobian'"
-            )
-        measurement_uncertainty = covariance.get("measurement_uncertainty")
-        if not isinstance(measurement_uncertainty, dict):
-            raise ValueError(
-                "assignment:moment_objective:covariance:measurement_uncertainty "
-                "must be a mapping"
-            )
-        uncertainty_unknown = set(measurement_uncertainty) - {
-            "shift_sigma_abs",
-            "width_sigma_rel",
-        }
-        if uncertainty_unknown:
-            raise ValueError(
-                "assignment:moment_objective:covariance:measurement_uncertainty "
-                "contains unknown key(s): " + ", ".join(sorted(uncertainty_unknown))
-            )
-        if "shift_sigma_abs" not in measurement_uncertainty:
-            raise ValueError(
-                "assignment:moment_objective:covariance:measurement_uncertainty:"
-                "shift_sigma_abs is required"
-            )
-        if "width_sigma_rel" not in measurement_uncertainty:
-            raise ValueError(
-                "assignment:moment_objective:covariance:measurement_uncertainty:"
-                "width_sigma_rel is required"
-            )
-        shift_sigma_abs = float(measurement_uncertainty["shift_sigma_abs"])
-        width_sigma_rel = float(measurement_uncertainty["width_sigma_rel"])
-        if shift_sigma_abs <= 0.0:
-            raise ValueError(
-                "assignment:moment_objective:covariance:measurement_uncertainty:"
-                "shift_sigma_abs must be positive"
-            )
-        if width_sigma_rel <= 0.0:
-            raise ValueError(
-                "assignment:moment_objective:covariance:measurement_uncertainty:"
-                "width_sigma_rel must be positive"
-            )
-        self._assignment_moment_objective = {
-            "number_of_moments": int(number_of_moments),
-            "covariance": {
-                "method": "jacobian",
-                "measurement_uncertainty": {
-                    "shift_sigma_abs": shift_sigma_abs,
-                    "width_sigma_rel": width_sigma_rel,
-                },
-            },
-        }
+        if not isinstance(value, int) or value <= 0:
+            raise ValueError("assignment:max_moment_order must be a positive integer")
+        self._assignment_max_moment_order = int(value)
         return
 
     def _parse_objective_map(self, *, value: dict, context: str) -> dict:
@@ -1555,14 +1463,17 @@ class FitSuscConfig(Config):
                     "Ignoring Hungarian-only assignment:search mapping for "
                     "assignment method 'moments'"
                 )
-            if not config.assignment_moment_objective:
+            if config.assignment_max_moment_order is None:
                 raise ValueError(
-                    "assignment:moment_objective is required when "
+                    "assignment:max_moment_order is required when "
                     "assignment:method is 'moments'"
                 )
-        if config.assignment_method != "moments" and config.assignment_moment_objective:
+        if (
+            config.assignment_method != "moments"
+            and config.assignment_max_moment_order is not None
+        ):
             raise ValueError(
-                "assignment:moment_objective is only supported when "
+                "assignment:max_moment_order is only supported when "
                 "assignment:method is 'moments'"
             )
 

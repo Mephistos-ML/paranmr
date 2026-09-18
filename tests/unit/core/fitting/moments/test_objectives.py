@@ -1,6 +1,8 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (C) 2026 Suturina Group
 
+"""Tests for deterministic moment residual objectives."""
+
 import numpy as np
 import pytest
 
@@ -8,126 +10,34 @@ from paranmr.core.fitting.susceptibility.objectives.gmm.objective import (
     GMMMomentObjective,
 )
 
-MOMENT_LABELS = ("m1", "m2", "m3", "m4", "m5", "m6")
-
 
 @pytest.mark.unit
-def test_gmm_moment_objective_builds_from_covariance():
-    objective = GMMMomentObjective.with_covariance(
-        moment_names=MOMENT_LABELS,
-        covariance=np.eye(6, dtype=float),
-    )
-
-    assert objective.moment_names == MOMENT_LABELS
-
-
-@pytest.mark.unit
-def test_gmm_moment_objective_returns_raw_condition_residuals_for_identity_weighting():
-    objective = GMMMomentObjective.with_covariance(
-        moment_names=MOMENT_LABELS,
-        covariance=np.eye(6, dtype=float),
-    )
-    observed = {
-        "m1": 2.0,
-        "m2": 4.0,
-        "m3": 8.0,
-        "m4": 16.0,
-        "m5": 32.0,
-        "m6": 64.0,
-    }
-    calculated = {
-        "m1": 3.0,
-        "m2": 2.0,
-        "m3": 12.0,
-        "m4": 16.0,
-        "m5": 16.0,
-        "m6": 128.0,
-    }
-
-    residuals = objective.residuals(
-        observed_moments=observed,
-        calculated_moments=calculated,
-    )
-
-    expected = np.asarray([1.0, -2.0, 4.0, 0.0, -16.0, 64.0], dtype=float)
-    assert residuals == pytest.approx(expected)
-    assert objective.score(
-        observed_moments=observed,
-        calculated_moments=calculated,
-    ) == pytest.approx(float(np.sqrt(np.sum(expected**2))))
-
-
-@pytest.mark.unit
-def test_gmm_moment_objective_applies_general_weighting_matrix():
-    objective = GMMMomentObjective.with_covariance(
+def test_objective_scales_residuals_and_jacobian_by_observed_moments() -> None:
+    observed = {"m1": 0.5, "m2": 100.0}
+    objective = GMMMomentObjective(
         moment_names=("m1", "m2"),
-        covariance=np.asarray([[0.25, 0.0], [0.0, 1.0 / 9.0]], dtype=float),
-    )
-    observed = {"m1": 1.0, "m2": 2.0}
-    calculated = {"m1": 3.0, "m2": 5.0}
-
-    residuals = objective.residuals(
         observed_moments=observed,
+    )
+    calculated = {"m1": 1.5, "m2": 300.0}
+    raw_jacobian = np.asarray([[2.0, 4.0], [30.0, 50.0]])
+
+    assert objective.residuals(
         calculated_moments=calculated,
-    )
-
-    assert residuals == pytest.approx(np.asarray([4.0, 9.0], dtype=float))
-
-
-@pytest.mark.unit
-def test_gmm_moment_objective_score_matches_weighting_quadratic_form():
-    weighting_matrix = np.asarray([[5.0, 2.0], [2.0, 3.0]], dtype=float)
-    objective = GMMMomentObjective.with_covariance(
-        moment_names=("m1", "m2"),
-        covariance=np.linalg.inv(weighting_matrix),
-    )
-    observed = {"m1": 1.0, "m2": 2.0}
-    calculated = {"m1": 3.0, "m2": 5.0}
-
-    conditions = objective.conditions(
-        observed_moments=observed,
-        calculated_moments=calculated,
-    )
-    score = objective.score(
-        observed_moments=observed,
-        calculated_moments=calculated,
-    )
-
-    expected = float(np.sqrt(conditions @ weighting_matrix @ conditions))
-    assert score == pytest.approx(expected)
-
-
-@pytest.mark.unit
-@pytest.mark.unit
-def test_gmm_moment_objective_transforms_residual_jacobian_by_cholesky_factor():
-    objective = GMMMomentObjective.with_covariance(
-        moment_names=("m1", "m2"),
-        covariance=np.asarray([[0.25, 0.0], [0.0, 1.0 / 9.0]], dtype=float),
-    )
-
-    residual_jacobian = objective.residual_jacobian(
-        moment_jacobian=np.asarray([[1.0, 2.0], [3.0, 4.0]], dtype=float),
-    )
-
-    assert residual_jacobian == pytest.approx(
-        np.asarray([[2.0, 4.0], [9.0, 12.0]], dtype=float)
-    )
-
-
-@pytest.mark.unit
-def test_gmm_moment_objective_uses_transposed_cholesky_factor():
-    weighting_matrix = np.asarray([[5.0, 2.0], [2.0, 3.0]], dtype=float)
-    objective = GMMMomentObjective.with_covariance(
-        moment_names=("m1", "m2"),
-        covariance=np.linalg.inv(weighting_matrix),
-    )
-    raw_jacobian = np.asarray([[1.0, 2.0], [3.0, 4.0]], dtype=float)
-
-    residual_jacobian = objective.residual_jacobian(
+    ) == pytest.approx(np.asarray([1.0, 2.0]))
+    assert objective.residual_jacobian(
         moment_jacobian=raw_jacobian,
-    )
-    expected = np.linalg.solve(
-        np.linalg.cholesky(np.linalg.inv(weighting_matrix)), raw_jacobian
+    ) == pytest.approx(np.asarray([[2.0, 4.0], [0.3, 0.5]]))
+    assert objective.weighting_matrix() == pytest.approx(np.diag([1.0, 1.0e-4]))
+
+
+@pytest.mark.unit
+def test_objective_subsets_fixed_scales_for_continuation() -> None:
+    observed = {"m1": 2.0, "m2": 10.0, "m3": 100.0}
+    objective = GMMMomentObjective(
+        moment_names=("m1", "m2", "m3"),
+        observed_moments=observed,
     )
 
-    assert residual_jacobian == pytest.approx(expected)
+    stage = objective.subset(("m1", "m2"))
+
+    assert stage.weighting_matrix() == pytest.approx(np.diag([0.25, 0.01]))

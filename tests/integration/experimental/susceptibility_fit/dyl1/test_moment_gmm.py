@@ -21,8 +21,7 @@ def test_dyl1_gmm_moment_fit_writes_diagnostics(tmp_path: Path) -> None:
     )
     assert result.returncode == 0, result.stdout + result.stderr
     output = cwd / "DyL1_1H_Fitting_Moments_iso_ax_rho"
-    assert (output / "moment_covariance_302.15_K.csv").is_file()
-    assert (output / "moment_weighting_matrix_302.15_K.csv").is_file()
+    assert (output / "moment_jacobian_302.15_K.csv").is_file()
     tensor = pd.read_csv(
         output / "susceptibility_tensor.csv", comment="#", encoding="utf-8-sig"
     )

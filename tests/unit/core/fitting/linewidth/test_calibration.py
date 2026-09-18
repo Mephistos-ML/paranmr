@@ -87,13 +87,7 @@ def test_fit_susc_config_rejects_linewidth_estimate_for_moments(tmp_path):
                 "    iso: [fit, 0.0]",
                 "assignment:",
                 "  method: moments",
-                "  moment_objective:",
-                "    number_of_moments: 6",
-                "    covariance:",
-                "      method: jacobian",
-                "      measurement_uncertainty:",
-                "        shift_sigma_abs: 0.02",
-                "        width_sigma_rel: 0.05",
+                "  max_moment_order: 6",
                 "linewidth:",
                 "  method: experimental",
                 "  estimate: p1_p2",
@@ -103,233 +97,6 @@ def test_fit_susc_config_rejects_linewidth_estimate_for_moments(tmp_path):
     )
 
     with pytest.raises(ValueError, match="linewidth:estimate"):
-        FitSuscConfig.from_file(config_file)
-
-
-@pytest.mark.unit
-def test_fit_susc_config_rejects_legacy_moment_weights(tmp_path):
-    config_file = tmp_path / "fit.yml"
-    config_file.write_text(
-        "\n".join(
-            [
-                "project:",
-                "  name: test",
-                "hyperfine:",
-                "  method: pdip",
-                "  file: hf.xyz",
-                "  paramagnetic_centre: [0.0, 0.0, 0.0]",
-                "experiment:",
-                "  files: exp.csv",
-                "nuclei:",
-                "  include: H",
-                "diamagnetic:",
-                "  method: dft",
-                "  file: dia.out",
-                "diamagnetic_ref:",
-                "  method: dft",
-                "  file: ref.out",
-                "susc_fit:",
-                "  type: split",
-                "  variables:",
-                "    iso: [fit, 0.0]",
-                "assignment:",
-                "  method: moments",
-                "  moment_objective:",
-                "    number_of_moments: 6",
-                "    moment_weights:",
-                "      m7: 1.0",
-                "linewidth:",
-                "  method: experimental",
-            ]
-        ),
-        encoding="utf-8",
-    )
-
-    with pytest.raises(ValueError, match="unknown key"):
-        FitSuscConfig.from_file(config_file)
-
-
-@pytest.mark.unit
-def test_fit_susc_config_rejects_legacy_moment_weights_without_all_orders(tmp_path):
-    config_file = tmp_path / "fit.yml"
-    config_file.write_text(
-        "\n".join(
-            [
-                "project:",
-                "  name: test",
-                "hyperfine:",
-                "  method: pdip",
-                "  file: hf.xyz",
-                "  paramagnetic_centre: [0.0, 0.0, 0.0]",
-                "experiment:",
-                "  files: exp.csv",
-                "nuclei:",
-                "  include: H",
-                "diamagnetic:",
-                "  method: dft",
-                "  file: dia.out",
-                "diamagnetic_ref:",
-                "  method: dft",
-                "  file: ref.out",
-                "susc_fit:",
-                "  type: split",
-                "  variables:",
-                "    iso: [fit, 0.0]",
-                "assignment:",
-                "  method: moments",
-                "  moment_objective:",
-                "    number_of_moments: 3",
-                "    moment_weights:",
-                "      m1: 1.0",
-                "      m2: 1.0",
-                "linewidth:",
-                "  method: experimental",
-            ]
-        ),
-        encoding="utf-8",
-    )
-
-    with pytest.raises(
-        ValueError,
-        match="unknown key",
-    ):
-        FitSuscConfig.from_file(config_file)
-
-
-@pytest.mark.unit
-def test_fit_susc_config_rejects_moment_objective_without_covariance(tmp_path):
-    config_file = tmp_path / "fit.yml"
-    config_file.write_text(
-        "\n".join(
-            [
-                "project:",
-                "  name: test",
-                "hyperfine:",
-                "  method: pdip",
-                "  file: hf.xyz",
-                "  paramagnetic_centre: [0.0, 0.0, 0.0]",
-                "experiment:",
-                "  files: exp.csv",
-                "nuclei:",
-                "  include: H",
-                "diamagnetic:",
-                "  method: dft",
-                "  file: dia.out",
-                "diamagnetic_ref:",
-                "  method: dft",
-                "  file: ref.out",
-                "susc_fit:",
-                "  type: split",
-                "  variables:",
-                "    iso: [fit, 0.0]",
-                "assignment:",
-                "  method: moments",
-                "  moment_objective:",
-                "    number_of_moments: 6",
-                "linewidth:",
-                "  method: experimental",
-            ]
-        ),
-        encoding="utf-8",
-    )
-
-    with pytest.raises(ValueError, match="covariance is required"):
-        FitSuscConfig.from_file(config_file)
-
-
-@pytest.mark.unit
-def test_fit_susc_config_accepts_gmm_with_explicit_covariance_specification(tmp_path):
-    config_file = tmp_path / "fit.yml"
-    config_file.write_text(
-        "\n".join(
-            [
-                "project:",
-                "  name: test",
-                "hyperfine:",
-                "  method: pdip",
-                "  file: hf.xyz",
-                "  paramagnetic_centre: [0.0, 0.0, 0.0]",
-                "experiment:",
-                "  files: exp.csv",
-                "nuclei:",
-                "  include: H",
-                "diamagnetic:",
-                "  method: csv",
-                "  file: dia.csv",
-                "susc_fit:",
-                "  type: split",
-                "  variables:",
-                "    iso: [fit, 0.0]",
-                "assignment:",
-                "  method: moments",
-                "  moment_objective:",
-                "    number_of_moments: 6",
-                "    covariance:",
-                "      method: jacobian",
-                "      measurement_uncertainty:",
-                "        shift_sigma_abs: 0.02",
-                "        width_sigma_rel: 0.05",
-                "linewidth:",
-                "  method: experimental",
-            ]
-        ),
-        encoding="utf-8",
-    )
-
-    config = FitSuscConfig.from_file(config_file)
-
-    assert config.assignment_moment_objective == {
-        "number_of_moments": 6,
-        "covariance": {
-            "method": "jacobian",
-            "measurement_uncertainty": {
-                "shift_sigma_abs": 0.02,
-                "width_sigma_rel": 0.05,
-            },
-        },
-    }
-
-
-@pytest.mark.unit
-def test_fit_susc_config_rejects_monte_carlo_gmm_covariance(tmp_path):
-    config_file = tmp_path / "fit.yml"
-    config_file.write_text(
-        "\n".join(
-            [
-                "project:",
-                "  name: test",
-                "hyperfine:",
-                "  method: pdip",
-                "  file: hf.xyz",
-                "  paramagnetic_centre: [0.0, 0.0, 0.0]",
-                "experiment:",
-                "  files: exp.csv",
-                "nuclei:",
-                "  include: H",
-                "diamagnetic:",
-                "  method: csv",
-                "  file: dia.csv",
-                "susc_fit:",
-                "  type: split",
-                "  variables:",
-                "    iso: [fit, 0.0]",
-                "assignment:",
-                "  method: moments",
-                "  moment_objective:",
-                "    number_of_moments: 6",
-                "    covariance:",
-                "      method: monte_carlo",
-                "      measurement_uncertainty:",
-                "        shift_sigma_abs: 0.02",
-                "        width_sigma_rel: 0.05",
-                "linewidth:",
-                "  method: experimental",
-            ]
-        ),
-        encoding="utf-8",
-    )
-
-    with pytest.raises(ValueError, match="must be 'jacobian'"):
         FitSuscConfig.from_file(config_file)
 
 
@@ -363,13 +130,7 @@ def test_fit_susc_config_accepts_susc_fit_objective_map_defaults(tmp_path):
                 "    parameters: [ax, rho_over_ax]",
                 "assignment:",
                 "  method: moments",
-                "  moment_objective:",
-                "    number_of_moments: 2",
-                "    covariance:",
-                "      method: jacobian",
-                "      measurement_uncertainty:",
-                "        shift_sigma_abs: 0.02",
-                "        width_sigma_rel: 0.05",
+                "  max_moment_order: 2",
                 "linewidth:",
                 "  method: experimental",
             ]
@@ -419,13 +180,7 @@ def test_fit_susc_config_rejects_invalid_susc_fit_objective_map_parameter_list(
                 "    parameters: [ax]",
                 "assignment:",
                 "  method: moments",
-                "  moment_objective:",
-                "    number_of_moments: 2",
-                "    covariance:",
-                "      method: jacobian",
-                "      measurement_uncertainty:",
-                "        shift_sigma_abs: 0.02",
-                "        width_sigma_rel: 0.05",
+                "  max_moment_order: 2",
                 "linewidth:",
                 "  method: experimental",
             ]
@@ -434,47 +189,6 @@ def test_fit_susc_config_rejects_invalid_susc_fit_objective_map_parameter_list(
     )
 
     with pytest.raises(ValueError, match="two-item list"):
-        FitSuscConfig.from_file(config_file)
-
-
-@pytest.mark.unit
-def test_fit_susc_config_rejects_gmm_moment_weights(tmp_path):
-    config_file = tmp_path / "fit.yml"
-    config_file.write_text(
-        "\n".join(
-            [
-                "project:",
-                "  name: test",
-                "hyperfine:",
-                "  method: pdip",
-                "  file: dummy.xyz",
-                "  paramagnetic_centre: [0.0, 0.0, 0.0]",
-                "  spin: 0.5",
-                "  orbit: 0",
-                "  total_momentum_J: 0.5",
-                "experiment:",
-                "  files: exp.csv",
-                "nuclei:",
-                "  include: [H]",
-                "assignment:",
-                "  method: moments",
-                "  moment_objective:",
-                "    number_of_moments: 6",
-                "    moment_weights:",
-                "      m1: 1.0",
-                "susc_fit:",
-                "  type: split",
-                "  average_shifts: all",
-                "  variables:",
-                "    iso: [fit, 0.0]",
-                "    ax: [fit, 0.1]",
-                "    rho_over_ax: [fit, 0.0]",
-            ]
-        ),
-        encoding="utf-8",
-    )
-
-    with pytest.raises(ValueError, match="unknown key"):
         FitSuscConfig.from_file(config_file)
 
 
@@ -501,13 +215,7 @@ def test_fit_susc_config_accepts_signal_label_averaging_for_moments(tmp_path):
                 "  average_shifts: all",
                 "assignment:",
                 "  method: moments",
-                "  moment_objective:",
-                "    number_of_moments: 6",
-                "    covariance:",
-                "      method: jacobian",
-                "      measurement_uncertainty:",
-                "        shift_sigma_abs: 0.02",
-                "        width_sigma_rel: 0.05",
+                "  max_moment_order: 6",
                 "linewidth:",
                 "  method: experimental",
             ]
@@ -553,38 +261,3 @@ def test_fit_susc_config_accepts_signal_label_averaging_for_basic_fit(tmp_path):
     config = FitSuscConfig.from_file(config_file)
 
     assert config.susc_fit_average_shifts == "all"
-
-
-@pytest.mark.unit
-def test_fit_susc_config_rejects_legacy_moment_objective_type(tmp_path):
-    config_file = tmp_path / "fit.yml"
-    config_file.write_text(
-        "\n".join(
-            [
-                "project:",
-                "  name: test",
-                "hyperfine:",
-                "  method: pdip",
-                "  file: hf.xyz",
-                "  paramagnetic_centre: [0.0, 0.0, 0.0]",
-                "experiment:",
-                "  files: exp.csv",
-                "nuclei:",
-                "  include: H",
-                "susc_fit:",
-                "  type: split",
-                "  variables:",
-                "    iso: [fit, 0.0]",
-                "assignment:",
-                "  method: moments",
-                "  moment_objective:",
-                "    type: made_up",
-                "linewidth:",
-                "  method: experimental",
-            ]
-        ),
-        encoding="utf-8",
-    )
-
-    with pytest.raises(ValueError, match="unknown key"):
-        FitSuscConfig.from_file(config_file)
