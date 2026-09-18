@@ -24,26 +24,25 @@ experiment:
   files: generated_shifts.csv
 assignment:
   method: moments
-  moment_objective:
-    number_of_moments: 10
-    covariance:
-      method: parameter_jacobian
+  max_moment_order: 10
 linewidth:
   method: r6
   variables:
     p1:
-    - fix
-    - 518.933180241867
+    - fit
+    - 1.0
+    - [0.0, 1000000.0]
     p2:
-    - fix
-    - 0.239390978830240
+    - fit
+    - 0.01
+    - [0.001, 10.0]
 susc_fit:
   type: split
   average_shifts: all
   variables:
     iso: [fix, 0.0]
-    dxx: [fit, -0.002560267873729879]
-    dyy: [fit, 0.005800230093043623]
-    dxy: [fit, 0.0005314367779005822]
-    dxz: [fit, -0.0005233237864394349]
-    dyz: [fit, 0.0029033674498646195]
+    dxx: [fit, 0.0]
+    dyy: [fit, 0.0]
+    dxy: [fit, 0.0]
+    dxz: [fit, 0.0]
+    dyz: [fit, 0.0]

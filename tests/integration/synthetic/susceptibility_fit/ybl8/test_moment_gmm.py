@@ -47,11 +47,11 @@ def _materialize_gmm_config(tmp_path: Path) -> Path:
 
 @pytest.mark.integration
 def test_gmm_recovers_seeded_synthetic_ybl8_shifts(tmp_path: Path) -> None:
-    """Recover seeded YbL8 shifts with its known R6 linewidths fixed."""
+    """Recover seeded YbL8 shifts and R6 linewidth parameters."""
     gmm_config_path = _materialize_gmm_config(tmp_path)
     gmm_config = yaml.safe_load(gmm_config_path.read_text(encoding="utf-8"))
     assert gmm_config["assignment"]["method"] == "moments"
-    assert "type" not in gmm_config["assignment"]["moment_objective"]
+    assert gmm_config["assignment"]["max_moment_order"] == 10
     assert gmm_config["susc_fit"]["average_shifts"] == "all"
     assert gmm_config["susc_fit"]["variables"]["iso"] == ["fix", 0.0]
     assert all(
@@ -60,8 +60,8 @@ def test_gmm_recovers_seeded_synthetic_ybl8_shifts(tmp_path: Path) -> None:
         if name != "iso"
     )
     assert gmm_config["linewidth"]["variables"] == {
-        "p1": ["fix", 518.933180241867],
-        "p2": ["fix", 0.239390978830240],
+        "p1": ["fit", 1.0, [0.0, 1000000.0]],
+        "p2": ["fit", 0.01, [0.001, 10.0]],
     }
     generated_peaks = pd.read_csv(
         _GMM_FIXTURE / "generated_shifts.csv",
@@ -82,4 +82,11 @@ def test_gmm_recovers_seeded_synthetic_ybl8_shifts(tmp_path: Path) -> None:
         output / "peak_data_302.15_K.csv", comment="#", encoding="utf-8-sig"
     )
     recovered_centers = np.sort(peak_data["δ_total_avg (ppm)"].to_numpy(dtype=float))
-    assert recovered_centers == pytest.approx(expected_centers, abs=2e-3)
+    assert recovered_centers == pytest.approx(expected_centers, abs=1e-6)
+    linewidth_model = pd.read_csv(
+        output / "linewidth_model_302.15_K.csv",
+        comment="#",
+        encoding="utf-8-sig",
+    ).iloc[0]
+    assert linewidth_model["p1"] == pytest.approx(518.933180241867, abs=1e-3)
+    assert linewidth_model["p2"] == pytest.approx(0.239390978830240, abs=2e-6)

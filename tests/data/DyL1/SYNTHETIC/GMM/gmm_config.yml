@@ -1,0 +1,36 @@
+project:
+  name: dyl1_gmm_fitted_output
+hyperfine:
+  method: pdip
+  file: ../../DATA/HFC/DyL1.xyz
+  paramagnetic_centre: [0.006857, -0.008695, 0.057882]
+  spin: 2.5
+  orbit: 5.0
+  total_momentum_J: 7.5
+nuclei:
+  include: H
+signal_labels:
+  file: ../../DATA/LABELS/DyL1_1H_Labels.csv
+diamagnetic:
+  method: csv
+  file: synthetic_diamagnetic.csv
+experiment:
+  files: generated_shifts.csv
+assignment:
+  method: moments
+  max_moment_order: 10
+linewidth:
+  method: r6
+  variables:
+    p1: [fit, 1.0, [0.0, 1000000.0]]
+    p2: [fit, 0.1, [0.0, 10.0]]
+susc_fit:
+  type: split
+  average_shifts: all
+  variables:
+    iso: [fix, 0.0]
+    dxx: [fit, 0.0]
+    dyy: [fit, 0.0]
+    dxy: [fit, 0.0]
+    dxz: [fit, 0.0]
+    dyz: [fit, 0.0]
