@@ -94,6 +94,35 @@ def compute_single_gaussian_mixture_raw_moment(
     return float(np.sum(weights_arr * total))
 
 
+def _compute_gaussian_mixture_raw_moments_up_to(
+    *,
+    centers: np.ndarray,
+    sigmas: np.ndarray,
+    area_norm: np.ndarray,
+    max_order: int,
+) -> np.ndarray:
+    """Return Gaussian-mixture raw moments from order zero to ``max_order``."""
+
+    moments = np.empty(max_order + 1, dtype=float)
+    component_two_lower = np.ones_like(centers, dtype=float)
+    moments[0] = float(np.sum(area_norm * component_two_lower))
+    if max_order == 0:
+        return moments
+
+    component_one_lower = centers.astype(float, copy=True)
+    moments[1] = float(np.sum(area_norm * component_one_lower))
+    sigma_squared = sigmas**2
+    for order in range(2, max_order + 1):
+        component_current = (
+            centers * component_one_lower
+            + (order - 1) * sigma_squared * component_two_lower
+        )
+        moments[order] = float(np.sum(area_norm * component_current))
+        component_two_lower = component_one_lower
+        component_one_lower = component_current
+    return moments
+
+
 def compute_gaussian_mixture_moments(
     *,
     centers: ArrayLike,
@@ -133,12 +162,11 @@ def compute_gaussian_mixture_moments(
     if not moment_labels:
         raise ValueError("At least one moment label is required")
 
-    return {
-        label: compute_single_gaussian_mixture_raw_moment(
-            centers=centers_arr,
-            sigmas=sigmas_arr,
-            area_norm=weights_arr,
-            order=moment_order(label),
-        )
-        for label in moment_labels
-    }
+    orders = tuple(moment_order(label) for label in moment_labels)
+    moments = _compute_gaussian_mixture_raw_moments_up_to(
+        centers=centers_arr,
+        sigmas=sigmas_arr,
+        area_norm=weights_arr,
+        max_order=max(orders),
+    )
+    return {label: float(moments[order]) for label, order in zip(moment_labels, orders)}

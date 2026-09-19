@@ -92,6 +92,24 @@ def test_compute_gaussian_mixture_moments_matches_manual_raw_formula_1_to_6():
 
 
 @pytest.mark.unit
+def test_compute_gaussian_mixture_moments_preserves_sparse_requested_order():
+    centers, sigmas, weights, expected = _manual_gaussian_mixture_raw_moments_1_to_6()
+    labels = ("m6", "m1", "m0")
+
+    moments = compute_gaussian_mixture_moments(
+        centers=centers,
+        sigmas=sigmas,
+        area_norm=weights,
+        moment_labels=labels,
+    )
+
+    assert tuple(moments) == labels
+    assert moments == pytest.approx(
+        {"m6": expected["m6"], "m1": expected["m1"], "m0": sum(weights)}
+    )
+
+
+@pytest.mark.unit
 def test_compute_single_gaussian_mixture_raw_moment_matches_wrapper_component():
     moments = compute_gaussian_mixture_moments(
         centers=[-1.2, 0.7, 2.4],
