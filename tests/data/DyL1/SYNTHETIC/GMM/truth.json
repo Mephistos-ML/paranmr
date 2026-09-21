@@ -6,5 +6,11 @@
   "dxz": 0.0,
   "dyz": 0.0,
   "p1": 15750.6274978675,
-  "p2": 0.0765462111964243
+  "p2": 0.0765462111964243,
+  "dzz": -0.893285761235852,
+  "_provenance": {
+    "generator": "ParaNMR-Synth",
+    "source": "Existing synthetic GMM truth fixture",
+    "tensor_basis": "Cartesian traceless anisotropic \u0394\u03c7 components"
+  }
 }

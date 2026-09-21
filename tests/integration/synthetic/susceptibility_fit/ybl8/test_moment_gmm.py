@@ -8,12 +8,14 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
-import numpy as np
-import pandas as pd
 import pytest
 import yaml
 
 from tests.helpers.cli import run_paranmr
+from tests.helpers.gmm import (
+    assert_gmm_fit_config,
+    assert_gmm_recovers_synthetic_truth,
+)
 
 _YBL8_ROOT = Path(__file__).resolve().parents[5] / "tests" / "data" / "YbL8"
 _YBL8_DATA = _YBL8_ROOT / "DATA"
@@ -50,25 +52,11 @@ def test_gmm_recovers_seeded_synthetic_ybl8_shifts(tmp_path: Path) -> None:
     """Recover seeded YbL8 shifts and R6 linewidth parameters."""
     gmm_config_path = _materialize_gmm_config(tmp_path)
     gmm_config = yaml.safe_load(gmm_config_path.read_text(encoding="utf-8"))
-    assert gmm_config["assignment"]["method"] == "moments"
-    assert gmm_config["assignment"]["max_moment_order"] == 10
-    assert gmm_config["susc_fit"]["average_shifts"] == "all"
-    assert gmm_config["susc_fit"]["variables"]["iso"] == ["fix", 0.0]
-    assert all(
-        value[0] == "fit"
-        for name, value in gmm_config["susc_fit"]["variables"].items()
-        if name != "iso"
-    )
+    assert_gmm_fit_config(gmm_config)
     assert gmm_config["linewidth"]["variables"] == {
         "p1": ["fit", 1.0, [0.0, 1000000.0]],
         "p2": ["fit", 0.01, [0.001, 10.0]],
     }
-    generated_peaks = pd.read_csv(
-        _GMM_FIXTURE / "generated_shifts.csv",
-        comment="#",
-        encoding="utf-8-sig",
-    )
-    expected_centers = np.sort(generated_peaks["shift (ppm)"].to_numpy(dtype=float))
 
     result = run_paranmr(
         ["--hide", "fit_susc", gmm_config_path.name],
@@ -78,15 +66,8 @@ def test_gmm_recovers_seeded_synthetic_ybl8_shifts(tmp_path: Path) -> None:
     assert result.returncode == 0, result.stdout + result.stderr
 
     output = tmp_path / "paranmr_gmm_fitted_output"
-    peak_data = pd.read_csv(
-        output / "peak_data_302.15_K.csv", comment="#", encoding="utf-8-sig"
+    assert_gmm_recovers_synthetic_truth(
+        output_dir=output,
+        generated_shifts_file=_GMM_FIXTURE / "generated_shifts.csv",
+        truth_file=_GMM_FIXTURE / "truth.json",
     )
-    recovered_centers = np.sort(peak_data["δ_total_avg (ppm)"].to_numpy(dtype=float))
-    assert recovered_centers == pytest.approx(expected_centers, abs=1e-6)
-    linewidth_model = pd.read_csv(
-        output / "linewidth_model_302.15_K.csv",
-        comment="#",
-        encoding="utf-8-sig",
-    ).iloc[0]
-    assert linewidth_model["p1"] == pytest.approx(518.933180241867, abs=0.05)
-    assert linewidth_model["p2"] == pytest.approx(0.239390978830240, abs=5e-5)

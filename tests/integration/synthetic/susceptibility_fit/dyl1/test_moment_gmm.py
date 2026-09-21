@@ -5,15 +5,17 @@
 
 from __future__ import annotations
 
-import json
 import os
 from pathlib import Path
 
-import pandas as pd
 import pytest
 import yaml
 
 from tests.helpers.cli import run_paranmr
+from tests.helpers.gmm import (
+    assert_gmm_fit_config,
+    assert_gmm_recovers_synthetic_truth,
+)
 
 _DYL1_ROOT = Path(__file__).resolve().parents[5] / "tests" / "data" / "DyL1"
 _DYL1_DATA = _DYL1_ROOT / "DATA"
@@ -51,14 +53,7 @@ def test_gmm_recovers_label_averaged_synthetic_dyl1_tensor_and_linewidths(
     """Recover DyL1 anisotropy and R6 parameters from zero tensor guesses."""
     config_path = _materialize_gmm_config(tmp_path)
     config = yaml.safe_load(config_path.read_text(encoding="utf-8"))
-    assert config["assignment"]["max_moment_order"] == 10
-    assert config["susc_fit"]["average_shifts"] == "all"
-    assert config["susc_fit"]["variables"]["iso"] == ["fix", 0.0]
-    assert all(
-        value == ["fit", 0.0]
-        for name, value in config["susc_fit"]["variables"].items()
-        if name != "iso"
-    )
+    assert_gmm_fit_config(config)
 
     result = run_paranmr(
         ["--hide", "fit_susc", config_path.name],
@@ -68,26 +63,8 @@ def test_gmm_recovers_label_averaged_synthetic_dyl1_tensor_and_linewidths(
     assert result.returncode == 0, result.stdout + result.stderr
 
     output = tmp_path / "dyl1_gmm_fitted_output"
-    truth = json.loads((_GMM_FIXTURE / "truth.json").read_text(encoding="utf-8"))
-    recovered = pd.read_csv(
-        output / "susceptibility_tensor.csv",
-        comment="#",
-        encoding="utf-8-sig",
-    ).iloc[0]
-    columns = {
-        "dxx": "dchi_xx (Å^3)",
-        "dyy": "dchi_yy (Å^3)",
-        "dxy": "dchi_xy (Å^3)",
-        "dxz": "dchi_xz (Å^3)",
-        "dyz": "dchi_yz (Å^3)",
-    }
-    for parameter, column in columns.items():
-        assert recovered[column] == pytest.approx(truth[parameter], abs=2e-6)
-
-    linewidth_model = pd.read_csv(
-        output / "linewidth_model_302.15_K.csv",
-        comment="#",
-        encoding="utf-8-sig",
-    ).iloc[0]
-    assert linewidth_model["p1"] == pytest.approx(truth["p1"], abs=0.05)
-    assert linewidth_model["p2"] == pytest.approx(truth["p2"], abs=2e-5)
+    assert_gmm_recovers_synthetic_truth(
+        output_dir=output,
+        generated_shifts_file=_GMM_FIXTURE / "generated_shifts.csv",
+        truth_file=_GMM_FIXTURE / "truth.json",
+    )
