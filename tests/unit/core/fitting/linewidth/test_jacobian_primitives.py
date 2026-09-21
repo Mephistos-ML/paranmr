@@ -117,7 +117,7 @@ def test_differentiate_sigmas_by_linewidth_parameters_matches_finite_difference(
 
 
 @pytest.mark.unit
-def test_differentiate_sigmas_by_linewidth_parameters_uses_package_label_precedence():
+def test_differentiate_sigmas_by_linewidth_parameters_averages_group_members():
     packages = [
         CalculatedSignalPackage(
             label="H3",
@@ -139,7 +139,7 @@ def test_differentiate_sigmas_by_linewidth_parameters_uses_package_label_precede
     )
 
     factor = 2.0 * np.sqrt(2.0 * np.log(2.0))
-    assert jacobian[0, 0] == pytest.approx(3.0 / factor)
+    assert jacobian[0, 0] == pytest.approx(np.mean([3.0, 4.0, 6.0]) / factor)
     assert jacobian[0, 1] == pytest.approx(1.0 / factor)
 
 

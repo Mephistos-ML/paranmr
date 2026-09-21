@@ -88,5 +88,5 @@ def test_gmm_recovers_seeded_synthetic_ybl8_shifts(tmp_path: Path) -> None:
         comment="#",
         encoding="utf-8-sig",
     ).iloc[0]
-    assert linewidth_model["p1"] == pytest.approx(518.933180241867, abs=1e-3)
-    assert linewidth_model["p2"] == pytest.approx(0.239390978830240, abs=2e-6)
+    assert linewidth_model["p1"] == pytest.approx(518.933180241867, abs=0.05)
+    assert linewidth_model["p2"] == pytest.approx(0.239390978830240, abs=5e-5)

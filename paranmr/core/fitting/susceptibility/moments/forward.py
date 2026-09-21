@@ -216,9 +216,16 @@ def _package_linewidth(
     package: CalculatedSignalPackage,
     linewidths_by_label: dict[str, float],
 ) -> float:
+    atom_linewidths = [
+        linewidths_by_label[label]
+        for label in package.atom_labels
+        if label in linewidths_by_label
+    ]
+    if package.atom_labels and len(atom_linewidths) == len(package.atom_labels):
+        return float(np.mean(atom_linewidths))
     if package.label in linewidths_by_label:
         return linewidths_by_label[package.label]
-    return float(np.mean([linewidths_by_label[label] for label in package.atom_labels]))
+    raise ValueError(f"Missing calculated linewidth for signal {package.label!r}")
 
 
 def average_signal_packages(

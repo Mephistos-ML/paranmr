@@ -105,24 +105,19 @@ def _package_mean_inv_r6(
     package: CalculatedSignalPackage,
     mean_inv_r6_by_atom_label: dict[str, float],
 ) -> float:
+    atom_values = [
+        mean_inv_r6_by_atom_label[label]
+        for label in package.atom_labels
+        if label in mean_inv_r6_by_atom_label
+    ]
+    if package.atom_labels and len(atom_values) == len(package.atom_labels):
+        return float(np.mean(atom_values))
     if package.label in mean_inv_r6_by_atom_label:
         return float(mean_inv_r6_by_atom_label[package.label])
-
     missing = [
-        atom_label
-        for atom_label in package.atom_labels
-        if atom_label not in mean_inv_r6_by_atom_label
+        label for label in package.atom_labels if label not in mean_inv_r6_by_atom_label
     ]
-    if missing:
-        raise ValueError(
-            "Missing atom-level mean 1/r^6 values for linewidth Jacobian "
-            "evaluation: " + ", ".join(missing)
-        )
-    return float(
-        np.mean(
-            [
-                mean_inv_r6_by_atom_label[atom_label]
-                for atom_label in package.atom_labels
-            ]
-        )
+    raise ValueError(
+        "Missing atom-level mean 1/r^6 values for linewidth Jacobian evaluation: "
+        + ", ".join(missing)
     )
