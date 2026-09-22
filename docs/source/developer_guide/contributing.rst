@@ -58,16 +58,16 @@ AI-assisted contributions
 AI-assisted development is allowed, but it is subject to additional constraints.
 
 All AI-generated or AI-assisted code **must** comply with the project-wide
-AI contract defined in ``AI_CONTRACT.md`` (located at the root of the repository).
-This contract takes precedence over general contribution guidelines when AI tools
-are involved.
+agent instructions defined in ``AGENTS.md`` (located at the root of the
+repository). These instructions take precedence over general contribution
+guidelines when AI tools are involved.
 
 Requirements for AI-assisted contributions:
 
 1. The contributor is responsible for the correctness, architecture, and scientific
    validity of the submitted code, regardless of AI usage.
 2. The AI system **must** be provided with:
-   - the ``AI_CONTRACT.md`` file,
+   - the ``AGENTS.md`` file,
    - the relevant directory tree,
    - the specific file(s) being modified.
 3. AI-generated changes must not introduce:
@@ -77,8 +77,8 @@ Requirements for AI-assisted contributions:
 4. If the AI system does not have sufficient context to make a correct change,
    it must stop and request clarification rather than guessing.
 
-During review, maintainers may request confirmation that the AI contract was
-provided to the agent. Contributions that violate ``AI_CONTRACT.md`` may be
+During review, maintainers may request confirmation that the agent instructions
+were provided to the agent. Contributions that violate ``AGENTS.md`` may be
 rejected without further review.
 
 Documentation

@@ -1,20 +1,18 @@
-# SimpNMR-X — AI Agent Development Contract
+# SimpNMR-X — Agent Development Instructions
 
-## Usage for Chat-Based AI
+This file defines the repository-level instructions for coding agents working on
+SimpNMR-X. These instructions apply to the whole repository unless a more
+specific `AGENTS.md` or `AGENTS.override.md` exists in a subdirectory.
 
-When using an external AI that does not have repository access:
-
-1. Provide the AI_CONTRACT.md file.
-2. Provide the relevant directory tree.
-3. Provide the specific file(s) being modified.
-4. Instruct the AI that this contract overrides default behaviour.
+When an agent does not have repository access, provide this file, the relevant
+directory tree, and the specific files being modified.
 
 ## 0. Scope and Authority
 
 This document defines mandatory rules for any AI system (LLM, coding agent, autocomplete tool)
 generating code, tests, documentation, or patches for the SimpNMR-X codebase.
 
-If any instruction here conflicts with an AI’s default behaviour, suggestions, or heuristics,
+If any instruction here conflicts with an agent’s default behaviour or suggestions,
 **this document takes precedence**.
 
 Non-compliant output is considered invalid and will be rejected without review.
@@ -67,6 +65,8 @@ Examples:
 - No debug print statements.
 - No commented‑out code blocks.
 - No dead or unused code.
+- Do not automatically reformat Markdown files. Preserve intentional Markdown
+  layout, line wrapping, tables, and code blocks.
 
 All generated code must pass Ruff linting and existing tests.
 
@@ -301,4 +301,4 @@ Producing speculative or assumed code is forbidden.
 
 ---
 
-# End of Contract
+# End of Instructions
