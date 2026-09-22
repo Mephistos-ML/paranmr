@@ -116,7 +116,7 @@ jobs:
 
       - name: Add documentation badge
         run: |
-          VERSION=$(grep -oP '__version__ = "\K[^"]+' paranmr/__version__.py)
+          VERSION=$(grep -oP '__version__ = "\K[^"]+' simpnmr_x/__version__.py)
           rm -f docs/build/html/docs.svg
           anybadge -l Documentation -v "$VERSION" -f docs/build/html/docs.svg --color green -o
 

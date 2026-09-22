@@ -1,7 +1,7 @@
 Hyperfine Benchmarks
 =====================
 
-``paranmr`` provides dedicated benchmark workflows for comparing hyperfine
+``simpnmr_x`` provides dedicated benchmark workflows for comparing hyperfine
 sources. The supported benchmark subcommands are:
 
 - ``benchmark a_fc``: compare isotropic Fermi-contact values ``A_fc``.
@@ -65,20 +65,20 @@ Run the ``A_fc`` benchmark:
 
 .. code-block:: console
 
-   paranmr benchmark a_fc benchmark_hyperfine.yml
+   simpnmr-x benchmark a_fc benchmark_hyperfine.yml
 
 Run the ``A_sd`` benchmark:
 
 .. code-block:: console
 
-   paranmr benchmark a_sd benchmark_hyperfine.yml
+   simpnmr-x benchmark a_sd benchmark_hyperfine.yml
 
 Plots are always saved to the project directory. To suppress interactive display,
 use the ``--hide`` flag:
 
 .. code-block:: console
 
-   paranmr --hide benchmark a_fc benchmark_hyperfine.yml
+   simpnmr-x --hide benchmark a_fc benchmark_hyperfine.yml
 
 Outputs
 -------

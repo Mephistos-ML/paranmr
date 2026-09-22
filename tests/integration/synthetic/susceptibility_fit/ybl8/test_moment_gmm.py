@@ -8,12 +8,14 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
-import numpy as np
-import pandas as pd
 import pytest
 import yaml
 
-from tests.helpers.cli import run_paranmr
+from tests.helpers.cli import run_simpnmr_x
+from tests.helpers.gmm import (
+    assert_gmm_fit_config,
+    assert_gmm_recovers_synthetic_truth,
+)
 
 _YBL8_ROOT = Path(__file__).resolve().parents[5] / "tests" / "data" / "YbL8"
 _YBL8_DATA = _YBL8_ROOT / "DATA"
@@ -34,10 +36,11 @@ def _materialize_gmm_config(tmp_path: Path) -> Path:
     config = yaml.safe_load(
         (_GMM_FIXTURE / "gmm_config.yml").read_text(encoding="utf-8")
     )
-    config["project"]["name"] = str(tmp_path / "paranmr_gmm_fitted_output")
+    config["project"]["name"] = str(tmp_path / "simpnmr_x_gmm_fitted_output")
     config["hyperfine"]["file"] = str(_YBL8_DATA / "HFC" / "YbL8.xyz")
     config["diamagnetic"]["file"] = str(_YBL8_DATA / "DIA" / "LuL8_DIA_NMR.out")
     config["diamagnetic_ref"]["file"] = str(_YBL8_DATA / "DIA" / "tms_ref.out")
+    config["signal_labels"]["file"] = str(_YBL8_DATA / "LABELS" / "YbL8_labels.csv")
     config["experiment"]["files"] = str(_GMM_FIXTURE / "generated_shifts.csv")
     config_path = tmp_path / "gmm_config.yml"
     config_path.write_text(yaml.safe_dump(config, sort_keys=False), encoding="utf-8")
@@ -46,34 +49,25 @@ def _materialize_gmm_config(tmp_path: Path) -> Path:
 
 @pytest.mark.integration
 def test_gmm_recovers_seeded_synthetic_ybl8_shifts(tmp_path: Path) -> None:
-    """Fit all χ/R6 variables to the committed seeded YbL8 fixture."""
+    """Recover seeded YbL8 shifts and R6 linewidth parameters."""
     gmm_config_path = _materialize_gmm_config(tmp_path)
     gmm_config = yaml.safe_load(gmm_config_path.read_text(encoding="utf-8"))
-    assert gmm_config["assignment"]["method"] == "moments"
-    assert gmm_config["assignment"]["moment_objective"]["type"] == "gmm"
-    assert all(
-        value[0] == "fit" for value in gmm_config["susc_fit"]["variables"].values()
-    )
-    assert all(
-        value[0] == "fit" for value in gmm_config["linewidth"]["variables"].values()
-    )
-    generated_peaks = pd.read_csv(
-        _GMM_FIXTURE / "generated_shifts.csv",
-        comment="#",
-        encoding="utf-8-sig",
-    )
-    expected_centers = np.sort(generated_peaks["shift (ppm)"].to_numpy(dtype=float))
+    assert_gmm_fit_config(gmm_config)
+    assert gmm_config["linewidth"]["variables"] == {
+        "p1": ["fit", 1.0, [0.0, 1000000.0]],
+        "p2": ["fit", 0.01, [0.001, 10.0]],
+    }
 
-    result = run_paranmr(
+    result = run_simpnmr_x(
         ["--hide", "fit_susc", gmm_config_path.name],
         cwd=gmm_config_path.parent,
         env=_cli_env(tmp_path),
     )
     assert result.returncode == 0, result.stdout + result.stderr
 
-    output = tmp_path / "paranmr_gmm_fitted_output"
-    peak_data = pd.read_csv(
-        output / "peak_data_302.15_K.csv", comment="#", encoding="utf-8-sig"
+    output = tmp_path / "simpnmr_x_gmm_fitted_output"
+    assert_gmm_recovers_synthetic_truth(
+        output_dir=output,
+        generated_shifts_file=_GMM_FIXTURE / "generated_shifts.csv",
+        truth_file=_GMM_FIXTURE / "truth.json",
     )
-    recovered_centers = np.sort(peak_data["δ_total_avg (ppm)"].to_numpy(dtype=float))
-    assert recovered_centers == pytest.approx(expected_centers, abs=2e-3)

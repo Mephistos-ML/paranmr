@@ -1,5 +1,5 @@
 project:
-  name: paranmr_gmm_fitted_output
+  name: simpnmr_x_gmm_fitted_output
 hyperfine:
   method: pdip
   file: ../../DATA/HFC/YbL8.xyz
@@ -12,6 +12,8 @@ hyperfine:
   total_momentum_J: 3.5
 nuclei:
   include: H
+signal_labels:
+  file: ../../DATA/LABELS/YbL8_labels.csv
 diamagnetic:
   method: dft
   file: ../../DATA/DIA/LuL8_DIA_NMR.out
@@ -22,47 +24,25 @@ experiment:
   files: generated_shifts.csv
 assignment:
   method: moments
-  moment_objective:
-    type: gmm
-    number_of_moments: 10
-    covariance:
-      method: monte_carlo
-      n_samples: 500
-      random_seed: 20260912
-      perturbation:
-        shift_sigma_abs: 0.02
-        width_sigma_rel: 0.05
+  max_moment_order: 10
 linewidth:
   method: r6
   variables:
     p1:
     - fit
     - 1.0
-    - - 0.0
-      - 1000000.0
+    - [0.0, 1000000.0]
     p2:
     - fit
-    - 0.1
-    - - 0.0
-      - 10.0
-susc_fit:
-  type: isoaxrho_euler
-  variables:
-    iso:
-    - fit
-    - 0.0
-    ax:
-    - fit
     - 0.01
-    rho_over_ax:
-    - fit
-    - 0.1
-    alpha:
-    - fit
-    - 0.0
-    beta:
-    - fit
-    - 0.0
-    gamma:
-    - fit
-    - 0.0
+    - [0.001, 10.0]
+susc_fit:
+  type: split
+  average_shifts: all
+  variables:
+    iso: [fix, 0.0]
+    dxx: [fit, 0.0]
+    dyy: [fit, 0.0]
+    dxy: [fit, 0.0]
+    dxz: [fit, 0.0]
+    dyz: [fit, 0.0]

@@ -12,7 +12,7 @@ from pathlib import Path
 
 import pytest
 
-from tests.helpers.cli import run_paranmr
+from tests.helpers.cli import run_simpnmr_x
 from tests.helpers.fixtures import materialize_canonical_fixture
 
 
@@ -30,8 +30,8 @@ def test_predict_with_qc_hfc_and_qc_susceptibility(tmp_path: Path):
     """
     root = materialize_canonical_fixture(tmp_path=tmp_path, system="P3FeCl")
     cwd = root / "SIMULATIONS" / "Prediction"
-    cmd = ["paranmr", "--hide", "predict", "P3FeCl_Prediction.yml"]
-    result = run_paranmr(cmd[1:], cwd=cwd, env=_cli_env(tmp_path))
+    cmd = ["simpnmr-x", "--hide", "predict", "P3FeCl_Prediction.yml"]
+    result = run_simpnmr_x(cmd[1:], cwd=cwd, env=_cli_env(tmp_path))
 
     assert result.returncode == 0, (
         f"Command failed with return code {result.returncode}\nstdout:\n"
@@ -52,8 +52,8 @@ def test_predict_with_pdip_hfc_and_csv_susceptibility(tmp_path: Path):
     """
     root = materialize_canonical_fixture(tmp_path=tmp_path, system="DyL1")
     cwd = root / "SIMULATIONS" / "Prediction"
-    cmd = ["paranmr", "--hide", "predict", "DyL1_1H_Prediction.yml"]
-    result = run_paranmr(cmd[1:], cwd=cwd, env=_cli_env(tmp_path))
+    cmd = ["simpnmr-x", "--hide", "predict", "DyL1_1H_Prediction.yml"]
+    result = run_simpnmr_x(cmd[1:], cwd=cwd, env=_cli_env(tmp_path))
 
     assert result.returncode == 0, (
         f"Command failed with return code {result.returncode}\nstdout:\n"

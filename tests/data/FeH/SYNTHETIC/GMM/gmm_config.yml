@@ -1,0 +1,30 @@
+project:
+  name: feh_gmm_fitted_output
+hyperfine:
+  method: pdip
+  file: ../../DATA/Q_CHEM/FeH_opt_Cs_HFC_TPSSH_def2TZVP.out
+  paramagnetic_centre: [0.0, 0.0, 0.0]
+  spin: 1.0
+  orbit: 0.0
+  total_momentum_J: 1.0
+nuclei:
+  include: H
+experiment:
+  files: generated_shifts.csv
+assignment:
+  method: moments
+  max_moment_order: 10
+linewidth:
+  method: r6
+  variables:
+    p1: [fix, 0.0]
+    p2: [fix, 0.1]
+susc_fit:
+  type: split
+  variables:
+    iso: [fix, 0.0]
+    dxx: [fit, 0.0]
+    dyy: [fit, 0.0]
+    dxy: [fit, 0.0]
+    dxz: [fit, 0.0]
+    dyz: [fit, 0.0]

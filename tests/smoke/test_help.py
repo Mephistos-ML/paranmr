@@ -1,6 +1,6 @@
-from tests.helpers.cli import run_paranmr
+from tests.helpers.cli import run_simpnmr_x
 
 
-def test_paranmr_help():
-    result = run_paranmr(["--help"])
+def test_simpnmr_x_help():
+    result = run_simpnmr_x(["--help"])
     assert result.returncode == 0

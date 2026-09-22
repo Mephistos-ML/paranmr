@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from tests.helpers.cli import run_paranmr
+from tests.helpers.cli import run_simpnmr_x
 from tests.helpers.fixtures import materialize_canonical_fixture
 
 
@@ -14,7 +14,7 @@ def test_ybl8_gmm_moment_fit_produces_finite_shifts(tmp_path: Path) -> None:
     root = materialize_canonical_fixture(tmp_path=tmp_path, system="YbL8")
     cwd = root / "SIMULATIONS" / "Fitting" / "Moments" / "GMM"
     env = {**os.environ, "MPLBACKEND": "Agg", "MPLCONFIGDIR": str(tmp_path / "mpl")}
-    result = run_paranmr(
+    result = run_simpnmr_x(
         ["--hide", "fit_susc", "YbL8_PD_GMM_fit_momens.yml"],
         cwd=cwd,
         env=env,
@@ -25,7 +25,11 @@ def test_ybl8_gmm_moment_fit_produces_finite_shifts(tmp_path: Path) -> None:
         output / "peak_data_302.15_K.csv", comment="#", encoding="utf-8-sig"
     )
     shifts = peak_data["δ_total_avg (ppm)"].to_numpy(float)
-    assert len(peak_data) == 33
+    experimental = pd.read_csv(
+        root / "DATA" / "PARA" / "exp.csv", comment="#", encoding="utf-8-sig"
+    )
+    experimental_shifts = np.sort(experimental["shift (ppm)"].dropna().to_numpy(float))
+    assert len(peak_data) == 31
     assert {
         "δ_total_avg (ppm)",
         "δ_dia_avg (ppm)",
@@ -34,6 +38,7 @@ def test_ybl8_gmm_moment_fit_produces_finite_shifts(tmp_path: Path) -> None:
     }.issubset(peak_data.columns)
     assert np.isfinite(shifts).all()
     assert np.isfinite(peak_data.select_dtypes("number").to_numpy()).all()
+    assert np.sort(shifts) == pytest.approx(experimental_shifts, abs=5.0)
     diagnostics = pd.read_csv(
         output / "moment_fit_diagnostics_302.15_K.csv",
         comment="#",

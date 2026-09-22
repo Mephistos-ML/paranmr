@@ -1,8 +1,8 @@
 import pytest
 
-from paranmr.core.build.eff_factors import calc_g_eff, choose_S_eff
-from paranmr.core.const.physics import KB, MU0, MUB
-from paranmr.core.phys.susc import get_spin_only_susc
+from simpnmr_x.core.build.eff_factors import calc_g_eff, choose_S_eff
+from simpnmr_x.core.const.physics import KB, MU0, MUB
+from simpnmr_x.core.phys.susc import get_spin_only_susc
 
 
 def test_spin_only_susceptibility_matches_curie_reference_formula():

@@ -3,9 +3,7 @@
 
 import pytest
 
-from paranmr.core.fitting.susceptibility.moments.descriptors import (
-    NormalizedMomentVectors,
-    build_normalized_moment_vectors,
+from simpnmr_x.core.fitting.susceptibility.moments.descriptors import (
     compute_gaussian_mixture_moments,
     compute_single_gaussian_mixture_raw_moment,
     moment_n,
@@ -68,6 +66,18 @@ def test_compute_gaussian_mixture_moments_returns_raw_moments():
 
 
 @pytest.mark.unit
+def test_compute_gaussian_mixture_moments_includes_normalized_zeroth_moment():
+    moments = compute_gaussian_mixture_moments(
+        centers=[-1.0, 1.0],
+        sigmas=[0.5, 0.5],
+        area_norm=[0.5, 0.5],
+        moment_labels=("m0", "m1"),
+    )
+
+    assert moments == pytest.approx({"m0": 1.0, "m1": 0.0})
+
+
+@pytest.mark.unit
 def test_compute_gaussian_mixture_moments_matches_manual_raw_formula_1_to_6():
     centers, sigmas, weights, expected = _manual_gaussian_mixture_raw_moments_1_to_6()
 
@@ -79,6 +89,24 @@ def test_compute_gaussian_mixture_moments_matches_manual_raw_formula_1_to_6():
     )
 
     assert moments == pytest.approx(expected)
+
+
+@pytest.mark.unit
+def test_compute_gaussian_mixture_moments_preserves_sparse_requested_order():
+    centers, sigmas, weights, expected = _manual_gaussian_mixture_raw_moments_1_to_6()
+    labels = ("m6", "m1", "m0")
+
+    moments = compute_gaussian_mixture_moments(
+        centers=centers,
+        sigmas=sigmas,
+        area_norm=weights,
+        moment_labels=labels,
+    )
+
+    assert tuple(moments) == labels
+    assert moments == pytest.approx(
+        {"m6": expected["m6"], "m1": expected["m1"], "m0": sum(weights)}
+    )
 
 
 @pytest.mark.unit
@@ -103,119 +131,3 @@ def test_compute_single_gaussian_mixture_raw_moment_matches_wrapper_component():
 def test_moment_metadata_is_generated_from_max_order():
     assert MOMENT_LABELS == tuple(f"m{order}" for order in range(1, 7))
     assert [moment_n(order) for order in range(1, 7)] == list(MOMENT_LABELS)
-
-
-@pytest.mark.unit
-def test_build_normalized_moment_vectors_scales_all_orders():
-    observed = {
-        "m1": 4.0,
-        "m2": 4.0,
-        "m3": 16.0,
-        "m4": 32.0,
-        "m5": 64.0,
-        "m6": 128.0,
-    }
-    calculated = {
-        "m1": 2.0,
-        "m2": 1.0,
-        "m3": 8.0,
-        "m4": 16.0,
-        "m5": 32.0,
-        "m6": 64.0,
-    }
-
-    normalized = build_normalized_moment_vectors(
-        observed=observed,
-        calculated=calculated,
-        moment_names=MOMENT_LABELS,
-    )
-
-    assert normalized.observed == pytest.approx(
-        {
-            "m1": 1.0,
-            "m2": 1.0,
-            "m3": 1.0,
-            "m4": 1.0,
-            "m5": 1.0,
-            "m6": 1.0,
-        }
-    )
-    assert normalized.calculated == pytest.approx(
-        {
-            "m1": 0.5,
-            "m2": 0.25,
-            "m3": 0.5,
-            "m4": 0.5,
-            "m5": 0.5,
-            "m6": 0.5,
-        }
-    )
-
-
-@pytest.mark.unit
-def test_build_normalized_moment_vectors_returns_structured_normalized_space():
-    observed = {
-        "m1": 4.0,
-        "m2": 4.0,
-        "m3": 16.0,
-        "m4": 32.0,
-        "m5": 64.0,
-        "m6": 128.0,
-    }
-    calculated = {
-        "m1": 2.0,
-        "m2": 1.0,
-        "m3": 8.0,
-        "m4": 16.0,
-        "m5": 32.0,
-        "m6": 64.0,
-    }
-
-    normalized = build_normalized_moment_vectors(
-        observed=observed,
-        calculated=calculated,
-        moment_names=MOMENT_LABELS,
-    )
-
-    assert isinstance(normalized, NormalizedMomentVectors)
-    assert normalized.observed == pytest.approx({name: 1.0 for name in MOMENT_LABELS})
-    assert normalized.calculated == pytest.approx(
-        {
-            "m1": 0.5,
-            "m2": 0.25,
-            "m3": 0.5,
-            "m4": 0.5,
-            "m5": 0.5,
-            "m6": 0.5,
-        }
-    )
-
-
-@pytest.mark.unit
-def test_build_normalized_moment_vectors_fails_loudly_on_zero_observed():
-    observed = {
-        "m1": 4.0,
-        "m2": 4.0,
-        "m3": 0.0,
-        "m4": 32.0,
-        "m5": 64.0,
-        "m6": 128.0,
-    }
-    calculated = {
-        "m1": 2.0,
-        "m2": 1.0,
-        "m3": 8.0,
-        "m4": 16.0,
-        "m5": 32.0,
-        "m6": 64.0,
-    }
-
-    with pytest.raises(
-        ValueError,
-        match="zero or too close to zero: m3",
-    ):
-        build_normalized_moment_vectors(
-            observed=observed,
-            calculated=calculated,
-            moment_names=MOMENT_LABELS,
-        )

@@ -1,12 +1,12 @@
 ---
 name: Bug report
-about: Report a reproducible bug in paranmr
+about: Report a reproducible bug in SimpNMR-X
 ---
 
 ## Quick Information
 <!-- This is to help replicate the issue as closely as possible -->
 - **Operating System:** Windows/MacOS/Linux <!-- Delete as appropriate -->
-- **Version of paranmr:** <!-- Obtained with `pip show paranmr` -->
+- **Version of SimpNMR-X:** <!-- Obtained with `pip show simpnmr-x` -->
 - **Python version:** <!-- Obtained with `python --version` -->
 
 ## Steps to reproduce

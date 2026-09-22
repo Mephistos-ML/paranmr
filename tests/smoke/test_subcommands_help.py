@@ -1,6 +1,6 @@
 import pytest
 
-from tests.helpers.cli import run_paranmr
+from tests.helpers.cli import run_simpnmr_x
 
 
 @pytest.mark.parametrize(
@@ -12,6 +12,6 @@ from tests.helpers.cli import run_paranmr
         "calc_pcs_iso",
     ],
 )
-def test_paranmr_subcommand_help(subcommand):
-    result = run_paranmr([subcommand, "--help"])
+def test_simpnmr_x_subcommand_help(subcommand):
+    result = run_simpnmr_x([subcommand, "--help"])
     assert result.returncode == 0

@@ -12,7 +12,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from tests.helpers.cli import run_paranmr
+from tests.helpers.cli import run_simpnmr_x
 from tests.helpers.fixtures import materialize_canonical_fixture
 
 
@@ -30,7 +30,7 @@ def test_qc_hungarian_assignment_fit(tmp_path: Path) -> None:
     """Run the canonical P3FeCl QC Hungarian VT fitting workflow."""
     root = materialize_canonical_fixture(tmp_path=tmp_path, system="P3FeCl")
     cwd = root / "SIMULATIONS" / "Fitting"
-    result = run_paranmr(
+    result = run_simpnmr_x(
         ["--hide", "fit_susc", "P3FeCl_VT_Fitting.yml"],
         cwd=cwd,
         env=_cli_env(tmp_path),

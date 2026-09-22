@@ -1,4 +1,4 @@
-"""Run the checked-out ParaNMR CLI from subprocess-based tests."""
+"""Run the checked-out SimpNMR-X CLI from subprocess-based tests."""
 
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ from pathlib import Path
 _REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 
 
-def run_paranmr(
+def run_simpnmr_x(
     arguments: list[str],
     *,
     cwd: Path | None = None,
@@ -29,7 +29,7 @@ def run_paranmr(
     command = [
         sys.executable,
         "-c",
-        "from paranmr.cli.main import interface; interface()",
+        "from simpnmr_x.cli.main import interface; interface()",
         *arguments,
     ]
     return subprocess.run(

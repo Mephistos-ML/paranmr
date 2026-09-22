@@ -4,27 +4,27 @@
 import numpy as np
 import pytest
 
-from paranmr.core.fitting.susceptibility.jacobian.linewidth import (
+from simpnmr_x.core.fitting.susceptibility.jacobian.linewidth import (
     differentiate_moments_by_linewidth_parameters,
     differentiate_sigmas_by_linewidth_parameters,
 )
-from paranmr.core.fitting.susceptibility.linewidths import (
+from simpnmr_x.core.fitting.susceptibility.linewidths import (
     SusceptibilityLinewidthInputs,
     predict_r6_widths_by_atom_label,
 )
-from paranmr.core.fitting.susceptibility.moments.descriptors import (
+from simpnmr_x.core.fitting.susceptibility.moments.descriptors import (
     compute_gaussian_mixture_moments,
 )
-from paranmr.core.fitting.susceptibility.moments.forward import (
+from simpnmr_x.core.fitting.susceptibility.moments.forward import (
     CalculatedSignalPackage,
     package_centers,
     package_linewidths,
     sort_packages_by_center,
 )
-from paranmr.core.fitting.susceptibility.moments.gaussian import (
+from simpnmr_x.core.fitting.susceptibility.moments.gaussian import (
     gaussian_peak_representation,
 )
-from paranmr.core.spectrum.kernels import gaussian_fwhm_to_sigma
+from simpnmr_x.core.spectrum.kernels import gaussian_fwhm_to_sigma
 
 MOMENT_LABELS = tuple(f"m{order}" for order in range(1, 7))
 
@@ -117,7 +117,7 @@ def test_differentiate_sigmas_by_linewidth_parameters_matches_finite_difference(
 
 
 @pytest.mark.unit
-def test_differentiate_sigmas_by_linewidth_parameters_uses_package_label_precedence():
+def test_differentiate_sigmas_by_linewidth_parameters_averages_group_members():
     packages = [
         CalculatedSignalPackage(
             label="H3",
@@ -139,7 +139,7 @@ def test_differentiate_sigmas_by_linewidth_parameters_uses_package_label_precede
     )
 
     factor = 2.0 * np.sqrt(2.0 * np.log(2.0))
-    assert jacobian[0, 0] == pytest.approx(3.0 / factor)
+    assert jacobian[0, 0] == pytest.approx(np.mean([3.0, 4.0, 6.0]) / factor)
     assert jacobian[0, 1] == pytest.approx(1.0 / factor)
 
 

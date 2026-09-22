@@ -1,7 +1,7 @@
 Home
 ====
 
-``paranmr`` is a Python package for the analysis of solution NMR data of
+``simpnmr_x`` is a Python package for the analysis of solution NMR data of
 paramagnetic metal complexes using computational chemistry methods.
 
 The package provides reproducible, workflow-driven tools for:
@@ -17,7 +17,7 @@ calculations transparent, reproducible, and suitable for systematic studies.
 
 This repository is a fork of the original
 `suturina-group/simpnmr <https://gitlab.com/suturina-group/simpnmr>`_. The
-project continues upstream ideas under the new `ParaNMR` name while preserving
+project continues upstream ideas under the new `SimpNMR-X` name while preserving
 GPL-3.0-or-later compatibility.
 
 
@@ -29,13 +29,13 @@ GPL-3.0-or-later compatibility.
       :link-type: doc
 
       Installation instructions, workflows, and practical guidance for running
-      prediction and fitting calculations with ``paranmr``.
+      prediction and fitting calculations with ``simpnmr_x``.
 
    .. grid-item-card:: Tutorials
       :link: tutorials/index
       :link-type: doc
 
-      Downloadable example materials for the ParaNMR tutorials and workshop,
+      Downloadable example materials for the SimpNMR-X tutorials and workshop,
       provided as ready-to-use files from the repository.
 
    .. grid-item-card:: Developer Guide

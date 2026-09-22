@@ -1,0 +1,333 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Suturina Group
+
+"""Write relaxation analysis outputs as CSV.
+
+Provides helpers to export relaxation decompositions and correlation-time fit data.
+"""
+
+import logging
+from collections.abc import Mapping
+
+import numpy as np
+import pandas as pd
+
+from simpnmr_x.io.csv.csv_util import write_csv_safe
+
+logger = logging.getLogger(__name__)
+
+
+def _average_by_signal_label(
+    label_to_signal_label: dict[str, str],
+    values_by_label: dict[str, float],
+) -> dict[str, float]:
+    """Average per-label values by signal label."""
+    grouped: dict[str, list[float]] = {}
+    for label, value in values_by_label.items():
+        signal_label = label_to_signal_label.get(label)
+        if signal_label is None:
+            continue
+        if signal_label not in grouped:
+            grouped[signal_label] = []
+        grouped[signal_label].append(value)
+
+    return {
+        signal_label: float(np.mean(values)) for signal_label, values in grouped.items()
+    }
+
+
+def save_peak_data_to_csv(
+    molecule,
+    file_name: str,
+    comment: str = "",
+    verbose: bool = True,
+    *,
+    linewidth_by_label: Mapping[str, float] | None = None,
+    linewidth_column_name: str = "linewidth_avg (ppm)",
+) -> None:
+    """Write peak linewidth and optional relaxation data to a CSV file.
+
+    The function groups linewidths by signal label and writes the resulting
+    averages to CSV. Linewidths may be provided explicitly by the application
+    pipeline or read from the molecule domain object.
+
+    Args:
+        molecule: Molecule domain object containing nuclei, linewidths, and
+            optional relaxation data.
+        file_name: Output CSV file path.
+        comment: Optional comment line appended to the file header. If provided,
+            it must begin with ``#`` (or will be prefixed automatically).
+        verbose: If ``True``, prints the output file path.
+        linewidth_by_label: Optional per-nucleus linewidth values in ppm to
+            write instead of reading `nuc.shift.lw`.
+        linewidth_column_name: Output column name for linewidth values.
+
+    Returns:
+        None.
+    """
+    label_to_signal_label = {nuc.label: nuc.signal_label for nuc in molecule.nuclei}
+    if linewidth_by_label is None:
+        lw_by_label = {
+            nuc.label: nuc.shift.lw
+            for nuc in molecule.nuclei
+            if nuc.shift.lw is not None
+        }
+    else:
+        lw_by_label = dict(linewidth_by_label)
+
+    relaxation = getattr(molecule, "relaxation", None)
+    r1_by_label = relaxation.r1.total if relaxation is not None else None
+    r2_by_label = relaxation.r2.total if relaxation is not None else None
+    dipolar_r1_by_label = relaxation.r1.dipolar if relaxation is not None else None
+    contact_r1_by_label = relaxation.r1.contact if relaxation is not None else None
+    curie_r1_by_label = relaxation.r1.curie if relaxation is not None else None
+
+    has_fc_gcorr = (
+        getattr(molecule.susc, "iso_g_corr", None) is not None
+        and getattr(molecule.susc, "iso_spin_only", None) is not None
+    )
+    has_fc_spin_only = (
+        getattr(molecule.susc, "iso_spin_only", None) is not None
+        and getattr(molecule.susc, "iso_g_corr", None) is None
+    )
+    hyperfine_meta = molecule.metadata.get("hyperfine", {})
+    has_orb = hyperfine_meta.get("orbital_contribution") == "available"
+
+    if has_fc_gcorr:
+        fc_column_name = "δ_fc_g_corr_avg (ppm)"
+    elif has_fc_spin_only:
+        fc_column_name = "δ_fc_spin_only_avg (ppm)"
+    else:
+        fc_column_name = "δ_fc_avg (ppm)"
+
+    delta_total_avg_by_label = {}
+    delta_dia_by_label = {}
+    delta_pc_by_label = {}
+    delta_fc_by_label = {}
+    delta_fc_spin_only_by_label = {}
+    delta_fc_g_corr_by_label = {}
+    delta_orb_by_label = {}
+    delta_orb_iso_by_label = {}
+    delta_orb_aniso_by_label = {}
+
+    for nuc in molecule.nuclei:
+        if getattr(nuc.shift, "avg", None) is not None:
+            delta_total_avg_by_label[nuc.label] = nuc.shift.avg
+        if getattr(nuc.shift, "dia", None) is not None:
+            delta_dia_by_label[nuc.label] = nuc.shift.dia
+        if getattr(nuc.shift, "pc", None) is not None:
+            delta_pc_by_label[nuc.label] = nuc.shift.pc
+        if getattr(nuc.shift, "fc", None) is not None:
+            delta_fc_by_label[nuc.label] = nuc.shift.fc
+        if getattr(nuc.shift, "fc_spin_only", None) is not None:
+            delta_fc_spin_only_by_label[nuc.label] = nuc.shift.fc_spin_only
+        if getattr(nuc.shift, "fc_delta_g_corr", None) is not None:
+            delta_fc_g_corr_by_label[nuc.label] = nuc.shift.fc_delta_g_corr
+        if getattr(nuc.shift, "orb", None) is not None:
+            delta_orb_by_label[nuc.label] = nuc.shift.orb
+        if getattr(nuc.shift, "orb_iso", None) is not None:
+            delta_orb_iso_by_label[nuc.label] = nuc.shift.orb_iso
+        if getattr(nuc.shift, "orb_aniso", None) is not None:
+            delta_orb_aniso_by_label[nuc.label] = nuc.shift.orb_aniso
+
+    avg_r1_by_signal_label = (
+        _average_by_signal_label(label_to_signal_label, r1_by_label)
+        if r1_by_label is not None
+        else None
+    )
+    avg_r2_by_signal_label = (
+        _average_by_signal_label(label_to_signal_label, r2_by_label)
+        if r2_by_label is not None
+        else None
+    )
+
+    avg_lw_by_signal_label = _average_by_signal_label(
+        label_to_signal_label,
+        lw_by_label,
+    )
+
+    avg_dipolar_by_signal_label = (
+        _average_by_signal_label(
+            label_to_signal_label,
+            dipolar_r1_by_label,
+        )
+        if dipolar_r1_by_label is not None
+        else None
+    )
+    avg_contact_by_signal_label = (
+        _average_by_signal_label(
+            label_to_signal_label,
+            contact_r1_by_label,
+        )
+        if contact_r1_by_label is not None
+        else None
+    )
+    avg_curie_by_signal_label = (
+        _average_by_signal_label(
+            label_to_signal_label,
+            curie_r1_by_label,
+        )
+        if curie_r1_by_label is not None
+        else None
+    )
+    avg_delta_total_avg_by_signal_label = (
+        _average_by_signal_label(label_to_signal_label, delta_total_avg_by_label)
+        if delta_total_avg_by_label
+        else None
+    )
+    avg_delta_dia_by_signal_label = (
+        _average_by_signal_label(label_to_signal_label, delta_dia_by_label)
+        if delta_dia_by_label
+        else None
+    )
+    avg_delta_pc_by_signal_label = (
+        _average_by_signal_label(label_to_signal_label, delta_pc_by_label)
+        if delta_pc_by_label
+        else None
+    )
+    avg_delta_fc_by_signal_label = (
+        _average_by_signal_label(label_to_signal_label, delta_fc_by_label)
+        if delta_fc_by_label
+        else None
+    )
+    avg_delta_fc_spin_only_by_signal_label = (
+        _average_by_signal_label(label_to_signal_label, delta_fc_spin_only_by_label)
+        if delta_fc_spin_only_by_label
+        else None
+    )
+    avg_delta_fc_g_corr_by_signal_label = (
+        _average_by_signal_label(label_to_signal_label, delta_fc_g_corr_by_label)
+        if delta_fc_g_corr_by_label
+        else None
+    )
+    avg_delta_orb_by_signal_label = (
+        _average_by_signal_label(label_to_signal_label, delta_orb_by_label)
+        if delta_orb_by_label
+        else None
+    )
+    avg_delta_orb_iso_by_signal_label = (
+        _average_by_signal_label(label_to_signal_label, delta_orb_iso_by_label)
+        if delta_orb_iso_by_label
+        else None
+    )
+    avg_delta_orb_aniso_by_signal_label = (
+        _average_by_signal_label(label_to_signal_label, delta_orb_aniso_by_label)
+        if delta_orb_aniso_by_label
+        else None
+    )
+
+    # Collect the union of all signal labels that appear in any available dict
+    signal_labels: set[str] = set(avg_lw_by_signal_label.keys())
+
+    if avg_r1_by_signal_label is not None:
+        signal_labels |= set(avg_r1_by_signal_label.keys())
+    if avg_r2_by_signal_label is not None:
+        signal_labels |= set(avg_r2_by_signal_label.keys())
+    if avg_dipolar_by_signal_label is not None:
+        signal_labels |= set(avg_dipolar_by_signal_label.keys())
+    if avg_contact_by_signal_label is not None:
+        signal_labels |= set(avg_contact_by_signal_label.keys())
+    if avg_curie_by_signal_label is not None:
+        signal_labels |= set(avg_curie_by_signal_label.keys())
+    if avg_delta_total_avg_by_signal_label is not None:
+        signal_labels |= set(avg_delta_total_avg_by_signal_label.keys())
+    if avg_delta_dia_by_signal_label is not None:
+        signal_labels |= set(avg_delta_dia_by_signal_label.keys())
+    if avg_delta_pc_by_signal_label is not None:
+        signal_labels |= set(avg_delta_pc_by_signal_label.keys())
+    if avg_delta_fc_by_signal_label is not None:
+        signal_labels |= set(avg_delta_fc_by_signal_label.keys())
+    if avg_delta_fc_spin_only_by_signal_label is not None:
+        signal_labels |= set(avg_delta_fc_spin_only_by_signal_label.keys())
+    if avg_delta_fc_g_corr_by_signal_label is not None:
+        signal_labels |= set(avg_delta_fc_g_corr_by_signal_label.keys())
+    if avg_delta_orb_by_signal_label is not None:
+        signal_labels |= set(avg_delta_orb_by_signal_label.keys())
+    if avg_delta_orb_iso_by_signal_label is not None:
+        signal_labels |= set(avg_delta_orb_iso_by_signal_label.keys())
+    if avg_delta_orb_aniso_by_signal_label is not None:
+        signal_labels |= set(avg_delta_orb_aniso_by_signal_label.keys())
+
+    signal_labels = sorted(signal_labels)
+
+    # Base columns: signal label, shifts, linewidth, then R1/R2 and other data.
+    out: dict[str, list] = {
+        "signal_label": signal_labels,
+    }
+
+    if avg_delta_total_avg_by_signal_label is not None:
+        out["δ_total_avg (ppm)"] = [
+            avg_delta_total_avg_by_signal_label.get(lbl, np.nan)
+            for lbl in signal_labels
+        ]
+    if avg_delta_dia_by_signal_label is not None:
+        out["δ_dia_avg (ppm)"] = [
+            avg_delta_dia_by_signal_label.get(lbl, np.nan) for lbl in signal_labels
+        ]
+    if avg_delta_pc_by_signal_label is not None:
+        out["δ_pc_avg (ppm)"] = [
+            avg_delta_pc_by_signal_label.get(lbl, np.nan) for lbl in signal_labels
+        ]
+    if avg_delta_fc_by_signal_label is not None:
+        out[fc_column_name] = [
+            avg_delta_fc_by_signal_label.get(lbl, np.nan) for lbl in signal_labels
+        ]
+    if avg_delta_fc_spin_only_by_signal_label is not None:
+        out["δ_fc_spin_only_avg (ppm)"] = [
+            avg_delta_fc_spin_only_by_signal_label.get(lbl, np.nan)
+            for lbl in signal_labels
+        ]
+    if avg_delta_fc_g_corr_by_signal_label is not None:
+        out["Δδ_fc_g_corr_avg (ppm)"] = [
+            avg_delta_fc_g_corr_by_signal_label.get(lbl, np.nan)
+            for lbl in signal_labels
+        ]
+    if has_orb and avg_delta_orb_by_signal_label is not None:
+        out["δ_orb_avg (ppm)"] = [
+            avg_delta_orb_by_signal_label.get(lbl, np.nan) for lbl in signal_labels
+        ]
+    if has_orb and avg_delta_orb_iso_by_signal_label is not None:
+        out["δ_orb_iso_avg (ppm)"] = [
+            avg_delta_orb_iso_by_signal_label.get(lbl, np.nan) for lbl in signal_labels
+        ]
+    if has_orb and avg_delta_orb_aniso_by_signal_label is not None:
+        out["δ_orb_aniso_avg (ppm)"] = [
+            avg_delta_orb_aniso_by_signal_label.get(lbl, np.nan)
+            for lbl in signal_labels
+        ]
+
+    out[linewidth_column_name] = [
+        avg_lw_by_signal_label.get(lbl, np.nan) for lbl in signal_labels
+    ]
+
+    if avg_r1_by_signal_label is not None:
+        out["R1_total (s^-1)"] = [
+            avg_r1_by_signal_label.get(lbl, np.nan) for lbl in signal_labels
+        ]
+    if avg_r2_by_signal_label is not None:
+        out["R2_total (s^-1)"] = [
+            avg_r2_by_signal_label.get(lbl, np.nan) for lbl in signal_labels
+        ]
+
+    # Optional decompositions
+    if avg_dipolar_by_signal_label is not None:
+        out["R1_sbm_dipolar (s^-1)"] = [
+            avg_dipolar_by_signal_label.get(lbl, np.nan) for lbl in signal_labels
+        ]
+    if avg_contact_by_signal_label is not None:
+        out["R1_sbm_contact (s^-1)"] = [
+            avg_contact_by_signal_label.get(lbl, np.nan) for lbl in signal_labels
+        ]
+    if avg_curie_by_signal_label is not None:
+        out["R1_curie (s^-1)"] = [
+            avg_curie_by_signal_label.get(lbl, np.nan) for lbl in signal_labels
+        ]
+
+    df = pd.DataFrame(data=out)
+
+    write_csv_safe(df, file_name, comment)
+
+    if verbose:
+        logger.info("pNMR data written to %s", file_name)
+
+    return

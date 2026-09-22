@@ -6,31 +6,31 @@ Installation
 Installation
 ------------
 
-The ``paranmr`` Python package and its command-line interface can be installed using the standard ``pip`` package manager.
+The ``simpnmr_x`` Python package and its command-line interface can be installed using the standard ``pip`` package manager.
 
 .. code-block:: bash
 
-    pip install paranmr
+    pip install simpnmr-x
 
 To test that the installation was successful, run the following command:
 
 .. code-block:: bash
 
-    paranmr -h
+    simpnmr-x -h
 
 If you prefer using isolated Python environments, you may use tools such as
 ``venv`` or ``conda``. Environment management is optional and not required for
-using ``paranmr``.
+using ``simpnmr_x``.
 
-You are now ready to start using ``ParaNMR``. Head to the :doc:`workflows` pages for more information.
+You are now ready to start using ``SimpNMR-X``. Head to the :doc:`workflows` pages for more information.
 
 .. _updating:
 
 Updating
 --------
 
-To update ``ParaNMR``, run:
+To update ``SimpNMR-X``, run:
 
 .. code-block:: bash
 
-    pip install paranmr --upgrade
+    pip install simpnmr-x --upgrade

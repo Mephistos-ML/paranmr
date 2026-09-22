@@ -1,8 +1,8 @@
 Contributing
 ============
 
-We welcome contributions to ``ParaNMR``. If you would like to add functionality or improve the code or the documentation,
-please start by creating an `Issue <https://github.com/Mephistos-ML/paranmr/issues>`_ on GitHub (using the relevant template)
+We welcome contributions to ``SimpNMR-X``. If you would like to add functionality or improve the code or the documentation,
+please start by creating an `Issue <https://github.com/Mephistos-ML/simpnmr_x/issues>`_ on GitHub (using the relevant template)
 to describe the change you propose.
 
 When contributing, you **must** follow the rules below. These define the required development standards and help keep the project maintainable over time.
@@ -14,7 +14,7 @@ Source Code
    using an imperative, present-tense subject line (for example: ``feat: add new fitting routine``).
    Commit scopes are encouraged and should reflect the affected subsystem (for example: ``feat(application): add new fitting routine`` or ``fix(io): handle malformed CSV input``).
 
-   These commit messages are not just a style requirement: ParaNMR uses an automated semantic release workflow in CI.
+   These commit messages are not just a style requirement: SimpNMR-X uses an automated semantic release workflow in CI.
    Commit types and optional breaking-change markers determine the version bump (major/minor/patch) and are used to
    generate release notes / changelog entries.
 
@@ -58,16 +58,16 @@ AI-assisted contributions
 AI-assisted development is allowed, but it is subject to additional constraints.
 
 All AI-generated or AI-assisted code **must** comply with the project-wide
-AI contract defined in ``AI_CONTRACT.md`` (located at the root of the repository).
-This contract takes precedence over general contribution guidelines when AI tools
-are involved.
+agent instructions defined in ``AGENTS.md`` (located at the root of the
+repository). These instructions take precedence over general contribution
+guidelines when AI tools are involved.
 
 Requirements for AI-assisted contributions:
 
 1. The contributor is responsible for the correctness, architecture, and scientific
    validity of the submitted code, regardless of AI usage.
 2. The AI system **must** be provided with:
-   - the ``AI_CONTRACT.md`` file,
+   - the ``AGENTS.md`` file,
    - the relevant directory tree,
    - the specific file(s) being modified.
 3. AI-generated changes must not introduce:
@@ -77,15 +77,15 @@ Requirements for AI-assisted contributions:
 4. If the AI system does not have sufficient context to make a correct change,
    it must stop and request clarification rather than guessing.
 
-During review, maintainers may request confirmation that the AI contract was
-provided to the agent. Contributions that violate ``AI_CONTRACT.md`` may be
+During review, maintainers may request confirmation that the agent instructions
+were provided to the agent. Contributions that violate ``AGENTS.md`` may be
 rejected without further review.
 
 Documentation
 -------------
 
 Our documentation is written in `Sphinx <https://www.sphinx-doc.org/en/master/>`_ and uses
-the PyData Sphinx theme. The source code for the docs is available at ``paranmr/docs/source``.
+the PyData Sphinx theme. The source code for the docs is available at ``simpnmr_x/docs/source``.
 
 To build the documentation locally, ensure the project is installed with developer
 dependencies (see :ref:`local development setup <local-development-setup>`), then
@@ -104,7 +104,7 @@ Makefile wrapper:
 
     make clean html
 
-The compiled HTML pages will be available at ``paranmr/docs/build/html``.
+The compiled HTML pages will be available at ``simpnmr_x/docs/build/html``.
 
 Please ensure the documentation builds successfully prior to committing/merging.
 

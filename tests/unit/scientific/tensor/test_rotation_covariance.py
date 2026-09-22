@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from paranmr.core.util.transform import rotate_coords, rotate_tensor
+from simpnmr_x.core.util.transform import rotate_coords, rotate_tensor
 from tests.unit.scientific.oracles.rotations import (
     rotate_tensor as reference_rotate_tensor,
 )

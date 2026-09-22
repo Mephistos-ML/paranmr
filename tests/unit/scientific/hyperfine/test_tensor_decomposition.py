@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from paranmr.core.build.hfc import _assemble_hfc_from_full_tensor
+from simpnmr_x.core.build.hfc import _assemble_hfc_from_full_tensor
 
 
 def test_full_hyperfine_tensor_decomposes_into_isotropic_and_traceless_parts():

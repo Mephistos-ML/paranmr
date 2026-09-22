@@ -5,7 +5,7 @@ requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "paranmr"
+name = "simpnmr-x"
 dynamic = ["version"]
 description = "Prediction, fitting, and analysis of paramagnetic NMR spectra."
 readme = { file = "README.md", content-type = "text/markdown" }
@@ -56,32 +56,32 @@ dev = [
     "ruff>=0.16.1",
 ]
 synthetic = [
-    "ParaNMR-Synth>=0.3.0",
+    "SimpNMR-X-Synth>=0.3.0",
 ]
 
 [project.urls]
-Homepage = "https://github.com/Mephistos-ML/paranmr"
-Documentation = "https://mephistos-ml.github.io/paranmr/"
-Repository = "https://github.com/Mephistos-ML/paranmr"
-Issues = "https://github.com/Mephistos-ML/paranmr/issues"
+Homepage = "https://github.com/Mephistos-ML/simpnmr-x"
+Documentation = "https://mephistos-ml.github.io/simpnmr-x/"
+Repository = "https://github.com/Mephistos-ML/simpnmr-x"
+Issues = "https://github.com/Mephistos-ML/simpnmr-x/issues"
 "Original Source" = "https://gitlab.com/suturina-group/simpnmr"
 
 [project.scripts]
-paranmr = "paranmr.cli.main:interface"
-plot_A_funcs = "paranmr.tools.hfc_plot_batch:main"
-plot_chi_funcs = "paranmr.tools.susc_plot_batch:main"
-xyz_to_chemlabel = "paranmr.tools.coords.chemcraft:main"
+simpnmr-x = "simpnmr_x.cli.main:interface"
+plot_A_funcs = "simpnmr_x.tools.hfc_plot_batch:main"
+plot_chi_funcs = "simpnmr_x.tools.susc_plot_batch:main"
+xyz_to_chemlabel = "simpnmr_x.tools.coords.chemcraft:main"
 
 [tool.setuptools.dynamic]
-version = { attr = "paranmr.__version__.__version__" }
+version = { attr = "simpnmr_x.__version__.__version__" }
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["paranmr*"]
+include = ["simpnmr_x*"]
 namespaces = false
 
 [tool.semantic_release]
-version_variables = ["paranmr/__version__.py:__version__"]
+version_variables = ["simpnmr_x/__version__.py:__version__"]
 branch = "main"
 commit_parser = "conventional"
 build_command = "python -m pip install build && python -m build --sdist --wheel ."

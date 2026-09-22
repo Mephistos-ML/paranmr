@@ -3,17 +3,15 @@
 
 import pytest
 
-from paranmr.app.policies.averaging import (
-    apply_methyl_signal_labels,
-    detect_methyl_group_records,
+from simpnmr_x.app.policies.averaging import (
     resolve_average_shift_groups,
 )
-from paranmr.core.domain.mol import Molecule
-from paranmr.core.fitting.susceptibility.moments.forward import (
+from simpnmr_x.core.domain.mol import Molecule
+from simpnmr_x.core.fitting.susceptibility.moments.forward import (
     calculated_moments_from_parameters,
     calculated_signal_packages_from_parameters,
 )
-from paranmr.core.fitting.susceptibility.moments.gaussian import (
+from simpnmr_x.core.fitting.susceptibility.moments.gaussian import (
     gaussian_peak_representation,
 )
 
@@ -23,8 +21,14 @@ class _DummyModel:
         return {nucleus.label: parameters[nucleus.label] for nucleus in nuclei}
 
 
+def _assign_methyl_chemical_label(molecule: Molecule) -> None:
+    for nucleus in molecule.nuclei:
+        if nucleus.label in {"H1", "H2", "H3"}:
+            nucleus.signal_label = "Me-1"
+
+
 @pytest.mark.unit
-def test_detect_methyl_group_records_finds_three_protons_on_one_carbon():
+def test_moment_forward_collapses_chemical_label_group_into_one_signal():
     molecule = Molecule.from_labels_coords(
         labels=["C1", "H1", "H2", "H3", "C2", "H4"],
         coords=[
@@ -38,49 +42,9 @@ def test_detect_methyl_group_records_finds_three_protons_on_one_carbon():
         elements="H",
     )
 
-    groups = detect_methyl_group_records(molecule)
-
-    assert len(groups) == 1
-    assert groups[0].carbon_label == "C1"
-    assert groups[0].proton_labels == ("H1", "H2", "H3")
-
-
-@pytest.mark.unit
-def test_detect_methyl_group_records_requires_h_only_nuclei_selection():
-    molecule = Molecule.from_labels_coords(
-        labels=["C1", "H1", "H2", "H3", "C2"],
-        coords=[
-            [0.0, 0.0, 0.0],
-            [1.09, 0.0, 0.0],
-            [-0.36, 1.03, 0.0],
-            [-0.36, -0.51, 0.89],
-            [-1.52, 0.0, 0.0],
-        ],
-        elements="all",
-    )
-
-    with pytest.raises(ValueError, match="only H nuclei"):
-        detect_methyl_group_records(molecule)
-
-
-@pytest.mark.unit
-def test_moment_forward_collapses_methyl_group_into_one_signal():
-    molecule = Molecule.from_labels_coords(
-        labels=["C1", "H1", "H2", "H3", "C2", "H4"],
-        coords=[
-            [0.0, 0.0, 0.0],
-            [1.09, 0.0, 0.0],
-            [-0.36, 1.03, 0.0],
-            [-0.36, -0.51, 0.89],
-            [-1.52, 0.0, 0.0],
-            [-2.61, 0.0, 0.0],
-        ],
-        elements="H",
-    )
-
+    _assign_methyl_chemical_label(molecule)
     average_labels = resolve_average_shift_groups(
-        molecule=molecule,
-        average_shifts="methyls",
+        molecule=molecule, average_shifts="all"
     )
     packages = calculated_signal_packages_from_parameters(
         model=_DummyModel(),
@@ -90,13 +54,15 @@ def test_moment_forward_collapses_methyl_group_into_one_signal():
     )
 
     assert len(packages) == 2
-    assert packages[0].atom_labels == ("H1", "H2", "H3")
-    assert packages[0].center == pytest.approx((1.0 + 2.0 + 4.0) / 3.0)
-    assert packages[1].atom_labels == ("H4",)
+    packages_by_atoms = {package.atom_labels: package for package in packages}
+    methyl_package = packages_by_atoms[("H1", "H2", "H3")]
+    assert methyl_package.center == pytest.approx((1.0 + 2.0 + 4.0) / 3.0)
+    assert methyl_package.area == pytest.approx(3.0)
+    assert packages_by_atoms[("H4",)].area == pytest.approx(1.0)
 
 
 @pytest.mark.unit
-def test_calculated_moments_treat_collapsed_packages_with_equal_weight():
+def test_calculated_moments_weight_collapsed_packages_by_theoretical_area():
     molecule = Molecule.from_labels_coords(
         labels=["C1", "H1", "H2", "H3", "C2", "H4"],
         coords=[
@@ -109,9 +75,9 @@ def test_calculated_moments_treat_collapsed_packages_with_equal_weight():
         ],
         elements="H",
     )
+    _assign_methyl_chemical_label(molecule)
     average_labels = resolve_average_shift_groups(
-        molecule=molecule,
-        average_shifts="methyls",
+        molecule=molecule, average_shifts="all"
     )
     widths_by_label = {
         "H1": 1.0,
@@ -133,41 +99,10 @@ def test_calculated_moments_treat_collapsed_packages_with_equal_weight():
     expected_peaks = gaussian_peak_representation(
         centers=[(1.0 + 2.0 + 4.0) / 3.0, 10.0],
         fwhm=[1.0, 1.0],
-        areas=[1.0, 1.0],
+        areas=[3.0, 1.0],
     )
     expected_m1 = float(sum(expected_peaks["area_norm"] * expected_peaks["center"]))
     assert moments["m1"] == pytest.approx(expected_m1)
-
-
-@pytest.mark.unit
-def test_apply_methyl_signal_labels_assigns_shared_synthetic_labels():
-    molecule = Molecule.from_labels_coords(
-        labels=["C1", "H1", "H2", "H3", "C2", "H4"],
-        coords=[
-            [0.0, 0.0, 0.0],
-            [1.09, 0.0, 0.0],
-            [-0.36, 1.03, 0.0],
-            [-0.36, -0.51, 0.89],
-            [-1.52, 0.0, 0.0],
-            [-2.61, 0.0, 0.0],
-        ],
-        elements="H",
-    )
-
-    apply_methyl_signal_labels(molecule)
-
-    ch3_label = "CH3(C1)"
-    assert [nuc.signal_label for nuc in molecule.nuclei] == [
-        ch3_label,
-        ch3_label,
-        ch3_label,
-        "H4",
-    ]
-    assert [nuc.signal_math_label for nuc in molecule.nuclei[:3]] == [
-        ch3_label,
-        ch3_label,
-        ch3_label,
-    ]
 
 
 @pytest.mark.unit

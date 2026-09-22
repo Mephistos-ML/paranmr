@@ -1,0 +1,30 @@
+project:
+  name: p3fecl_gmm_fitted_output
+hyperfine:
+  method: dft
+  file: ../../DATA/HFC/P3FeCl_HFC.out
+  paramagnetic_centre: [9.122358, 5.108520, 11.946464]
+signal_labels:
+  file: ../../DATA/LABELS/P3FeCl_Signal_Labels_13C.csv
+nuclei:
+  include: C
+experiment:
+  files: generated_shifts.csv
+assignment:
+  method: moments
+  max_moment_order: 10
+linewidth:
+  method: r6
+  variables:
+    p1: [fix, 1000.0]
+    p2: [fix, 0.1]
+susc_fit:
+  type: split
+  average_shifts: all
+  variables:
+    iso: [fix, 0.243408]
+    dxx: [fit, 0.0]
+    dyy: [fit, 0.0]
+    dxy: [fit, 0.0]
+    dxz: [fit, 0.0]
+    dyz: [fit, 0.0]

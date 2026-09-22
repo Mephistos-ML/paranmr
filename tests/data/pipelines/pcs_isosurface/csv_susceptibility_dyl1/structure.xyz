@@ -1,5 +1,5 @@
 67
-This file is a canonical ParaNMR integration fixture derived from the DyL1 HFC input.
+This file is a canonical SimpNMR-X integration fixture derived from the DyL1 HFC input.
 Dy1         0.0068570      -0.0086950       0.0578820
 O1         -0.3020270      -1.8305320      -1.4199550
 O2         -1.4215720       1.1756920      -1.4222900

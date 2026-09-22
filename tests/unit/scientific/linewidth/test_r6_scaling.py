@@ -1,6 +1,6 @@
 import pytest
 
-from paranmr.core.fitting.linewidth.r6 import predict_r6_linewidths
+from simpnmr_x.core.fitting.linewidth.r6 import predict_r6_linewidths
 
 
 def test_r6_linewidth_is_affine_in_mean_inverse_sixth_distance():

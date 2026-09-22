@@ -4,8 +4,8 @@
 import numpy as np
 import pytest
 
-from paranmr.core.const.gammas import NUCLEAR_GAMMAS
-from paranmr.core.conv.freq_to_ppm import signal_widths_hz_to_ppm
+from simpnmr_x.core.const.gammas import NUCLEAR_GAMMAS
+from simpnmr_x.core.conv.freq_to_ppm import signal_widths_hz_to_ppm
 
 
 @pytest.mark.unit

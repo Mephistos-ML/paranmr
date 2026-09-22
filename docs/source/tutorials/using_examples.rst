@@ -49,7 +49,7 @@ configuration file and generated outputs.
 
 .. code-block:: bash
 
-   paranmr predict run.yml
+   simpnmr-x predict run.yml
 
 .. rubric:: 02. PCS Isosurface
 
@@ -59,7 +59,7 @@ centre.
 
 .. code-block:: bash
 
-   paranmr calc_pcs_iso susceptibility.csv 302.150 structure.xyz Dy1
+   simpnmr-x calc_pcs_iso susceptibility.csv 302.150 structure.xyz Dy1
 
 .. note::
 
@@ -74,7 +74,7 @@ relaxation-related outputs.
 
 .. code-block:: bash
 
-   paranmr predict run.yml
+   simpnmr-x predict run.yml
 
 .. rubric:: 04. Susceptibility Fitting
 
@@ -83,7 +83,7 @@ This example introduces the standard susceptibility fitting workflow using a
 
 .. code-block:: bash
 
-   paranmr fit_susc run.yml
+   simpnmr-x fit_susc run.yml
 
 
 .. rubric:: 05. Variable-Temperature Susceptibility Fitting
@@ -93,7 +93,7 @@ workflow.
 
 .. code-block:: bash
 
-   paranmr --hide fit_susc --susc_units 'cm3 mol-1' run.yml
+   simpnmr-x --hide fit_susc --susc_units 'cm3 mol-1' run.yml
 
 .. note::
 
@@ -108,7 +108,7 @@ susceptibility fitting output.
 
 .. code-block:: bash
 
-   paranmr get_sh --spin 2.0 isoaxrho_fit.csv
+   simpnmr-x get_sh --spin 2.0 isoaxrho_fit.csv
 
 .. note::
 

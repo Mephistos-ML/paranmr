@@ -12,7 +12,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from tests.helpers.cli import run_paranmr
+from tests.helpers.cli import run_simpnmr_x
 from tests.helpers.fixtures import materialize_canonical_fixture
 
 
@@ -30,7 +30,7 @@ def test_pdip_fixed_assignment_fit(tmp_path: Path) -> None:
     """Run the canonical DyL1 PDIP fixed-assignment workflow."""
     root = materialize_canonical_fixture(tmp_path=tmp_path, system="DyL1")
     cwd = root / "SIMULATIONS" / "Fitting" / "Standart_Fit"
-    result = run_paranmr(
+    result = run_simpnmr_x(
         ["--hide", "fit_susc", "DyL1_1H_Fitting.yml"],
         cwd=cwd,
         env=_cli_env(tmp_path),

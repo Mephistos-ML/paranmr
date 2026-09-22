@@ -1,0 +1,16 @@
+{
+  "iso": 0.0,
+  "dxx": 0.446642880617926,
+  "dyy": 0.446642880617926,
+  "dxy": 0.0,
+  "dxz": 0.0,
+  "dyz": 0.0,
+  "p1": 15750.6274978675,
+  "p2": 0.0765462111964243,
+  "dzz": -0.893285761235852,
+  "_provenance": {
+    "generator": "SimpNMR-X-Synth",
+    "source": "Existing synthetic GMM truth fixture",
+    "tensor_basis": "Cartesian traceless anisotropic \u0394\u03c7 components"
+  }
+}

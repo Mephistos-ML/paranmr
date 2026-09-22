@@ -4,12 +4,12 @@
 import numpy as np
 import pytest
 
-from paranmr.core.domain.mol import Nucleus
-from paranmr.core.domain.tensor import Hyperfine
-from paranmr.core.fitting.susceptibility.jacobian.assembly import (
+from simpnmr_x.core.domain.mol import Nucleus
+from simpnmr_x.core.domain.tensor import Hyperfine
+from simpnmr_x.core.fitting.susceptibility.jacobian.assembly import (
     build_moment_jacobian,
 )
-from paranmr.core.fitting.susceptibility.linewidths import (
+from simpnmr_x.core.fitting.susceptibility.linewidths import (
     SusceptibilityLinewidthInputs,
 )
 
@@ -57,30 +57,23 @@ def test_build_moment_jacobian_returns_active_contract():
         temperature=302.15,
         parameters={
             "iso": 0.0,
-            "ax": 0.12,
-            "rho_over_ax": 0.08,
-            "alpha": 25.0,
-            "beta": 40.0,
-            "gamma": 75.0,
+            "dxx": 0.12,
+            "dyy": -0.08,
+            "dxy": 0.01,
+            "dxz": 0.03,
+            "dyz": -0.02,
         },
         nuclei=_test_nuclei(),
         linewidth_inputs=SusceptibilityLinewidthInputs(
             mean_inv_r6_by_atom_label={"H1": 2.0, "H2": 5.0, "H3": 3.0}
         ),
         linewidth_vars_by_name={"p1": 1000.0, "p2": 0.5},
-        observed_moments={
-            "m1": 2.0,
-            "m2": 4.0,
-            "m3": 6.0,
-            "m4": 8.0,
-            "m5": 10.0,
-            "m6": 12.0,
-        },
-        parameter_names=("ax", "alpha", "p1"),
+        moment_names=MOMENT_LABELS,
+        parameter_names=("dxx", "dxy", "p1"),
         average_labels=(),
     )
 
     assert result.temperature == pytest.approx(302.15)
     assert result.moment_names == MOMENT_LABELS
-    assert result.parameter_names == ("ax", "alpha", "p1")
+    assert result.parameter_names == ("dxx", "dxy", "p1")
     assert result.values.shape == (6, 3)
