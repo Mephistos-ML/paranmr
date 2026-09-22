@@ -13,7 +13,7 @@ import pandas as pd
 import pytest
 import yaml
 
-from tests.helpers.cli import run_paranmr
+from tests.helpers.cli import run_simpnmr_x
 
 _FEH_ROOT = Path(__file__).resolve().parents[5] / "tests" / "data" / "FeH"
 _FEH_DATA = _FEH_ROOT / "DATA"
@@ -58,7 +58,7 @@ def test_gmm_recovers_atom_resolved_synthetic_feh_pdip_tensor(tmp_path: Path) ->
         if name != "iso"
     )
 
-    result = run_paranmr(
+    result = run_simpnmr_x(
         ["--hide", "fit_susc", config_path.name],
         cwd=config_path.parent,
         env=_cli_env(tmp_path),

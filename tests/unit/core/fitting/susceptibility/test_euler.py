@@ -5,8 +5,8 @@
 
 import numpy as np
 
-from paranmr.core.domain.tensor import Susceptibility
-from paranmr.core.fitting.susceptibility.models.isoaxrho_euler import (
+from simpnmr_x.core.domain.tensor import Susceptibility
+from simpnmr_x.core.fitting.susceptibility.models.isoaxrho_euler import (
     IsoAxRhoEulerFitter,
 )
 

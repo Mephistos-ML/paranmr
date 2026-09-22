@@ -22,13 +22,13 @@ User Guide
       :link: installation
       :link-type: doc
 
-      Install ``paranmr`` and verify that the command-line interface is available.
+      Install ``simpnmr_x`` and verify that the command-line interface is available.
 
    .. grid-item-card:: Workflows
       :link: workflows
       :link-type: doc
 
-      Overview of prediction and susceptibility fitting workflows supported by ``paranmr``.
+      Overview of prediction and susceptibility fitting workflows supported by ``simpnmr_x``.
 
    .. grid-item-card:: Benchmarks
       :link: benchmarks
@@ -71,19 +71,19 @@ User Guide
 Quick start
 ^^^^^^^^^^^
 
-After installing ``paranmr`` (see :ref:`installation`), you can explore the command line interface:
+After installing ``simpnmr_x`` (see :ref:`installation`), you can explore the command line interface:
 
 .. code-block:: bash
 
-    paranmr -h
-    paranmr predict -h
-    paranmr fit_susc -h
+    simpnmr-x -h
+    simpnmr-x predict -h
+    simpnmr-x fit_susc -h
 
 As a minimal example using a YAML configuration file:
 
 .. code-block:: bash
 
-    paranmr predict your_config.yml
+    simpnmr-x predict your_config.yml
 
 For details of the available options and required input fields, see the :ref:`input_files` page.
 

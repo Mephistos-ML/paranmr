@@ -8,8 +8,8 @@ from pathlib import Path
 
 import pytest
 
-from paranmr.io.csv.csv_util import read_csv_safe
-from tests.helpers.cli import run_paranmr
+from simpnmr_x.io.csv.csv_util import read_csv_safe
+from tests.helpers.cli import run_simpnmr_x
 from tests.helpers.fixtures import repository_path
 
 DATA_DIR = repository_path("tests", "data", "sources", "hfc", "qc", "orca", "version_6")
@@ -62,7 +62,7 @@ def test_benchmark_a_fc_with_orca6_hfc(tmp_path: Path):
     project_dir = tmp_path / "A_FC_Benchmark"
     input_file = _write_benchmark_input(tmp_path, project_dir=project_dir)
 
-    result = run_paranmr(
+    result = run_simpnmr_x(
         ["--hide", "benchmark", "a_fc", str(input_file)], env=_cli_env(tmp_path)
     )
 
@@ -97,7 +97,7 @@ def test_benchmark_a_sd_with_orca6_hfc(tmp_path: Path):
     project_dir = tmp_path / "A_SD_Benchmark"
     input_file = _write_benchmark_input(tmp_path, project_dir=project_dir)
 
-    result = run_paranmr(
+    result = run_simpnmr_x(
         ["--hide", "benchmark", "a_sd", str(input_file)], env=_cli_env(tmp_path)
     )
 

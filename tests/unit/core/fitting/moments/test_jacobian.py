@@ -6,12 +6,12 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
-from paranmr.core.fitting.susceptibility.jacobian.types import (
+from simpnmr_x.core.fitting.susceptibility.jacobian.types import (
     MomentJacobianResult,
 )
-from paranmr.io.csv.fit import save_moment_jacobian
-from paranmr.viz.plots.jacobian import plot_moment_jacobian_heatmap
-from paranmr.viz.style.theme import build_spec
+from simpnmr_x.io.csv.fit import save_moment_jacobian
+from simpnmr_x.viz.plots.jacobian import plot_moment_jacobian_heatmap
+from simpnmr_x.viz.style.theme import build_spec
 
 MOMENT_LABELS = tuple(f"m{order}" for order in range(1, 7))
 

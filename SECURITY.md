@@ -7,7 +7,7 @@ Instead, email the maintainer at [eb2819@bath.ac.uk](mailto:eb2819@bath.ac.uk)
 with:
 
 - a description of the vulnerability and its impact;
-- the affected ParaNMR version and environment;
+- the affected SimpNMR-X version and environment;
 - reliable reproduction steps or a minimal proof of concept;
 - any proposed mitigation, if available.
 
@@ -16,7 +16,7 @@ reporter. No fixed response or remediation SLA is currently provided.
 
 ## Supported versions
 
-ParaNMR is an actively developed research software project without an LTS
+SimpNMR-X is an actively developed research software project without an LTS
 release line. Security fixes target the latest published release and the
 current `main` branch.
 

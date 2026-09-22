@@ -1,4 +1,4 @@
-# ParaNMR — AI Agent Development Contract
+# SimpNMR-X — AI Agent Development Contract
 
 ## Usage for Chat-Based AI
 
@@ -12,7 +12,7 @@ When using an external AI that does not have repository access:
 ## 0. Scope and Authority
 
 This document defines mandatory rules for any AI system (LLM, coding agent, autocomplete tool)
-generating code, tests, documentation, or patches for the ParaNMR codebase.
+generating code, tests, documentation, or patches for the SimpNMR-X codebase.
 
 If any instruction here conflicts with an AI’s default behaviour, suggestions, or heuristics,
 **this document takes precedence**.
@@ -85,7 +85,7 @@ Reverse or cross‑layer dependencies are forbidden.
 
 ---
 
-### 4.1 CLI Layer (`paranmr.cli`)
+### 4.1 CLI Layer (`simpnmr_x.cli`)
 
 Allowed:
 
@@ -101,7 +101,7 @@ Forbidden:
 
 ---
 
-### 4.2 Application Layer (`paranmr.app`)
+### 4.2 Application Layer (`simpnmr_x.app`)
 
 Role: workflow orchestration and policy definition.
 
@@ -129,7 +129,7 @@ Forbidden:
 
 ---
 
-### 4.3 Core Domain Layer (`paranmr.core`)
+### 4.3 Core Domain Layer (`simpnmr_x.core`)
 
 This is the **only** layer where scientific and numerical logic is permitted.
 
@@ -149,7 +149,7 @@ Constraints:
 
 ---
 
-### 4.4 IO Layer (`paranmr.io`)
+### 4.4 IO Layer (`simpnmr_x.io`)
 
 Role: translation between external formats and internal domain objects.
 
@@ -165,7 +165,7 @@ Forbidden:
 
 ---
 
-### 4.5 Visualisation Layer (`paranmr.viz`)
+### 4.5 Visualisation Layer (`simpnmr_x.viz`)
 
 Role: presentation only.
 
@@ -204,13 +204,13 @@ Forbidden:
 Forbidden:
 
 ```
-from paranmr.core.sh import *
+from simpnmr_x.core.sh import *
 ```
 
 Required:
 
 ```
-from paranmr.core.sh import SpinHamiltonian, extract_hfc_tensor
+from simpnmr_x.core.sh import SpinHamiltonian, extract_hfc_tensor
 ```
 
 ---
@@ -244,14 +244,14 @@ Each layer must import directly from the layer it depends on.
 
 ### 6.4 Import hygiene rules
 
-- No `import *` inside `paranmr.app`, `paranmr.cli`, or `paranmr.viz`
+- No `import *` inside `simpnmr_x.app`, `simpnmr_x.cli`, or `simpnmr_x.viz`
 - No circular imports
 - No unused imports
 - No aliasing to hide origin (`import x as y`) unless semantically justified
 - Import order:
   1. standard library
   2. third‑party
-  3. `paranmr`
+  3. `simpnmr_x`
 
 ---
 
@@ -269,10 +269,10 @@ Each layer must import directly from the layer it depends on.
 
 When extending functionality:
 
-- New QC output format → `paranmr.io`
-- New scientific or numerical model → `paranmr.core`
-- New workflow → `paranmr.app` (+ CLI)
-- Experimental or exploratory code → `paranmr.tools` or `examples`
+- New QC output format → `simpnmr_x.io`
+- New scientific or numerical model → `simpnmr_x.core`
+- New workflow → `simpnmr_x.app` (+ CLI)
+- Experimental or exploratory code → `simpnmr_x.tools` or `examples`
 
 Avoid spreading changes across layers unless strictly required.
 
@@ -285,7 +285,7 @@ Avoid spreading changes across layers unless strictly required.
 - Rewriting existing APIs
 - Ad‑hoc plotting in pipelines
 - Convenience re‑exports that hide dependencies
-- Heavyweight dependencies in `paranmr.core` without justification
+- Heavyweight dependencies in `simpnmr_x.core` without justification
 - Silent casting or implicit unit conversion
 - Guessing scientific intent
 

@@ -1,4 +1,4 @@
-"""Sphinx configuration file for the ParaNMR documentation.
+"""Sphinx configuration file for the SimpNMR-X documentation.
 
 This file defines documentation structure, extensions, theme configuration,
 and output formatting for HTML and LaTeX builds.
@@ -8,21 +8,21 @@ https://www.sphinx-doc.org/en/master/usage/configuration.html
 """
 
 # -- Path setup --------------------------------------------------------------
-# Extend sys.path so Sphinx can import the paranmr package and its submodules.
+# Extend sys.path so Sphinx can import the simpnmr_x package and its submodules.
 import os
 import sys
 
-from paranmr.__version__ import __version__
+from simpnmr_x.__version__ import __version__
 
 sys.path.insert(0, os.path.abspath(".."))
 sys.path.insert(0, os.path.abspath("../../"))
 
 # -- Project metadata -------------------------------------------------------
-project = "paranmr"
+project = "SimpNMR-X"
 copyright = ""
 
 # Title displayed in the HTML documentation header and browser tab.
-html_title = f"ParaNMR v{__version__}"
+html_title = f"SimpNMR-X v{__version__}"
 # -- General configuration ---------------------------------------------------
 
 # Sphinx extensions enabled for this documentation build.
@@ -59,7 +59,7 @@ html_theme = "pydata_sphinx_theme"
 html_use_directory_uris = True
 
 # Canonical base URL for sitemap/canonical links.
-html_baseurl = "https://mephistos-ml.github.io/paranmr/"
+html_baseurl = "https://mephistos-ml.github.io/simpnmr-x/"
 
 # Remove footer metadata (copyright and Sphinx attribution)
 html_show_copyright = False
@@ -71,23 +71,23 @@ html_theme_options = {
     "show_nav_level": 1,
     "secondary_sidebar_items": ["page-toc"],
     "logo": {
-        "text": "ParaNMR",
+        "text": "SimpNMR-X",
     },
     "icon_links": [
         {
             "name": "GitHub",
-            "url": "https://github.com/Mephistos-ML/paranmr",
+            "url": "https://github.com/Mephistos-ML/simpnmr-x",
             "icon": "fa-brands fa-github",
         },
         {
             "name": "PyPI",
-            "url": "https://pypi.org/project/paranmr/",
+            "url": "https://pypi.org/project/simpnmr-x/",
             "icon": "fa-brands fa-python",
         },
     ],
 }
-html_logo = "_static/paranmr-logo.png"
-html_favicon = "_static/paranmr-favicon.ico"
+html_logo = "_static/simpnmr-x-logo.png"
+html_favicon = "_static/simpnmr-x-favicon.ico"
 
 # Paths containing custom static assets (CSS, images, JavaScript).
 html_static_path = ["_static"]
@@ -123,5 +123,5 @@ latex_elements = {
 latex_show_urls = "footnote"
 root_doc = "index"
 latex_documents = [
-    (root_doc, "paranmr.tex", "paranmr Documentation", "", "manual"),
+    (root_doc, "simpnmr_x.tex", "SimpNMR-X Documentation", "", "manual"),
 ]

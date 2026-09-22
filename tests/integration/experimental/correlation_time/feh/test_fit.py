@@ -12,7 +12,7 @@ from pathlib import Path
 
 import pytest
 
-from tests.helpers.cli import run_paranmr
+from tests.helpers.cli import run_simpnmr_x
 from tests.helpers.fixtures import materialize_canonical_fixture
 
 
@@ -30,8 +30,8 @@ def test_fit_corr_time(tmp_path: Path):
     """
     root = materialize_canonical_fixture(tmp_path=tmp_path, system="FeH")
     cwd = root / "SIMULATIONS" / "Fit_Correlation_Time"
-    cmd = ["paranmr", "--hide", "fit_corr_time", "FeH_fit_corr_time.yml"]
-    result = run_paranmr(cmd[1:], cwd=cwd, env=_cli_env(tmp_path))
+    cmd = ["simpnmr-x", "--hide", "fit_corr_time", "FeH_fit_corr_time.yml"]
+    result = run_simpnmr_x(cmd[1:], cwd=cwd, env=_cli_env(tmp_path))
 
     assert result.returncode == 0, (
         f"Command failed with return code {result.returncode}\nstdout:\n"

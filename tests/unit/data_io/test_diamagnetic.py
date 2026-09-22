@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from paranmr.app.loaders.dia_load import load_diamagnetic_shifts
+from simpnmr_x.app.loaders.dia_load import load_diamagnetic_shifts
 
 
 def test_load_diamagnetic_csv_by_atom_label(tmp_path):

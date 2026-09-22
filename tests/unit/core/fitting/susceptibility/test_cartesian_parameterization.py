@@ -4,11 +4,11 @@
 import numpy as np
 import pytest
 
-from paranmr.core.domain.tensor import Susceptibility
-from paranmr.core.fitting.susceptibility.models.isoaxrho_euler import (
+from simpnmr_x.core.domain.tensor import Susceptibility
+from simpnmr_x.core.fitting.susceptibility.models.isoaxrho_euler import (
     IsoAxRhoEulerFitter,
 )
-from paranmr.core.fitting.susceptibility.models.split import SplitFitter
+from simpnmr_x.core.fitting.susceptibility.models.split import SplitFitter
 
 
 def _split_parameters_from_tensor(tensor: np.ndarray) -> dict[str, float]:

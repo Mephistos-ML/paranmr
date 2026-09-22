@@ -1,11 +1,11 @@
 {
   "schema_version": 1,
   "generator": {
-    "name": "ParaNMR-Synth",
+    "name": "SimpNMR-X-Synth",
     "version": "0.4.0",
     "source_commit": "fcb82536fbb05b3e6829cf3ce90e6de3a9feb77a"
   },
-  "paranmr_version": "1.17.0",
+  "simpnmr_x_version": "1.17.0",
   "project_name": "synthetic_ybl8_gmm",
   "seed": 20260912,
   "number_of_moments": 10,

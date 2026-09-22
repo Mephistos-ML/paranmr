@@ -4,7 +4,7 @@
 import numpy as np
 import pytest
 
-from paranmr.core.fitting.susceptibility.moments.forward import (
+from simpnmr_x.core.fitting.susceptibility.moments.forward import (
     CalculatedSignalPackage,
     integral_scale_from_calculated_packages,
     observed_moment_data_from_peaks,

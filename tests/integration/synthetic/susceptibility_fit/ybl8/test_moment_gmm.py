@@ -11,7 +11,7 @@ from pathlib import Path
 import pytest
 import yaml
 
-from tests.helpers.cli import run_paranmr
+from tests.helpers.cli import run_simpnmr_x
 from tests.helpers.gmm import (
     assert_gmm_fit_config,
     assert_gmm_recovers_synthetic_truth,
@@ -36,7 +36,7 @@ def _materialize_gmm_config(tmp_path: Path) -> Path:
     config = yaml.safe_load(
         (_GMM_FIXTURE / "gmm_config.yml").read_text(encoding="utf-8")
     )
-    config["project"]["name"] = str(tmp_path / "paranmr_gmm_fitted_output")
+    config["project"]["name"] = str(tmp_path / "simpnmr_x_gmm_fitted_output")
     config["hyperfine"]["file"] = str(_YBL8_DATA / "HFC" / "YbL8.xyz")
     config["diamagnetic"]["file"] = str(_YBL8_DATA / "DIA" / "LuL8_DIA_NMR.out")
     config["diamagnetic_ref"]["file"] = str(_YBL8_DATA / "DIA" / "tms_ref.out")
@@ -58,14 +58,14 @@ def test_gmm_recovers_seeded_synthetic_ybl8_shifts(tmp_path: Path) -> None:
         "p2": ["fit", 0.01, [0.001, 10.0]],
     }
 
-    result = run_paranmr(
+    result = run_simpnmr_x(
         ["--hide", "fit_susc", gmm_config_path.name],
         cwd=gmm_config_path.parent,
         env=_cli_env(tmp_path),
     )
     assert result.returncode == 0, result.stdout + result.stderr
 
-    output = tmp_path / "paranmr_gmm_fitted_output"
+    output = tmp_path / "simpnmr_x_gmm_fitted_output"
     assert_gmm_recovers_synthetic_truth(
         output_dir=output,
         generated_shifts_file=_GMM_FIXTURE / "generated_shifts.csv",

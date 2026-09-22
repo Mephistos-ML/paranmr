@@ -1,7 +1,7 @@
 Authors
 =======
 
-The ``ParaNMR`` package is developed by the following contributors:
+The ``SimpNMR-X`` package is developed by the following contributors:
 
 - Ernest Borysenko — current maintainer and lead developer, PhD student at the University of Bath, Suturina Group.
 - Dr. Jon Kragskow — original author, developed the initial version of the package as a member of the Suturina Group at the University of Bath.
@@ -12,9 +12,9 @@ Citation
 --------
 
 
-To acknowledge ``ParaNMR`` in your work, please include the ``paranmr`` version number and cite the associated publication.
+To acknowledge ``SimpNMR-X`` in your work, please include the ``simpnmr_x`` version number and cite the associated publication.
 
-The primary reference for ``ParaNMR`` is the associated `ChemRxiv preprint
+The primary reference for ``SimpNMR-X`` is the associated `ChemRxiv preprint
 <https://doi.org/10.26434/chemrxiv.15001463.v1>`_. The repository also includes
 machine-readable citation metadata in ``CITATION.cff``.
 
@@ -22,4 +22,4 @@ The version number can be obtained using the following terminal command:
 
 .. code-block::
 
-   pip show paranmr
+   pip show simpnmr-x

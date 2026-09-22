@@ -13,7 +13,7 @@ import pandas as pd
 import pytest
 import yaml
 
-from tests.helpers.cli import run_paranmr
+from tests.helpers.cli import run_simpnmr_x
 
 _P3FECL_ROOT = Path(__file__).resolve().parents[5] / "tests" / "data" / "P3FeCl"
 _P3FECL_DATA = _P3FECL_ROOT / "DATA"
@@ -59,7 +59,7 @@ def test_gmm_recovers_label_averaged_synthetic_p3fecl_tensor(tmp_path: Path) -> 
         if name != "iso"
     )
 
-    result = run_paranmr(
+    result = run_simpnmr_x(
         ["--hide", "fit_susc", config_path.name],
         cwd=config_path.parent,
         env=_cli_env(tmp_path),

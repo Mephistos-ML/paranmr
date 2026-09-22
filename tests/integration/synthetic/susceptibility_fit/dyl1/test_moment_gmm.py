@@ -11,7 +11,7 @@ from pathlib import Path
 import pytest
 import yaml
 
-from tests.helpers.cli import run_paranmr
+from tests.helpers.cli import run_simpnmr_x
 from tests.helpers.gmm import (
     assert_gmm_fit_config,
     assert_gmm_recovers_synthetic_truth,
@@ -55,7 +55,7 @@ def test_gmm_recovers_label_averaged_synthetic_dyl1_tensor_and_linewidths(
     config = yaml.safe_load(config_path.read_text(encoding="utf-8"))
     assert_gmm_fit_config(config)
 
-    result = run_paranmr(
+    result = run_simpnmr_x(
         ["--hide", "fit_susc", config_path.name],
         cwd=config_path.parent,
         env=_cli_env(tmp_path),

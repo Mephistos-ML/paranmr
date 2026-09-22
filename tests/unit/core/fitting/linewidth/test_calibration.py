@@ -3,8 +3,8 @@
 
 import pytest
 
-from paranmr.cfg.config import FitSuscConfig
-from paranmr.core.fitting.linewidth import estimate_r6_linewidth_parameters
+from simpnmr_x.cfg.config import FitSuscConfig
+from simpnmr_x.core.fitting.linewidth import estimate_r6_linewidth_parameters
 
 
 @pytest.mark.unit

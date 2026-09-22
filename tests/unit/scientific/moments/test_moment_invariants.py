@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from paranmr.core.fitting.susceptibility.moments.descriptors import (
+from simpnmr_x.core.fitting.susceptibility.moments.descriptors import (
     compute_gaussian_mixture_moments,
 )
 

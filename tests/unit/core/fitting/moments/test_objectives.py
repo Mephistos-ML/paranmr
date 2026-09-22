@@ -6,7 +6,7 @@
 import numpy as np
 import pytest
 
-from paranmr.core.fitting.susceptibility.objectives.gmm.objective import (
+from simpnmr_x.core.fitting.susceptibility.objectives.gmm.objective import (
     GMMMomentObjective,
 )
 

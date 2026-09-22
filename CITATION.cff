@@ -1,6 +1,6 @@
 cff-version: 1.2.0
-message: "If you use ParaNMR in academic work, please cite the software and the associated preprint."
-title: "ParaNMR"
+message: "If you use SimpNMR-X in academic work, please cite the software and the associated preprint."
+title: "SimpNMR-X"
 authors:
   - family-names: Borysenko
     given-names: Ernest
@@ -11,7 +11,7 @@ authors:
     given-names: James
   - family-names: Suturina
     given-names: Elizaveta
-repository-code: "https://gitlab.com/suturina-group/simpnmr"
+repository-code: "https://github.com/Mephistos-ML/simpnmr-x"
 license: "GPL-3.0-or-later"
 doi: "10.26434/chemrxiv.15001463.v1"
 keywords:

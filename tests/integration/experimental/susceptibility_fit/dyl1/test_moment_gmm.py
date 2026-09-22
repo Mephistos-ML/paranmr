@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from tests.helpers.cli import run_paranmr
+from tests.helpers.cli import run_simpnmr_x
 from tests.helpers.fixtures import materialize_canonical_fixture
 
 
@@ -14,7 +14,7 @@ def test_dyl1_gmm_moment_fit_writes_diagnostics(tmp_path: Path) -> None:
     root = materialize_canonical_fixture(tmp_path=tmp_path, system="DyL1")
     cwd = root / "SIMULATIONS" / "Fitting" / "Moments" / "GMM"
     env = {**os.environ, "MPLBACKEND": "Agg", "MPLCONFIGDIR": str(tmp_path / "mpl")}
-    result = run_paranmr(
+    result = run_simpnmr_x(
         ["--hide", "fit_susc", "DyL1_1H_GMM_Fitting_moments_iso_ax_rho.yml"],
         cwd=cwd,
         env=env,

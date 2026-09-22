@@ -4,12 +4,12 @@
 import numpy as np
 import pytest
 
-from paranmr.core.domain.mol import Nucleus
-from paranmr.core.domain.tensor import Hyperfine
-from paranmr.core.fitting.susceptibility.jacobian.assembly import (
+from simpnmr_x.core.domain.mol import Nucleus
+from simpnmr_x.core.domain.tensor import Hyperfine
+from simpnmr_x.core.fitting.susceptibility.jacobian.assembly import (
     build_moment_jacobian,
 )
-from paranmr.core.fitting.susceptibility.linewidths import (
+from simpnmr_x.core.fitting.susceptibility.linewidths import (
     SusceptibilityLinewidthInputs,
 )
 

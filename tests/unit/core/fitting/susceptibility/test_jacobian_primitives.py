@@ -6,23 +6,23 @@
 import numpy as np
 import pytest
 
-from paranmr.core.domain.mol import Nucleus
-from paranmr.core.domain.tensor import Hyperfine
-from paranmr.core.fitting.susceptibility.jacobian.susceptibility_moments import (
+from simpnmr_x.core.domain.mol import Nucleus
+from simpnmr_x.core.domain.tensor import Hyperfine
+from simpnmr_x.core.fitting.susceptibility.jacobian.susceptibility_moments import (
     differentiate_moments_by_split_parameter,
 )
-from paranmr.core.fitting.susceptibility.models.split import SplitFitter
-from paranmr.core.fitting.susceptibility.moments.descriptors import (
+from simpnmr_x.core.fitting.susceptibility.models.split import SplitFitter
+from simpnmr_x.core.fitting.susceptibility.moments.descriptors import (
     compute_gaussian_mixture_moments,
 )
-from paranmr.core.fitting.susceptibility.moments.forward import (
+from simpnmr_x.core.fitting.susceptibility.moments.forward import (
     calculated_signal_packages_from_parameters,
     package_areas,
     package_centers,
     package_linewidths,
     sort_packages_by_center,
 )
-from paranmr.core.fitting.susceptibility.moments.gaussian import (
+from simpnmr_x.core.fitting.susceptibility.moments.gaussian import (
     gaussian_peak_representation,
 )
 

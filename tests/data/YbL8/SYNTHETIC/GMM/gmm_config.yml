@@ -1,5 +1,5 @@
 project:
-  name: paranmr_gmm_fitted_output
+  name: simpnmr_x_gmm_fitted_output
 hyperfine:
   method: pdip
   file: ../../DATA/HFC/YbL8.xyz

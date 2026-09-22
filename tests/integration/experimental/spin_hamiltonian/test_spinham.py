@@ -10,7 +10,7 @@ from pathlib import Path
 
 import pytest
 
-from tests.helpers.cli import run_paranmr
+from tests.helpers.cli import run_simpnmr_x
 from tests.helpers.fixtures import repository_path
 
 
@@ -24,8 +24,8 @@ def test_get_sh_with_isoaxrho_fit_csv_runs_successfully(tmp_path: Path):
     """
     cwd = tmp_path / "spinham"
     shutil.copytree(repository_path("tests", "data", "pipelines", "spinham"), cwd)
-    cmd = ["paranmr", "get_sh", "--spin", "2.0", "isoaxrho_fit.csv"]
-    result = run_paranmr(cmd[1:], cwd=cwd)
+    cmd = ["simpnmr-x", "get_sh", "--spin", "2.0", "isoaxrho_fit.csv"]
+    result = run_simpnmr_x(cmd[1:], cwd=cwd)
 
     assert result.returncode == 0, (
         f"Command failed with return code {result.returncode}\nstdout:\n"

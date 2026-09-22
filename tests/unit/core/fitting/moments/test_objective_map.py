@@ -5,9 +5,9 @@ from pathlib import Path
 
 import pytest
 
-from paranmr.core.fitting.susceptibility.objective_map import ObjectiveMapResult
-from paranmr.viz.plots.objective_map import plot_objective_map
-from paranmr.viz.style.theme import build_spec
+from simpnmr_x.core.fitting.susceptibility.objective_map import ObjectiveMapResult
+from simpnmr_x.viz.plots.objective_map import plot_objective_map
+from simpnmr_x.viz.style.theme import build_spec
 
 
 @pytest.mark.unit

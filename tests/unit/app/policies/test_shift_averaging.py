@@ -3,15 +3,15 @@
 
 import pytest
 
-from paranmr.app.policies.averaging import (
+from simpnmr_x.app.policies.averaging import (
     resolve_average_shift_groups,
 )
-from paranmr.core.domain.mol import Molecule
-from paranmr.core.fitting.susceptibility.moments.forward import (
+from simpnmr_x.core.domain.mol import Molecule
+from simpnmr_x.core.fitting.susceptibility.moments.forward import (
     calculated_moments_from_parameters,
     calculated_signal_packages_from_parameters,
 )
-from paranmr.core.fitting.susceptibility.moments.gaussian import (
+from simpnmr_x.core.fitting.susceptibility.moments.gaussian import (
     gaussian_peak_representation,
 )
 

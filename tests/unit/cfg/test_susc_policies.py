@@ -4,12 +4,12 @@
 import numpy as np
 import pytest
 
-from paranmr.app.policies.susc import (
+from simpnmr_x.app.policies.susc import (
     normalize_susc_fit_input_units,
     resolve_susc_fit_variables,
 )
-from paranmr.cfg.config import FitSuscConfig
-from paranmr.core.const.physics import KB, MU0, MUB, NA
+from simpnmr_x.cfg.config import FitSuscConfig
+from simpnmr_x.core.const.physics import KB, MU0, MUB, NA
 
 
 @pytest.mark.unit
