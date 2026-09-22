@@ -2,6 +2,176 @@
 
 <!-- version list -->
 
+## v1.18.0 (2026-09-22)
+
+### Bug Fixes
+
+- **gmm**: Average linewidths within labelled signals
+  ([`14b2ab5`](https://github.com/Mephistos-ML/simpnmr-x/commit/14b2ab5d6af3c4c60f903eee3d73eb5253387625))
+
+- **gmm**: Include zero moment and signal multiplicities
+  ([`c2d9556`](https://github.com/Mephistos-ML/simpnmr-x/commit/c2d95560dff3465b3186b4d27604d0802f88271c))
+
+- **gmm**: Propagate theoretical signal areas through moments
+  ([`c9b0ad7`](https://github.com/Mephistos-ML/simpnmr-x/commit/c9b0ad77a3dfcde037aad00d47290b0adc1ce4a0))
+
+### Build System
+
+- Migrate packaging metadata to pyproject.toml
+  ([`b15ba78`](https://github.com/Mephistos-ML/simpnmr-x/commit/b15ba780e53cfd0c0aabbf3b1221789dea65978a))
+
+### Chores
+
+- Enforce Ruff checks with pre-commit
+  ([`9b72fe1`](https://github.com/Mephistos-ML/simpnmr-x/commit/9b72fe1d69003ce2800988bf97a0fd22cbe6aa47))
+
+- Remove editor-specific settings
+  ([`edf7de1`](https://github.com/Mephistos-ML/simpnmr-x/commit/edf7de1ba3459c79bf54ea57f11bac530d6203aa))
+
+- Remove tracked editor artifact
+  ([`847c9f1`](https://github.com/Mephistos-ML/simpnmr-x/commit/847c9f1867dee27e2a4b8cedc968af0003d521ab))
+
+### Code Style
+
+- Apply Ruff lint and formatting fixes
+  ([`4574fea`](https://github.com/Mephistos-ML/simpnmr-x/commit/4574fea2b9b415ed0ed0c7eac7d31b4522a44ef3))
+
+- Satisfy Ruff lint checks
+  ([`511ff29`](https://github.com/Mephistos-ML/simpnmr-x/commit/511ff29d3faa55bdddcfcfbc7004a1bde3528756))
+
+### Continuous Integration
+
+- Add Ruff check and Python compatibility matrix
+  ([`79dbc38`](https://github.com/Mephistos-ML/simpnmr-x/commit/79dbc38211a5bb1c232ceb2bab55a42aff833a0b))
+
+- Force headless matplotlib backend
+  ([`f0021d8`](https://github.com/Mephistos-ML/simpnmr-x/commit/f0021d878772d304a062c68aa367df8152e06acd))
+
+- Make synthetic GMM checks opt-in
+  ([`c44debb`](https://github.com/Mephistos-ML/simpnmr-x/commit/c44debb0aa2e46cffa989bf1ceb2cf91cee4702e))
+
+- Run non-GMM checks on pull requests
+  ([`cfcaad2`](https://github.com/Mephistos-ML/simpnmr-x/commit/cfcaad22cdd38a97237777aa47fb5cf329a6fb63))
+
+### Documentation
+
+- Add citation and project support policy
+  ([`33d49e7`](https://github.com/Mephistos-ML/simpnmr-x/commit/33d49e7d6936cc1246800899a47f46debd967b59))
+
+- Rename AI_CONTRACT.md to AGENTS.md
+  ([`e62be11`](https://github.com/Mephistos-ML/simpnmr-x/commit/e62be111ece0968c49153b978d2359d013955c1d))
+
+- Standardize agent instructions
+  ([`4384977`](https://github.com/Mephistos-ML/simpnmr-x/commit/4384977535b75409502809e854f24b8e757eff2f))
+
+### Features
+
+- **core**: Add Cartesian susceptibility parameterization
+  ([`99283ea`](https://github.com/Mephistos-ML/simpnmr-x/commit/99283ea42cf9a6d010b08ba5401c1cbe4b1e767f))
+
+- **gmm**: Add Cartesian moment fitting pipeline
+  ([`c5a68cf`](https://github.com/Mephistos-ML/simpnmr-x/commit/c5a68cfe8b2c94813d94b60c774cdf84108abe9b))
+
+### Performance Improvements
+
+- **core**: Compute Gaussian mixture moments recursively
+  ([`fb2090e`](https://github.com/Mephistos-ML/simpnmr-x/commit/fb2090e2937d8321086880db6f96a54a07d74128))
+
+### Refactoring
+
+- Rename project to SimpNMR-X
+  ([`ca09c6c`](https://github.com/Mephistos-ML/simpnmr-x/commit/ca09c6c914ce04dab4886daad3897d050ed2a2b1))
+
+- **core**: Centralize moment signal preparation
+  ([`60aea63`](https://github.com/Mephistos-ML/simpnmr-x/commit/60aea634e2290738fdbd50f5c222b83f749e735c))
+
+- **core**: Flatten GMM objective namespace
+  ([`0a788d1`](https://github.com/Mephistos-ML/simpnmr-x/commit/0a788d1310723b001e8641377259ad75093c2abd))
+
+- **core**: Remove legacy LS moment fitting
+  ([`80f635a`](https://github.com/Mephistos-ML/simpnmr-x/commit/80f635a793f9139259c5c07202926449379ed0e4))
+
+- **core**: Replace GMM Monte Carlo covariance with Jacobian propagation
+  ([`583540a`](https://github.com/Mephistos-ML/simpnmr-x/commit/583540aa115b1f9bf9674a7063066ba0c9753c05))
+
+- **core**: Use raw GMM moment conditions
+  ([`05b256a`](https://github.com/Mephistos-ML/simpnmr-x/commit/05b256af6779688387f57081a6bd96e71ed4e1de))
+
+- **gmm**: Fit susceptibility in Cartesian split coordinates
+  ([`e0b268f`](https://github.com/Mephistos-ML/simpnmr-x/commit/e0b268f22b82d768f146d4ffb5eef7cbef50cc4d))
+
+- **labels**: Remove geometry-based methyl averaging
+  ([`c9d2662`](https://github.com/Mephistos-ML/simpnmr-x/commit/c9d266243d9966727835c8deb5140c48f06b6d82))
+
+### Testing
+
+- Add independent scientific correctness contracts
+  ([`fef28f5`](https://github.com/Mephistos-ML/simpnmr-x/commit/fef28f5b6bf86c5eb68ed4ec98bcf729e87cf978))
+
+- Add susceptibility fit assertion helpers
+  ([`992904b`](https://github.com/Mephistos-ML/simpnmr-x/commit/992904bc0261fb21e858d8ede3726e29652bfc6b))
+
+- Classify canonical fixture materialization as integration
+  ([`2238676`](https://github.com/Mephistos-ML/simpnmr-x/commit/2238676c895b74578e279029370ffc5dcd0352a5))
+
+- Document canonical fixture contract
+  ([`c8b97bb`](https://github.com/Mephistos-ML/simpnmr-x/commit/c8b97bb34887cd595939f9a7fb7cfcf48400cbd3))
+
+- Enforce isolated and checkout-backed integration runs
+  ([`530f07a`](https://github.com/Mephistos-ML/simpnmr-x/commit/530f07a0b3b4f23a420b4fb4f3140751431795ae))
+
+- Establish synthetic GMM validation foundation
+  ([`a522af6`](https://github.com/Mephistos-ML/simpnmr-x/commit/a522af65acab4145e5ec9169c47407b08c4f494e))
+
+- Harden integration and synthetic test contracts
+  ([`98b7786`](https://github.com/Mephistos-ML/simpnmr-x/commit/98b778608ed06bd15739de8797e7a7535f5ca337))
+
+- Isolate P3FeCl susceptibility fit workflow
+  ([`db88170`](https://github.com/Mephistos-ML/simpnmr-x/commit/db88170b08de3bd12a8a7e99a17cde58610873ad))
+
+- Mirror synthetic workflows under integration architecture
+  ([`d2706cc`](https://github.com/Mephistos-ML/simpnmr-x/commit/d2706cc4ad82a3e6a555d2fbdc669cc95f59b662))
+
+- Organize experimental integration workflows
+  ([`6d7b18b`](https://github.com/Mephistos-ML/simpnmr-x/commit/6d7b18b137170034f32af2de83e8c9d2809c479b))
+
+- Organize susceptibility fit workflows by complex
+  ([`376f471`](https://github.com/Mephistos-ML/simpnmr-x/commit/376f471fd31c837a79d6d3a0a28b290328917a61))
+
+- Organize unit tests by package boundary
+  ([`ad62e75`](https://github.com/Mephistos-ML/simpnmr-x/commit/ad62e75cffde7b8b699119334ab2858b65d9ce8f))
+
+- Prune unused canonical fixtures
+  ([`2d76d0f`](https://github.com/Mephistos-ML/simpnmr-x/commit/2d76d0f926ec091da132025294151668829b4524))
+
+- Relocate susceptibility fit reference workflows
+  ([`81b9b99`](https://github.com/Mephistos-ML/simpnmr-x/commit/81b9b99edb1b4c48b18eddac845b4d35b5699e6d))
+
+- Remove empty regression placeholders
+  ([`779de9c`](https://github.com/Mephistos-ML/simpnmr-x/commit/779de9c58c94feed138c9cf9bf9ef3c26242fd53))
+
+- **gmm**: Add synthetic susceptibility recovery coverage
+  ([`f3d64c5`](https://github.com/Mephistos-ML/simpnmr-x/commit/f3d64c5fc5086dcf9824077bb238525af7b46a19))
+
+- **gmm**: Fix isotropic susceptibility at zero
+  ([`b57a954`](https://github.com/Mephistos-ML/simpnmr-x/commit/b57a9545432c63c9cb8f01a81b15431a9210cfb1))
+
+- **gmm**: Standardize synthetic recovery checks
+  ([`63f9c7a`](https://github.com/Mephistos-ML/simpnmr-x/commit/63f9c7abb6ff21092762488575bf2b90229fd9ae))
+
+- **gmm**: Use chemical-label-averaged synthetic YbL8 peaks
+  ([`7b31ef0`](https://github.com/Mephistos-ML/simpnmr-x/commit/7b31ef023d135c5af6f3c751f88ff5b8d59a9664))
+
+- **integration**: Restore assignment workflow coverage
+  ([`45bd113`](https://github.com/Mephistos-ML/simpnmr-x/commit/45bd113e841bae1dd0396b7d6ebf16c0821ca873))
+
+- **integration**: Use YbL8 GMM fixture
+  ([`5194dc7`](https://github.com/Mephistos-ML/simpnmr-x/commit/5194dc736bb07dcb0e72bbe4939fc902065ccd06))
+
+- **synthetic**: Discover generated GMM config by contract
+  ([`f8e9e98`](https://github.com/Mephistos-ML/simpnmr-x/commit/f8e9e98586a37c03e4a136fd3ff846a6b811ef5f))
+
+
 ## v1.17.0 (2026-09-08)
 
 ### Bug Fixes
