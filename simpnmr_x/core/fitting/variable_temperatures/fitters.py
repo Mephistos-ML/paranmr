@@ -17,6 +17,7 @@ def fit_chit_linear_model(
     chi_vals: np.ndarray,
     chi_errors: np.ndarray,
     susc_vt_variables: dict,
+    total_J: float | None = None,
 ) -> tuple[np.ndarray, np.ndarray, dict[str, float | None | np.ndarray]]:
     """
     Fit a linear chiT(T) = A + B / T + tip * T model to
@@ -33,6 +34,8 @@ def fit_chit_linear_model(
         susc_vt_variables (dict): Variables controlling fit modes and initial values.
             Must include keys `intercept` and `slope`. The optional key `tip` may be
             provided as `["fit", <guess>]` or `["fix", <value>]`.
+        total_J (float | None): Effective total angular momentum used for Curie
+            normalisation. If omitted, ``spin`` is used.
 
     Returns:
         tuple[np.ndarray, np.ndarray, dict[str, float | None | np.ndarray]]:
@@ -53,7 +56,7 @@ def fit_chit_linear_model(
 
         return Intercept + Slope / T + tip * T
 
-    norm_factor = compute_curie_prefactor(spin)
+    norm_factor = compute_curie_prefactor(spin, total_J=total_J)
 
     fit_param_names: list[str] = []
     x0: list[float] = []
@@ -268,6 +271,7 @@ def compute_chit_high_t_limit(
     fit_temps: np.ndarray,
     chi_vals: np.ndarray,
     chi_errors: np.ndarray,
+    total_J: float | None = None,
 ) -> tuple[np.ndarray, np.ndarray, dict[str, float | None | np.ndarray]]:
     """
     Evaluate the high-temperature chiT limit assuming a zero slope
@@ -280,7 +284,9 @@ def compute_chit_high_t_limit(
         temperature (array_like): Temperature values
         chi_value (array_like): Susceptibility values for a single chi_component
         chi_errors: Uncertainties associated with `chi_vals` as an array
-        of the same shape
+            of the same shape
+        total_J (float | None): Effective total angular momentum used for Curie
+            normalisation. If omitted, ``spin`` is used.
 
     Returns:
         tuple[np.ndarray, np.ndarray, dict[str, float | None | np.ndarray]]:
@@ -293,7 +299,7 @@ def compute_chit_high_t_limit(
             `fit_y`, `fit_y_low`, `fit_y_high` arrays evaluated on `fit_temps`
             for downstream visualization.
     """
-    norm_factor = compute_curie_prefactor(spin)
+    norm_factor = compute_curie_prefactor(spin, total_J=total_J)
 
     # chiT in internal units -> Curie-normalised (dimensionless)
     chiT_reduced = (chi_vals * fit_temps) / norm_factor
