@@ -2,6 +2,32 @@
 
 <!-- version list -->
 
+## v1.19.0 (2026-09-24)
+
+### Bug Fixes
+
+- **vt**: Align g-tensor with ZFS frame
+  ([`b892a12`](https://github.com/Mephistos-ML/simpnmr-x/commit/b892a12fdfbcc590cb86031c3ccc7c14cc2d85dd))
+
+### Code Style
+
+- **repo**: Format Python sources
+  ([`988b381`](https://github.com/Mephistos-ML/simpnmr-x/commit/988b38180db4782a5e31991fe31fe4c6be5e2b24))
+
+### Features
+
+- **viz**: Add temperature-dependent susceptibility plotting
+  ([`02a102d`](https://github.com/Mephistos-ML/simpnmr-x/commit/02a102d4b6a691ca54b19588464b18c0fee39fa9))
+
+- **viz**: Refine temperature-dependent susceptibility plot
+  ([`7529672`](https://github.com/Mephistos-ML/simpnmr-x/commit/752967271af11ee732fabfde9246dbcab6df97f3))
+
+### Refactoring
+
+- **core**: Centralize susceptibility unit conversions
+  ([`a51c03d`](https://github.com/Mephistos-ML/simpnmr-x/commit/a51c03d67edc63f0076cbbd42c4553f8a6edd636))
+
+
 ## v1.18.0 (2026-09-22)
 
 ### Bug Fixes
