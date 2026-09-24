@@ -8,6 +8,7 @@ inverse temperature, with optional precomputed fit curves and uncertainty bands.
 """
 
 import logging
+from collections.abc import Mapping
 
 import matplotlib.ticker as ticker
 import numpy as np
@@ -19,6 +20,93 @@ from simpnmr_x.viz.style.theme import PlotSpec
 from simpnmr_x.viz.utils.uncertainty import format_compact_uncertainty
 
 logger = logging.getLogger(__name__)
+
+_TEMPERATURE_AXIS_MARGIN = 0.05
+_CHI_T_LOWER_AXIS_MARGIN = 0.05
+_CHI_T_UPPER_AXIS_MARGIN = 0.10
+
+
+def plot_chit_comparison(
+    series: Mapping[str, tuple[np.ndarray, np.ndarray]],
+    spec: PlotSpec,
+    *,
+    show: bool = True,
+    save: bool = True,
+    save_name: str = "XTvsT_double_plot",
+    temperature_limits: tuple[float, float] | None = None,
+) -> None:
+    """Plot one or more temperature-dependent ``chi*T`` series.
+
+    Args:
+        series: Mapping from display labels to ``(temperature, chi_t)`` arrays.
+            Values are expected in K and cm³ K mol⁻¹, respectively.
+        spec: Resolved plotting style contract.
+        show: Whether to display the figure interactively.
+        save: Whether to save the figure through the plotting export suite.
+        save_name: Output path or base name passed to the export suite.
+        temperature_limits: Optional lower and upper temperature limits in K.
+
+    Raises:
+        ValueError: If no series are provided or a series has incompatible data.
+    """
+
+    if not series:
+        raise ValueError("plot_chit_comparison requires at least one series")
+
+    fig, ax = create_canvas(spec.profile, variant="horizontal")
+    palette = spec.palette
+    colours = {
+        "XRD Geometry": palette.secondary,
+        "Opt. Geometry": palette.primary,
+        "Opt. Geom. - TIP": palette.highlight,
+    }
+    markers = ["s", "o", "^"]
+    chi_t_min = np.inf
+    chi_t_max = -np.inf
+
+    for index, (label, values) in enumerate(series.items()):
+        if len(values) != 2:
+            raise ValueError(f"Series {label!r} must contain temperature and chi_t")
+        temperatures = np.asarray(values[0], dtype=float)
+        chi_t = np.asarray(values[1], dtype=float)
+        if temperatures.ndim != 1 or chi_t.ndim != 1:
+            raise ValueError(f"Series {label!r} must contain one-dimensional arrays")
+        if temperatures.shape != chi_t.shape or temperatures.size == 0:
+            raise ValueError(
+                f"Series {label!r} must contain equally sized non-empty arrays"
+            )
+        chi_t_min = min(chi_t_min, float(np.min(chi_t)))
+        chi_t_max = max(chi_t_max, float(np.max(chi_t)))
+
+        ax.plot(
+            temperatures,
+            chi_t,
+            color=colours.get(label, palette.primary),
+            linestyle="-",
+            linewidth=spec.glyphs.line_lw,
+            marker=markers[index % len(markers)],
+            markersize=spec.glyphs.ms,
+            markeredgecolor=spec.glyphs.mec,
+            label=label,
+        )
+
+    ax.set_xlabel(r"$T$ (K)")
+    ax.set_ylabel(r"$\chi T$ (cm$^3$ K mol$^{-1}$)")
+    if temperature_limits is not None:
+        minimum, maximum = temperature_limits
+        margin = _TEMPERATURE_AXIS_MARGIN * (maximum - minimum)
+        ax.set_xlim(minimum - margin, maximum + margin)
+    chi_t_range = chi_t_max - chi_t_min
+    if np.isfinite(chi_t_range) and chi_t_range > 0.0:
+        ax.set_ylim(
+            chi_t_min - _CHI_T_LOWER_AXIS_MARGIN * chi_t_range,
+            chi_t_max + _CHI_T_UPPER_AXIS_MARGIN * chi_t_range,
+        )
+    ax.grid(True, color=palette.grid, linewidth=0.5, alpha=0.7)
+    ax.legend()
+    spec.skin_axes(ax)
+
+    render_figure(fig, save=save, show=show, save_name=save_name)
 
 
 def plot_isoaxrho(

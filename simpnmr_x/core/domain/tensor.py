@@ -25,6 +25,49 @@ class SusceptibilityDecomposition:
     gamma: float
 
 
+def canonical_principal_axes(
+    tensor: NDArray,
+) -> tuple[NDArray, NDArray]:
+    """Return tensor eigenvalues and eigenvectors in the canonical χ-frame.
+
+    The axes are ordered by increasing absolute deviation from the isotropic
+    value.  This is the ordering used for the ZFS convention: the first two
+    axes define the rhombic pair and the third axis defines the axial term.
+    Eigenvector signs are made deterministic without changing the represented
+    frame.
+
+    Args:
+        tensor: Symmetric 3×3 tensor.
+
+    Returns:
+        A tuple ``(eigenvalues, eigenvectors)``.  The eigenvectors are columns
+        of a right-handed rotation matrix.
+
+    Raises:
+        ValueError: If ``tensor`` is not a symmetric 3×3 matrix.
+    """
+    array = np.asarray(tensor, dtype=float)
+    if array.shape != (3, 3):
+        raise ValueError("Tensor must have shape (3, 3)")
+    if not np.allclose(array, array.T):
+        raise ValueError("Tensor must be symmetric")
+
+    eigenvalues, eigenvectors = la.eigh(array)
+    iso = float(np.trace(array) / 3.0)
+    order = np.argsort(np.abs(eigenvalues - iso))
+    ordered_values = eigenvalues[order]
+    rotation = eigenvectors[:, order].copy()
+
+    for column in range(3):
+        dominant_component = int(np.argmax(np.abs(rotation[:, column])))
+        if rotation[dominant_component, column] < 0.0:
+            rotation[:, column] *= -1.0
+    if np.linalg.det(rotation) < 0.0:
+        rotation[:, 0] *= -1.0
+
+    return ordered_values, rotation
+
+
 def decompose_susceptibility_tensor(
     tensor: NDArray,
 ) -> SusceptibilityDecomposition:

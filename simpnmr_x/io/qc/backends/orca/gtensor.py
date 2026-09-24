@@ -34,22 +34,42 @@ def read_g_tensor_ab_initio(file_name: str, section: str) -> np.ndarray | None:
     try:
         with open(file_name, "r") as f:
             for line in f:
-                # Find the correct QDPT section
-                if f"QDPT WITH {section.upper()}" in line:
-                    # Go down to the G-matrix header
-                    for line in f:
-                        if "ELECTRONIC G-MATRIX FROM EFFECTIVE HAMILTONIAN" in line:
-                            break
-                    # Find "g-matrix:"
-                    for line in f:
-                        if "g-matrix:" in line:
-                            # Next three lines are the rows of the tensor
-                            row_1 = [float(val) for val in next(f).split()]
-                            row_2 = [float(val) for val in next(f).split()]
-                            row_3 = [float(val) for val in next(f).split()]
-                            g_tensor = np.array([row_1, row_2, row_3])
-                            break
-                    break
+                if f"QDPT WITH {section.upper()}" not in line:
+                    continue
+
+                for line in f:
+                    if "ELECTRONIC G-MATRIX FROM EFFECTIVE HAMILTONIAN" in line:
+                        break
+
+                g_factors = None
+                orientation = None
+                for line in f:
+                    if "g-factors:" in line:
+                        values = next(f).split()[:3]
+                        if len(values) != 3:
+                            raise ValueError("expected three principal g-factor values")
+                        g_factors = np.array([float(value) for value in values])
+                    if "Orientation:" in line:
+                        rows = [next(f).split()[1:4] for _ in range(3)]
+                        orientation = np.array(
+                            [[float(value) for value in row] for row in rows]
+                        )
+                        break
+
+                if g_factors is None or orientation is None:
+                    raise ValueError("incomplete g-factor or orientation block")
+                if g_factors.shape != (3,) or orientation.shape != (3, 3):
+                    raise ValueError("invalid g-factor or orientation shape")
+                if not np.allclose(
+                    orientation @ orientation.T,
+                    np.eye(3),
+                    rtol=1.0e-5,
+                    atol=1.0e-6,
+                ):
+                    raise ValueError("orientation matrix is not orthogonal")
+
+                g_tensor = orientation @ np.diag(g_factors) @ orientation.T
+                break
     except Exception as e:
         raise ParseError(
             message=(
@@ -74,7 +94,7 @@ def read_g_tensor_dft(
     ORCA and reconstructs the full 3x3 tensors for the ``gRMC``, ``gDSO(tot)``,
     and ``gPSO(tot)`` contributions. ORCA reports these contributions as
     principal values together with an ``Orientation`` matrix. The full tensors
-    are reconstructed as ``R.T @ diag(vals) @ R``, where ``R`` is the
+    are reconstructed as ``R @ diag(vals) @ R.T``, where ``R`` is the
     orientation matrix whose rows correspond to the printed X/Y/Z axes.
 
     Args:

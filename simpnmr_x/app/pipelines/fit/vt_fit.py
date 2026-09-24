@@ -19,14 +19,18 @@ import numpy as np
 from simpnmr_x.app.loaders.sh_load import load_g_tensor_ab_initio
 from simpnmr_x.app.loaders.susc_load import load_susceptibilities
 from simpnmr_x.app.policies.susc import resolve_susceptibility_source
+from simpnmr_x.core.domain.tensor import canonical_principal_axes
 
 # Core / domain
 from simpnmr_x.core.fitting.variable_temperatures.components import (
     calculate_E_D_components,
     compute_analytic_component,
     compute_curie_prefactor,
+    compute_g_components,
     compute_g_sq_components,
     compute_tip_correction,
+    rotate_tensors_to_frame,
+    validate_common_principal_axes,
 )
 from simpnmr_x.core.fitting.variable_temperatures.fitters import (
     compute_chit_high_t_limit,
@@ -43,6 +47,8 @@ from simpnmr_x.viz.plots.susc import plot_exp_vs_ab_initio, plot_isoaxrho
 from simpnmr_x.viz.style.theme import apply_profile
 
 logger = logging.getLogger(__name__)
+
+G_FRAME_ALIGNMENT_TOLERANCE = 1.0e-2
 
 
 def fit_vt(
@@ -134,12 +140,7 @@ def fit_vt(
             susceptibility_format=config.susc_vt_ab_initio_format,
         )
         g_tensor = molecules[0].sh.g_tensor_ab_initio
-        g_components = {
-            "g_iso": molecules[0].sh.g_tensor_ab_initio_iso,
-            "g_ax": molecules[0].sh.g_tensor_ab_initio_ax,
-            "g_rho": molecules[0].sh.g_tensor_ab_initio_rho,
-        }
-        if g_tensor is None or any(value is None for value in g_components.values()):
+        if g_tensor is None:
             raise ValueError("Ab initio g-tensor components could not be loaded.")
 
         suscs_ab_initio = load_susceptibilities(
@@ -160,16 +161,21 @@ def fit_vt(
         # Use only the reference susceptibility for the VT/TIP pipeline
         susc_ab_initio = copy.deepcopy(suscs_ab_initio[idx])
 
-        # Rotate the effective Hamiltonian tensor into the chi eigenframe
-        eff_H_rot = susc_ab_initio.eigvecs.T @ eff_H @ susc_ab_initio.eigvecs
-
-        # Construct a diagonal g-tensor in the chi eigenframe
-        g_rot_diag = np.diag(
-            np.diag(susc_ab_initio.eigvecs.T @ g_tensor @ susc_ab_initio.eigvecs)
+        # Rotate both tensors into the canonical ZFS/chi frame.  The frame is
+        # ordered by deviations from chi_iso, not by the magnitude of raw
+        # eigenvalues.
+        _, chi_frame = canonical_principal_axes(susc_ab_initio.tensor)
+        eff_H_rot, g_rot = rotate_tensors_to_frame(eff_H, g_tensor, chi_frame)
+        validate_common_principal_axes(
+            eff_H_rot,
+            g_rot,
+            tolerance=G_FRAME_ALIGNMENT_TOLERANCE,
         )
 
+        g_components = compute_g_components(g_rot)
+
         # Precompute g^2 invariants in the chi eigenframe for analytic chi(T) evaluation
-        g_components_sq = compute_g_sq_components(g_rot_diag)
+        g_components_sq = compute_g_sq_components(g_rot)
 
         # Compute the axial and rhombic parts of the effective Hamiltonian tensor (J)
         D_J, E_J = calculate_E_D_components(eff_H_rot)
@@ -215,6 +221,7 @@ def fit_vt(
                     D_J,
                     E_J,
                     spin,
+                    total_J=molecules[0].electronic.total_J,
                 ),
                 dtype=float,
             )
@@ -235,6 +242,7 @@ def fit_vt(
                 ab_initio_value,
                 analytic_val_ref,
                 spin,
+                total_J=molecules[0].electronic.total_J,
             )
             susc_vt_variables[comp]["tip"] = ["fix", float(tip_ref)]
 
@@ -244,7 +252,10 @@ def fit_vt(
             ab_series[comp] = np.asarray(ab_series_full[comp], dtype=float)[ab_mask]
 
         # Normalise ab initio chiT series by the Curie prefactor for consistency
-        curie_prefactor = compute_curie_prefactor(spin)
+        curie_prefactor = compute_curie_prefactor(
+            spin,
+            total_J=molecules[0].electronic.total_J,
+        )
         for comp in fit_component:
             ab_series[comp] = ab_series[comp] / curie_prefactor
 
@@ -284,6 +295,7 @@ def fit_vt(
                 chi_vals=chi_vals[comp],
                 chi_errors=chi_errors[comp],
                 susc_vt_variables=susc_vt_variables[comp],
+                total_J=molecules[0].electronic.total_J,
             )
 
         if temps_fit.size == 1 or method == "ht_limit":
@@ -292,6 +304,7 @@ def fit_vt(
                 fit_temps=temps_fit,
                 chi_vals=chi_vals[comp],
                 chi_errors=chi_errors[comp],
+                total_J=molecules[0].electronic.total_J,
             )
 
         # Store results

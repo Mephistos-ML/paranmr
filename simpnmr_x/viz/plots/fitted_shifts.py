@@ -13,9 +13,9 @@ import matplotlib.lines as mlines
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 import numpy as np
-import scipy.constants as constants
 
 from simpnmr_x.core.const import ptable
+from simpnmr_x.core.conv.a3_to_cm3mol import A3_TO_CM3MOL
 from simpnmr_x.core.domain.exp import Experiment
 from simpnmr_x.core.domain.mol import Molecule
 from simpnmr_x.core.fitting.susceptibility.models.base import SusceptibilityModel
@@ -81,7 +81,7 @@ def plot_fitted_shifts(
         save_name: Output image file name.
         window_title: Figure window title.
         susc_units: Units for reporting susceptibility values in the annotation.
-            Supported: ``"A3"``, ``"A3 mol-1"``, ``"cm3"``, ``"cm3 mol-1"``.
+        Supported: ``"A3"`` and ``"cm3 mol-1"``.
         verbose: If ``True``, prints the output file name when saving.
 
     Returns:
@@ -154,19 +154,11 @@ def plot_fitted_shifts(
     if susc_units == "A3":
         conv = 1.0
         model_unit_label = "Å³"
-    elif susc_units == "A3 mol-1":
-        conv = constants.Avogadro
-        model_unit_label = "Å³ mol⁻¹"
-    elif susc_units == "cm3":
-        conv = 1e-24
-        model_unit_label = "cm³"
     elif susc_units == "cm3 mol-1":
-        conv = 1e-24 * constants.Avogadro / (4 * np.pi)
+        conv = A3_TO_CM3MOL
         model_unit_label = "cm³ mol⁻¹"
     else:
-        raise ValueError(
-            "Unsupported susc_units. Expected one of: A3, A3 mol-1, cm3, cm3 mol-1."
-        )
+        raise ValueError("Unsupported susc_units. Expected 'A3' or 'cm3 mol-1'.")
 
     fit_lines = [
         f"R²adj: {susc_model.adj_r2:.4f}",

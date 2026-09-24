@@ -9,6 +9,7 @@ the CLI into application pipelines.
 
 from __future__ import annotations
 
+from argparse import Namespace
 from dataclasses import dataclass
 
 from simpnmr_x.app.params.plot_cfg import PlotMode, PlotProfile
@@ -88,6 +89,19 @@ class PlotShiftTdepRunOptions:
             show=True,
             save=True,
         )
+
+
+@dataclass(frozen=True)
+class PlotChiTRunOptions:
+    """Runtime options for the temperature-dependent χT plot."""
+
+    runtime: RuntimeSettings
+
+    @classmethod
+    def from_namespace(cls, ns: Namespace) -> "PlotChiTRunOptions":
+        """Build plotting options from the parsed CLI namespace."""
+
+        return cls(runtime=ns.runtime)
 
 
 @dataclass(frozen=True)
