@@ -15,6 +15,9 @@ plot_chit:
     file: xrd.out
     format: orca
     section: NEVPT2
+  temperature:
+    min: 2.0
+    max: 300.0
   output:
     file: figure.pdf
 """
@@ -28,6 +31,9 @@ plot_chit:
     assert config.output_file == str(tmp_path / "figure.pdf")
     assert config.opt is None
     assert config.tip is None
+    assert config.temperature is not None
+    assert config.temperature.minimum == 2.0
+    assert config.temperature.maximum == 300.0
 
 
 def test_plot_chit_config_requires_source(tmp_path: Path):
@@ -40,5 +46,14 @@ def test_plot_chit_config_rejects_tip_without_opt(tmp_path: Path):
         PlotChiTConfig(
             xrd={"file": "xrd.out", "format": "orca", "section": "nevpt2"},
             tip={"mode": "analytic", "reference_temperature": "max"},
+            output={"file": str(tmp_path / "figure.pdf")},
+        )
+
+
+def test_plot_chit_config_rejects_invalid_temperature_limits(tmp_path: Path):
+    with pytest.raises(ValueError, match="greater than min"):
+        PlotChiTConfig(
+            xrd={"file": "xrd.out", "format": "orca", "section": "nevpt2"},
+            temperature={"min": 300.0, "max": 2.0},
             output={"file": str(tmp_path / "figure.pdf")},
         )

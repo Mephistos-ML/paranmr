@@ -40,16 +40,23 @@ def run_plot_chit(config: PlotChiTConfig, options: PlotChiTRunOptions) -> int:
 
     series: dict[str, tuple[np.ndarray, np.ndarray]] = {}
     if config.xrd is not None:
-        series["XRD"] = _read_chi_t_series(config.xrd)
+        series["XRD Geometry"] = _read_chi_t_series(config.xrd)
     if config.opt is not None:
         opt_series = _read_chi_t_series(config.opt)
-        series["OPT"] = opt_series
+        series["Opt. Geometry"] = opt_series
         if config.tip is not None:
-            series["OPT without TIP"] = _remove_analytic_tip(
+            series["Opt. Geom. - TIP"] = _remove_analytic_tip(
                 config.opt,
                 opt_series,
                 config.tip.reference_temperature,
             )
+
+    temperature_limits = None
+    if config.temperature is not None:
+        temperature_limits = (
+            config.temperature.minimum,
+            config.temperature.maximum,
+        )
 
     spec = apply_profile(options.runtime.plot_profile)
     with spec.context():
@@ -59,6 +66,7 @@ def run_plot_chit(config: PlotChiTConfig, options: PlotChiTRunOptions) -> int:
             show=options.runtime.show_plots,
             save=True,
             save_name=config.output_file,
+            temperature_limits=temperature_limits,
         )
 
     return 0

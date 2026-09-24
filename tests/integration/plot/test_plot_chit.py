@@ -12,6 +12,7 @@ def test_plot_chit_with_analytic_tip(tmp_path: Path):
         xrd={"file": str(source), "format": "orca", "section": "nevpt2"},
         opt={"file": str(source), "format": "orca", "section": "nevpt2"},
         tip={"mode": "analytic", "reference_temperature": "max"},
+        temperature={"min": 2.0, "max": 300.0},
         output={"file": str(output)},
     )
 

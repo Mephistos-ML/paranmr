@@ -5,6 +5,7 @@
 
 from __future__ import annotations
 
+import math
 import os
 from dataclasses import dataclass
 
@@ -28,17 +29,26 @@ class ChiTTipConfig:
     reference_temperature: str | float
 
 
+@dataclass(frozen=True)
+class ChiTTemperatureConfig:
+    """Temperature limits for the χT plot, in kelvin."""
+
+    minimum: float
+    maximum: float
+
+
 class PlotChiTConfig(Config):
     """Validate and expose configuration for ``plot_chit``."""
 
     REQ_KEYWORDS = {"plot_chit": ["output"]}
-    KEYWORDS = {"plot_chit": ["xrd", "opt", "tip", "output"]}
+    KEYWORDS = {"plot_chit": ["xrd", "opt", "tip", "temperature", "output"]}
     KEYWORD_PARTNERS: dict[str, list[str]] = {}
 
     def __init__(self, **kwargs) -> None:
         self._xrd: ChiTSourceConfig | None = None
         self._opt: ChiTSourceConfig | None = None
         self._tip: ChiTTipConfig | None = None
+        self._temperature: ChiTTemperatureConfig | None = None
         self._output_file = ""
 
         for keyword, value in kwargs.items():
@@ -103,6 +113,37 @@ class PlotChiTConfig(Config):
         self._tip = ChiTTipConfig(
             mode=mode,
             reference_temperature=reference_temperature,
+        )
+
+    @property
+    def temperature(self) -> ChiTTemperatureConfig | None:
+        """Return the optional temperature limits for the plot."""
+
+        return self._temperature
+
+    @temperature.setter
+    def temperature(self, value: dict) -> None:
+        if not isinstance(value, dict):
+            raise TypeError("plot_chit:temperature must be a mapping")
+
+        try:
+            minimum = float(value["min"])
+            maximum = float(value["max"])
+        except (KeyError, TypeError, ValueError) as exc:
+            raise ValueError(
+                "plot_chit:temperature requires numeric min and max"
+            ) from exc
+
+        if not math.isfinite(minimum) or not math.isfinite(maximum):
+            raise ValueError("plot_chit:temperature limits must be finite")
+        if minimum <= 0.0:
+            raise ValueError("plot_chit:temperature:min must be positive")
+        if maximum <= minimum:
+            raise ValueError("plot_chit:temperature:max must be greater than min")
+
+        self._temperature = ChiTTemperatureConfig(
+            minimum=minimum,
+            maximum=maximum,
         )
 
     @property
