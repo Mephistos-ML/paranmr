@@ -21,9 +21,8 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Final, Literal
 
-import numpy as np
-
-from simpnmr_x.core.const.physics import KB, MU0, MUB, NA
+from simpnmr_x.core.const.physics import KB, MU0, MUB
+from simpnmr_x.core.conv.cm3mol_to_a3 import CM3MOL_TO_A3
 from simpnmr_x.io.qc.backends.orca.detect import detect_susc_methods
 from simpnmr_x.io.qc.detect import detect_backend
 
@@ -319,7 +318,7 @@ def _get_susc_fit_input_scale_to_a3(
         return 1.0
 
     if input_units == "cm3 mol-1":
-        return 1.0 / (1e-24 * NA / (4 * np.pi))
+        return CM3MOL_TO_A3
 
     if spin is None:
         raise ValueError(

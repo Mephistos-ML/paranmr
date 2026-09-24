@@ -11,7 +11,7 @@ physical models or direct source values.
 import numpy as np
 from numpy.typing import NDArray
 
-from simpnmr_x.core.const.physics import NA
+from simpnmr_x.core.conv.cm3mol_to_a3 import cm3mol_to_a3
 from simpnmr_x.core.domain.tensor import Susceptibility
 from simpnmr_x.core.phys.susc import get_g_corr_iso_susc, get_spin_only_susc
 
@@ -36,13 +36,7 @@ def build_chi_d_tensor_from_orca(
         Tensor-backed susceptibility domain object.
     """
 
-    # Conversion factor:
-    # 1 cm^3 mol^-1 = 1e-6 m^3 / N_A
-    # then convert m^3 -> Å^3 (1 m^3 = 1e30 Å^3)
-    conv = 1e-24 * NA / (4.0 * np.pi)
-    conv = 1.0 / conv
-
-    chi_tensor = tensor_xt / temperature * conv
+    chi_tensor = cm3mol_to_a3(tensor_xt) / temperature
 
     susc = Susceptibility(chi_tensor, temperature=float(temperature))
     susc.calc_irred()

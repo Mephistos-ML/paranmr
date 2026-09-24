@@ -15,7 +15,8 @@ from typing import Any, List, Sequence, Tuple
 import numpy as np
 import pandas as pd
 
-from simpnmr_x.core.const.physics import NA
+from simpnmr_x.core.conv.a3_to_cm3mol import A3_TO_CM3MOL
+from simpnmr_x.core.conv.cm3mol_to_a3 import cm3mol_to_a3
 from simpnmr_x.io.csv.csv_util import read_csv_safe, write_csv_safe
 
 logger = logging.getLogger(__name__)
@@ -52,17 +53,17 @@ def read_susceptibilities_csv(
     """
     data = read_csv_safe(file_name)
 
-    # Forward conversion, A^3 --> Key (same mapping as old domain code)
+    # Normalize supported units to the canonical internal Å^3 representation.
     convs = {
         "(A^3)": 1.0,
-        "(Å^3 mol^-1)": NA,
-        "(A^3 mol^-1)": NA,
-        "(cm^3)": 1e-24,
-        "(cm^3 mol^-1)": 1e-24 * NA / (4 * np.pi),
     }
 
     renamer = {}
     for name in data.keys():
+        if "(cm^3 mol^-1)" in name:
+            data[name] = cm3mol_to_a3(data[name].to_numpy())
+            renamer[name] = name.replace("(cm^3 mol^-1)", "(Å^3)")
+            continue
         for unit, factor in convs.items():
             if unit in name:
                 data[name] /= factor
@@ -112,7 +113,7 @@ def save_susc(
         susc_models: Optional fitted susceptibility models used to add parameter
             standard deviations and fit metrics.
         susc_units: Units for susceptibility values. Supported values are
-            ``"A3"``, ``"A3 mol-1"``, ``"cm3 mol-1"``, and ``"cm3 "``.
+        ``"A3"`` and ``"cm3 mol-1"``.
         delimiter: CSV delimiter.
         comment: Optional comment line appended to the file header. If provided,
             it must begin with ``#`` (or will be prefixed automatically).
@@ -124,15 +125,11 @@ def save_susc(
     if susc_units == "A3":
         conv = 1.0
         unit_label = r"Å^3"
-    elif susc_units == "A3 mol-1":
-        conv = NA
-        unit_label = r"Å^3 mol^-1"
-    elif susc_units == "cm3 ":
-        conv = 1e-24
-        unit_label = r"cm^3"
     elif susc_units == "cm3 mol-1":
-        conv = 1e-24 * NA / (4 * np.pi)
+        conv = A3_TO_CM3MOL
         unit_label = r"cm^3 mol^-1"
+    else:
+        raise ValueError("Unsupported susc_units. Expected 'A3' or 'cm3 mol-1'.")
 
     # Write susceptibility tensor to CSV
     out = {
