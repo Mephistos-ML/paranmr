@@ -671,3 +671,33 @@ Optional. Used in susceptibility fitting workflows that model temperature depend
 
    Command-line options may override plotting and output behaviour but do not
    modify the configuration semantics defined by the YAML file.
+
+Plot χT
+^^^^^^^
+
+The ``plot_chit`` block configures the ``plot_chit`` workflow. At least one of
+``xrd`` and ``opt`` is required. Each source requires an ORCA output file and a
+QDPT section (``casscf`` or ``nevpt2``).
+
+.. code-block:: yaml
+
+    plot_chit:
+        xrd:
+            file: xrd.out
+            format: orca
+            section: nevpt2
+        opt:
+            file: opt.out
+            format: orca
+            section: nevpt2
+        tip:
+            mode: analytic
+            reference_temperature: max
+        output:
+            file: XTvsT_double_plot.pdf
+
+The ``tip`` block is optional and is valid only with ``opt``. It aligns the
+g-tensor and effective Hamiltonian with the canonical susceptibility frame,
+checks that both tensors share that frame, and derives the TIP correction from
+the selected reference temperature. No fixed mapping of g principal values to
+the x/y axes is assumed.

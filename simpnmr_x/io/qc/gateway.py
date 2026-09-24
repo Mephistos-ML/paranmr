@@ -62,7 +62,10 @@ from simpnmr_x.io.qc.backends.orca.shield import (  # noqa
     read_orca5_output_cs,
     read_orca5_property_cs,
 )
-from simpnmr_x.io.qc.backends.orca.susc import read_orca_susceptibility  # noqa
+from simpnmr_x.io.qc.backends.orca.susc import (  # noqa
+    read_orca_chi_t,
+    read_orca_susceptibility,
+)
 from simpnmr_x.io.qc.errors import (
     ReaderContractError,
     UnsupportedFileError,

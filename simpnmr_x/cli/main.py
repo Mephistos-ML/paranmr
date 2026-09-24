@@ -81,6 +81,19 @@ def plot_shift_tdep_cli(uargs: argparse.Namespace, runtime: RuntimeSettings) -> 
     return run_plot_shift_tdep(uargs.experiment_files, options)
 
 
+def plot_chit_cli(uargs: argparse.Namespace, runtime: RuntimeSettings) -> int:
+    """Thin CLI wrapper for the plot_chit pipeline."""
+
+    from simpnmr_x.app.params.options import PlotChiTRunOptions
+    from simpnmr_x.app.pipelines.plot.chit_plot import run_plot_chit
+    from simpnmr_x.cfg.plot_chit import PlotChiTConfig
+
+    config = PlotChiTConfig.from_file(uargs.input_file)
+    options = PlotChiTRunOptions.from_namespace(uargs)
+
+    return run_plot_chit(config, options)
+
+
 def calc_pcs_iso_cli(uargs: argparse.Namespace, runtime: RuntimeSettings) -> int:
     """Thin CLI wrapper for calc_pcs_iso pipeline."""
 
@@ -646,6 +659,13 @@ def read_args(arg_list=None):
     plot_shift_tdep.add_argument(
         "experiment_files", type=str, nargs="+", help=("SimpNMR-X experiment.csv files")
     )
+
+    plot_chit = subparsers.add_parser(
+        "plot_chit",
+        description="Plot temperature-dependent magnetic susceptibility χT",
+    )
+    plot_chit.set_defaults(func=plot_chit_cli)
+    plot_chit.add_argument("input_file", type=str, help="plot_chit YAML input file")
 
     fit_corr_time = subparsers.add_parser(
         "fit_corr_time", description="Fit correlation times using experimental R1 data"

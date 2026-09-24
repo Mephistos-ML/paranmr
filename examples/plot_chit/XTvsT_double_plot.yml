@@ -1,0 +1,23 @@
+# Run from the directory containing this YAML file with:
+#
+#   simpnmr-x plot_chit XTvsT_double_plot.yml
+
+plot_chit:
+  # The repository fixture is used twice only to keep this example runnable.
+  # Replace the two paths with the corresponding XRD and OPT ORCA outputs.
+  xrd:
+    file: ../../tests/data/P3FeCl/DATA/CHI/P3FeCl_Susceptibility_NEVPT2.out
+    format: orca
+    section: nevpt2
+
+  opt:
+    file: ../../tests/data/P3FeCl/DATA/CHI/P3FeCl_Susceptibility_NEVPT2.out
+    format: orca
+    section: nevpt2
+
+  tip:
+    mode: analytic
+    reference_temperature: max
+
+  output:
+    file: XTvsT_double_plot.pdf

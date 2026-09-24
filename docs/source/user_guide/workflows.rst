@@ -115,6 +115,44 @@ Optional additions
 - ``susc_fit:input_units``: optionally specify YAML fit-variable units as ``A3``,
   ``cm3 mol-1``, or Curie-normalised ``reduced`` values.
 
+Temperature-dependent susceptibility plotting
+----------------------------------------------
+
+The ``plot_chit`` workflow plots scalar ``chi*T`` values parsed from ORCA
+outputs. The ``xrd`` and ``opt`` sources are independent and either one may be
+omitted. Analytical TIP removal is optional and requires an ``opt`` source.
+
+Run
+^^^
+
+.. code-block:: console
+
+   simpnmr-x plot_chit XTvsT_double_plot.yml
+
+Input example
+^^^^^^^^^^^^^
+
+.. code-block:: yaml
+
+   plot_chit:
+     xrd:
+       file: path/to/xrd.out
+       format: orca
+       section: nevpt2
+     opt:
+       file: path/to/opt.out
+       format: orca
+       section: nevpt2
+     tip:
+       mode: analytic
+       reference_temperature: max
+     output:
+       file: XTvsT_double_plot.pdf
+
+``reference_temperature`` may be ``max`` or an explicit temperature present in
+the OPT grid. When TIP removal is enabled, the output includes the OPT curve
+and the analytically corrected OPT-without-TIP curve.
+
 Notes
 ^^^^^
 
