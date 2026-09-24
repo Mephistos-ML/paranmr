@@ -158,9 +158,7 @@ def plot_fitted_shifts(
         conv = A3_TO_CM3MOL
         model_unit_label = "cm³ mol⁻¹"
     else:
-        raise ValueError(
-            "Unsupported susc_units. Expected 'A3' or 'cm3 mol-1'."
-        )
+        raise ValueError("Unsupported susc_units. Expected 'A3' or 'cm3 mol-1'.")
 
     fit_lines = [
         f"R²adj: {susc_model.adj_r2:.4f}",

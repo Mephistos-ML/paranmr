@@ -98,9 +98,7 @@ class PlotChiTConfig(Config):
         else:
             reference_temperature = float(reference_temperature)
             if reference_temperature <= 0.0:
-                raise ValueError(
-                    "plot_chit:tip:reference_temperature must be positive"
-                )
+                raise ValueError("plot_chit:tip:reference_temperature must be positive")
 
         self._tip = ChiTTipConfig(
             mode=mode,
@@ -136,9 +134,7 @@ class PlotChiTConfig(Config):
         if file_format.lower() != "orca":
             raise ValueError(f"plot_chit:{name}:format must be 'orca'")
         if section.lower() not in {"casscf", "nevpt2"}:
-            raise ValueError(
-                f"plot_chit:{name}:section must be 'casscf' or 'nevpt2'"
-            )
+            raise ValueError(f"plot_chit:{name}:section must be 'casscf' or 'nevpt2'")
         if not file_name.strip():
             raise ValueError(f"plot_chit:{name}:file must not be empty")
 

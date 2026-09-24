@@ -6,9 +6,7 @@ from simpnmr_x.cfg.plot_chit import PlotChiTConfig
 
 
 def test_plot_chit_with_analytic_tip(tmp_path: Path):
-    source = Path(
-        "tests/data/P3FeCl/DATA/CHI/P3FeCl_Susceptibility_NEVPT2.out"
-    )
+    source = Path("tests/data/P3FeCl/DATA/CHI/P3FeCl_Susceptibility_NEVPT2.out")
     output = tmp_path / "XTvsT_double_plot.pdf"
     config = PlotChiTConfig(
         xrd={"file": str(source), "format": "orca", "section": "nevpt2"},

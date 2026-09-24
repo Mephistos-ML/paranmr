@@ -116,9 +116,7 @@ def _remove_analytic_tip(
     )[0]
 
     prefactor = compute_curie_prefactor(spin)
-    analytic_chi_t = a3_to_cm3mol(
-        np.asarray([analytic_chi * reference * prefactor])
-    )[0]
+    analytic_chi_t = a3_to_cm3mol(np.asarray([analytic_chi * reference * prefactor]))[0]
     tip_chi_t = float(chi_t[reference_index] - analytic_chi_t)
 
     return temperatures, chi_t - tip_chi_t
@@ -145,6 +143,4 @@ def _get_temperature_value(values: dict[float, np.ndarray], temperature: float):
     for value_temperature, value in values.items():
         if np.isclose(value_temperature, temperature, rtol=0.0, atol=1.0e-8):
             return value
-    raise ValueError(
-        "TIP reference_temperature is not present in the OPT tensor grid"
-    )
+    raise ValueError("TIP reference_temperature is not present in the OPT tensor grid")

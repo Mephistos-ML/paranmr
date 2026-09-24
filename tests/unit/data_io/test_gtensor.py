@@ -39,6 +39,7 @@ def test_read_g_tensor_ab_initio_reconstructs_matrix_from_qdpt_block(tmp_path):
     )
     np.testing.assert_allclose(g_tensor, expected)
 
+
 def test_read_g_tensor_ab_initio_returns_none_when_block_is_absent(tmp_path):
     """Return None when the requested QDPT block is absent."""
     file_name = tmp_path / "orca.out"

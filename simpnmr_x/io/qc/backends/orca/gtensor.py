@@ -47,9 +47,7 @@ def read_g_tensor_ab_initio(file_name: str, section: str) -> np.ndarray | None:
                     if "g-factors:" in line:
                         values = next(f).split()[:3]
                         if len(values) != 3:
-                            raise ValueError(
-                                "expected three principal g-factor values"
-                            )
+                            raise ValueError("expected three principal g-factor values")
                         g_factors = np.array([float(value) for value in values])
                     if "Orientation:" in line:
                         rows = [next(f).split()[1:4] for _ in range(3)]
@@ -59,9 +57,7 @@ def read_g_tensor_ab_initio(file_name: str, section: str) -> np.ndarray | None:
                         break
 
                 if g_factors is None or orientation is None:
-                    raise ValueError(
-                        "incomplete g-factor or orientation block"
-                    )
+                    raise ValueError("incomplete g-factor or orientation block")
                 if g_factors.shape != (3,) or orientation.shape != (3, 3):
                     raise ValueError("invalid g-factor or orientation shape")
                 if not np.allclose(
