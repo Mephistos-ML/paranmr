@@ -125,9 +125,11 @@ def _remove_analytic_tip(
 
     prefactor = compute_curie_prefactor(spin)
     analytic_chi_t = a3_to_cm3mol(np.asarray([analytic_chi * reference * prefactor]))[0]
-    tip_chi_t = float(chi_t[reference_index] - analytic_chi_t)
 
-    return temperatures, chi_t - tip_chi_t
+    tip_chi_t_reference = float(chi_t[reference_index] - analytic_chi_t)
+    tip_chi = tip_chi_t_reference / reference
+
+    return temperatures, chi_t - tip_chi * temperatures
 
 
 def _reference_index(
